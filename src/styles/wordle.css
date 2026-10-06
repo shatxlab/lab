@@ -1,0 +1,509 @@
+/*
+ * Wordle styling. Scoped under .wd-shell; colours come from the shared tokens
+ * in apps.css plus the three tile states below. Text on every tile state keeps
+ * at least 4.5:1 contrast, and each state has a non-colour cue (✓ / •) too.
+ */
+
+.wd-shell,
+.wd-theme {
+  --wd-correct: oklch(0.5 0.13 150);
+  --wd-correct-fg: oklch(1 0 0);
+  --wd-present: oklch(0.85 0.15 90);
+  --wd-present-fg: oklch(0.22 0.02 80);
+  --wd-absent: oklch(0.46 0.01 280);
+  --wd-absent-fg: oklch(1 0 0);
+  --wd-empty-border: var(--border);
+  --wd-typing-border: var(--muted-fg);
+  --wd-key-bg: color-mix(in srgb, var(--muted-fg) 22%, var(--bg));
+}
+
+.wd-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 8px 10px;
+}
+
+[data-theme="dark"] .wd-shell,
+[data-theme="dark"] .wd-theme {
+  --wd-correct: oklch(0.5 0.12 150);
+  --wd-present: oklch(0.8 0.14 88);
+  --wd-absent: oklch(0.4 0.01 280);
+  --wd-key-bg: color-mix(in srgb, var(--muted-fg) 35%, var(--bg));
+}
+
+/* Colour-blind friendly: orange and blue instead of green and yellow. */
+.wd-shell.wd-hc,
+.wd-theme.wd-hc {
+  --wd-correct: oklch(0.72 0.17 50);
+  --wd-correct-fg: oklch(0.2 0.02 60);
+  --wd-present: oklch(0.8 0.1 240);
+  --wd-present-fg: oklch(0.2 0.02 250);
+}
+
+/* One screen, no page scroll: the board sizes itself to the viewport. */
+html:has(.wd-shell),
+body:has(.wd-shell) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.wd-shell :where(button) {
+  font: inherit;
+  cursor: pointer;
+}
+
+.wd-shell :where(button:disabled) {
+  cursor: default;
+}
+
+.wd-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wd-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.wd-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.wd-icon-button {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+}
+
+.wd-icon-button:hover {
+  background: var(--surface);
+}
+
+.wd-icon-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ------------------------------------------------------------------ toast */
+.wd-toast-area {
+  position: relative;
+  width: 100%;
+  height: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.wd-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 8px;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.3);
+}
+
+/* ------------------------------------------------------------------ board */
+.wd-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.wd-board {
+  --wd-tile: clamp(38px, min(calc((100dvh - 52px - 58px - 218px) / 6 - 5px), calc((100vw - 28px) / 5 - 5px)), 64px);
+  display: grid;
+  grid-template-rows: repeat(6, var(--wd-tile));
+  gap: 5px;
+}
+
+.wd-row {
+  display: grid;
+  grid-template-columns: repeat(5, var(--wd-tile));
+  gap: 5px;
+}
+
+.wd-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--wd-empty-border);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: calc(var(--wd-tile) * 0.52);
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.wd-tile.wd-small {
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
+}
+
+.wd-tile[data-state="typing"] {
+  border-color: var(--wd-typing-border);
+}
+
+.wd-tile.wd-filled[data-state="typing"] {
+  animation: wd-pop 100ms ease-out;
+}
+
+.wd-tile[data-state="correct"] {
+  border-color: var(--wd-correct);
+  background: var(--wd-correct);
+  color: var(--wd-correct-fg);
+}
+
+.wd-tile[data-state="present"] {
+  border-color: var(--wd-present);
+  background: var(--wd-present);
+  color: var(--wd-present-fg);
+}
+
+.wd-tile[data-state="absent"] {
+  border-color: var(--wd-absent);
+  background: var(--wd-absent);
+  color: var(--wd-absent-fg);
+}
+
+.wd-mark {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: calc(var(--wd-tile) * 0.2);
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.wd-tile.wd-flip {
+  animation: wd-flip 600ms ease-in-out both;
+  animation-delay: calc(var(--wd-i) * 300ms);
+}
+
+.wd-row.wd-shake {
+  animation: wd-shake 500ms;
+}
+
+.wd-row.wd-won .wd-tile {
+  animation: wd-bounce 900ms ease both;
+}
+
+.wd-row.wd-won .wd-tile:nth-child(2) { animation-delay: 100ms; }
+.wd-row.wd-won .wd-tile:nth-child(3) { animation-delay: 200ms; }
+.wd-row.wd-won .wd-tile:nth-child(4) { animation-delay: 300ms; }
+.wd-row.wd-won .wd-tile:nth-child(5) { animation-delay: 400ms; }
+
+@keyframes wd-pop {
+  50% { transform: scale(1.1); }
+}
+
+@keyframes wd-flip {
+  0% {
+    transform: rotateX(0);
+    background: var(--bg);
+    border-color: var(--wd-typing-border);
+    color: var(--fg);
+  }
+  49% {
+    transform: rotateX(90deg);
+    background: var(--bg);
+    border-color: var(--wd-typing-border);
+    color: var(--fg);
+  }
+  51% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0);
+  }
+}
+
+@keyframes wd-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+
+@keyframes wd-bounce {
+  0%, 20% { transform: translateY(0); }
+  40% { transform: translateY(-14px); }
+  50% { transform: translateY(4px); }
+  60% { transform: translateY(-6px); }
+  80% { transform: translateY(1px); }
+  100% { transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------- keyboard */
+.wd-keyboard {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.wd-key-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.wd-key {
+  display: inline-flex;
+  min-width: 0;
+  height: 52px;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wd-key-bg);
+  color: var(--fg);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.wd-key svg {
+  width: 22px;
+  height: 22px;
+}
+
+.wd-key-wide {
+  flex: 1.6 1 0;
+  font-size: 0.75rem;
+}
+
+.wd-key[data-state="correct"] {
+  background: var(--wd-correct);
+  color: var(--wd-correct-fg);
+}
+
+.wd-key[data-state="present"] {
+  background: var(--wd-present);
+  color: var(--wd-present-fg);
+}
+
+.wd-key[data-state="absent"] {
+  background: var(--wd-absent);
+  color: var(--wd-absent-fg);
+}
+
+.wd-key:disabled {
+  opacity: 0.6;
+}
+
+@media (max-height: 640px) {
+  .wd-key {
+    height: 44px;
+  }
+}
+
+/* ---------------------------------------------------------------- dialogs */
+.wd-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+}
+
+.wd-dialog h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.wd-dialog p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.wd-muted {
+  color: var(--muted-fg);
+  font-size: 0.875rem;
+}
+
+.wd-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wd-rules {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.45;
+}
+
+.wd-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wd-example {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wd-example-row {
+  display: flex;
+  gap: 4px;
+}
+
+.wd-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.wd-button {
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 0 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.wd-button:hover {
+  background: var(--surface);
+}
+
+.wd-button-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.wd-button-primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+
+.wd-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0;
+  text-align: center;
+}
+
+.wd-stats dd {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.wd-stats dt {
+  font-size: 0.7rem;
+  color: var(--muted-fg);
+}
+
+.wd-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wd-distribution li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.wd-distribution li > span:first-child {
+  width: 1ch;
+}
+
+.wd-bar {
+  min-width: 1.8rem;
+  background: var(--wd-correct);
+  color: var(--wd-correct-fg);
+  padding: 1px 6px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.wd-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wd-settings label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.wd-settings input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.wd-settings p {
+  margin: 4px 0 0 28px;
+}
+
+@media print {
+  .wd-shell {
+    display: none;
+  }
+}

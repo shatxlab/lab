@@ -1,22 +1,40 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 import {
+  APP_LANG_STORAGE_KEY,
   applyAppLang,
   readAppLang,
   subscribeToAppLang,
   type AppLang,
 } from "@/lib/apps/lang";
 
+function subscribe(onChange: () => void): () => void {
+  const unsubscribe = subscribeToAppLang(onChange);
+  // Another tab changed the language.
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === APP_LANG_STORAGE_KEY) onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    unsubscribe();
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+const serverSnapshot = (): AppLang => "en";
+
 /**
  * Subscribe an island to the global UI language.
  *
- * The hook reads the persisted choice on mount, keeps <html lang> in sync and
- * re-renders whenever any island (typically the header toggle) changes it.
+ * Built on useSyncExternalStore so hydration is mismatch-free: the prerendered
+ * HTML is English, React hydrates with that server snapshot, then immediately
+ * (before paint) re-renders with the stored language. A plain
+ * `useState(() => readAppLang())` would instead hydrate with the client value
+ * and trip React's "text content does not match" error for every visitor who
+ * has chosen another language.
  */
 export function useAppLang(): AppLang {
-  const [lang, setLang] = useState<AppLang>(() => readAppLang());
-
-  useEffect(() => subscribeToAppLang(setLang), []);
+  const lang = useSyncExternalStore(subscribe, readAppLang, serverSnapshot);
 
   useEffect(() => {
     applyAppLang(lang);

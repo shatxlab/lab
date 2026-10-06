@@ -146,6 +146,18 @@ export const TOOLS: readonly ToolEntry[] = [
     keywords: "crossword puzzle clues кроссворд головоломка",
   },
   {
+    id: "wordle",
+    path: "/wordle",
+    category: "games",
+    files: { en: "English · Русский · ~1000 words each", ru: "English · Русский · около 1000 слов" },
+    title: { en: "Wordle", ru: "Вордли" },
+    description: {
+      en: "Guess the hidden five-letter word in six tries, in English or Russian. Hard mode, high-contrast colours and saved statistics.",
+      ru: "Угадайте слово из пяти букв за шесть попыток — на русском или английском. Сложный режим, контрастные цвета и сохранённая статистика.",
+    },
+    keywords: "wordle word guess puzzle five letter вордли слова угадай слово головоломка",
+  },
+  {
     id: "couples",
     path: "/couples",
     category: "games",

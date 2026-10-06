@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-
-import { readAppLang, subscribeToAppLang, type AppLang } from "@/lib/apps/lang";
 import { CATEGORY_ORDER, CATEGORY_TITLES, toolHref, toolsByCategory } from "@/lib/apps/tools";
-import { useLangReady } from "@/lib/apps/use-app-lang";
+import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 
 /**
  * The tools index. A client island so the cards follow the shared language
@@ -10,10 +7,8 @@ import { useLangReady } from "@/lib/apps/use-app-lang";
  * the shared registry (also used by the command palette).
  */
 export default function ToolsGrid() {
-  const [lang, setLang] = useState<AppLang>(() => readAppLang());
+  const lang = useAppLang();
   const readyRef = useLangReady<HTMLElement>();
-
-  useEffect(() => subscribeToAppLang(setLang), []);
 
   return (
     <section

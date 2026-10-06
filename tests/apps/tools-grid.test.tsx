@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import ToolsGrid from "@/components/apps/ToolsGrid";
+import { TOOLS, toolHref } from "@/lib/apps/tools";
+import { mount } from "../helpers/dom";
 
 describe("ToolsGrid", () => {
   it("renders English cards by default", () => {
@@ -15,15 +17,29 @@ describe("ToolsGrid", () => {
     expect(html).toContain("Games for couples");
   });
 
-  it("renders Russian cards when the shared language is Russian", () => {
+  it("renders Russian cards on the client when the shared language is Russian", async () => {
     localStorage.setItem("lab:lang", "ru");
+    const view = await mount(<ToolsGrid />);
+    const text = view.container.textContent ?? "";
+    expect(text).toContain("Инструменты");
+    expect(text).toContain("Выберите инструмент");
+    expect(text).toContain("EPUB-читалка");
+    expect(text).toContain("Просмотр документов");
+    expect(text).toContain("Алиас");
+    expect(text).toContain("Кроссворд");
+    expect(text).toContain("Вордли");
+    expect(text).toContain("Игры для пар");
+    view.unmount();
+  });
+
+  it("prerenders English even when another language is stored (hydration-safe)", () => {
+    localStorage.setItem("lab:lang", "ru");
+    expect(renderToStaticMarkup(<ToolsGrid />)).toContain("Pick a tool");
+  });
+
+  it("groups the tools by category and lists every registered tool", () => {
     const html = renderToStaticMarkup(<ToolsGrid />);
-    expect(html).toContain("Инструменты");
-    expect(html).toContain("Выберите инструмент");
-    expect(html).toContain("EPUB-читалка");
-    expect(html).toContain("Просмотр документов");
-    expect(html).toContain("Алиас");
-    expect(html).toContain("Кроссворд");
-    expect(html).toContain("Игры для пар");
+    for (const heading of ["Read &amp; view", "Utilities", "Games"]) expect(html).toContain(heading);
+    for (const tool of TOOLS) expect(html).toContain(`href="${toolHref(tool)}"`);
   });
 });

@@ -54,8 +54,8 @@ body {
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
 }
 
-/* Very narrow screens: the mark alone, so the header controls still fit. */
-@media (max-width: 420px) {
+/* Narrow screens: the mark alone, so the header controls still fit. */
+@media (max-width: 470px) {
   .lab-wordmark-text {
     position: absolute;
     width: 1px;

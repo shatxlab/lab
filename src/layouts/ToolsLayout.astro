@@ -4,6 +4,8 @@ import ThemePrePaint from "@/components/apps/ThemePrePaint.astro";
 import LangPrePaint from "@/components/apps/LangPrePaint.astro";
 import ThemeToggle from "@/components/apps/ThemeToggle";
 import LangToggle from "@/components/apps/LangToggle";
+import CommandPalette from "@/components/apps/CommandPalette";
+import SettingsButton from "@/components/apps/SettingsButton";
 import { withBase } from "@/lib/apps/paths";
 
 interface Props {
@@ -26,6 +28,7 @@ const { title, lang = "en" } = Astro.props;
     <LangPrePaint />
   </head>
   <body class="flex min-h-screen flex-col bg-(--bg) text-(--fg) antialiased">
+    <a href="#main" class="skip-link"><span class="skip-en">Skip to content</span><span class="skip-ru">К содержимому</span></a>
     <div class="flex min-h-0 flex-1 flex-col">
       <header
         class="lab-header sticky top-0 z-50 flex h-[58px] shrink-0 items-center justify-between gap-4 border-b border-(--border) px-[18px] backdrop-blur"
@@ -38,6 +41,8 @@ const { title, lang = "en" } = Astro.props;
           lab
         </a>
         <div class="flex shrink-0 items-center gap-2.5">
+          <CommandPalette client:load />
+          <SettingsButton client:load />
           <LangToggle client:load />
           <ThemeToggle client:load />
         </div>
@@ -48,7 +53,7 @@ const { title, lang = "en" } = Astro.props;
         renders files entirely in your browser. Nothing is uploaded anywhere.
       -->
 
-      <main class="flex min-h-0 flex-1 flex-col">
+      <main id="main" tabindex="-1" class="flex min-h-0 flex-1 flex-col focus:outline-none">
         <slot />
       </main>
     </div>

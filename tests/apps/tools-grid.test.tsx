@@ -9,7 +9,7 @@ import { mount } from "../helpers/dom";
 describe("ToolsGrid", () => {
   it("renders English cards by default", () => {
     const html = renderToStaticMarkup(<ToolsGrid />);
-    expect(html).toContain("Nothing uploaded.");
+    expect(html).toContain("Your data stays yours.");
     expect(html).toContain("EPUB reader");
     expect(html).toContain("Document viewer");
     expect(html).toContain("Alias word game");
@@ -22,7 +22,7 @@ describe("ToolsGrid", () => {
     const view = await mount(<ToolsGrid />);
     const text = view.container.textContent ?? "";
     expect(text).toContain("Ваши инструменты.");
-    expect(text).toContain("Ничего не загружается.");
+    expect(text).toContain("Данные остаются у вас.");
     expect(text).toContain("EPUB-читалка");
     expect(text).toContain("Просмотр документов");
     expect(text).toContain("Алиас");

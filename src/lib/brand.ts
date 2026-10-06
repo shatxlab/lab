@@ -8,8 +8,8 @@ export const BRAND = {
   name: "Local Lab",
   /** The promise, short enough for a hero line and a social card. */
   tagline: {
-    en: "Your tools. Your browser. Nothing uploaded.",
-    ru: "Ваши инструменты. Ваш браузер. Ничего не загружается.",
+    en: "Your tools. Your browser. Your data stays yours.",
+    ru: "Ваши инструменты. Ваш браузер. Данные остаются у вас.",
   },
   /** One-paragraph pitch for the landing page. */
   pitch: {

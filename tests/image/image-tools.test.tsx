@@ -103,7 +103,7 @@ describe("ImageTools", () => {
 
   it("warns about GPS in the original and lists what was found", async () => {
     const view = await mount(<ImageTools />);
-    const file = new File([buildJpeg({ orientation: 6, withGps: true })], "trip.jpg", { type: "image/jpeg" });
+    const file = new File([buildJpeg({ orientation: 6, withGps: true }) as unknown as BlobPart], "trip.jpg", { type: "image/jpeg" });
     await addFiles([file]);
     await waitFor(() => expect(document.body.textContent).toContain("Metadata found in the original"));
     const details = document.querySelector("details")!;

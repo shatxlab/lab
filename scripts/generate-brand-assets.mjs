@@ -15,14 +15,16 @@ const { chromium } = await import("playwright-core").catch(() => {
 });
 
 const svg = await readFile(`${root}assets/favicon.svg`, "utf8");
-// The mark without its rounded-square plate, for full-bleed (maskable / Apple) icons.
-const mark = svg.replace(/<rect x="2" y="2"[^>]*\/>/, "");
-const GRADIENT = '<linearGradient id="ll-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#10b981"/><stop offset="1" stop-color="#047857"/></linearGradient>';
-
+// The mark without its rounded-square plate, on a full-bleed tile (maskable / Apple icons
+// must not have transparent corners). `scale` shrinks the flask to stay inside the safe zone.
 const fullBleed = (scale) => {
-  const inner = mark.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "").replace(/<defs>[\s\S]*?<\/defs>/, "");
-  const defs = svg.match(/<defs>[\s\S]*?<\/defs>/)?.[0] ?? `<defs>${GRADIENT}</defs>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${defs}<rect width="64" height="64" fill="url(#ll-bg)"/><g transform="translate(32 32) scale(${scale}) translate(-32 -32)">${inner}</g></svg>`;
+  const defs = svg.match(/<defs>[\s\S]*?<\/defs>/)?.[0] ?? "";
+  const inner = svg
+    .replace(/^<svg[^>]*>/, "")
+    .replace(/<\/svg>\s*$/, "")
+    .replace(/<defs>[\s\S]*?<\/defs>/, "")
+    .replace(/<rect x="2" y="2"[^>]*\/>/, "");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${defs}<rect width="64" height="64" fill="#059669"/><g transform="translate(32 32) scale(${scale}) translate(-32 -32)">${inner}</g></svg>`;
 };
 
 const executablePath = process.env.CHROME_PATH;
@@ -49,7 +51,7 @@ await page.setContent(`<!doctype html><meta charset="utf-8"><style>
     background:radial-gradient(900px 500px at 85% -10%,#0f766e55,transparent),radial-gradient(700px 500px at -10% 110%,#10b98133,transparent),#0b1512;
     display:flex;flex-direction:column;justify-content:space-between;padding:68px 76px}
   .top{display:flex;align-items:center;gap:44px}
-  .logo svg{width:210px;height:210px;display:block;filter:drop-shadow(0 18px 40px #05966955)}
+  .logo svg{width:210px;height:210px;display:block;}
   h1{font-size:112px;line-height:1;letter-spacing:-0.03em;font-weight:800}
   .tag{margin-top:18px;font-size:42px;line-height:1.2;color:#6ee7b7;font-weight:600}
   .chips{display:flex;flex-wrap:wrap;gap:12px}

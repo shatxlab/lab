@@ -41,6 +41,7 @@ describe("brand", () => {
     const favicon = read("assets/favicon.svg");
     expect(favicon).not.toContain("shatxlab-bolt");
     expect(favicon).toContain("clipPath"); // the flask
+    expect(favicon).not.toContain("Gradient"); // flat, minimal
     const layout = read("src/layouts/ToolsLayout.astro");
     expect(layout).not.toContain("— lab");
     expect(layout).not.toContain('content="lab"');

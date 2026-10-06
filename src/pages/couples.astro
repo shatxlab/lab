@@ -1,0 +1,9 @@
+---
+import ToolsLayout from "@/layouts/ToolsLayout.astro";
+import CouplesGame from "@/components/couples/CouplesGame";
+import "@/styles/couples.css";
+---
+
+<ToolsLayout title="Игры для пар" lang="ru">
+  <CouplesGame client:load />
+</ToolsLayout>

@@ -1,0 +1,52 @@
+---
+import "@/styles/apps.css";
+import ThemePrePaint from "@/components/apps/ThemePrePaint.astro";
+import ThemeToggle from "@/components/apps/ThemeToggle";
+import { withBase } from "@/lib/apps/paths";
+
+interface Props {
+  title: string;
+  lang?: string;
+}
+
+const { title, lang = "en" } = Astro.props;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
+    <meta name="theme-color" content="#242424" />
+    <title>{title} — lab</title>
+    <ThemePrePaint />
+  </head>
+  <body class="flex min-h-screen flex-col bg-(--bg) text-(--fg) antialiased">
+    <div class="flex min-h-0 flex-1 flex-col">
+      <header
+        class="lab-header sticky top-0 z-50 flex h-[58px] shrink-0 items-center justify-between gap-4 border-b border-(--border) px-[18px] backdrop-blur"
+      >
+        <a
+          href={withBase("/")}
+          class="lab-wordmark no-underline text-sm uppercase tracking-[0.3em] text-(--fg) transition-colors hover:text-(--accent)"
+          aria-label="lab home"
+        >
+          lab
+        </a>
+        <div class="flex shrink-0 items-center gap-2.5">
+          <ThemeToggle client:load />
+        </div>
+      </header>
+
+      <!--
+        Local-first by construction: every tool on /tools opens, parses and
+        renders files entirely in your browser. Nothing is uploaded anywhere.
+      -->
+
+      <main class="flex min-h-0 flex-1 flex-col">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

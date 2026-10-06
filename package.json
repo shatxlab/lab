@@ -1,0 +1,48 @@
+{
+  "name": "lab",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "lab — local-first browser tool stack (Astro + React islands)",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "start": "astro preview --host 127.0.0.1",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1",
+    "test": "vitest run",
+    "gen:crosswords": "node scripts/generate-crosswords.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/react": "6.0.5",
+    "@radix-ui/react-slot": "^1.3.3",
+    "astro": "^7.3.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dompurify": "^3.4.15",
+    "fflate": "^0.8.3",
+    "highlight.js": "^11.12.0",
+    "jszip": "^3.10.1",
+    "lucide-react": "^1.48.0",
+    "mammoth": "^1.12.2",
+    "marked": "^18.0.14",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.4.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "jsdom": "^30.1.0",
+    "vitest": "^5.0.0"
+  }
+}

@@ -1,0 +1,9 @@
+---
+import ToolsLayout from "@/layouts/ToolsLayout.astro";
+import CrosswordGame from "@/components/crossword/CrosswordGame";
+import "@/styles/crossword.css";
+---
+
+<ToolsLayout title="Кроссворд" lang="ru">
+  <CrosswordGame client:load />
+</ToolsLayout>

@@ -1,0 +1,19 @@
+# Static-host security headers (Netlify / Cloudflare Pages / Cloudflare Workers
+# Sites and other `_headers`-aware platforms). The Content-Security-Policy is
+# emitted per-build as a <meta> tag by Astro (see security.csp in
+# astro.config.mjs), so it is intentionally NOT duplicated here: a header CSP
+# without the build-time script hashes would intersect with the meta policy and
+# block hydration. `frame-ancestors` cannot live in <meta>, so clickjacking is
+# covered by X-Frame-Options instead.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000
+
+# Fingerprinted build assets are immutable; cache them aggressively.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable

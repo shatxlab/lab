@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="shatxlab-bolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcd34d"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#18181b"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#3f3f46" stroke-width="2"/>
+  <path d="M35 9 L18 36 H29 L26 55 L46 26 H33 Z" fill="url(#shatxlab-bolt)"/>
+</svg>

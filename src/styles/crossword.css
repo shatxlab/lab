@@ -1,0 +1,1256 @@
+/*
+ * Crossword styling.
+ *
+ * Scoped under .cw-shell so it never leaks into other lab tools. Colours come
+ * from the shared design tokens in apps.css; everything below is layout and
+ * the crossword-specific states.
+ */
+
+/*
+ * Playable squares are clearly lighter than the page and blocks clearly
+ * darker, in both themes — blocks must never read as just another grey tile.
+ */
+.cw-shell {
+  --cw-cell: oklch(1 0 0);
+  --cw-cell-line: oklch(0.8 0.006 80);
+  --cw-block: oklch(0.27 0.012 80);
+  --cw-danger: oklch(0.58 0.2 25);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+[data-theme="dark"] .cw-shell {
+  --cw-cell: oklch(0.43 0.012 80);
+  --cw-cell-line: oklch(0.56 0.012 80);
+  --cw-block: oklch(0.12 0.008 80);
+  --cw-danger: oklch(0.72 0.17 25);
+}
+
+/* One screen, no page scroll: the crossword sizes itself to the viewport. */
+html:has(.cw-shell),
+body:has(.cw-shell) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cw-shell :where(button) {
+  font: inherit;
+  cursor: pointer;
+}
+
+.cw-shell :where(button:disabled) {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.cw-shell :where(button:focus-visible, input:focus-visible) {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------- buttons */
+
+.cw-primary-button,
+.cw-secondary-button,
+.cw-danger-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 0.45rem;
+  justify-content: center;
+  padding: 0.7rem 1.2rem;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
+}
+
+.cw-primary-button {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.cw-primary-button:hover {
+  transform: translateY(-1px);
+}
+
+.cw-secondary-button {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--fg);
+}
+
+.cw-secondary-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cw-danger-button {
+  background: var(--cw-danger);
+  color: #fff;
+}
+
+.cw-primary-button svg,
+.cw-secondary-button svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+.cw-icon-button {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  color: var(--fg);
+  display: inline-flex;
+  height: 2.4rem;
+  justify-content: center;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  width: 2.4rem;
+}
+
+.cw-icon-button svg {
+  height: 1.05rem;
+  width: 1.05rem;
+}
+
+.cw-icon-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- picker */
+
+.cw-picker {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  gap: 1rem;
+  margin: 0 auto;
+  max-width: 64rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(1rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem) 1.5rem;
+  width: 100%;
+}
+
+.cw-picker-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cw-eyebrow {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.cw-picker-hero h1 {
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.cw-picker-note {
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.cw-card-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .cw-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.cw-card {
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.3rem;
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+@media (hover: hover) {
+  .cw-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 18px 40px rgba(15, 18, 45, 0.16);
+    transform: translateY(-3px);
+  }
+}
+
+.cw-card[data-completed="true"] {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+}
+
+.cw-card-top {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.95rem;
+}
+
+.cw-card-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.cw-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.cw-badge {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.16rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.cw-badge[data-tone="muted"] {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--muted-fg);
+}
+
+.cw-badge[data-tone="ghost"] {
+  border-color: var(--border);
+  color: var(--muted-fg);
+}
+
+.cw-badge[data-tone="success"] {
+  background: color-mix(in srgb, var(--success) 16%, transparent);
+  color: var(--success);
+}
+
+.cw-card-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.cw-card-subtitle {
+  color: var(--muted-fg);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.cw-card-meta {
+  color: var(--muted-fg);
+  font-size: 0.76rem;
+  margin-top: 0.25rem;
+}
+
+.cw-card-progress {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+}
+
+.cw-card-bar {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  border-radius: 999px;
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+}
+
+.cw-card-bar-fill {
+  background: var(--accent);
+  border-radius: 999px;
+  display: block;
+  height: 100%;
+  transition: width 300ms ease;
+}
+
+.cw-card[data-completed="true"] .cw-card-bar-fill {
+  background: var(--success);
+}
+
+.cw-card-progress-label {
+  align-items: center;
+  color: var(--muted-fg);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  gap: 0.25rem;
+}
+
+.cw-card-progress-label svg {
+  height: 0.85rem;
+  width: 0.85rem;
+}
+
+.cw-mini {
+  align-content: center;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border-radius: 0.5rem;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 2px;
+  grid-template-columns: repeat(var(--cw-cols), 1fr);
+  grid-template-rows: repeat(var(--cw-rows), 1fr);
+  padding: 4px;
+  width: 3.4rem;
+}
+
+.cw-mini span {
+  border-radius: 1px;
+  min-height: 3px;
+}
+
+.cw-mini .is-white {
+  background: color-mix(in srgb, var(--fg) 44%, transparent);
+}
+
+.cw-mini .is-black {
+  background: transparent;
+}
+
+/* ----------------------------------------------------------------- board */
+
+.cw-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: calc(100vh - 58px - var(--cw-kb, 0px));
+  height: calc(100dvh - 58px - var(--cw-kb, 0px));
+  margin: 0 auto;
+  max-width: 72rem;
+  overflow: hidden;
+  padding: 0.4rem clamp(0.75rem, 3vw, 1.5rem) calc(0.6rem + env(safe-area-inset-bottom, 0px));
+  position: relative;
+  width: 100%;
+}
+
+.cw-topbar {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.75rem;
+}
+
+.cw-topbar-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cw-topbar-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-topbar-meta {
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cw-topbar-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.cw-progress-track {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  border-radius: 999px;
+  flex: 0 0 auto;
+  height: 4px;
+  overflow: hidden;
+}
+
+.cw-progress-fill {
+  background: var(--accent);
+  border-radius: 999px;
+  display: block;
+  height: 100%;
+  transition: width 350ms ease;
+}
+
+.cw-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-height: 0;
+}
+
+.cw-main {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+/* The stage is whatever space is left; the grid scales to fit it. */
+.cw-stage {
+  align-items: center;
+  container-type: size;
+  display: flex;
+  flex: 1 1 0;
+  justify-content: center;
+  min-height: 0;
+  width: 100%;
+}
+
+.cw-side {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ grid */
+
+.cw-grid {
+  aspect-ratio: calc(var(--cw-cols) / var(--cw-rows));
+  container-type: inline-size;
+  display: grid;
+  gap: clamp(2px, 0.55vw, 5px);
+  grid-template-columns: repeat(var(--cw-cols), 1fr);
+  grid-template-rows: repeat(var(--cw-rows), 1fr);
+  position: relative;
+  touch-action: manipulation;
+  width: min(100%, 30rem);
+  /* Fit both axes of the stage so the board never needs scrolling. */
+  width: min(100cqw, 34rem, calc(100cqh * var(--cw-cols) / var(--cw-rows)));
+}
+
+.cw-cell {
+  align-items: center;
+  background: var(--cw-cell);
+  border: 1px solid var(--cw-cell-line);
+  border-radius: clamp(4px, 1.1vw, 10px);
+  color: var(--fg);
+  display: flex;
+  font-size: clamp(0.9rem, 4vw, 1.6rem);
+  font-weight: 700;
+  justify-content: center;
+  line-height: 1;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.cw-cell--black {
+  background: var(--cw-block);
+  border-color: transparent;
+}
+
+.cw-cell-number {
+  color: var(--muted-fg);
+  font-size: clamp(0.5rem, 1.9vw, 0.72rem);
+  font-weight: 700;
+  left: 0.16em;
+  line-height: 1;
+  position: absolute;
+  top: 0.12em;
+}
+
+.cw-cell-dot {
+  background: var(--accent);
+  border-radius: 999px;
+  height: 0.32em;
+  position: absolute;
+  right: 0.18em;
+  top: 0.18em;
+  width: 0.32em;
+}
+
+.cw-cell.is-word {
+  background: color-mix(in srgb, var(--accent) 26%, var(--cw-cell));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--cw-cell-line));
+}
+
+[data-theme="dark"] .cw-cell.is-word {
+  background: color-mix(in srgb, var(--accent) 34%, var(--cw-cell));
+}
+
+.cw-cell.is-solved {
+  background: color-mix(in srgb, var(--success) 28%, var(--cw-cell));
+  color: color-mix(in srgb, var(--success) 78%, var(--fg));
+}
+
+.cw-cell.is-solved .cw-cell-number {
+  color: color-mix(in srgb, var(--success) 60%, var(--muted-fg));
+}
+
+.cw-cell.is-wrong {
+  background: color-mix(in srgb, var(--cw-danger) 24%, var(--cw-cell));
+  color: var(--cw-danger);
+}
+
+.cw-cell.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 42%, transparent);
+  color: var(--accent-fg);
+  transform: scale(1.05);
+  z-index: 1;
+}
+
+.cw-cell.is-active .cw-cell-number {
+  color: color-mix(in srgb, var(--accent-fg) 78%, transparent);
+}
+
+.cw-cell.is-active .cw-cell-dot {
+  background: var(--accent-fg);
+}
+
+.cw-grid[data-focused="true"] .cw-cell.is-active .cw-cell-letter::after {
+  animation: cw-blink 1.1s steps(1, end) infinite;
+  background: currentColor;
+  content: "";
+  display: inline-block;
+  height: 0.95em;
+  margin-left: 0.06em;
+  vertical-align: -0.08em;
+  width: 0.09em;
+}
+
+/* Solved cells are read-only: no editing caret, even when the cursor is there. */
+.cw-grid[data-focused="true"] .cw-cell.is-active.is-solved .cw-cell-letter::after {
+  display: none;
+}
+
+@keyframes cw-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@supports (container-type: inline-size) {
+  .cw-cell {
+    font-size: calc(56cqw / var(--cw-cols));
+  }
+
+  .cw-cell-number {
+    font-size: calc(19cqw / var(--cw-cols));
+  }
+
+  .cw-cell-dot {
+    height: calc(9cqw / var(--cw-cols));
+    width: calc(9cqw / var(--cw-cols));
+  }
+}
+
+/* The invisible input is a grid item parked on the active cell. It must stay
+ * focusable (no display/visibility:none) for the mobile keyboard to open. */
+.cw-input {
+  background: transparent;
+  border: 0;
+  caret-color: transparent;
+  color: transparent;
+  font-size: 16px;
+  height: 100%;
+  opacity: 0;
+  outline: none !important;
+  padding: 0;
+  pointer-events: none;
+  /* Absolutely positioned so it is out of grid flow: an in-flow item with an
+   * explicit grid-area makes auto-placed cells skip its slot and shifts the
+   * whole board. The grid-area still resolves against the grid lines. */
+  position: absolute;
+  width: 100%;
+  z-index: 2;
+}
+
+/* --------------------------------------------------------------- clue bar */
+
+.cw-cluebar {
+  align-items: center;
+  align-self: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.3rem;
+  max-width: 34rem;
+  padding: 0.3rem;
+  width: 100%;
+}
+
+.cw-cluebar[data-solved="true"] {
+  border-color: color-mix(in srgb, var(--success) 50%, var(--border));
+}
+
+.cw-clue-body {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 0.6rem;
+  min-height: 2.7rem;
+  min-width: 0;
+}
+
+.cw-clue-badge {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 999px;
+  color: var(--accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
+}
+
+.cw-clue-badge svg {
+  height: 0.95rem;
+  width: 0.95rem;
+}
+
+.cw-cluebar[data-solved="true"] .cw-clue-badge {
+  background: var(--success);
+  color: #fff;
+}
+
+.cw-clue-text {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-clamp: 2;
+  line-height: 1.25;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cw-clue-text--empty {
+  color: var(--muted-fg);
+  font-weight: 500;
+}
+
+.cw-clue-nav {
+  align-items: center;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border: 0;
+  border-radius: 0.8rem;
+  color: var(--fg);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 2.5rem;
+  justify-content: center;
+  transition: background-color 140ms ease, color 140ms ease;
+  width: 2.3rem;
+}
+
+.cw-clue-nav svg {
+  height: 1.15rem;
+  width: 1.15rem;
+}
+
+.cw-clue-nav:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------------- actions */
+
+/* One compact row so the whole board fits above the keyboard. */
+.cw-actions {
+  align-self: center;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 0.4rem;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  max-width: 34rem;
+  width: 100%;
+}
+
+.cw-tool-button {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.7rem;
+  font-weight: 700;
+  gap: 0.2rem;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.4rem 0.2rem;
+  position: relative;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+
+.cw-tool-button svg {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.cw-tool-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cw-tool-count {
+  background: var(--accent);
+  border-radius: 999px;
+  color: var(--accent-fg);
+  font-size: 0.62rem;
+  line-height: 1;
+  padding: 0.15rem 0.35rem;
+  position: absolute;
+  right: 0.35rem;
+  top: 0.3rem;
+}
+
+/* --------------------------------------------------------------- clues */
+
+.cw-clues {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.cw-clues-section h2 {
+  color: var(--muted-fg);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+}
+
+.cw-clues-section ul {
+  display: grid;
+  gap: 0.2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cw-clue-item {
+  align-items: start;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  color: var(--fg);
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: 1.5rem 1fr 1rem;
+  padding: 0.5rem 0.55rem;
+  text-align: left;
+  transition: background-color 140ms ease, border-color 140ms ease;
+  width: 100%;
+}
+
+.cw-clue-item:hover {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.cw-clue-item[data-active="true"] {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.cw-clue-item-number {
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.cw-clue-item-text {
+  font-size: 0.87rem;
+  line-height: 1.35;
+}
+
+.cw-clue-item[data-solved="true"] .cw-clue-item-text {
+  color: var(--muted-fg);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--success) 65%, transparent);
+}
+
+.cw-clue-item-mark {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.cw-clue-item-mark svg {
+  color: var(--success);
+  height: 0.95rem;
+  width: 0.95rem;
+}
+
+/* ------------------------------------------------------------ bottom sheet */
+
+.cw-sheet-backdrop {
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  inset: 0;
+  position: fixed;
+  z-index: 60;
+}
+
+.cw-sheet {
+  animation: cw-sheet-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  background: var(--bg);
+  border-radius: 1.4rem 1.4rem 0 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 80dvh;
+  padding: 0 0.9rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+}
+
+.cw-sheet::before {
+  background: var(--border);
+  border-radius: 999px;
+  content: "";
+  display: block;
+  height: 0.25rem;
+  margin: 0.55rem auto 0.2rem;
+  width: 2.4rem;
+}
+
+@keyframes cw-sheet-in {
+  from {
+    transform: translateY(18%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.cw-sheet-head {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.35rem 0 0.75rem;
+}
+
+.cw-sheet-head h2 {
+  flex: 1;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.cw-sheet-body {
+  overflow: auto;
+  padding-top: 0.85rem;
+}
+
+/* ---------------------------------------------------------------- toast */
+
+/* Anchored to the board (not the window) so it always sits above the actions,
+ * keyboard open or not. A two-line grid keeps icon, title and answer aligned. */
+.cw-toast {
+  --cw-toast-tone: var(--success);
+  align-items: center;
+  animation: cw-toast-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--cw-toast-tone) 55%, var(--border));
+  border-radius: 1rem;
+  bottom: calc(4.4rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+  color: var(--fg);
+  column-gap: 0.7rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  left: 50%;
+  max-width: calc(100% - 1.5rem);
+  min-height: 2.9rem;
+  padding: 0.5rem 1.05rem 0.5rem 0.55rem;
+  position: absolute;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 50;
+}
+
+.cw-toast[data-tone="warn"] {
+  --cw-toast-tone: var(--cw-danger);
+}
+
+.cw-toast[data-tone="info"] {
+  --cw-toast-tone: var(--accent);
+}
+
+.cw-toast-icon {
+  align-items: center;
+  background: var(--cw-toast-tone);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  height: 1.9rem;
+  justify-content: center;
+  width: 1.9rem;
+}
+
+[data-theme="dark"] .cw-toast[data-tone="info"] .cw-toast-icon,
+[data-theme="dark"] .cw-toast[data-tone="success"] .cw-toast-icon {
+  color: var(--accent-fg);
+}
+
+.cw-toast-icon svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+.cw-toast-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.cw-toast-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cw-toast-detail {
+  color: var(--cw-toast-tone);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+@keyframes cw-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ------------------------------------------------------------- completion */
+
+.cw-complete {
+  align-items: center;
+  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  overflow: hidden;
+  padding: 1.25rem;
+  position: fixed;
+  z-index: 70;
+}
+
+.cw-complete-card {
+  animation: cw-pop 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.6rem;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  max-width: 28rem;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  position: relative;
+  text-align: center;
+  width: 100%;
+  z-index: 2;
+}
+
+@keyframes cw-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.cw-complete-icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-radius: 1.2rem;
+  color: var(--accent);
+  display: inline-flex;
+  height: 4rem;
+  justify-content: center;
+  margin-bottom: 0.7rem;
+  width: 4rem;
+}
+
+.cw-complete-icon svg {
+  height: 2rem;
+  width: 2rem;
+}
+
+.cw-complete-eyebrow {
+  color: var(--muted-fg);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  margin: 0 0 0.3rem;
+  text-transform: uppercase;
+}
+
+.cw-complete-card h2 {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.cw-complete-sub {
+  color: var(--muted-fg);
+  margin: 0.45rem 0 1.2rem;
+}
+
+.cw-complete-stats {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1.3rem;
+}
+
+.cw-stat {
+  align-items: center;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 6.2rem;
+  padding: 0.7rem 1rem;
+}
+
+.cw-stat svg {
+  color: var(--accent);
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.cw-stat-label {
+  color: var(--muted-fg);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cw-stat strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cw-complete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.cw-complete-list {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted-fg);
+  display: inline-flex;
+  font-size: 0.85rem;
+  gap: 0.35rem;
+  margin-top: 1rem;
+}
+
+.cw-complete-list:hover {
+  color: var(--accent);
+}
+
+.cw-complete-list svg {
+  height: 0.9rem;
+  width: 0.9rem;
+}
+
+.cw-confetti {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+}
+
+.cw-confetti-piece {
+  animation-fill-mode: forwards;
+  animation-iteration-count: 1;
+  animation-name: cw-fall;
+  animation-timing-function: ease-in;
+  background: var(--cw-confetti);
+  border-radius: 2px;
+  opacity: 0.95;
+  position: absolute;
+  top: -1.5rem;
+}
+
+@keyframes cw-fall {
+  from {
+    opacity: 1;
+    transform: translate3d(0, -2rem, 0) rotate(0deg);
+  }
+  to {
+    opacity: 0.9;
+    transform: translate3d(var(--cw-drift), 106vh, 0) rotate(var(--cw-spin));
+  }
+}
+
+/* ---------------------------------------------------------------- modal */
+
+.cw-modal {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1.25rem;
+  position: fixed;
+  z-index: 80;
+}
+
+.cw-modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.3rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  max-width: 24rem;
+  padding: 1.5rem;
+  position: relative;
+  width: 100%;
+}
+
+.cw-modal-card h2 {
+  font-size: 1.2rem;
+  margin: 0 0 0.5rem;
+}
+
+.cw-modal-card p {
+  color: var(--muted-fg);
+  margin: 0 0 1.2rem;
+}
+
+.cw-modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.cw-modal-close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0.6rem;
+  color: var(--muted-fg);
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  position: absolute;
+  right: 0.7rem;
+  top: 0.7rem;
+  width: 2rem;
+}
+
+.cw-modal-close:hover {
+  color: var(--fg);
+}
+
+.cw-modal-close svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+/* ------------------------------------------------------------- desktop */
+
+@media (min-width: 900px) {
+  .cw-layout {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cw-side {
+    background: color-mix(in srgb, var(--surface) 65%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    display: block;
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem;
+  }
+
+  .cw-tool-clues {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .cw-card-subtitle {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-cell,
+  .cw-card,
+  .cw-sheet,
+  .cw-toast,
+  .cw-complete-card {
+    animation: none;
+    transition: none;
+  }
+
+  .cw-confetti {
+    display: none;
+  }
+
+  .cw-grid[data-focused="true"] .cw-cell.is-active .cw-cell-letter::after {
+    animation: none;
+  }
+}

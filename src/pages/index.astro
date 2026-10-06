@@ -1,0 +1,61 @@
+---
+import ToolsLayout from "@/layouts/ToolsLayout.astro";
+import { withBase } from "@/lib/apps/paths";
+
+const tools = [
+  {
+    href: withBase("/reader"),
+    title: "EPUB reader",
+    files: ".epub",
+    description:
+      "Open an EPUB and read it right in your browser — chapter navigation, themeable UI, reading position persisted locally.",
+  },
+  {
+    href: withBase("/viewer"),
+    title: "Document viewer",
+    files: ".docx · .xlsx · .csv · .json · .md · .txt",
+    description:
+      "Word documents, spreadsheets, JSON, Markdown and plain text, parsed and rendered locally. Spreadsheets are editable.",
+  },
+  {
+    href: withBase("/alias"),
+    title: "Alias word game",
+    files: "English · Русский · 10 themes",
+    description:
+      "The party word-guessing game: one player explains, the team guesses. Ten themed decks with 1000+ words each and sound feedback.",
+  },
+  {
+    href: withBase("/crossword"),
+    title: "Кроссворд",
+    files: "Русский · 50 кроссвордов",
+    description:
+      "Русские кроссворды с обычной клавиатурой телефона: крупная сетка, подсказки, проверка ошибок и сохранение прогресса.",
+  },
+  {
+    href: withBase("/couples"),
+    title: "Игры для пар",
+    files: "Русский · 3 игры · 9 000 вопросов",
+    description:
+      "Норм или стрём, ИлиТо и Кто из нас для двоих: отвечайте по очереди и смотрите, насколько вы совпадаете.",
+  },
+];
+---
+
+<ToolsLayout title="Lab">
+  <section class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-[18px] py-10">
+    <p class="text-xs uppercase tracking-[0.3em] text-(--muted-fg)">Tools</p>
+    <h1 class="text-2xl font-bold text-(--fg)">Pick a tool</h1>
+    <div class="grid gap-4 sm:grid-cols-2">
+      {tools.map((tool) => (
+        <a
+          href={tool.href}
+          class="group block rounded-xl border border-(--border) bg-(--surface) p-5 no-underline transition-colors hover:border-(--accent)"
+        >
+          <span class="text-xs text-(--muted-fg)">{tool.files}</span>
+          <h2 class="mt-1 text-lg font-semibold text-(--fg) transition-colors group-hover:text-(--accent)">{tool.title}</h2>
+          <p class="mt-2 text-sm text-(--muted-fg)">{tool.description}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</ToolsLayout>

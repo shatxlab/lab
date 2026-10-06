@@ -329,6 +329,8 @@ body:has(.cp-shell) {
 
 .cp-name input:focus {
   border-color: var(--accent);
+  /* A border colour change alone is a weak focus cue; add a ring. */
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   outline: none;
 }
 

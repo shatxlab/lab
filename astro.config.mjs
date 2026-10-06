@@ -2,6 +2,7 @@ import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
+import pwa from "./scripts/pwa/integration.mjs";
 
 /*
  * Every tool is client-side only (parsing/rendering happens in the tab, no
@@ -20,7 +21,7 @@ export default defineConfig({
   base: "/lab",
   output: "static",
   compressHTML: true,
-  integrations: [react()],
+  integrations: [react(), pwa()],
   /*
    * The app renders user Markdown in the browser (marked + highlight.js), so
    * Astro's build-time Markdown pipeline is unused. Shiki emits inline styles

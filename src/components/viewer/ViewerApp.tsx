@@ -553,6 +553,7 @@ export default function ViewerApp() {
       data-lang-sensitive=""
       className="contents"
     >
+      {state.status !== "idle" && <h1 className="sr-only">{stringsFor(lang).viewerTitle}</h1>}
       {fileInput}
       <input
         id={COMPARE_INPUT_ID}

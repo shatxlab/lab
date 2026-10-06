@@ -112,7 +112,8 @@
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
   border-radius: 999px;
-  color: var(--accent);
+  /* The raw accent on a tinted badge is only ~4:1; darken the text to pass AA. */
+  color: color-mix(in srgb, var(--accent) 70%, var(--fg));
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.28rem 0.7rem;
@@ -360,7 +361,8 @@
 .alias-toggle.is-on {
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  color: var(--accent);
+  /* Raw accent on the tint is ~3.9:1; mix toward the text colour for AA. */
+  color: color-mix(in srgb, var(--accent) 70%, var(--fg));
 }
 
 .alias-toggle svg {

@@ -13,9 +13,9 @@
   --fg: oklch(0.24 0.006 285.885); /* zinc-800 */
   --surface: oklch(0.967 0.001 286.375); /* zinc-100 */
   --border: oklch(0.905 0.001 286.023); /* zinc-300 */
-  --accent: oklch(0.508 0.1183 165.612); /* emerald-700 — 5.1:1 on --bg, WCAG AA */
+  --accent: oklch(0.485 0.113 165.612); /* a touch darker than emerald-700 — ≥5:1 on --bg and on accent tints, WCAG AA */
   --accent-fg: oklch(1 0 0); /* white — 5.4:1 on --accent */
-  --muted-fg: oklch(0.552 0.016 285.938); /* zinc-600 */
+  --muted-fg: oklch(0.48 0.016 285.938); /* between zinc-600 and zinc-700 — ≥5.5:1 on --bg and --surface (WCAG AA) */
   --success: oklch(0.508 0.1183 165.612); /* emerald-700 */
   --warning: oklch(0.555 0.135 48.998); /* amber-700 — 4.8:1 on --bg */
 }
@@ -973,4 +973,51 @@ html[data-lang="ru"] .skip-link .skip-en {
 
 html[data-lang="ru"] .skip-link .skip-ru {
   display: inline;
+}
+
+/* Service-worker status toast (update available / offline ready). */
+.lab-toast {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  z-index: 90;
+  display: flex;
+  max-width: calc(100vw - 2rem);
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.875rem;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+}
+
+.lab-toast p {
+  margin: 0;
+}
+
+.lab-toast-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.lab-toast button {
+  height: 2rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--surface);
+  color: var(--fg);
+  padding: 0 0.8rem;
+  font-weight: 600;
+}
+
+.lab-toast .lab-toast-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
 }

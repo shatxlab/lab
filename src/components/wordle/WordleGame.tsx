@@ -406,7 +406,7 @@ function Keyboard({
       {rows.map((row, rowIndex) => (
         <div key={rowIndex} className="wd-key-row">
           {rowIndex === rows.length - 1 && (
-            <button type="button" className="wd-key wd-key-wide" onClick={onEnter} aria-label={tw(lang, "keyEnter")} disabled={disabled}>
+            <button type="button" className="wd-key wd-key-wide" onClick={onEnter} disabled={disabled}>
               {tw(lang, "enter")}
             </button>
           )}

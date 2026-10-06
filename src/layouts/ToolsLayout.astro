@@ -6,6 +6,7 @@ import ThemeToggle from "@/components/apps/ThemeToggle";
 import LangToggle from "@/components/apps/LangToggle";
 import CommandPalette from "@/components/apps/CommandPalette";
 import SettingsButton from "@/components/apps/SettingsButton";
+import PwaRegister from "@/components/apps/PwaRegister";
 import { withBase } from "@/lib/apps/paths";
 
 interface Props {
@@ -23,6 +24,11 @@ const { title, lang = "en" } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
     <meta name="theme-color" content="#242424" />
+    <link rel="manifest" href={withBase("/manifest.webmanifest")} />
+    <link rel="apple-touch-icon" href={withBase("/icons/apple-touch-icon.png")} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="lab" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>{title} — lab</title>
     <ThemePrePaint />
     <LangPrePaint />
@@ -57,5 +63,6 @@ const { title, lang = "en" } = Astro.props;
         <slot />
       </main>
     </div>
+    <PwaRegister client:idle />
   </body>
 </html>

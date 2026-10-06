@@ -2,6 +2,7 @@ import * as React from "react";
 import { Search } from "lucide-react";
 
 import { Modal } from "@/components/apps/Modal";
+import { cn } from "@/lib/viewer/utils";
 import { EXPORT_SETTINGS_EVENT, OPEN_SETTINGS_EVENT } from "@/components/apps/SettingsButton";
 import { th } from "@/lib/apps/header-i18n";
 import { changeAppLang, readAppLang, subscribeToAppLang, type AppLang } from "@/lib/apps/lang";
@@ -136,13 +137,14 @@ export default function CommandPalette() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={th(lang, "paletteOpen")}
+        // The accessible name must contain the visible text, shortcut hint included.
+        aria-label={`${th(lang, "paletteOpen")} ${shortcut}`}
         aria-keyshortcuts="Control+K Meta+K"
         aria-haspopup="dialog"
         className="lab-search-button"
       >
         <Search aria-hidden="true" className="h-4 w-4" />
-        <span className="lab-search-text">{th(lang, "paletteOpen")}</span>
+        <span className="lab-search-text">{th(lang, "paletteOpen")}</span>{" "}
         <kbd className="lab-kbd" aria-hidden="true">
           {shortcut}
         </kbd>
@@ -189,7 +191,7 @@ export default function CommandPalette() {
                     className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-sm aria-selected:bg-(--accent) aria-selected:text-(--accent-fg)"
                   >
                     <span>{item.title}</span>
-                    {item.hint && <span className="text-xs opacity-70">{item.hint}</span>}
+                    {item.hint && <span className={cn("text-xs", index !== active && "text-(--muted-fg)")}>{item.hint}</span>}
                   </li>
                 </React.Fragment>
               );

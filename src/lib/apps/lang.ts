@@ -83,10 +83,13 @@ export function persistAppLang(lang: AppLang, storage: OptionalStorage = storage
   }
 }
 
-/** Reflect the language on <html lang> so the document matches the UI. */
+/** Reflect the language on <html lang> and <html data-lang> for the CSS tokens to key off. */
 export function applyAppLang(lang: AppLang): void {
   if (typeof document === "undefined") return;
   document.documentElement.lang = lang;
+  // The header toggle's active state is CSS-driven off data-lang (apps.css),
+  // so this must follow every change, not just the pre-paint snapshot.
+  document.documentElement.dataset.lang = lang;
 }
 
 /** DOM event used to fan a language change out to every island on the page. */

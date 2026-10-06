@@ -758,14 +758,17 @@ html[data-lang-wait] [data-lang-sensitive]:not([data-lang-ready]) {
   visibility: hidden;
 }
 
-/* Header language toggle: the visual active state is CSS-driven so it is
-   correct before React hydrates (the React state only manages aria-pressed). */
+/* Header language toggle: a compact segmented control. The active option is
+   filled with the accent colour. <html data-lang> is set by the pre-paint
+   script before first paint, so the correct option is highlighted in the
+   prerendered HTML; React mirrors the state into data-active/aria-pressed
+   after hydration (both hooks are styled, so it works either way). */
 .lang-toggle {
   align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
-  display: flex;
+  display: inline-flex;
   flex-shrink: 0;
   gap: 0.125rem;
   padding: 0.1875rem;
@@ -798,20 +801,20 @@ html[data-lang-wait] [data-lang-sensitive]:not([data-lang-ready]) {
   outline-offset: 1px;
 }
 
-/* English is the default active option; <html data-lang="ru"> moves the pill. */
-.lang-toggle-option[data-lang-option="en"] {
+/* Active option — React (data-active) and the pre-paint attribute agree. */
+.lang-toggle-option[data-active="true"],
+html[data-lang="ru"] .lang-toggle-option[data-lang-option="ru"] {
   background: var(--accent);
   color: var(--accent-fg);
 }
 
-.lang-toggle-option[data-lang-option="en"]:hover {
+.lang-toggle-option[data-active="true"]:hover,
+html[data-lang="ru"] .lang-toggle-option[data-lang-option="ru"]:hover {
   color: var(--accent-fg);
 }
 
-.lang-toggle-option[data-lang-option="ru"]:hover {
-  color: var(--fg);
-}
-
+/* The server always renders English active; html[data-lang="ru"] turns that
+   off before hydration even though the prerendered data-active still says so. */
 html[data-lang="ru"] .lang-toggle-option[data-lang-option="en"] {
   background: transparent;
   color: var(--muted-fg);
@@ -819,13 +822,4 @@ html[data-lang="ru"] .lang-toggle-option[data-lang-option="en"] {
 
 html[data-lang="ru"] .lang-toggle-option[data-lang-option="en"]:hover {
   color: var(--fg);
-}
-
-html[data-lang="ru"] .lang-toggle-option[data-lang-option="ru"] {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-
-html[data-lang="ru"] .lang-toggle-option[data-lang-option="ru"]:hover {
-  color: var(--accent-fg);
 }

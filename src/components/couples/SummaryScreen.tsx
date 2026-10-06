@@ -1,4 +1,4 @@
-import { TXT, matchScore, percentText, verdictFor } from "@/lib/couples/i18n";
+import { matchScore, percentText, stringsFor, verdictFor } from "@/lib/couples/i18n";
 import { resolveOptions } from "@/lib/couples/questions";
 import type { CouplesSettings, RoundResult } from "@/lib/couples/types";
 
@@ -11,6 +11,7 @@ interface SummaryScreenProps {
 }
 
 function MatchSummary({ settings, results }: { settings: CouplesSettings; results: RoundResult[] }) {
+  const TXT = stringsFor(settings.lang);
   const total = results.length;
   const matched = results.filter((result) => result.match).length;
   const percent = total > 0 ? Math.round((matched / total) * 100) : 0;
@@ -23,7 +24,7 @@ function MatchSummary({ settings, results }: { settings: CouplesSettings; result
         <span className="cp-score-label">{TXT.summaryMatchTitle}</span>
         <span className="cp-score-sub">{matchScore(matched, total)}</span>
       </div>
-      <p className="cp-verdict">{verdictFor(total > 0 ? matched / total : 0)}</p>
+      <p className="cp-verdict">{verdictFor(settings.lang, total > 0 ? matched / total : 0)}</p>
 
       <ul className="cp-results">
         {results.map((result, index) => {
@@ -48,6 +49,7 @@ function MatchSummary({ settings, results }: { settings: CouplesSettings; result
 }
 
 function TogetherSummary({ settings, results }: { settings: CouplesSettings; results: RoundResult[] }) {
+  const TXT = stringsFor(settings.lang);
   const tally = new Map<string, number>();
   for (const result of results) {
     const options = resolveOptions(result.question, settings.names);
@@ -87,7 +89,7 @@ function TogetherSummary({ settings, results }: { settings: CouplesSettings; res
               </span>
               <span className="cp-result-body">
                 <span className="cp-result-prompt">{result.question.prompt}</span>
-                <span className="cp-result-picks">Выбрали: {options[result.picks[0] ?? 0]}</span>
+                <span className="cp-result-picks">{TXT.summaryChose}: {options[result.picks[0] ?? 0]}</span>
               </span>
             </li>
           );
@@ -98,6 +100,7 @@ function TogetherSummary({ settings, results }: { settings: CouplesSettings; res
 }
 
 export function SummaryScreen({ settings, results, onPlayAgain, onSettings, onMenu }: SummaryScreenProps) {
+  const TXT = stringsFor(settings.lang);
   return (
     <div className="cp-summary">
       <header className="cp-summary-hero">

@@ -11,6 +11,8 @@ let root: Root | null = null;
 
 beforeEach(() => {
   localStorage.clear();
+  // The flow test plays the Russian deck; the shared language setting drives it.
+  localStorage.setItem("lab:lang", "ru");
   // Web Audio is absent in jsdom; the engine already fails soft.
   vi.stubGlobal("AudioContext", undefined);
 });

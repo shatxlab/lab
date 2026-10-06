@@ -1,7 +1,5 @@
-import type { ThemeId } from "./types";
-
 /**
- * Seed vocabulary for the couples games.
+ * Seed vocabulary for the couples games — Russian locale.
  *
  * The games are generated from **coherent scenario frames** rather than from a
  * verb plus an abstract adjunct. Each frame is a sentence pattern with a verb
@@ -11,26 +9,13 @@ import type { ThemeId } from "./types";
  *   pattern «Есть {a} с {b}»  ×  [пиццу, борщ…] × [ананасами, шоколадом…]
  *   → «Есть пиццу с ананасами», «Есть борщ с шоколадом»…
  *
- * This is why there are no abstract tails like «по доброй воле» any more:
- * «Хлопать дверью по доброй воле» is grammatical but not a situation anyone
- * can picture. Every string below is a complete, imaginable scenario.
- *
  * Each frame carries both a `norm` (infinitive) pattern and a `who`
  * (third-person future) pattern, so one set of object lists feeds «Норм или
  * стрём» and «Кто из нас» that share a theme.
  */
 
-/** A sentence pattern plus the objects it crosses. */
-export interface ScenarioFrame {
-  /** Infinitive pattern for «Норм или стрём». */
-  norm: string;
-  /** Third-person future pattern for «Кто из нас скорее…?». */
-  who: string;
-  /** First slot, substituted for `{a}`. */
-  a: readonly string[];
-  /** Optional second slot, substituted for `{b}`. */
-  b?: readonly string[];
-}
+import type { AxesByTheme, FramesByTheme, ScenarioFrame } from "./types";
+
 
 /** Ways to sleep — manner, not location, so «в обнимку» can't end up under «хранить». */
 const HOME_CONDITIONS: readonly string[] = [
@@ -72,7 +57,7 @@ const HOME_LOCATIONS: readonly string[] = [
   "в ванной",
 ];
 
-export const FRAMES: Record<ThemeId, readonly ScenarioFrame[]> = {
+export const FRAMES: FramesByTheme = {
   home: [
     {
       norm: "Спать {a}",
@@ -1191,14 +1176,10 @@ export const FRAMES: Record<ThemeId, readonly ScenarioFrame[]> = {
     },
   ],
 };
-/** One dilemma axis: a shared label plus mutually exclusive options. */
-export interface EitherAxis {
-  label: string;
-  options: readonly string[];
-}
 
+/** One dilemma axis: a shared label plus mutually exclusive options. */
 /** `either` dilemmas. Pairing within an axis keeps both options comparable. */
-export const EITHER_AXES: Record<ThemeId, readonly EitherAxis[]> = {
+export const EITHER_AXES: AxesByTheme = {
   home: [
     {
       label: "Идеальный вечер дома:",

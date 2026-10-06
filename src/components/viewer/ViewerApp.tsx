@@ -15,6 +15,9 @@ import { parseJson, prettifyJson } from "@/lib/viewer/json";
 import { parseWorkbook, workbookToSheets, columnLabel, type RawWorkbook, type SheetData } from "@/lib/viewer/sheet";
 import { applyEdits, serializeWorkbook, type SheetEdit, type SheetJsWriter } from "@/lib/viewer/sheet-edit";
 import { saveBlob } from "@/lib/apps/file-open";
+import { useAppLang } from "@/lib/apps/use-app-lang";
+import { stringsFor, t } from "@/lib/viewer/i18n";
+import type { AppLang } from "@/lib/apps/lang";
 
 const FILE_INPUT_ID = "docviewer-open";
 
@@ -33,9 +36,6 @@ type ViewerState =
   | { status: "ready"; file: FileMeta; doc: LoadedDocument }
   | { status: "error"; file: FileMeta | null; message: string; hint?: string };
 
-const LEGACY_DOC_HINT =
-  "Word 97-2003 files use a binary format that browsers cannot read. Open it in Word or LibreOffice and save as .docx, then try again.";
-
 /** Book types that can be written back as themselves; everything else converts. */
 const SAVABLE_BOOK_TYPES = new Set(["xlsx", "xlsm"]);
 
@@ -52,6 +52,7 @@ function baseFileName(name: string): string {
 }
 
 export default function ViewerApp() {
+  const lang = useAppLang();
   const [state, setState] = React.useState<ViewerState>({ status: "idle" });
   const [dragging, setDragging] = React.useState(false);
   /** Cell edits for the open spreadsheet, newest value per cell. */
@@ -87,8 +88,8 @@ export default function ViewerApp() {
       setState({
         status: "error",
         file: { name: file.name, size: file.size, kind: detectFileKind(file.name) },
-        message: "File is too large",
-        hint: `Files up to ${formatBytesLimit(MAX_FILE_BYTES)} can be opened here.`,
+        message: t(lang, "fileTooLarge"),
+        hint: t(lang, "filesUpTo", { limit: formatBytesLimit(MAX_FILE_BYTES) }),
       });
       return;
     }
@@ -101,7 +102,7 @@ export default function ViewerApp() {
     const meta: FileMeta = { name: file.name, size: file.size, kind };
 
     if (kind === "legacy-doc") {
-      setState({ status: "error", file: meta, message: "Cannot open .doc files", hint: LEGACY_DOC_HINT });
+      setState({ status: "error", file: meta, message: t(lang, "cannotOpenDoc"), hint: t(lang, "legacyDocHint") });
       return;
     }
 
@@ -109,8 +110,8 @@ export default function ViewerApp() {
       setState({
         status: "error",
         file: meta,
-        message: "Unsupported file type",
-        hint: "Markdown, Excel, CSV, Word, JSON and text files can be opened here.",
+        message: t(lang, "unsupportedType"),
+        hint: t(lang, "unsupportedHint"),
       });
       return;
     }
@@ -129,8 +130,8 @@ export default function ViewerApp() {
       setState({
         status: "error",
         file: meta,
-        message: "Could not read this file",
-        hint: error instanceof Error ? error.message : "The file may be corrupted or password protected.",
+        message: t(lang, "couldNotRead"),
+        hint: error instanceof Error ? error.message : t(lang, "corruptedHint"),
       });
     }
   }, []);
@@ -332,14 +333,15 @@ export default function ViewerApp() {
       {fileInput}
 
       {state.status === "idle" ? (
-        <Landing inputId={FILE_INPUT_ID} dragging={dragging} />
+        <Landing lang={lang} inputId={FILE_INPUT_ID} dragging={dragging} />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <FileBar
+            lang={lang}
             name={state.file?.name ?? ""}
             size={state.file?.size ?? 0}
             kind={state.file?.kind ?? "unsupported"}
-            detail={state.status === "loading" ? "Loading" : undefined}
+            detail={state.status === "loading" ? t(lang, "loadingDetail") : undefined}
             edited={editedState}
             onOpen={openPicker}
             onClose={close}
@@ -348,14 +350,15 @@ export default function ViewerApp() {
           />
 
           <div className="min-h-0 flex-1">
-            {state.status === "loading" && <LoadingPane />}
+            {state.status === "loading" && <LoadingPane lang={lang} />}
 
             {state.status === "error" && (
-              <ErrorPane message={state.message} hint={state.hint} inputId={FILE_INPUT_ID} dragging={dragging} />
+              <ErrorPane lang={lang} message={state.message} hint={state.hint} inputId={FILE_INPUT_ID} dragging={dragging} />
             )}
 
             {state.status === "ready" && (
               <DocumentPane
+                lang={lang}
                 doc={state.doc}
                 edits={edits}
                 jsonEdit={jsonEdit}
@@ -413,6 +416,7 @@ async function loadDocument(
 }
 
 function DocumentPane({
+  lang,
   doc,
   edits,
   jsonEdit,
@@ -423,6 +427,7 @@ function DocumentPane({
   onApplyJson,
   onRevertJson,
 }: {
+  lang: AppLang;
   doc: LoadedDocument;
   edits: SheetEdit[];
   jsonEdit: { value: unknown } | null;
@@ -467,11 +472,12 @@ function DocumentPane({
   );
 
   if (doc.kind === "markdown") return <MarkdownView html={doc.html} />;
-  if (doc.kind === "docx") return <DocxView html={doc.html} warnings={doc.warnings} />;
+  if (doc.kind === "docx") return <DocxView lang={lang} html={doc.html} warnings={doc.warnings} />;
   if (doc.kind === "text") return <TextView text={doc.text} />;
   if (doc.kind === "json")
     return (
       <JsonView
+        lang={lang}
         value={jsonValue}
         resetKey={jsonResetKey}
         onApply={onApplyJson}
@@ -481,6 +487,7 @@ function DocumentPane({
   return (
     <SheetView
       ref={sheetRef}
+      lang={lang}
       sheets={sheets}
       resetKey={resetKey}
       onEditCell={doc.workbook ? onEditCell : undefined}
@@ -489,22 +496,21 @@ function DocumentPane({
   );
 }
 
-function Landing({ inputId, dragging }: { inputId: string; dragging: boolean }) {
+function Landing({ lang, inputId, dragging }: { lang: AppLang; inputId: string; dragging: boolean }) {
   return (
     <main className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-xl">
         <header className="mb-8 text-center">
           <h1 className="flex items-center justify-center gap-2.5 text-3xl font-semibold tracking-tight">
             <FileText className="size-7 text-(--accent)" aria-hidden="true" />
-            Viewer
+            {stringsFor(lang).viewerTitle}
           </h1>
           <p className="mt-2 text-[0.9375rem] leading-relaxed text-(--muted-fg)">
-            Open Markdown, Excel, Word, JSON and text files right here. Everything is read in your
-            browser &mdash; no file is ever uploaded.
+            {stringsFor(lang).viewerTagline}
           </p>
         </header>
 
-        <DropZone inputId={inputId} dragging={dragging} />
+        <DropZone lang={lang} inputId={inputId} dragging={dragging} />
 
         <p className="mt-6 text-center text-xs text-(--muted-fg)">
           .md &middot; .xlsx &middot; .xls &middot; .csv &middot; .tsv &middot; .ods &middot; .json
@@ -515,21 +521,23 @@ function Landing({ inputId, dragging }: { inputId: string; dragging: boolean }) 
   );
 }
 
-function LoadingPane() {
+function LoadingPane({ lang }: { lang: AppLang }) {
   return (
     <div className="flex h-full items-center justify-center gap-3 text-sm text-(--muted-fg)">
       <Loader2 className="size-4 animate-spin" />
-      Reading file
+      {t(lang, "readingFile")}
     </div>
   );
 }
 
 function ErrorPane({
+  lang,
   message,
   hint,
   inputId,
   dragging,
 }: {
+  lang: AppLang;
   message: string;
   hint?: string;
   inputId: string;
@@ -546,7 +554,7 @@ function ErrorPane({
         {hint && <p className="mt-2 text-sm text-(--muted-fg)">{hint}</p>}
 
         <div className="mt-6">
-          <DropZone inputId={inputId} compact dragging={dragging} />
+          <DropZone lang={lang} inputId={inputId} compact dragging={dragging} />
         </div>
       </div>
     </div>

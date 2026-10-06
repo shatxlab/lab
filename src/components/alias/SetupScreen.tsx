@@ -1,7 +1,7 @@
 import { Plus, Sparkles, Trash2, Volume2, VolumeX } from "lucide-react";
 import type { CSSProperties } from "react";
 
-import { LANG_LABELS, LANGS, t } from "@/lib/alias/i18n";
+import { t } from "@/lib/alias/i18n";
 import {
   MAX_TEAMS,
   MIN_TEAMS,
@@ -82,19 +82,6 @@ export function SetupScreen({
         </p>
         <h1>{t(lang, "tagline")}</h1>
 
-        <div className="alias-lang" role="group" aria-label={t(lang, "language")}>
-          {LANGS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              className={`alias-lang-button${option === lang ? " is-active" : ""}`}
-              aria-pressed={option === lang}
-              onClick={() => onChange({ lang: option as Lang })}
-            >
-              {LANG_LABELS[option]}
-            </button>
-          ))}
-        </div>
       </header>
 
       <section className="alias-section" aria-labelledby="alias-theme-title">

@@ -1,5 +1,5 @@
-import { cellAt, cellKey, entryById, normalizeLetter, RUSSIAN_LETTER } from "./grid";
-import type { BuiltPuzzle, CellRef, Direction, PlacedEntry } from "./types";
+import { cellAt, cellKey, entryById, letterPattern, normalizeLetter } from "./grid";
+import type { BuiltPuzzle, CellRef, Direction, Lang, PlacedEntry } from "./types";
 
 export interface Cursor {
   row: number;
@@ -42,14 +42,23 @@ export const LATIN_TO_CYRILLIC: Record<string, string> = {
   ",": "Б", ".": "Ю",
 };
 
-/** Turn raw keyboard/paste text into accepted uppercase Russian letters. */
-export function parseInput(text: string): string[] {
+const LATIN_LETTER = /^[A-Z]$/;
+
+/** Turn raw keyboard/paste text into accepted uppercase grid letters. */
+export function parseInput(text: string, lang: Lang = "ru"): string[] {
   const letters: string[] = [];
+  if (lang === "en") {
+    for (const char of text) {
+      const upper = char.toUpperCase();
+      if (LATIN_LETTER.test(upper)) letters.push(upper);
+    }
+    return letters;
+  }
   for (const char of text) {
     const upper = char.toUpperCase();
     if (upper === "Ё") {
       letters.push("Е");
-    } else if (RUSSIAN_LETTER.test(upper)) {
+    } else if (letterPattern(lang).test(upper)) {
       letters.push(upper);
     } else {
       const mapped = LATIN_TO_CYRILLIC[char.toLowerCase()];
@@ -310,7 +319,7 @@ export function crosswordReducer(
         // Solved words are read-only: ignore the letter but keep moving on.
         const locked = isCellLocked(built, next.values, next.cursor.row, next.cursor.col);
         const wasSolved = isEntryCorrect(entry, next.values);
-        if (!locked) next = setLetter(next, key, normalizeLetter(letter));
+        if (!locked) next = setLetter(next, key, normalizeLetter(letter, built.puzzle.lang));
         next = { ...next, cursor: advanceAfterType(built, next) };
         // Completing a word hands the cursor to the next unsolved word.
         if (!wasSolved && isEntryCorrect(entry, next.values)) {

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 
-import { TXT } from "@/lib/couples/i18n";
+import { stringsFor } from "@/lib/couples/i18n";
 import { dealSession, redealSession, type Session } from "@/lib/couples/deck";
 import { questionsFor, resolveOptions } from "@/lib/couples/questions";
 import { createCouplesSoundEngine, type CouplesSoundEngine } from "@/lib/couples/sound";
 import {
+  DEFAULT_NAMES,
   defaultSettings,
   effectiveNames,
   readCouplesState,
@@ -13,6 +14,7 @@ import {
   writeCouplesState,
   type CouplesStats,
 } from "@/lib/couples/storage";
+import { readAppLang, subscribeToAppLang } from "@/lib/apps/lang";
 import type { CouplesQuestion, CouplesSettings, GameId, PlayPhase, RoundResult } from "@/lib/couples/types";
 
 import { MenuScreen } from "./MenuScreen";
@@ -40,16 +42,40 @@ export default function CouplesGame() {
   if (!soundRef.current) soundRef.current = createCouplesSoundEngine(settings.sound);
   const seenRef = useRef<Set<string>>(new Set());
 
-  // Restore the saved setup once, after mount (SSR has no localStorage).
+  // Restore the saved setup once, after mount (SSR has no localStorage). The
+  // shared header language setting wins over whatever the game last stored.
   useEffect(() => {
+    const lang = readAppLang();
     const stored = readCouplesState();
     if (stored) {
-      setSettings(stored.settings);
+      setSettings({ ...stored.settings, lang });
       setStats(stored.stats);
       soundRef.current?.setEnabled(stored.settings.sound);
+    } else {
+      setSettings((current) => ({ ...current, lang }));
     }
     setHydrated(true);
   }, []);
+
+  // Follow the shared header language setting; default partner names follow it.
+  useEffect(
+    () =>
+      subscribeToAppLang((nextLang) => {
+        setSettings((current) => {
+          const previousLang = current.lang;
+          const swappedDefaults: [string, string] = [
+            current.names[0] === DEFAULT_NAMES[previousLang][0]
+              ? DEFAULT_NAMES[nextLang][0]
+              : current.names[0],
+            current.names[1] === DEFAULT_NAMES[previousLang][1]
+              ? DEFAULT_NAMES[nextLang][1]
+              : current.names[1],
+          ];
+          return { ...current, lang: nextLang, names: swappedDefaults };
+        });
+      }),
+    [],
+  );
 
   useEffect(() => {
     soundRef.current?.setEnabled(settings.sound);
@@ -61,8 +87,8 @@ export default function CouplesGame() {
   }, [settings, stats, hydrated]);
 
   const pool = useMemo(
-    () => questionsFor(settings.game, settings.theme),
-    [settings.game, settings.theme],
+    () => questionsFor(settings.game, settings.theme, settings.lang),
+    [settings.game, settings.theme, settings.lang],
   );
 
   const question = session?.cards[index] ?? null;
@@ -92,7 +118,7 @@ export default function CouplesGame() {
   );
 
   const startSession = useCallback(() => {
-    setSettings((current) => ({ ...current, names: effectiveNames(current.names) }));
+    setSettings((current) => ({ ...current, names: effectiveNames(current.names, current.lang) }));
     beginSession(pool, true);
   }, [pool, beginSession]);
 
@@ -221,9 +247,12 @@ export default function CouplesGame() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [screen, phase, vote, pass, next]);
 
+  const T = stringsFor(settings.lang);
   return (
     <div className="cp-shell" data-phase={phase}>
-      {screen === "menu" ? <MenuScreen stats={stats} onPick={pickGame} /> : null}
+      {screen === "menu" ? (
+        <MenuScreen lang={settings.lang} stats={stats} onPick={pickGame} />
+      ) : null}
 
       {screen === "setup" ? (
         <SetupScreen
@@ -263,19 +292,19 @@ export default function CouplesGame() {
       ) : null}
 
       {confirmExit ? (
-        <div className="cp-modal" role="dialog" aria-modal="true" aria-label={TXT.confirmExit}>
+        <div className="cp-modal" role="dialog" aria-modal="true" aria-label={T.confirmExit}>
           <div className="cp-modal-card">
-            <h2>{TXT.confirmExit}</h2>
-            <p>{TXT.confirmExitBody}</p>
+            <h2>{T.confirmExit}</h2>
+            <p>{T.confirmExitBody}</p>
             <div className="cp-modal-actions">
               <button type="button" className="cp-secondary" onClick={cancelExit}>
-                {TXT.cancel}
+                {T.cancel}
               </button>
               <button type="button" className="cp-danger" onClick={confirmExitNow}>
-                {TXT.confirm}
+                {T.confirm}
               </button>
             </div>
-            <button type="button" className="cp-modal-close" onClick={cancelExit} aria-label={TXT.close}>
+            <button type="button" className="cp-modal-close" onClick={cancelExit} aria-label={T.close}>
               <X aria-hidden="true" />
             </button>
           </div>

@@ -27,7 +27,8 @@ describe("couples storage", () => {
     expect(settings.mode).toBe("match");
     expect(settings.theme).toBe("all");
     expect(settings.count).toBe(20);
-    expect(settings.names).toEqual([...DEFAULT_NAMES]);
+    expect(settings.lang).toBe("ru");
+    expect(settings.names).toEqual([...DEFAULT_NAMES.ru]);
     expect(settings.sound).toBe(true);
   });
 
@@ -45,6 +46,7 @@ describe("couples storage", () => {
     });
     expect(normalized?.settings).toEqual({
       game: "either",
+      lang: "ru",
       mode: "together",
       theme: "food",
       count: 30,

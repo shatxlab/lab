@@ -2,6 +2,7 @@
 import "@/styles/apps.css";
 import ThemePrePaint from "@/components/apps/ThemePrePaint.astro";
 import ThemeToggle from "@/components/apps/ThemeToggle";
+import LangToggle from "@/components/apps/LangToggle";
 import { withBase } from "@/lib/apps/paths";
 
 interface Props {
@@ -35,6 +36,7 @@ const { title, lang = "en" } = Astro.props;
           lab
         </a>
         <div class="flex shrink-0 items-center gap-2.5">
+          <LangToggle client:load />
           <ThemeToggle client:load />
         </div>
       </header>

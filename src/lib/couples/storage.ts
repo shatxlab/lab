@@ -1,10 +1,14 @@
-import { CARD_COUNTS, DEFAULT_CARD_COUNT, isThemeId } from "./themes";
-import type { CouplesSettings, GameId, Mode, ThemeId } from "./types";
+import { CARD_COUNTS, DEFAULT_CARD_COUNT, isLang, isThemeId } from "./themes";
+import type { CouplesSettings, GameId, Lang, Mode, ThemeId } from "./types";
 
 /** Persisted key for the couples setup and lifetime stats. */
 export const COUPLES_STORAGE_KEY = "lab:couples:v1";
 
-export const DEFAULT_NAMES: readonly [string, string] = ["Игрок 1", "Игрок 2"];
+/** Default partner names per language. */
+export const DEFAULT_NAMES: Record<Lang, readonly [string, string]> = {
+  en: ["Player 1", "Player 2"],
+  ru: ["Игрок 1", "Игрок 2"],
+};
 
 export interface CouplesStats {
   games: number;
@@ -31,17 +35,20 @@ function storageOrUndefined(): CouplesStorage | undefined {
 }
 
 /** Fall back to the default names when a field is blank. */
-export function effectiveNames(names: readonly [string, string]): [string, string] {
-  return [names[0].trim() || DEFAULT_NAMES[0], names[1].trim() || DEFAULT_NAMES[1]];
+export function effectiveNames(names: readonly [string, string], lang: Lang = "ru"): [string, string] {
+  const fallback = DEFAULT_NAMES[lang];
+  return [names[0].trim() || fallback[0], names[1].trim() || fallback[1]];
 }
 
-export function defaultSettings(): CouplesSettings {
+export function defaultSettings(lang: Lang = "ru"): CouplesSettings {
+  const names = DEFAULT_NAMES[lang];
   return {
     game: "norm",
+    lang,
     mode: "match",
     theme: "all",
     count: DEFAULT_CARD_COUNT,
-    names: [DEFAULT_NAMES[0], DEFAULT_NAMES[1]],
+    names: [names[0], names[1]],
     sound: true,
   };
 }
@@ -58,6 +65,10 @@ function isMode(value: unknown): value is Mode {
 
 function isCount(value: unknown): value is number {
   return typeof value === "number" && (CARD_COUNTS as readonly number[]).includes(value);
+}
+
+function cleanLang(value: unknown): Lang | null {
+  return isLang(value) ? value : null;
 }
 
 function cleanName(value: unknown, fallback: string): string {
@@ -79,6 +90,10 @@ export function normalizeCouplesState(raw: unknown): StoredCouplesState | null {
   if (candidate.settings && typeof candidate.settings === "object") {
     const stored = candidate.settings as Record<string, unknown>;
     if (isGame(stored.game)) settings.game = stored.game;
+    if (isLang(stored.lang)) {
+      settings.lang = stored.lang;
+      settings.names = [...DEFAULT_NAMES[stored.lang]] as [string, string];
+    }
     if (isMode(stored.mode)) settings.mode = stored.mode;
     if (isThemeId(stored.theme)) settings.theme = stored.theme;
     else if (stored.theme === "all") settings.theme = "all";
@@ -86,8 +101,8 @@ export function normalizeCouplesState(raw: unknown): StoredCouplesState | null {
     if (typeof stored.sound === "boolean") settings.sound = stored.sound;
     if (Array.isArray(stored.names)) {
       settings.names = [
-        cleanName(stored.names[0], DEFAULT_NAMES[0]),
-        cleanName(stored.names[1], DEFAULT_NAMES[1]),
+        cleanName(stored.names[0], DEFAULT_NAMES[settings.lang][0]),
+        cleanName(stored.names[1], DEFAULT_NAMES[settings.lang][1]),
       ];
     }
   }

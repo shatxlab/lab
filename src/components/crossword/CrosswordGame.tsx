@@ -12,11 +12,17 @@ import {
   type StoredCrosswordState,
   type StoredPuzzleProgress,
 } from "@/lib/crossword/storage";
+import { useAppLang } from "@/lib/apps/use-app-lang";
 
-// Pure derivation; building the four boards once avoids doing it on re-render.
-const BUILT = CROSSWORD_PUZZLES.map(buildPuzzle);
+// Pure derivation; building the boards once avoids doing it on re-render.
+const BUILT = {
+  en: CROSSWORD_PUZZLES.en.map(buildPuzzle),
+  ru: CROSSWORD_PUZZLES.ru.map(buildPuzzle),
+};
 
 export default function CrosswordGame() {
+  // The shared header language setting drives which puzzles and strings show.
+  const lang = useAppLang();
   const [store, setStore] = useState<StoredCrosswordState>({});
   const storeRef = useRef<StoredCrosswordState>({});
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -54,18 +60,26 @@ export default function CrosswordGame() {
     setStore({ ...storeRef.current });
     setActiveId((current) => {
       if (!current) return current;
-      const index = BUILT.findIndex((item) => item.puzzle.id === current);
-      const next = BUILT[(index + 1) % BUILT.length];
+      const list = BUILT[lang];
+      const index = list.findIndex((item) => item.puzzle.id === current);
+      const next = list[(index + 1) % list.length];
       return next?.puzzle.id ?? current;
     });
-  }, []);
+  }, [lang]);
 
   const items: PickerItem[] = useMemo(
-    () => BUILT.map((built) => ({ puzzle: built.puzzle, built, progress: store[built.puzzle.id] })),
-    [store],
+    () =>
+      BUILT[lang].map((built) => ({
+        puzzle: built.puzzle,
+        built,
+        progress: store[built.puzzle.id],
+      })),
+    [store, lang],
   );
 
-  const active = activeId ? BUILT.find((item) => item.puzzle.id === activeId) ?? null : null;
+  const active = activeId
+    ? BUILT[lang].find((item) => item.puzzle.id === activeId) ?? null
+    : null;
 
   return (
     <div className="cw-shell">
@@ -73,8 +87,9 @@ export default function CrosswordGame() {
         <Board
           key={active.puzzle.id}
           built={active}
+          lang={lang}
           saved={storeRef.current[active.puzzle.id]}
-          hasNext={BUILT.length > 1}
+          hasNext={BUILT[lang].length > 1}
           sound={sound}
           soundOn={soundOn}
           onToggleSound={() => setSoundOn((value) => !value)}
@@ -83,7 +98,7 @@ export default function CrosswordGame() {
           onNext={nextPuzzle}
         />
       ) : (
-        <PuzzlePicker items={items} onOpen={openPuzzle} />
+        <PuzzlePicker items={items} lang={lang} onOpen={openPuzzle} />
       )}
     </div>
   );

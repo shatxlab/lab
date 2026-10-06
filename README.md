@@ -11,8 +11,8 @@ locally, nothing is uploaded, and no accounts or telemetry are involved.
 | `/reader` | EPUB reader | Unzip + parse EPUB, chapter navigation, themeable UI, reading position persisted in localStorage. |
 | `/viewer` | Document viewer | Word (`.docx`), spreadsheets (`.xlsx`/`.ods`/`.csv`/…), JSON, Markdown, plain text — rendered locally, spreadsheets editable and saveable. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts and synthesised sound feedback. |
-| `/crossword` | Кроссворд | 50 Russian crosswords played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
-| `/couples` | Игры для пар | Russian couples games — «Норм или стрём», «ИлиТо» and «Кто из нас». 3 000 prompts per game across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode. |
+| `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
+| `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Fine or Cringe", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". 3 000 prompts per game per language across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode. |
 
 `/` is the landing page listing the tools.
 

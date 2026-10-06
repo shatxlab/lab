@@ -10,7 +10,9 @@ import {
 } from "@/lib/viewer/sheet";
 import { findSheetMatches, splitHighlighted, type SheetMatch } from "@/lib/viewer/sheet-find";
 import { coerceSheetValue } from "@/lib/viewer/sheet-edit";
+import { columnsPlural, notesPlural, rowsPlural, t } from "@/lib/viewer/i18n";
 import { cn } from "@/lib/viewer/utils";
+import type { AppLang } from "@/lib/apps/lang";
 
 /**
  * Even the capped 5,000 rows can be 100k cells, which is too many DOM nodes to
@@ -26,6 +28,7 @@ export type SheetViewHandle = {
 type EditTarget = { sourceRow: number; column: number };
 
 export type SheetViewProps = {
+  lang: AppLang;
   sheets: SheetData[];
   /** Present only when the file has a backing workbook and can be edited. */
   onEditCell?: (sheetName: string, addr: string, value: string | number | null) => void;
@@ -40,7 +43,7 @@ export type SheetViewProps = {
 };
 
 export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
-  function SheetView({ sheets, onEditCell, onAddRow, resetKey }, ref) {
+  function SheetView({ lang, sheets, onEditCell, onAddRow, resetKey }, ref) {
     const [activeIndex, setActiveIndex] = React.useState(0);
     const [visibleRows, setVisibleRows] = React.useState(ROW_CHUNK);
     const [sort, setSort] = React.useState<SheetSort | null>(null);
@@ -268,6 +271,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
         )}
 
         <SheetFindBar
+          lang={lang}
           query={query}
           matchIndex={matchIndex}
           matchCount={matches.length}
@@ -279,7 +283,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
         />
 
         {active.rows.length === 0 ? (
-          <EmptyState>This sheet is empty.</EmptyState>
+          <EmptyState>{t(lang, "emptySheet")}</EmptyState>
         ) : (
           <div
             ref={scrollRef}
@@ -333,7 +337,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                         data-sheet-cell={`${headerRow.sourceRow}-${columnIndex}`}
                         onDoubleClick={(event) => startEdit(headerRow.sourceRow, columnIndex, event.currentTarget)}
                         tabIndex={canEdit ? -1 : undefined}
-                        title={canEdit ? "Double-click to edit" : undefined}
+                        title={canEdit ? t(lang, "doubleClickToEdit") : undefined}
                         className={cn(
                           "border-r border-b border-(--border) bg-(--bg) px-3 py-1.5 align-top font-medium tabular-nums",
                           canEdit && "cursor-text",
@@ -341,6 +345,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                       >
                         {editing?.sourceRow === headerRow.sourceRow && editing.column === columnIndex ? (
                           <CellEditor
+                            lang={lang}
                             initialValue={cell}
                             onCommit={(text) => commitEdit(editing, text)}
                             onCancel={cancelEdit}
@@ -369,7 +374,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                         data-sheet-cell={`${row.sourceRow}-${columnIndex}`}
                         onDoubleClick={(event) => startEdit(row.sourceRow, columnIndex, event.currentTarget)}
                         tabIndex={canEdit ? -1 : undefined}
-                        title={canEdit ? "Double-click to edit" : undefined}
+                        title={canEdit ? t(lang, "doubleClickToEdit") : undefined}
                         className={cn(
                           "border-r border-b border-(--border) px-3 py-1.5 align-top tabular-nums group-hover:bg-(--surface)",
                           canEdit && "cursor-text",
@@ -377,6 +382,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                       >
                         {editing?.sourceRow === row.sourceRow && editing.column === columnIndex ? (
                           <CellEditor
+                            lang={lang}
                             initialValue={cell}
                             onCommit={(text) => commitEdit(editing, text)}
                             onCancel={cancelEdit}
@@ -403,27 +409,34 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
             <button
               type="button"
               onClick={handleAddRow}
-              title="Append an empty row at the bottom of this sheet"
+              title={t(lang, "appendRow")}
               className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-(--accent) transition-colors hover:bg-(--surface)"
             >
-              + Add row
+              {t(lang, "addRow")}
             </button>
           )}
           <p className="min-w-0 flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
-            {active.name} &middot; {active.totalRows.toLocaleString("en-US")}{" "}
-            {active.totalRows === 1 ? "row" : "rows"} &times; {active.columnCount}{" "}
-            {active.columnCount === 1 ? "column" : "columns"}
+            {active.name} &middot;{" "}
+            {t(lang, "rowsColumns", {
+              rows: active.totalRows.toLocaleString("en-US"),
+              columns: active.columnCount.toLocaleString("en-US"),
+              rowsPlural: rowsPlural(active.totalRows),
+              columnsPlural: columnsPlural(active.columnCount),
+            })}
             {sort && (
               <>
                 {" "}
-                &middot; sorted by {columnLabel(sort.column)},{" "}
-                {sort.direction === "asc" ? "ascending" : "descending"}
+                &middot;{" "}
+                {t(lang, "sortedBy", {
+                  column: columnLabel(sort.column),
+                  direction: sort.direction === "asc" ? t(lang, "ascending") : t(lang, "descending"),
+                })}
               </>
             )}
             {active.truncated && (
               <span className="text-(--accent)">
                 {" "}
-                &middot; showing the first {active.rows.length.toLocaleString("en-US")} rows
+                &middot; {t(lang, "showingFirstRows", { count: active.rows.length.toLocaleString("en-US") })}
               </span>
             )}
           </p>
@@ -445,10 +458,12 @@ function isCurrentMatch(match: SheetMatch | null, sourceRow: number, column: num
  * after Escape the blur that follows the unmount must not commit either.
  */
 function CellEditor({
+  lang,
   initialValue,
   onCommit,
   onCancel,
 }: {
+  lang: AppLang;
   initialValue: string;
   onCommit: (text: string) => void;
   onCancel: () => void;
@@ -494,7 +509,7 @@ function CellEditor({
         }
       }}
       onBlur={commit}
-      aria-label="Edit cell"
+      aria-label={t(lang, "editCell")}
       className="w-full max-w-[28rem] rounded-sm border border-(--accent) bg-(--bg) px-1.5 py-0.5 text-[0.9375rem] leading-relaxed text-(--fg) outline-none"
     />
   );

@@ -1,14 +1,17 @@
 import { Upload } from "lucide-react";
 
+import type { AppLang } from "@/lib/apps/lang";
+import { t } from "@/lib/viewer/i18n";
 import { cn } from "@/lib/viewer/utils";
 
 type DropZoneProps = {
+  lang: AppLang;
   inputId: string;
   compact?: boolean;
   dragging?: boolean;
 };
 
-export function DropZone({ inputId, compact = false, dragging = false }: DropZoneProps) {
+export function DropZone({ lang, inputId, compact = false, dragging = false }: DropZoneProps) {
   return (
     <label
       htmlFor={inputId}
@@ -30,10 +33,10 @@ export function DropZone({ inputId, compact = false, dragging = false }: DropZon
 
       <span className="flex flex-col gap-1">
         <span className="font-medium">
-          {dragging ? "Drop to open" : "Drop a file here, or click to browse"}
+          {dragging ? t(lang, "dropToOpen") : t(lang, "dropPrompt")}
         </span>
         <span className="text-sm text-(--muted-fg)">
-          Markdown, Excel, CSV, Word, JSON and text &middot; you can also paste a file
+          {t(lang, "dropHint")}
         </span>
       </span>
     </label>

@@ -2,7 +2,10 @@ import { Download, FileSpreadsheet, FileText, FileType, FolderOpen, RotateCcw, X
 
 import { Badge } from "@/components/viewer/ui/badge";
 import { Button } from "@/components/viewer/ui/button";
-import { fileKindLabel, type FileKind } from "@/lib/viewer/file-kind";
+import type { AppLang } from "@/lib/apps/lang";
+import { fileKindLabel } from "@/lib/viewer/i18n";
+import type { FileKind } from "@/lib/viewer/file-kind";
+import { t } from "@/lib/viewer/i18n";
 import { formatBytes } from "@/lib/viewer/utils";
 
 const KIND_ICONS = {
@@ -25,6 +28,7 @@ export type EditedState = {
 };
 
 type FileBarProps = {
+  lang: AppLang;
   name: string;
   size: number;
   kind: FileKind;
@@ -36,7 +40,7 @@ type FileBarProps = {
   onDiscardEdits?: () => void;
 };
 
-export function FileBar({ name, size, kind, detail, edited, onOpen, onClose, onDownloadEdited, onDiscardEdits }: FileBarProps) {
+export function FileBar({ lang, name, size, kind, detail, edited, onOpen, onClose, onDownloadEdited, onDiscardEdits }: FileBarProps) {
   const Icon = KIND_ICONS[kind];
 
   return (
@@ -52,10 +56,10 @@ export function FileBar({ name, size, kind, detail, edited, onOpen, onClose, onD
         </p>
       </div>
 
-      {edited && <Badge variant="destructive">{edited.count === 1 ? "Edited" : `Edited · ${edited.count}`}</Badge>}
+      {edited && <Badge variant="destructive">{edited.count === 1 ? t(lang, "edited") : t(lang, "editedCount", { count: edited.count })}</Badge>}
 
       <Badge variant="outline" className="hidden sm:inline-flex">
-        {fileKindLabel(kind)}
+        {fileKindLabel(kind, lang)}
       </Badge>
 
       {edited && onDownloadEdited && (
@@ -63,10 +67,14 @@ export function FileBar({ name, size, kind, detail, edited, onOpen, onClose, onD
           <Button
             size="sm"
             onClick={onDownloadEdited}
-            title={edited.converted ? "Saves as .xlsx (converted)" : `Saves as ${edited.filename}`}
+            title={
+              edited.converted
+                ? t(lang, "savesAsConverted")
+                : t(lang, "savesAs", { filename: edited.filename })
+            }
           >
             <Download aria-hidden="true" />
-            Download edited
+            {t(lang, "downloadEdited")}
           </Button>
         </>
       )}
@@ -76,19 +84,19 @@ export function FileBar({ name, size, kind, detail, edited, onOpen, onClose, onD
           variant="ghost"
           size="sm"
           onClick={onDiscardEdits}
-          aria-label="Discard edits"
-          title="Throw away the edits and go back to the file as it was opened"
+          aria-label={t(lang, "discardEdits")}
+          title={t(lang, "discardEditsTitle")}
         >
           <RotateCcw aria-hidden="true" />
-          <span className="hidden sm:inline">Discard edits</span>
+          <span className="hidden sm:inline">{t(lang, "discardEdits")}</span>
         </Button>
       )}
 
-      <Button variant="ghost" size="icon" onClick={onOpen} aria-label="Open file">
+      <Button variant="ghost" size="icon" onClick={onOpen} aria-label={t(lang, "openFile")}>
         <FolderOpen />
       </Button>
 
-      <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close file">
+      <Button variant="ghost" size="icon" onClick={onClose} aria-label={t(lang, "closeFile")}>
         <X />
       </Button>
     </div>

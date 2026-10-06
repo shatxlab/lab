@@ -1,8 +1,11 @@
 import * as React from "react";
 
+import type { AppLang } from "@/lib/apps/lang";
+import { t } from "@/lib/viewer/i18n";
 import { parseJson, prettifyJson, tokenizePrettyLine, type JsonToken } from "@/lib/viewer/json";
 
 export type JsonViewProps = {
+  lang: AppLang;
   value: unknown;
   onApply?: (value: unknown) => void;
   /**
@@ -21,7 +24,7 @@ export type JsonViewProps = {
  * wrapping), so typing edits the pretty-printed document in place with live
  * syntax colors and no visible input chrome.
  */
-export function JsonView({ value, onApply, resetKey, onRevert }: JsonViewProps) {
+export function JsonView({ lang, value, onApply, resetKey, onRevert }: JsonViewProps) {
   const [draft, setDraft] = React.useState(() => prettifyJson(value));
   const [error, setError] = React.useState<string | null>(null);
   // The highlight mirrors the draft text itself, not the parsed value: while
@@ -50,7 +53,7 @@ export function JsonView({ value, onApply, resetKey, onRevert }: JsonViewProps) 
       } catch (parseError) {
         // The draft stays visible in the editor; the last valid document
         // remains the saved one until the draft parses again.
-        setError(parseError instanceof Error ? parseError.message : "Invalid JSON");
+        setError(parseError instanceof Error ? parseError.message : t(lang, "invalidJson"));
       }
     },
     [onApply],
@@ -105,7 +108,7 @@ export function JsonView({ value, onApply, resetKey, onRevert }: JsonViewProps) 
           ))}
         </div>
         <textarea
-          aria-label="JSON document"
+          aria-label={t(lang, "jsonDocument")}
           value={draft}
           onChange={handleChange}
           onKeyDown={handleKeyDown}

@@ -43,6 +43,13 @@ describe("parseInput", () => {
   it("drops characters with no Russian equivalent", () => {
     expect(parseInput("1 2 #")).toEqual([]);
   });
+
+  it("accepts Latin letters for English boards", () => {
+    expect(parseInput("Crossword", "en")).toEqual(["C", "R", "O", "S", "S", "W", "O", "R", "D"]);
+    // Latin keys are remapped to ЙЦУКЕН only in the Russian game.
+    expect(parseInput("cat", "en")).toEqual(["C", "A", "T"]);
+    expect(parseInput("cat")).toEqual(["С", "Ф", "Е"]);
+  });
 });
 
 describe("crosswordReducer", () => {

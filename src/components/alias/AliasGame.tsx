@@ -19,6 +19,7 @@ import { poolFor } from "@/lib/alias/words";
 import { getTheme } from "@/lib/alias/themes";
 import { createSoundEngine, type SoundEngine } from "@/lib/alias/sound";
 import { readAliasState, writeAliasState } from "@/lib/alias/storage";
+import { readAppLang, subscribeToAppLang } from "@/lib/apps/lang";
 import type { AliasSettings, Phase, Team, TurnResult, TurnWord } from "@/lib/alias/types";
 
 import { SetupScreen } from "./SetupScreen";
@@ -27,7 +28,7 @@ import { ResultsScreen } from "./ResultsScreen";
 
 export default function AliasGame() {
   const [settings, setSettings] = useState<AliasSettings>(() => defaultSettings());
-  const [teams, setTeams] = useState<Team[]>(() => defaultTeams("en"));
+  const [teams, setTeams] = useState<Team[]>(() => defaultTeams(readAppLang()));
   const [phase, setPhase] = useState<Phase>("setup");
   const [activeIndex, setActiveIndex] = useState(0);
   const [deck, setDeck] = useState<string[]>([]);
@@ -52,18 +53,27 @@ export default function AliasGame() {
   const activeTeam = teams[activeIndex] ?? teams[0];
   const winner = winnerId ? teams.find((team) => team.id === winnerId) ?? null : null;
 
-  // Restore the saved setup once, after mount (SSR has no localStorage).
+  // Restore the saved setup once, after mount (SSR has no localStorage). The
+  // shared header language setting wins over whatever the game last stored.
   useEffect(() => {
+    const lang = readAppLang();
     const stored = readAliasState();
     if (stored) {
-      setSettings(stored.settings);
+      setSettings({ ...stored.settings, lang });
       setTeams(
         stored.teams.length >= 2
-          ? stored.teams.map((team, index) =>
-              makeTeam(createTeamId(), team.name, team.color || TEAM_COLORS[index % TEAM_COLORS.length]),
-            )
-          : defaultTeams(stored.settings.lang),
+          ? stored.teams.map((team, index) => {
+              // Default names created in the old language follow the new one.
+              const name =
+                team.name === defaultTeamName(stored.settings.lang, index)
+                  ? defaultTeamName(lang, index)
+                  : team.name;
+              return makeTeam(createTeamId(), name, team.color || TEAM_COLORS[index % TEAM_COLORS.length]);
+            })
+          : defaultTeams(lang),
       );
+    } else {
+      setSettings((current) => ({ ...current, lang }));
     }
     setHydrated(true);
   }, []);
@@ -71,6 +81,26 @@ export default function AliasGame() {
   useEffect(() => {
     soundRef.current?.setEnabled(settings.sound);
   }, [settings.sound]);
+
+  // Follow the shared header language setting; default team names follow it.
+  const settingsLangRef = useRef(settings.lang);
+  settingsLangRef.current = settings.lang;
+  useEffect(
+    () =>
+      subscribeToAppLang((nextLang) => {
+        setSettings((prev) => ({ ...prev, lang: nextLang }));
+        setTeams((current) =>
+          current.map((team, index) => {
+            const wasDefault =
+              team.name === defaultTeamName(settingsLangRef.current, index) ||
+              team.name === defaultTeamName(nextLang, index);
+            return wasDefault ? { ...team, name: defaultTeamName(nextLang, index) } : team;
+          }),
+        );
+        settingsLangRef.current = nextLang;
+      }),
+    [],
+  );
 
   // Persist the setup (but never the in-progress scores).
   useEffect(() => {

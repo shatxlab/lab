@@ -36,7 +36,7 @@ describe("DocxView", () => {
   it("renders a converted Word document, image and all", async () => {
     const { html, warnings } = await renderDocx(await buildDocx());
 
-    const markup = renderToStaticMarkup(<DocxView html={html} warnings={warnings} />);
+    const markup = renderToStaticMarkup(<DocxView lang="en" html={html} warnings={warnings} />);
 
     expect(markup).toContain("Quarterly Report");
     expect(markup).toContain("data:image/png;base64,");
@@ -45,7 +45,7 @@ describe("DocxView", () => {
 
   it("offers the formatting notes when mammoth reported any", () => {
     const markup = renderToStaticMarkup(
-      <DocxView html="<p>Body</p>" warnings={["Unrecognised paragraph style: Quote"]} />,
+      <DocxView lang="en" html="<p>Body</p>" warnings={["Unrecognised paragraph style: Quote"]} />,
     );
 
     expect(markup).toContain("1 formatting note");
@@ -54,7 +54,7 @@ describe("DocxView", () => {
   });
 
   it("shows no notes panel for a cleanly converted document", () => {
-    const markup = renderToStaticMarkup(<DocxView html="<p>Body</p>" warnings={[]} />);
+    const markup = renderToStaticMarkup(<DocxView lang="en" html="<p>Body</p>" warnings={[]} />);
 
     expect(markup).not.toContain("formatting note");
   });
@@ -77,7 +77,7 @@ describe("SheetView", () => {
       extension: "xlsx",
     });
 
-    const markup = renderToStaticMarkup(<SheetView sheets={sheets} />);
+    const markup = renderToStaticMarkup(<SheetView lang="en" sheets={sheets} />);
 
     // Column letters and row numbers, so a reader can match a cell to the source.
     expect(markup).toContain(">A<");
@@ -101,8 +101,8 @@ describe("SheetView", () => {
       extension: "xlsx",
     });
 
-    const singleMarkup = renderToStaticMarkup(<SheetView sheets={single.sheets} />);
-    const multipleMarkup = renderToStaticMarkup(<SheetView sheets={multiple.sheets} />);
+    const singleMarkup = renderToStaticMarkup(<SheetView lang="en" sheets={single.sheets} />);
+    const multipleMarkup = renderToStaticMarkup(<SheetView lang="en" sheets={multiple.sheets} />);
 
     expect(singleMarkup).not.toContain(">Only</button>");
     expect(multipleMarkup).toContain(">First</button>");
@@ -115,7 +115,7 @@ describe("SheetView", () => {
       extension: "csv",
     });
 
-    const markup = renderToStaticMarkup(<SheetView sheets={sheets} />);
+    const markup = renderToStaticMarkup(<SheetView lang="en" sheets={sheets} />);
 
     expect(markup).toContain("Москва");
     expect(markup).toContain("count");
@@ -130,7 +130,7 @@ describe("SheetView", () => {
       truncated: true,
     };
 
-    const markup = renderToStaticMarkup(<SheetView sheets={[sheet]} />);
+    const markup = renderToStaticMarkup(<SheetView lang="en" sheets={[sheet]} />);
 
     expect(markup).toContain("row-0");
     expect(markup).toContain("row-200");
@@ -143,6 +143,7 @@ describe("SheetView", () => {
   it("says so instead of rendering an empty grid", () => {
     const markup = renderToStaticMarkup(
       <SheetView
+      lang="en"
         sheets={[{ name: "Blank", rows: [], totalRows: 0, columnCount: 0, truncated: false }]}
       />,
     );
@@ -164,7 +165,7 @@ describe("SheetView", () => {
       truncated: false,
     };
 
-    const { container, unmount } = await mount(<SheetView sheets={[sheet]} />);
+    const { container, unmount } = await mount(<SheetView lang="en" sheets={[sheet]} />);
 
     try {
       const sortA = container.querySelector('button[aria-label="Sort column A"]');
@@ -222,7 +223,7 @@ describe("SheetView", () => {
       truncated: false,
     };
 
-    const { container, unmount } = await mount(<SheetView sheets={[sheet]} />);
+    const { container, unmount } = await mount(<SheetView lang="en" sheets={[sheet]} />);
 
     try {
       const scroller = container.querySelector("[data-sheet-scroller]");
@@ -277,7 +278,7 @@ describe("SheetView", () => {
       truncated: false,
     };
 
-    const { container, unmount } = await mount(<SheetView sheets={[sheet]} />);
+    const { container, unmount } = await mount(<SheetView lang="en" sheets={[sheet]} />);
 
     try {
       expect(container.textContent).not.toContain("row-250");
@@ -330,7 +331,7 @@ describe("SheetView editing", () => {
   it("edits a cell on double-click and reports it by sheet and address", async () => {
     const onEditCell = vi.fn();
     const { container, unmount } = await mount(
-      <SheetView sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
+      <SheetView lang="en" sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
     );
 
     try {
@@ -363,7 +364,7 @@ describe("SheetView editing", () => {
   it("commits on blur and clears the cell when the draft is empty", async () => {
     const onEditCell = vi.fn();
     const { container, unmount } = await mount(
-      <SheetView sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
+      <SheetView lang="en" sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
     );
 
     try {
@@ -386,7 +387,7 @@ describe("SheetView editing", () => {
   it("cancels an edit with Escape without committing", async () => {
     const onEditCell = vi.fn();
     const { container, unmount } = await mount(
-      <SheetView sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
+      <SheetView lang="en" sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
     );
 
     try {
@@ -424,7 +425,7 @@ describe("SheetView editing", () => {
     };
     const onEditCell = vi.fn();
     const { container, unmount } = await mount(
-      <SheetView sheets={[sheet]} resetKey="f1" onEditCell={onEditCell} />,
+      <SheetView lang="en" sheets={[sheet]} resetKey="f1" onEditCell={onEditCell} />,
     );
 
     try {
@@ -470,7 +471,7 @@ describe("SheetView editing", () => {
   it("keeps addressing by cell when the sheet is sorted", async () => {
     const onEditCell = vi.fn();
     const { container, unmount } = await mount(
-      <SheetView sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
+      <SheetView lang="en" sheets={[editableSheet]} resetKey="f1" onEditCell={onEditCell} />,
     );
 
     try {
@@ -503,7 +504,7 @@ describe("SheetView editing", () => {
   it("offers an add-row button that asks for the row to be appended", async () => {
     const onAddRow = vi.fn();
     const { container, unmount } = await mount(
-      <SheetView sheets={[editableSheet]} resetKey="f1" onAddRow={onAddRow} />,
+      <SheetView lang="en" sheets={[editableSheet]} resetKey="f1" onAddRow={onAddRow} />,
     );
 
     try {
@@ -520,7 +521,7 @@ describe("SheetView editing", () => {
   });
 
   it("stays read-only (no add-row, no editor) when no edit handler is given", () => {
-    const { markup } = { markup: renderToStaticMarkup(<SheetView sheets={[editableSheet]} />) };
+    const { markup } = { markup: renderToStaticMarkup(<SheetView lang="en" sheets={[editableSheet]} />) };
 
     expect(markup).not.toContain("Add row");
     expect(markup).not.toContain("Double-click to edit");

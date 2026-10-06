@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 
-import { TXT } from "@/lib/couples/i18n";
+import { stringsFor, t } from "@/lib/couples/i18n";
 import { questionCount } from "@/lib/couples/questions";
 import { CARD_COUNTS, getGame, THEMES } from "@/lib/couples/themes";
 import type { CouplesSettings } from "@/lib/couples/types";
@@ -14,8 +14,9 @@ interface SetupScreenProps {
 }
 
 export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreenProps) {
+  const TXT = stringsFor(settings.lang);
   const game = getGame(settings.game);
-  const available = questionCount(settings.game, settings.theme);
+  const available = questionCount(settings.game, settings.theme, settings.lang);
 
   const setName = (index: 0 | 1, value: string) => {
     const names: [string, string] = [settings.names[0], settings.names[1]];
@@ -32,9 +33,9 @@ export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreen
         </button>
         <p className="cp-eyebrow">{TXT.setupTitle}</p>
         <h1>
-          <span aria-hidden="true">{game.emoji}</span> {game.name}
+          <span aria-hidden="true">{game.emoji}</span> {game.name[settings.lang]}
         </h1>
-        <p className="cp-note">{game.description}</p>
+        <p className="cp-note">{game.description[settings.lang]}</p>
       </header>
 
       <section className="cp-field">
@@ -111,7 +112,7 @@ export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreen
               🎲
             </span>
             <span className="cp-theme-name">{TXT.themeAll}</span>
-            <span className="cp-theme-count">{questionCount(settings.game, "all")}</span>
+            <span className="cp-theme-count">{questionCount(settings.game, "all", settings.lang)}</span>
           </button>
           {THEMES.map((theme) => (
             <button
@@ -125,8 +126,8 @@ export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreen
               <span className="cp-theme-emoji" aria-hidden="true">
                 {theme.emoji}
               </span>
-              <span className="cp-theme-name">{theme.name}</span>
-              <span className="cp-theme-count">{questionCount(settings.game, theme.id)}</span>
+              <span className="cp-theme-name">{theme.name[settings.lang]}</span>
+              <span className="cp-theme-count">{questionCount(settings.game, theme.id, settings.lang)}</span>
             </button>
           ))}
         </div>
@@ -169,7 +170,7 @@ export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreen
 
       <div className="cp-setup-footer">
         <div className="cp-setup-footer-inner">
-          <p className="cp-available">{available} вопросов в колоде</p>
+          <p className="cp-available">{t(settings.lang, "deckCount", { count: available })}</p>
           <button type="button" className="cp-primary" onClick={onStart}>
             {TXT.startGame}
           </button>

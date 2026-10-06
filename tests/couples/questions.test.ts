@@ -14,6 +14,26 @@ import type { GameId } from "@/lib/couples/types";
 const GAMES: GameId[] = ["norm", "either", "who"];
 
 describe("couples question builder", () => {
+  it("builds the same structure for the English deck", () => {
+    for (const game of GAMES) {
+      expect(buildGameQuestions(game, "en")).toHaveLength(QUESTIONS_PER_GAME);
+      for (const theme of THEME_IDS) {
+        expect(questionsFor(game, theme, "en"), `en/${game}/${theme}`).toHaveLength(PER_THEME);
+      }
+    }
+    const enPrompts = buildAllQuestions("en").map((question) => question.prompt);
+    const ruPrompts = buildAllQuestions("ru").map((question) => question.prompt);
+    expect(new Set(enPrompts).size).toBe(enPrompts.length);
+    expect(new Set([...enPrompts, ...ruPrompts]).size).toBe(enPrompts.length + ruPrompts.length);
+    expect(enPrompts.some((prompt) => prompt.includes("Which of us"))).toBe(true);
+  });
+
+  it("keeps the norm options per language", () => {
+    for (const question of questionsFor("norm", "all", "en")) {
+      expect(question.options).toEqual(["Fine", "Cringe"]);
+    }
+  });
+
   it("seeds exactly 3000 prompts per game", () => {
     for (const game of GAMES) {
       expect(buildGameQuestions(game)).toHaveLength(QUESTIONS_PER_GAME);
@@ -39,7 +59,7 @@ describe("couples question builder", () => {
   it("produces non-empty, unique ids and prompts", () => {
     for (const question of buildAllQuestions()) {
       expect(question.prompt.trim().length).toBeGreaterThan(0);
-      expect(question.id).toMatch(/^(norm|either|who):/);
+      expect(question.id).toMatch(/^(en|ru):(norm|either|who):/);
     }
     const ids = buildAllQuestions().map((question) => question.id);
     expect(new Set(ids).size).toBe(ids.length);

@@ -1,14 +1,17 @@
 import * as React from "react";
 import { ChevronDown, TriangleAlert } from "lucide-react";
 
+import type { AppLang } from "@/lib/apps/lang";
+import { notesPlural, t } from "@/lib/viewer/i18n";
 import { cn } from "@/lib/viewer/utils";
 
 type DocxViewProps = {
+  lang: AppLang;
   html: string;
   warnings: string[];
 };
 
-export function DocxView({ html, warnings }: DocxViewProps) {
+export function DocxView({ lang, html, warnings }: DocxViewProps) {
   const [showWarnings, setShowWarnings] = React.useState(false);
 
   return (
@@ -24,7 +27,10 @@ export function DocxView({ html, warnings }: DocxViewProps) {
             >
               <TriangleAlert className="size-4 shrink-0" />
               <span className="flex-1">
-                {warnings.length} formatting {warnings.length === 1 ? "note" : "notes"}
+                {t(lang, "formattingNotes", {
+                count: warnings.length,
+                notesPlural: notesPlural(warnings.length),
+              })}
               </span>
               <ChevronDown
                 className={cn("size-4 transition-transform", showWarnings && "rotate-180")}

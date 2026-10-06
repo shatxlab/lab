@@ -1,10 +1,13 @@
 import * as React from "react";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
 
+import type { AppLang } from "@/lib/apps/lang";
 import { Button } from "@/components/viewer/ui/button";
+import { t } from "@/lib/viewer/i18n";
 import { cn } from "@/lib/viewer/utils";
 
 type SheetFindBarProps = {
+  lang: AppLang;
   query: string;
   matchIndex: number;
   matchCount: number;
@@ -16,6 +19,7 @@ type SheetFindBarProps = {
 };
 
 export function SheetFindBar({
+  lang,
   query,
   matchIndex,
   matchCount,
@@ -48,12 +52,12 @@ export function SheetFindBar({
             }
           }
         }}
-        placeholder="Find in sheet"
-        aria-label="Find in sheet"
+        placeholder={t(lang, "findInSheet")}
+        aria-label={t(lang, "findInSheet")}
         className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-(--muted-fg)"
       />
       <span className={cn("shrink-0 text-xs tabular-nums text-(--muted-fg)", !query.trim() && "invisible")}>
-        {matchCount === 0 ? "No matches" : `${matchIndex + 1} of ${matchCount}`}
+        {matchCount === 0 ? t(lang, "noMatches") : t(lang, "matchOf", { index: matchIndex + 1, count: matchCount })}
       </span>
       <Button
         type="button"
@@ -61,7 +65,7 @@ export function SheetFindBar({
         size="icon"
         onClick={onPrev}
         disabled={matchCount === 0}
-        aria-label="Previous match"
+        aria-label={t(lang, "previousMatch")}
         className="size-8"
       >
         <ChevronUp />
@@ -72,7 +76,7 @@ export function SheetFindBar({
         size="icon"
         onClick={onNext}
         disabled={matchCount === 0}
-        aria-label="Next match"
+        aria-label={t(lang, "nextMatch")}
         className="size-8"
       >
         <ChevronDown />

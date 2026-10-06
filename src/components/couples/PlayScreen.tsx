@@ -1,6 +1,6 @@
 import { LogOut, Volume2, VolumeX } from "lucide-react";
 
-import { cardCounter, TXT, turnLabel } from "@/lib/couples/i18n";
+import { cardCounter, passBody, passButton, stringsFor, turnLabel } from "@/lib/couples/i18n";
 import type { CouplesQuestion, CouplesSettings, PlayPhase } from "@/lib/couples/types";
 
 interface PlayScreenProps {
@@ -51,6 +51,7 @@ export function PlayScreen({
   onExit,
   onToggleSound,
 }: PlayScreenProps) {
+  const TXT = stringsFor(settings.lang);
   const progress = total > 0 ? ((index + (phase === "reveal" ? 1 : 0)) / total) * 100 : 0;
   const [nameA, nameB] = settings.names;
   const isMatch = votes.a !== null && votes.b !== null && votes.a === votes.b;
@@ -67,7 +68,7 @@ export function PlayScreen({
           type="button"
           className="cp-icon"
           onClick={onToggleSound}
-          aria-label={soundOn ? "Выключить звук" : "Включить звук"}
+          aria-label={soundOn ? TXT.mute : TXT.unmute}
         >
           {soundOn ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
         </button>
@@ -82,15 +83,15 @@ export function PlayScreen({
             🙈
           </span>
           <h2>{TXT.passTitle}</h2>
-          <p>{TXT.passBody.replace("{name}", nameB)}</p>
+          <p>{passBody(settings.lang, nameB)}</p>
           <button type="button" className="cp-primary" onClick={onPass}>
-            {TXT.passButton.replace("{name}", nameB)}
+            {passButton(settings.lang, nameB)}
           </button>
         </div>
       ) : (
         <div className="cp-card">
           <p className="cp-turn">
-            {phase === "voteB" ? turnLabel(nameB) : phase === "voteA" ? turnLabel(nameA) : TXT.question}
+            {phase === "voteB" ? turnLabel(settings.lang, nameB) : phase === "voteA" ? turnLabel(settings.lang, nameA) : TXT.question}
           </p>
           <h2 className="cp-prompt">{question.prompt}</h2>
 

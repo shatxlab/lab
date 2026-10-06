@@ -8,6 +8,12 @@
 
 export type Direction = "across" | "down";
 
+/** Languages the crossword ships content and UI for. */
+export type Lang = "en" | "ru";
+
+/** Difficulty buckets shown on the picker cards. */
+export type Difficulty = "easy" | "medium" | "hard";
+
 /** Authored entry: where an answer starts and how it is clued. */
 export interface PuzzleEntry {
   answer: string;
@@ -23,7 +29,9 @@ export interface CrosswordPuzzle {
   title: string;
   subtitle: string;
   /** One of the difficulty labels used by the picker. */
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: Difficulty;
+  /** Which alphabet the answers and clues use. */
+  lang: Lang;
   rows: number;
   cols: number;
   entries: PuzzleEntry[];

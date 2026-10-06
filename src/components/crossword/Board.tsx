@@ -34,13 +34,14 @@ import {
   type CrosswordState,
 } from "@/lib/crossword/game";
 import { cellKey, entryById } from "@/lib/crossword/grid";
-import { TXT } from "@/lib/crossword/i18n";
+import { stringsFor } from "@/lib/crossword/i18n";
 import type { CrosswordSoundEngine } from "@/lib/crossword/sound";
 import { applyStoredProgress, toStoredProgress, type StoredPuzzleProgress } from "@/lib/crossword/storage";
-import type { BuiltPuzzle } from "@/lib/crossword/types";
+import type { BuiltPuzzle, Lang } from "@/lib/crossword/types";
 
 interface BoardProps {
   built: BuiltPuzzle;
+  lang: Lang;
   saved: StoredPuzzleProgress | undefined;
   hasNext: boolean;
   sound: CrosswordSoundEngine;
@@ -62,6 +63,7 @@ const TOAST_ICONS = { success: Check, warn: TriangleAlert, info: Info } as const
 
 export function Board({
   built,
+  lang,
   saved,
   hasNext,
   sound,
@@ -71,6 +73,7 @@ export function Board({
   onBack,
   onNext,
 }: BoardProps) {
+  const TXT = stringsFor(lang);
   const [state, dispatch] = useReducer(
     (prev: CrosswordState, action: CrosswordAction) => crosswordReducer(built, prev, action),
     built,
@@ -190,7 +193,7 @@ export function Board({
 
   const handleChange = useCallback(
     (text: string) => {
-      const letters = parseInput(text);
+      const letters = parseInput(text, lang);
       if (letters.length === 0) return;
       sound.resume();
       dispatch({ type: "type", letters });
@@ -347,6 +350,7 @@ export function Board({
         <div className="cw-main">
           <ClueBar
             entry={current}
+            lang={lang}
             solved={current ? solved.has(current.id) : false}
             hint={TXT.inputHint}
             onPrev={handlePrev}
@@ -422,6 +426,7 @@ export function Board({
       {showComplete ? (
         <CompletionOverlay
           built={built}
+          lang={lang}
           elapsed={state.elapsed}
           hints={state.revealed.length}
           hasNext={hasNext}

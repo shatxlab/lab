@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react";
 
+import { stringsFor } from "@/lib/crossword/i18n";
 import type { BuiltPuzzle, PlacedEntry } from "@/lib/crossword/types";
 
 interface CluePanelProps {
@@ -41,10 +42,11 @@ function ClueItem({
 
 /** Full clue list, used as a desktop sidebar and a mobile bottom sheet. */
 export function CluePanel({ built, activeEntryId, solved, onSelect }: CluePanelProps) {
+  const TXT = stringsFor(built.puzzle.lang);
   return (
     <div className="cw-clues">
       <section className="cw-clues-section">
-        <h2>По горизонтали</h2>
+        <h2>{TXT.across}</h2>
         <ul>
           {built.across.map((entry) => (
             <ClueItem
@@ -58,7 +60,7 @@ export function CluePanel({ built, activeEntryId, solved, onSelect }: CluePanelP
         </ul>
       </section>
       <section className="cw-clues-section">
-        <h2>По вертикали</h2>
+        <h2>{TXT.down}</h2>
         <ul>
           {built.down.map((entry) => (
             <ClueItem
@@ -82,19 +84,20 @@ export function ClueSheet({
   ...panel
 }: CluePanelProps & { open: boolean; onClose(): void }) {
   if (!open) return null;
+  const TXT = stringsFor(panel.built.puzzle.lang);
   return (
     <div className="cw-sheet-backdrop" role="presentation" onClick={onClose}>
       <div
         className="cw-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="Список слов"
+        aria-label={TXT.clues}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="cw-sheet-head">
           <span className="cw-sheet-grip" aria-hidden="true" />
-          <h2>Слова</h2>
-          <button type="button" className="cw-icon-button" onClick={onClose} aria-label="Закрыть">
+          <h2>{TXT.clues}</h2>
+          <button type="button" className="cw-icon-button" onClick={onClose} aria-label={TXT.close}>
             <X aria-hidden="true" />
           </button>
         </div>

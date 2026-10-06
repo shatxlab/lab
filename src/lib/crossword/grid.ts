@@ -3,20 +3,31 @@ import type {
   CellRef,
   CrosswordCell,
   CrosswordPuzzle,
+  Lang,
   PlacedEntry,
   PuzzleEntry,
 } from "./types";
 
-/** Uppercase a Russian letter and fold Ё to Е so keyboard/dataset agree. */
-export function normalizeLetter(value: string): string {
-  return value.replace(/ё/g, "е").replace(/Ё/g, "Е").toUpperCase();
+const CYRILLIC_LETTER = /^[А-Я]$/;
+const LATIN_LETTER = /^[A-Z]$/;
+
+/** The alphabet a language's answers are written in. */
+export function letterPattern(lang: Lang): RegExp {
+  return lang === "en" ? LATIN_LETTER : CYRILLIC_LETTER;
 }
 
-export const RUSSIAN_LETTER = /^[А-Я]$/;
+/** Uppercase a letter for the grid; folds Ё to Е so Russian keyboard/dataset agree. */
+export function normalizeLetter(value: string, lang: Lang): string {
+  const upper = value.toUpperCase();
+  return lang === "ru" ? upper.replace("Ё", "Е") : upper;
+}
+
+/** Kept for the Russian storage sanitizer and older callers. */
+export const RUSSIAN_LETTER = CYRILLIC_LETTER;
 
 /** Fold an authored answer into grid letters. */
-export function normalizeAnswer(answer: string): string {
-  return normalizeLetter(answer.replace(/\s+/g, ""));
+export function normalizeAnswer(answer: string, lang: Lang): string {
+  return normalizeLetter(answer.replace(/\s+/g, ""), lang);
 }
 
 export function entryId(entry: Pick<PuzzleEntry, "dir" | "row" | "col">): string {
@@ -35,6 +46,9 @@ export function buildPuzzle(puzzle: CrosswordPuzzle): BuiltPuzzle {
   const { rows, cols } = puzzle;
   if (rows < 1 || cols < 1) throw new PuzzleError(`puzzle ${puzzle.id}: empty board`);
 
+  const lang = puzzle.lang;
+  const letterRe = letterPattern(lang);
+
   const solution = new Array<string>(rows * cols).fill("");
   const acrossAt = new Array<string | null>(rows * cols).fill(null);
   const downAt = new Array<string | null>(rows * cols).fill(null);
@@ -43,10 +57,10 @@ export function buildPuzzle(puzzle: CrosswordPuzzle): BuiltPuzzle {
   const placedEntries: PlacedEntry[] = [];
 
   for (const entry of puzzle.entries) {
-    const answer = normalizeAnswer(entry.answer);
+    const answer = normalizeAnswer(entry.answer, lang);
     if (!answer) throw new PuzzleError(`puzzle ${puzzle.id}: empty answer`);
-    if ([...answer].some((letter) => !RUSSIAN_LETTER.test(letter))) {
-      throw new PuzzleError(`puzzle ${puzzle.id}: non-Russian answer "${entry.answer}"`);
+    if ([...answer].some((letter) => !letterRe.test(letter))) {
+      throw new PuzzleError(`puzzle ${puzzle.id}: answer "${entry.answer}" has letters outside its alphabet`);
     }
     const dr = entry.dir === "down" ? 1 : 0;
     const dc = entry.dir === "across" ? 1 : 0;

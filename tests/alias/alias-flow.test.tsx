@@ -124,15 +124,20 @@ describe("AliasGame flow", () => {
     expect(host.querySelector(".alias-word")?.textContent).not.toBe(unresolved);
   });
 
-  it("switches language and theme from the setup screen", () => {
+  it("follows the shared header language setting", () => {
+    localStorage.setItem("lab:lang", "ru");
     const host = mount();
 
-    act(() => {
-      const languageButtons = host.querySelectorAll<HTMLButtonElement>(".alias-lang-button");
-      languageButtons[1]?.click();
-    });
     const firstTeam = host.querySelector<HTMLInputElement>(".alias-team-row input");
     expect(firstTeam?.value).toBe("Команда 1");
+
+    click(host, '[data-theme-id="food"]');
+    const selected = host.querySelector('[data-theme-id="food"]');
+    expect(selected?.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("picks a theme from the setup screen", () => {
+    const host = mount();
 
     click(host, '[data-theme-id="food"]');
     const selected = host.querySelector('[data-theme-id="food"]');

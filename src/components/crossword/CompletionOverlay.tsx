@@ -3,11 +3,12 @@ import { useMemo } from "react";
 import type { CSSProperties } from "react";
 
 import { formatDuration } from "@/lib/crossword/game";
-import { TXT } from "@/lib/crossword/i18n";
-import type { BuiltPuzzle } from "@/lib/crossword/types";
+import { stringsFor } from "@/lib/crossword/i18n";
+import type { BuiltPuzzle, Lang } from "@/lib/crossword/types";
 
 interface CompletionOverlayProps {
   built: BuiltPuzzle;
+  lang: Lang;
   elapsed: number;
   hints: number;
   hasNext: boolean;
@@ -33,6 +34,7 @@ function makeConfetti(count: number) {
 
 export function CompletionOverlay({
   built,
+  lang,
   elapsed,
   hints,
   hasNext,
@@ -40,6 +42,7 @@ export function CompletionOverlay({
   onNext,
   onList,
 }: CompletionOverlayProps) {
+  const TXT = stringsFor(lang);
   const confetti = useMemo(() => makeConfetti(44), []);
   return (
     <div className="cw-complete" role="dialog" aria-modal="true" aria-label={TXT.completeTitle}>

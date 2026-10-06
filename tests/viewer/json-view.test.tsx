@@ -27,7 +27,7 @@ async function typeIntoTextarea(textarea: HTMLTextAreaElement, text: string) {
 describe("JsonView", () => {
   it("pretty-prints a minified document into one always-editable surface", () => {
     const { value } = parseJson('{"name":"Ada","count":2}');
-    const markup = renderToStaticMarkup(<JsonView value={value} resetKey="f" onApply={vi.fn()} />);
+    const markup = renderToStaticMarkup(<JsonView lang="en" value={value} resetKey="f" onApply={vi.fn()} />);
 
     // The editable surface is there from the start: no edit button exists.
     expect(markup).toContain('aria-label="JSON document"');
@@ -48,7 +48,7 @@ describe("JsonView", () => {
     const onApply = vi.fn();
     const { value } = parseJson('{"city":"Berlin"}');
     const { container, unmount } = await mount(
-      <JsonView value={value} resetKey="f" onApply={onApply} />,
+      <JsonView lang="en" value={value} resetKey="f" onApply={onApply} />,
     );
 
     try {
@@ -71,7 +71,7 @@ describe("JsonView", () => {
     const onApply = vi.fn();
     const { value } = parseJson('{"city":"Berlin"}');
     const { container, unmount } = await mount(
-      <JsonView value={value} resetKey="f" onApply={onApply} />,
+      <JsonView lang="en" value={value} resetKey="f" onApply={onApply} />,
     );
 
     try {
@@ -99,7 +99,7 @@ describe("JsonView", () => {
     const onRevert = vi.fn();
     const { value } = parseJson('{"city":"Berlin"}');
     const { container, unmount } = await mount(
-      <JsonView value={value} resetKey="f" onApply={onApply} onRevert={onRevert} />,
+      <JsonView lang="en" value={value} resetKey="f" onApply={onApply} onRevert={onRevert} />,
     );
 
     const leaked: KeyboardEvent[] = [];
@@ -128,7 +128,7 @@ describe("JsonView", () => {
     const onApply = vi.fn();
     const berlin = parseJson('{"city":"Berlin"}').value;
     const { container, rerender, unmount } = await mount(
-      <JsonView value={berlin} resetKey="f" onApply={onApply} />,
+      <JsonView lang="en" value={berlin} resetKey="f" onApply={onApply} />,
     );
 
     try {
@@ -137,13 +137,13 @@ describe("JsonView", () => {
 
       // Discard / new file: a new resetKey shows the new document…
       const paris = parseJson('{"city":"Paris"}').value;
-      await rerender(<JsonView value={paris} resetKey="g" onApply={onApply} />);
+      await rerender(<JsonView lang="en" value={paris} resetKey="g" onApply={onApply} />);
       expect(editor.value).toBe('{\n  "city": "Paris"\n}');
 
       // …but applying an edit alone must not reformat the draft mid-typing.
       const tokyo = parseJson('{"city":"Tokyo"}').value;
       await typeIntoTextarea(editor, '{"city":"Kyoto"}');
-      await rerender(<JsonView value={tokyo} resetKey="g" onApply={onApply} />);
+      await rerender(<JsonView lang="en" value={tokyo} resetKey="g" onApply={onApply} />);
       expect(editor.value).toBe('{"city":"Kyoto"}');
     } finally {
       unmount();
@@ -152,7 +152,7 @@ describe("JsonView", () => {
 
   it("renders an XSS payload inside a string as inert text", () => {
     const { value } = parseJson('{"note":"<img src=x onerror=\\"window.__x=1\\">"}');
-    const markup = renderToStaticMarkup(<JsonView value={value} resetKey="f" onApply={vi.fn()} />);
+    const markup = renderToStaticMarkup(<JsonView lang="en" value={value} resetKey="f" onApply={vi.fn()} />);
 
     // The payload is present as text (escaped), and no element materializes.
     expect(markup).toContain("&lt;img src=x onerror=");
@@ -163,7 +163,7 @@ describe("JsonView", () => {
   it("keeps XSS payloads inert under the live DOM too", async () => {
     const { value } = parseJson('{"note":"<img src=x onerror=\\"window.__x=1\\"><script>window.__y=1</script>"}');
     const { container, unmount } = await mount(
-      <JsonView value={value} resetKey="f" onApply={vi.fn()} />,
+      <JsonView lang="en" value={value} resetKey="f" onApply={vi.fn()} />,
     );
 
     try {

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { buildPuzzle, cellKey, entryId } from "@/lib/crossword/grid";
 import { CROSSWORD_PUZZLES, getPuzzle } from "@/lib/crossword/puzzles";
+
+const ALL_PUZZLES = [...CROSSWORD_PUZZLES.en, ...CROSSWORD_PUZZLES.ru];
 import type { CrosswordPuzzle } from "@/lib/crossword/types";
 
 function cellLetters(puzzle: CrosswordPuzzle) {
@@ -10,20 +12,23 @@ function cellLetters(puzzle: CrosswordPuzzle) {
 }
 
 describe("crossword puzzle data", () => {
-  it("ships fifty puzzles with unique ids", () => {
-    expect(CROSSWORD_PUZZLES.length).toBe(50);
-    const ids = CROSSWORD_PUZZLES.map((puzzle) => puzzle.id);
+  it("ships fifty puzzles per language with unique ids", () => {
+    expect(CROSSWORD_PUZZLES.en.length).toBe(50);
+    expect(CROSSWORD_PUZZLES.ru.length).toBe(50);
+    const ids = ALL_PUZZLES.map((puzzle) => puzzle.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // English ids are namespaced so saved progress never collides with Russian.
+    expect(CROSSWORD_PUZZLES.en.every((puzzle) => puzzle.id.startsWith("en-"))).toBe(true);
   });
 
   it("builds every puzzle without crossing conflicts", () => {
-    for (const puzzle of CROSSWORD_PUZZLES) {
+    for (const puzzle of ALL_PUZZLES) {
       expect(() => buildPuzzle(puzzle)).not.toThrow();
     }
   });
 
   it("places each answer so its letters match the grid", () => {
-    for (const puzzle of CROSSWORD_PUZZLES) {
+    for (const puzzle of ALL_PUZZLES) {
       const { built } = cellLetters(puzzle);
       for (const entry of built.entries) {
         entry.cells.forEach((cell, index) => {
@@ -34,7 +39,7 @@ describe("crossword puzzle data", () => {
   });
 
   it("numbers entries contiguously from 1 and references both axes", () => {
-    for (const puzzle of CROSSWORD_PUZZLES) {
+    for (const puzzle of ALL_PUZZLES) {
       const built = buildPuzzle(puzzle);
       const numbers = built.entries.map((entry) => entry.number);
       expect(numbers.every((n) => n >= 1)).toBe(true);
@@ -52,7 +57,7 @@ describe("crossword puzzle data", () => {
   });
 
   it("gives every white cell a clue-bearing entry on its axis", () => {
-    for (const puzzle of CROSSWORD_PUZZLES) {
+    for (const puzzle of ALL_PUZZLES) {
       const built = buildPuzzle(puzzle);
       for (const entry of built.entries) {
         for (const cell of entry.cells) {
@@ -66,7 +71,7 @@ describe("crossword puzzle data", () => {
   });
 
   it("keeps boards dense enough to read as crosswords", () => {
-    for (const puzzle of CROSSWORD_PUZZLES) {
+    for (const puzzle of ALL_PUZZLES) {
       const built = buildPuzzle(puzzle);
       const filled = built.cells.filter((cell) => !cell.isBlack).length;
       expect(filled / (built.rows * built.cols)).toBeGreaterThan(0.4);
@@ -74,7 +79,7 @@ describe("crossword puzzle data", () => {
   });
 
   it("keeps authored answers free of Ё so the keyboard is unambiguous", () => {
-    for (const puzzle of CROSSWORD_PUZZLES) {
+    for (const puzzle of ALL_PUZZLES) {
       for (const entry of puzzle.entries) {
         expect(entry.answer).not.toMatch(/ё|Ё/);
       }
@@ -82,7 +87,7 @@ describe("crossword puzzle data", () => {
   });
 
   it("looks puzzles up by stable id", () => {
-    const first = CROSSWORD_PUZZLES[0];
+    const first = ALL_PUZZLES[0];
     expect(getPuzzle(first.id)?.title).toBe(first.title);
     expect(getPuzzle("missing")).toBeUndefined();
   });

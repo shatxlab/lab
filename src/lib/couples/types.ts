@@ -1,6 +1,12 @@
-/** Shared types for the Russian couples game suite («Игры для пар»). */
+/** Shared types for the couples game suite («Игры для пар» / "Games for couples"). */
 
 export type GameId = "norm" | "either" | "who";
+
+/** Languages the game ships content and UI for. */
+export type Lang = "en" | "ru";
+
+/** A string localized into every shipped language. */
+export type LocalizedText = Record<Lang, string>;
 
 export type ThemeId =
   | "home"
@@ -27,9 +33,9 @@ export type Mode = "match" | "together";
 export interface GameDef {
   id: GameId;
   emoji: string;
-  name: string;
-  tagline: string;
-  description: string;
+  name: LocalizedText;
+  tagline: LocalizedText;
+  description: LocalizedText;
   gradient: string;
   accent: string;
 }
@@ -37,8 +43,8 @@ export interface GameDef {
 export interface ThemeDef {
   id: ThemeId;
   emoji: string;
-  name: string;
-  tagline: string;
+  name: LocalizedText;
+  tagline: LocalizedText;
   gradient: string;
   accent: string;
 }
@@ -73,6 +79,8 @@ export interface RoundResult {
 /** Persisted setup. `theme: "all"` mixes every theme's deck. */
 export interface CouplesSettings {
   game: GameId;
+  /** Language of the prompts and the interface. */
+  lang: Lang;
   mode: Mode;
   theme: ThemeId | "all";
   count: number;

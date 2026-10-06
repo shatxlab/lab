@@ -12,7 +12,7 @@ import { WALK_PUZZLE, WARMUP_PUZZLE } from "./fixture";
 import type { CrosswordSoundEngine } from "@/lib/crossword/sound";
 
 const warmup = buildPuzzle(WARMUP_PUZZLE);
-const built = CROSSWORD_PUZZLES.map(buildPuzzle);
+const built = [...CROSSWORD_PUZZLES.en, ...CROSSWORD_PUZZLES.ru].map(buildPuzzle);
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -25,6 +25,7 @@ const sound: CrosswordSoundEngine = {  play: () => undefined,
 function boardProps(overrides: Partial<Parameters<typeof Board>[0]> = {}): Parameters<typeof Board>[0] {
   return {
     built: warmup,
+    lang: "ru",
     saved: undefined,
     hasNext: true,
     sound,
@@ -127,19 +128,35 @@ describe("Board", () => {
 
 describe("PuzzlePicker", () => {
   it("renders a card per puzzle with progress", () => {
-    const items = built.map((item) => ({ puzzle: item.puzzle, built: item, progress: undefined }));
-    const markup = renderToStaticMarkup(<PuzzlePicker items={items} onOpen={() => undefined} />);
-    expect((markup.match(/class="cw-card"/g) ?? []).length).toBe(CROSSWORD_PUZZLES.length);
-    expect(markup).toContain(CROSSWORD_PUZZLES[0].title);
-    expect(markup).toContain(CROSSWORD_PUZZLES[CROSSWORD_PUZZLES.length - 1].title);
+    const ru = built.filter((item) => item.puzzle.lang === "ru");
+    const items = ru.map((item) => ({ puzzle: item.puzzle, built: item, progress: undefined }));
+    const markup = renderToStaticMarkup(
+      <PuzzlePicker items={items} lang="ru" onOpen={() => undefined} />,
+    );
+    expect((markup.match(/class="cw-card"/g) ?? []).length).toBe(CROSSWORD_PUZZLES.ru.length);
+    expect(markup).toContain(CROSSWORD_PUZZLES.ru[0].title);
+    expect(markup).toContain(CROSSWORD_PUZZLES.ru[CROSSWORD_PUZZLES.ru.length - 1].title);
+  });
+
+  it("renders English strings for English puzzles", () => {
+    const en = built.filter((item) => item.puzzle.lang === "en");
+    const items = en.map((item) => ({ puzzle: item.puzzle, built: item, progress: undefined }));
+    const markup = renderToStaticMarkup(
+      <PuzzlePicker items={items} lang="en" onOpen={() => undefined} />,
+    );
+    expect(markup).toContain("Pick a crossword");
+    expect(markup).toContain(CROSSWORD_PUZZLES.en[0].title);
   });
 
   it("opens the selected puzzle", () => {
     const opened: string[] = [];
-    const items = built.map((item) => ({ puzzle: item.puzzle, built: item, progress: undefined }));
-    const host = mount(<PuzzlePicker items={items} onOpen={(id) => opened.push(id)} />);
+    const ru = built.filter((item) => item.puzzle.lang === "ru");
+    const items = ru.map((item) => ({ puzzle: item.puzzle, built: item, progress: undefined }));
+    const host = mount(
+      <PuzzlePicker items={items} lang="ru" onOpen={(id) => opened.push(id)} />,
+    );
     const first = host.querySelector<HTMLButtonElement>(".cw-card");
     act(() => first?.click());
-    expect(opened).toEqual([CROSSWORD_PUZZLES[0].id]);
+    expect(opened).toEqual([CROSSWORD_PUZZLES.ru[0].id]);
   });
 });

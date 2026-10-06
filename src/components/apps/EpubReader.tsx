@@ -23,6 +23,13 @@ import {
 } from "lucide-react";
 
 import { openFiles, defaultOpenDeps, type FileSource } from "@/lib/apps/file-open";
+import { useAppLang } from "@/lib/apps/use-app-lang";
+import {
+  chapterPlural,
+  dateLocale,
+  epubT as t,
+  resultPlural,
+} from "@/lib/apps/epub-i18n";
 import { formatBytesLimit, MAX_FILE_BYTES } from "@/lib/limits";
 import { parseEpubBytes, type EpubBook } from "@/lib/apps/epub-reader";
 import {
@@ -75,10 +82,10 @@ function bookIdentity(file: File): string {
   return `epub:${file.name}:${file.size}:${file.lastModified}`;
 }
 
-function displayTitle(book: LoadedBook): string {
+function displayTitle(lang: "en" | "ru", book: LoadedBook): string {
   const parsed = book.title.trim();
   if (parsed) return parsed;
-  return book.fileName.replace(/\.epub$/i, "") || "Untitled EPUB";
+  return book.fileName.replace(/\.epub$/i, "") || t(lang, "untitledEpub");
 }
 
 function formatPercent(value: number): string {
@@ -155,13 +162,16 @@ function highlightSanitizedHtml(sanitizedHtml: string, query: string): string {
   return doc.body.innerHTML;
 }
 
-function themeLabel(theme: ReaderTheme): string {
-  if (theme === "sepia") return "Sepia";
-  if (theme === "night") return "Night";
-  return "Paper";
+function themeLabel(lang: "en" | "ru", theme: ReaderTheme): string {
+  if (theme === "sepia") return t(lang, "themeSepia");
+  if (theme === "night") return t(lang, "themeNight");
+  return t(lang, "themePaper");
 }
 
+const FALLBACK_TITLE = "Untitled EPUB";
+
 export default function EpubReader() {
+  const lang = useAppLang();
   const shellRef = useRef<HTMLDivElement | null>(null);
   const articleRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -261,11 +271,11 @@ export default function EpubReader() {
       if (!picked) return;
       // Size is checked before the whole file is read into memory.
       if (picked.file.size > MAX_FILE_BYTES) {
-        setError(`This book is larger than ${formatBytesLimit(MAX_FILE_BYTES)} and cannot be opened safely`);
+        setError(t(lang, "bookTooLarge", { limit: formatBytesLimit(MAX_FILE_BYTES) }));
         return;
       }
       setError(null);
-      setBusy("Reading EPUB…");
+      setBusy(t(lang, "readingEpub"));
       try {
         const bytes = await picked.readSlice(0, picked.file.size);
         const parsed = parseEpubBytes(bytes);
@@ -314,7 +324,7 @@ export default function EpubReader() {
         setBusy(null);
       }
     },
-    [focusReader, persistState],
+    [focusReader, persistState, lang],
   );
 
   const openBook = useCallback(async () => {
@@ -438,13 +448,13 @@ export default function EpubReader() {
   const canGoNext = Boolean(book && currentChapterIndex < book.chapters.length - 1);
 
   const sidebar = book ? (
-    <aside className="epub-reader-sidebar" aria-label="Reader panels">
-      <div className="epub-reader-tabs" role="tablist" aria-label="Reader tools">
+    <aside className="epub-reader-sidebar" aria-label={t(lang, "readerPanels")}>
+      <div className="epub-reader-tabs" role="tablist" aria-label={t(lang, "readerTools")}>
         {([
-          ["contents", Library, "Contents"],
-          ["search", Search, "Search"],
+          ["contents", Library, t(lang, "tabContents")],
+          ["search", Search, t(lang, "tabSearch")],
           ["prefs", SlidersHorizontal, "Aa"],
-          ["bookmarks", Bookmark, "Bookmarks"],
+          ["bookmarks", Bookmark, t(lang, "tabBookmarks")],
         ] as const).map(([panel, Icon, label]) => (
           <button
             key={panel}
@@ -470,7 +480,7 @@ export default function EpubReader() {
           tabIndex={0}
           className="epub-reader-panel"
         >
-          <h2>Contents</h2>
+          <h2>{t(lang, "tabContents")}</h2>
           <ol className="epub-reader-toc">
             {book.chapters.map((chapter, index) => (
               <li key={chapter.href}>
@@ -497,19 +507,24 @@ export default function EpubReader() {
           tabIndex={0}
           className="epub-reader-panel"
         >
-          <h2>Search</h2>
+          <h2>{t(lang, "tabSearch")}</h2>
           <label className="epub-reader-search-box">
-            <span>Find in book</span>
+            <span>{t(lang, "findInBook")}</span>
             <input
               ref={searchInputRef}
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search chapters"
+              placeholder={t(lang, "searchChapters")}
             />
           </label>
           <p className="epub-reader-panel-note">
-            {searchQuery.trim().length < 2 ? "Type at least two characters." : `${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`}
+            {searchQuery.trim().length < 2
+              ? t(lang, "typeTwoChars")
+              : t(lang, "resultsCount", {
+                  count: searchResults.length,
+                  countPlural: resultPlural(lang, searchResults.length),
+                })}
           </p>
           <ol className="epub-reader-results">
             {searchResults.map((result) => (
@@ -538,8 +553,8 @@ export default function EpubReader() {
           tabIndex={0}
           className="epub-reader-panel"
         >
-          <h2>Reading settings</h2>
-          <div className="epub-reader-theme-options" role="group" aria-label="Theme">
+          <h2>{t(lang, "readingSettings")}</h2>
+          <div className="epub-reader-theme-options" role="group" aria-label={t(lang, "themeLabel")}>
             {(["paper", "sepia", "night"] as ReaderTheme[]).map((theme) => (
               <button
                 key={theme}
@@ -547,27 +562,27 @@ export default function EpubReader() {
                 aria-pressed={prefs.theme === theme}
                 onClick={() => updatePrefs({ theme })}
               >
-                {themeLabel(theme)}
+                {themeLabel(lang, theme)}
               </button>
             ))}
           </div>
           <div className="epub-reader-stepper">
-            <span>Font size</span>
-            <button type="button" aria-label="Decrease font size" onClick={() => updatePrefs({ fontSize: prefs.fontSize - 1 })}>−</button>
+            <span>{t(lang, "fontSize")}</span>
+            <button type="button" aria-label={t(lang, "decreaseFontSize")} onClick={() => updatePrefs({ fontSize: prefs.fontSize - 1 })}>−</button>
             <strong>{prefs.fontSize}px</strong>
-            <button type="button" aria-label="Increase font size" onClick={() => updatePrefs({ fontSize: prefs.fontSize + 1 })}>+</button>
+            <button type="button" aria-label={t(lang, "increaseFontSize")} onClick={() => updatePrefs({ fontSize: prefs.fontSize + 1 })}>+</button>
           </div>
           <div className="epub-reader-stepper">
-            <span>Line height</span>
-            <button type="button" aria-label="Decrease line height" onClick={() => updatePrefs({ lineHeight: prefs.lineHeight - 0.05 })}>−</button>
+            <span>{t(lang, "lineHeight")}</span>
+            <button type="button" aria-label={t(lang, "decreaseLineHeight")} onClick={() => updatePrefs({ lineHeight: prefs.lineHeight - 0.05 })}>−</button>
             <strong>{prefs.lineHeight.toFixed(2)}</strong>
-            <button type="button" aria-label="Increase line height" onClick={() => updatePrefs({ lineHeight: prefs.lineHeight + 0.05 })}>+</button>
+            <button type="button" aria-label={t(lang, "increaseLineHeight")} onClick={() => updatePrefs({ lineHeight: prefs.lineHeight + 0.05 })}>+</button>
           </div>
           <div className="epub-reader-stepper">
-            <span>Page width</span>
-            <button type="button" aria-label="Narrow page" onClick={() => updatePrefs({ maxWidth: prefs.maxWidth - 4 })}>−</button>
+            <span>{t(lang, "pageWidth")}</span>
+            <button type="button" aria-label={t(lang, "narrowPage")} onClick={() => updatePrefs({ maxWidth: prefs.maxWidth - 4 })}>−</button>
             <strong>{prefs.maxWidth}ch</strong>
-            <button type="button" aria-label="Widen page" onClick={() => updatePrefs({ maxWidth: prefs.maxWidth + 4 })}>+</button>
+            <button type="button" aria-label={t(lang, "widenPage")} onClick={() => updatePrefs({ maxWidth: prefs.maxWidth + 4 })}>+</button>
           </div>
         </section>
       )}
@@ -580,18 +595,18 @@ export default function EpubReader() {
           tabIndex={0}
           className="epub-reader-panel"
         >
-          <h2>Bookmarks</h2>
+          <h2>{t(lang, "tabBookmarks")}</h2>
           {bookmarks.length === 0 ? (
-            <p className="epub-reader-panel-note">No bookmarks yet.</p>
+            <p className="epub-reader-panel-note">{t(lang, "noBookmarks")}</p>
           ) : (
             <ol className="epub-reader-bookmarks">
               {bookmarks.map((item) => (
                 <li key={item.id}>
                   <button type="button" onClick={() => restoreBookmark(item)}>
                     <strong>{item.label}</strong>
-                    <span>{new Date(item.createdAt).toLocaleDateString("en-US")}</span>
+                    <span>{new Date(item.createdAt).toLocaleDateString(dateLocale(lang))}</span>
                   </button>
-                  <button type="button" aria-label={`Delete bookmark ${item.label}`} onClick={() => deleteBookmark(item.id)}>
+                  <button type="button" aria-label={t(lang, "deleteBookmark", { label: item.label })} onClick={() => deleteBookmark(item.id)}>
                     <Trash2 aria-hidden="true" className="size-4" />
                   </button>
                 </li>
@@ -619,40 +634,43 @@ export default function EpubReader() {
       {error && <p role="alert" className="epub-reader-alert">{error}</p>}
 
       {!book || !currentChapter ? (
-        <section className={`epub-reader-landing${dragActive ? " is-dragging" : ""}`} aria-label="Open EPUB reader">
+        <section className={`epub-reader-landing${dragActive ? " is-dragging" : ""}`} aria-label={t(lang, "landingEyebrow")}>
           <div className="epub-reader-landing-icon" aria-hidden="true">
             <BookOpen className="size-8" />
           </div>
           <div>
-            <p className="epub-reader-eyebrow">Local EPUB reader</p>
-            <h1>Open a book and start reading immediately.</h1>
-            <p>
-              Files stay in this browser session. After choosing the same book again, this reader restores your chapter,
-              progress, bookmarks, and reading settings.
-            </p>
+            <p className="epub-reader-eyebrow">{t(lang, "landingEyebrow")}</p>
+            <h1>{t(lang, "landingTitle")}</h1>
+            <p>{t(lang, "landingDescription")}</p>
           </div>
           <button type="button" onClick={() => void openBook()} disabled={busy !== null} className="epub-reader-primary-button">
             {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <FilePlus2 aria-hidden="true" className="size-4" />}
-            Open EPUB
+            {t(lang, "openEpub")}
           </button>
-          <p className="epub-reader-drop-note">Drop a .epub file here, or use the button.</p>
+          <p className="epub-reader-drop-note">{t(lang, "dropNote")}</p>
         </section>
       ) : (
         <div className="epub-reader-workspace">
           <header className="epub-reader-toolbar">
             <div>
               <p className="epub-reader-eyebrow">EPUB Reader</p>
-              <h1>{displayTitle(book)}</h1>
-              <p>{book.author ? `by ${book.author} · ` : ""}{book.chapters.length} chapter{book.chapters.length === 1 ? "" : "s"}</p>
+              <h1>{displayTitle(lang, book)}</h1>
+              <p>
+                {book.author ? t(lang, "byAuthor", { author: book.author }) : ""}
+                {t(lang, "chaptersCount", {
+                  count: book.chapters.length,
+                  countPlural: chapterPlural(lang, book.chapters.length),
+                })}
+              </p>
             </div>
             <div className="epub-reader-toolbar-actions">
               <button type="button" onClick={() => setSidebarOpen((open) => !open)} aria-pressed={sidebarOpen}>
                 <PanelLeft aria-hidden="true" className="size-4" />
-                Contents
+                {t(lang, "tabContents")}
               </button>
               <button type="button" onClick={() => { setActivePanel("search"); setSidebarOpen(true); window.setTimeout(() => searchInputRef.current?.focus(), 0); }}>
                 <Search aria-hidden="true" className="size-4" />
-                Search
+                {t(lang, "tabSearch")}
               </button>
               <button type="button" onClick={() => { setActivePanel("prefs"); setSidebarOpen(true); }}>
                 <SlidersHorizontal aria-hidden="true" className="size-4" />
@@ -660,13 +678,13 @@ export default function EpubReader() {
               </button>
               <button type="button" onClick={addCurrentBookmark}>
                 <Bookmark aria-hidden="true" className="size-4" />
-                Bookmark
+                {t(lang, "bookmark")}
               </button>
               <button type="button" onClick={() => void openBook()} disabled={busy !== null}>
                 {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <FilePlus2 aria-hidden="true" className="size-4" />}
-                Open EPUB
+                {t(lang, "openEpub")}
               </button>
-              <button type="button" onClick={closeBook} aria-label="Close book">
+              <button type="button" onClick={closeBook} aria-label={t(lang, "closeBook")}>
                 <X aria-hidden="true" className="size-4" />
               </button>
             </div>
@@ -679,14 +697,14 @@ export default function EpubReader() {
                 <div className="epub-reader-chapter-head">
                   <button type="button" onClick={() => selectChapter(currentChapterIndex - 1, 0)} disabled={!canGoPrevious}>
                     <ChevronLeft aria-hidden="true" className="size-4" />
-                    Previous
+                    {t(lang, "previous")}
                   </button>
                   <div>
-                    <p>{currentChapterIndex + 1} of {book.chapters.length}</p>
+                    <p>{t(lang, "chapterOf", { index: currentChapterIndex + 1, count: book.chapters.length })}</p>
                     <h2>{currentChapter.title}</h2>
                   </div>
                   <button type="button" onClick={() => selectChapter(currentChapterIndex + 1, 0)} disabled={!canGoNext}>
-                    Next
+                    {t(lang, "next")}
                     <ChevronRight aria-hidden="true" className="size-4" />
                   </button>
                 </div>
@@ -701,10 +719,10 @@ export default function EpubReader() {
             </main>
           </div>
 
-          <nav className="epub-reader-progress-nav" aria-label="Reading progress">
+          <nav className="epub-reader-progress-nav" aria-label={t(lang, "readingProgress")}>
             <button type="button" onClick={() => selectChapter(currentChapterIndex - 1, 0)} disabled={!canGoPrevious}>
               <ChevronLeft aria-hidden="true" className="size-4" />
-              Previous
+              {t(lang, "previous")}
             </button>
             <div>
               <span>{formatPercent(chapterProgressValue)}</span>
@@ -713,7 +731,7 @@ export default function EpubReader() {
               </div>
             </div>
             <button type="button" onClick={() => selectChapter(currentChapterIndex + 1, 0)} disabled={!canGoNext}>
-              Next
+              {t(lang, "next")}
               <ChevronRight aria-hidden="true" className="size-4" />
             </button>
           </nav>

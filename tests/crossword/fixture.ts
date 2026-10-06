@@ -9,6 +9,7 @@ export const WARMUP_PUZZLE: CrosswordPuzzle = {
   title: "Разминка",
   subtitle: "Тестовая сетка",
   difficulty: "easy",
+  lang: "ru",
   rows: 6,
   cols: 6,
   entries: [
@@ -25,6 +26,7 @@ export const WALK_PUZZLE: CrosswordPuzzle = {
   title: "Прогулка",
   subtitle: "Тестовая сетка",
   difficulty: "medium",
+  lang: "ru",
   rows: 8,
   cols: 8,
   entries: [

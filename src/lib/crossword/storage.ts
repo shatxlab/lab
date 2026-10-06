@@ -1,9 +1,11 @@
-import { RUSSIAN_LETTER } from "./grid";
 import type { CrosswordState } from "./game";
 import type { BuiltPuzzle } from "./types";
 
 /** Versioned key for saved crossword progress. */
 export const CROSSWORD_STORAGE_KEY = "lab:crossword:v1";
+
+/** Any grid letter across shipped languages: А-Я or A-Z. */
+const ANY_GRID_LETTER = /^[A-ZА-Я]$/;
 
 export interface StoredPuzzleProgress {
   values: Record<string, string>;
@@ -39,7 +41,7 @@ function sanitizeProgress(raw: unknown): StoredPuzzleProgress | null {
     for (const [key, value] of Object.entries(candidate.values as Record<string, unknown>)) {
       if (!CELL_KEY.test(key) || typeof value !== "string") continue;
       const letter = value.toUpperCase().replace("Ё", "Е");
-      if (!RUSSIAN_LETTER.test(letter)) continue;
+      if (!ANY_GRID_LETTER.test(letter)) continue;
       values[key] = letter;
       count += 1;
       if (count >= 400) break;
@@ -125,3 +127,4 @@ export function progressFor(
 ): StoredPuzzleProgress | undefined {
   return store[built.puzzle.id];
 }
+

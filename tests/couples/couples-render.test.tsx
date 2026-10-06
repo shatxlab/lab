@@ -16,7 +16,7 @@ const options = resolveOptions(question, settings.names);
 describe("couples screens render", () => {
   it("menu lists the three games and the shared stats", () => {
     const html = renderToStaticMarkup(
-      <MenuScreen stats={{ games: 2, cards: 40, matches: 30 }} onPick={() => undefined} />,
+      <MenuScreen lang="ru" stats={{ games: 2, cards: 40, matches: 30 }} onPick={() => undefined} />,
     );
     expect(html).toContain("Норм или стрём");
     expect(html).toContain("ИлиТо");
@@ -26,7 +26,7 @@ describe("couples screens render", () => {
 
   it("hides the stats line for a first-time visitor", () => {
     const html = renderToStaticMarkup(
-      <MenuScreen stats={{ games: 0, cards: 0, matches: 0 }} onPick={() => undefined} />,
+      <MenuScreen lang="ru" stats={{ games: 0, cards: 0, matches: 0 }} onPick={() => undefined} />,
     );
     expect(html).not.toContain("Игр сыграно");
   });

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { withBase } from "@/lib/apps/paths";
 import { readAppLang, subscribeToAppLang, type AppLang } from "@/lib/apps/lang";
+import { useLangReady } from "@/lib/apps/use-app-lang";
 
 interface ToolCard {
   href: string;
@@ -67,11 +68,15 @@ const tools: ToolCard[] = [
  */
 export default function ToolsGrid() {
   const [lang, setLang] = useState<AppLang>(() => readAppLang());
+  const readyRef = useLangReady<HTMLElement>();
 
   useEffect(() => subscribeToAppLang(setLang), []);
 
   return (
-    <section className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-[18px] py-10">
+    <section
+      ref={readyRef}
+      data-lang-sensitive=""
+      className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-[18px] py-10">
       <p className="text-xs uppercase tracking-[0.3em] text-(--muted-fg)">
         {lang === "ru" ? "Инструменты" : "Tools"}
       </p>

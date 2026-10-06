@@ -15,6 +15,7 @@ import {
   type CouplesStats,
 } from "@/lib/couples/storage";
 import { readAppLang, subscribeToAppLang } from "@/lib/apps/lang";
+import { useLangReady } from "@/lib/apps/use-app-lang";
 import type { CouplesQuestion, CouplesSettings, GameId, PlayPhase, RoundResult } from "@/lib/couples/types";
 
 import { MenuScreen } from "./MenuScreen";
@@ -27,6 +28,7 @@ type Screen = "menu" | "setup" | "play" | "summary";
 const EMPTY_STATS: CouplesStats = { games: 0, cards: 0, matches: 0 };
 
 export default function CouplesGame() {
+  const readyRef = useLangReady<HTMLDivElement>();
   const [settings, setSettings] = useState<CouplesSettings>(() => defaultSettings());
   const [stats, setStats] = useState<CouplesStats>(EMPTY_STATS);
   const [screen, setScreen] = useState<Screen>("menu");
@@ -249,7 +251,7 @@ export default function CouplesGame() {
 
   const T = stringsFor(settings.lang);
   return (
-    <div className="cp-shell" data-phase={phase}>
+    <div ref={readyRef} data-lang-sensitive="" className="cp-shell" data-phase={phase}>
       {screen === "menu" ? (
         <MenuScreen lang={settings.lang} stats={stats} onPick={pickGame} />
       ) : null}

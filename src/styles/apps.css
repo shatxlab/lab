@@ -745,3 +745,76 @@ html:not([data-theme="dark"]) .theme-glyph-moon {
     padding: 1.15rem;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Language paint guard.
+   Islands prerender in English. When a non-default language is stored, the
+   inline LangPrePaint script sets <html data-lang-wait> before first paint;
+   language-sensitive island roots stay invisible until they hydrate and set
+   [data-lang-ready] on themselves (see useLangReady). Visibility (not
+   display) keeps the layout stable, so nothing jumps when content appears.
+--------------------------------------------------------------------------- */
+html[data-lang-wait] [data-lang-sensitive]:not([data-lang-ready]) {
+  visibility: hidden;
+}
+
+/* Header language toggle: the visual active state is CSS-driven so it is
+   correct before React hydrates (the React state only manages aria-pressed). */
+.lang-toggle {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  gap: 0.125rem;
+  padding: 0.125rem;
+}
+
+.lang-toggle-option {
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted-fg);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.lang-toggle-option[data-lang-option="en"] {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.lang-toggle-option:hover {
+  color: var(--fg);
+}
+
+.lang-toggle-option[data-lang-option="en"]:hover {
+  color: var(--accent-fg);
+}
+
+html[data-lang="ru"] .lang-toggle-option[data-lang-option="en"] {
+  background: transparent;
+  color: var(--muted-fg);
+}
+
+html[data-lang="ru"] .lang-toggle-option[data-lang-option="en"]:hover {
+  color: var(--fg);
+}
+
+.lang-toggle-option[data-lang-option="ru"] {
+  background: transparent;
+  color: var(--muted-fg);
+}
+
+.lang-toggle-option[data-lang-option="ru"]:hover {
+  color: var(--fg);
+}
+
+html[data-lang="ru"] .lang-toggle-option[data-lang-option="ru"] {
+  background: var(--accent);
+  color: var(--accent-fg);
+}

@@ -12,7 +12,7 @@ import {
   type StoredCrosswordState,
   type StoredPuzzleProgress,
 } from "@/lib/crossword/storage";
-import { useAppLang } from "@/lib/apps/use-app-lang";
+import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 
 // Pure derivation; building the boards once avoids doing it on re-render.
 const BUILT = {
@@ -23,6 +23,7 @@ const BUILT = {
 export default function CrosswordGame() {
   // The shared header language setting drives which puzzles and strings show.
   const lang = useAppLang();
+  const readyRef = useLangReady<HTMLDivElement>();
   const [store, setStore] = useState<StoredCrosswordState>({});
   const storeRef = useRef<StoredCrosswordState>({});
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -82,7 +83,7 @@ export default function CrosswordGame() {
     : null;
 
   return (
-    <div className="cw-shell">
+    <div ref={readyRef} data-lang-sensitive="" className="cw-shell">
       {active ? (
         <Board
           key={active.puzzle.id}

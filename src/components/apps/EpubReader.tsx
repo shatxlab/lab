@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { openFiles, defaultOpenDeps, type FileSource } from "@/lib/apps/file-open";
-import { useAppLang } from "@/lib/apps/use-app-lang";
+import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 import {
   chapterPlural,
   dateLocale,
@@ -172,6 +172,7 @@ const FALLBACK_TITLE = "Untitled EPUB";
 
 export default function EpubReader() {
   const lang = useAppLang();
+  const readyRef = useLangReady<HTMLDivElement>();
   const shellRef = useRef<HTMLDivElement | null>(null);
   const articleRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -620,7 +621,11 @@ export default function EpubReader() {
 
   return (
     <div
-      ref={shellRef}
+      ref={(node) => {
+        shellRef.current = node;
+        readyRef(node);
+      }}
+      data-lang-sensitive=""
       className="epub-reader-shell"
       data-reader-theme={prefs.theme}
       style={readerVars}

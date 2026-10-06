@@ -1,0 +1,47 @@
+---
+// Pre-paint language resolution for ToolsLayout.
+// Islands are prerendered in English (the site's default). When the visitor
+// has stored another language, this inline snippet — which runs before the
+// first paint — marks the document so the paint-guard CSS in apps.css keeps
+// language-sensitive islands invisible until React hydrates them with the
+// stored language. Without it the page would visibly flash English → Russian.
+// Mirrors src/lib/apps/lang.ts (readAppLang incl. legacy migration).
+---
+
+<script is:inline>
+  (function () {
+    var lang = null;
+    try {
+      lang = localStorage.getItem("lab:lang");
+    } catch (e) {}
+    if (lang !== "en" && lang !== "ru") {
+      try {
+        lang = localStorage.getItem("lab:crossword:lang");
+      } catch (e) {
+        lang = null;
+      }
+    }
+    if (lang !== "en" && lang !== "ru") {
+      try {
+        var legacy = ["lab:alias:v1", "lab:couples:v1"];
+        for (var i = 0; i < legacy.length; i += 1) {
+          var raw = localStorage.getItem(legacy[i]);
+          if (!raw) continue;
+          var settings = (JSON.parse(raw).settings) || {};
+          if (settings.lang === "en" || settings.lang === "ru") {
+            lang = settings.lang;
+            break;
+          }
+        }
+      } catch (e) {
+        lang = null;
+      }
+    }
+    if (lang !== "en" && lang !== "ru") lang = "en";
+    document.documentElement.lang = lang;
+    document.documentElement.dataset.lang = lang;
+    // Non-default language: hold language-sensitive islands invisible until
+    // each one hydrates and stamps itself with [data-lang-ready].
+    if (lang !== "en") document.documentElement.dataset.langWait = "";
+  })();
+</script>

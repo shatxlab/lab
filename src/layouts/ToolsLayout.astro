@@ -1,6 +1,7 @@
 ---
 import "@/styles/apps.css";
 import ThemePrePaint from "@/components/apps/ThemePrePaint.astro";
+import LangPrePaint from "@/components/apps/LangPrePaint.astro";
 import ThemeToggle from "@/components/apps/ThemeToggle";
 import LangToggle from "@/components/apps/LangToggle";
 import { withBase } from "@/lib/apps/paths";
@@ -22,6 +23,7 @@ const { title, lang = "en" } = Astro.props;
     <meta name="theme-color" content="#242424" />
     <title>{title} — lab</title>
     <ThemePrePaint />
+    <LangPrePaint />
   </head>
   <body class="flex min-h-screen flex-col bg-(--bg) text-(--fg) antialiased">
     <div class="flex min-h-0 flex-1 flex-col">

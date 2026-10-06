@@ -10,6 +10,9 @@ const LANG_OPTIONS: readonly { code: AppLang; label: string; full: string }[] = 
 /**
  * Header language toggle. One shared setting ("lab:lang") drives every app
  * island, the tools index and the <html lang> attribute.
+ *
+ * The visual active state is CSS-driven off <html data-lang> (see apps.css)
+ * so the toggle is correct before hydration; React only manages aria-pressed.
  */
 export default function LangToggle() {
   const [lang, setLang] = useState<AppLang>(() => readAppLang());
@@ -27,20 +30,16 @@ export default function LangToggle() {
     <div
       role="group"
       aria-label="Language · Язык"
-      className="flex shrink-0 items-center rounded-full border border-(--border) bg-(--surface) p-0.5"
+      className="lang-toggle"
     >
       {LANG_OPTIONS.map((option) => (
         <button
           key={option.code}
           type="button"
+          data-lang-option={option.code}
           aria-pressed={option.code === lang}
           title={option.full}
           onClick={() => pick(option.code)}
-          className={`rounded-full px-2 py-1 text-[0.7rem] font-bold tracking-wide transition-colors ${
-            option.code === lang
-              ? "bg-(--accent) text-(--accent-fg)"
-              : "text-(--muted-fg) hover:text-(--fg)"
-          }`}
         >
           {option.label}
         </button>

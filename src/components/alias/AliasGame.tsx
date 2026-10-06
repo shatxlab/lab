@@ -20,6 +20,7 @@ import { getTheme } from "@/lib/alias/themes";
 import { createSoundEngine, type SoundEngine } from "@/lib/alias/sound";
 import { readAliasState, writeAliasState } from "@/lib/alias/storage";
 import { readAppLang, subscribeToAppLang } from "@/lib/apps/lang";
+import { useLangReady } from "@/lib/apps/use-app-lang";
 import type { AliasSettings, Phase, Team, TurnResult, TurnWord } from "@/lib/alias/types";
 
 import { SetupScreen } from "./SetupScreen";
@@ -27,6 +28,7 @@ import { ReadyScreen, RoundScreen } from "./PlayScreens";
 import { ResultsScreen } from "./ResultsScreen";
 
 export default function AliasGame() {
+  const readyRef = useLangReady<HTMLDivElement>();
   const [settings, setSettings] = useState<AliasSettings>(() => defaultSettings());
   const [teams, setTeams] = useState<Team[]>(() => defaultTeams(readAppLang()));
   const [phase, setPhase] = useState<Phase>("setup");
@@ -324,7 +326,7 @@ export default function AliasGame() {
   const currentWord = deck[0] ?? "";
 
   return (
-    <div className="alias-shell" data-phase={phase}>
+    <div ref={readyRef} data-lang-sensitive="" className="alias-shell" data-phase={phase}>
       {phase === "setup" ? (
         <SetupScreen
           settings={settings}

@@ -15,7 +15,7 @@ import { parseJson, prettifyJson } from "@/lib/viewer/json";
 import { parseWorkbook, workbookToSheets, columnLabel, type RawWorkbook, type SheetData } from "@/lib/viewer/sheet";
 import { applyEdits, serializeWorkbook, type SheetEdit, type SheetJsWriter } from "@/lib/viewer/sheet-edit";
 import { saveBlob } from "@/lib/apps/file-open";
-import { useAppLang } from "@/lib/apps/use-app-lang";
+import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 import { stringsFor, t } from "@/lib/viewer/i18n";
 import type { AppLang } from "@/lib/apps/lang";
 
@@ -53,6 +53,7 @@ function baseFileName(name: string): string {
 
 export default function ViewerApp() {
   const lang = useAppLang();
+  const readyRef = useLangReady<HTMLDivElement>();
   const [state, setState] = React.useState<ViewerState>({ status: "idle" });
   const [dragging, setDragging] = React.useState(false);
   /** Cell edits for the open spreadsheet, newest value per cell. */
@@ -329,7 +330,15 @@ export default function ViewerApp() {
   })();
 
   return (
-    <>
+    /*
+     * display:contents wrapper: it carries the language paint-guard markers
+     * without creating a layout box, so the viewer's flex layout is untouched.
+     */
+    <div
+      ref={readyRef}
+      data-lang-sensitive=""
+      className="contents"
+    >
       {fileInput}
 
       {state.status === "idle" ? (
@@ -376,10 +385,10 @@ export default function ViewerApp() {
 
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-(--bg)/80 text-lg font-medium">
-          Drop to open
+          {t(lang, "dropToOpen")}
         </div>
       )}
-    </>
+    </div>
   );
 }
 

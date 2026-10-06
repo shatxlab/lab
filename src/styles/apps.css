@@ -1021,3 +1021,16 @@ html[data-lang="ru"] .skip-link .skip-ru {
   background: var(--accent);
   color: var(--accent-fg);
 }
+
+/*
+ * The palette's search box is the only thing focused when it opens, so a ring
+ * around the bare input looks like a stray box. Mark focus on the whole row
+ * instead (an accent underline) — still clearly visible, just tidier.
+ */
+.lab-palette-input:focus-visible {
+  outline: none;
+}
+
+.lab-palette-row:focus-within {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}

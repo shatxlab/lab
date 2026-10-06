@@ -154,7 +154,7 @@ export default function CommandPalette() {
 
       <Modal open={open} onClose={close} label={th(lang, "paletteLabel")} top initialFocus={inputRef} className="lab-modal-palette">
         <div onKeyDown={onKeyDown}>
-          <div className="flex items-center gap-2 border-b border-(--border) px-4">
+          <div className="lab-palette-row flex items-center gap-2 border-b border-(--border) px-4">
             <Search aria-hidden="true" className="size-4 shrink-0 text-(--muted-fg)" />
             <input
               ref={inputRef}
@@ -170,7 +170,7 @@ export default function CommandPalette() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={th(lang, "palettePlaceholder")}
-              className="h-12 w-full bg-transparent text-base text-(--fg) outline-none placeholder:text-(--muted-fg)"
+              className="lab-palette-input h-12 w-full bg-transparent text-base text-(--fg) placeholder:text-(--muted-fg)"
             />
           </div>
 

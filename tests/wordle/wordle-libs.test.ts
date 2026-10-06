@@ -3,12 +3,37 @@ import { describe, expect, it } from "vitest";
 import { checkHardMode, evaluateGuess, keyStates, newGame, pickAnswer, shareText, submitGuess, type GameState } from "@/lib/wordle/game";
 import { KEYBOARD_ROWS, letterFromKeyEvent, normalizeLetter } from "@/lib/wordle/layout";
 import { defaultStore, readWordleStore, recordResult, WORDLE_STORAGE_KEY, writeWordleStore, type WordleStorage } from "@/lib/wordle/storage";
-import { WORDS } from "@/lib/wordle/words";
+import { loadValidWords, WORDS } from "@/lib/wordle/words";
 
 const memory = (): WordleStorage & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return { data, getItem: (key) => data.get(key) ?? null, setItem: (key, value) => void data.set(key, value) };
 };
+
+describe("guess dictionaries", () => {
+  it.each([
+    ["en", /^[a-z]{5}$/, 10000],
+    ["ru", /^[а-я]{5}$/, 4000],
+  ] as const)("%s: a large, well-formed word list that contains every answer", async (lang, shape, minimum) => {
+    const valid = await loadValidWords(lang);
+    expect(valid.size).toBeGreaterThanOrEqual(minimum);
+    expect([...valid].filter((word) => !shape.test(word))).toEqual([]);
+    expect(WORDS[lang].filter((word) => !valid.has(word))).toEqual([]);
+  });
+
+  it("accepts real words and rejects gibberish", async () => {
+    const en = await loadValidWords("en");
+    for (const word of ["crane", "slate", "zebra", "queue"]) expect(en.has(word), word).toBe(true);
+    for (const word of ["asdfg", "zzzzz", "qwert", "xxxxx"]) expect(en.has(word), word).toBe(false);
+    const ru = await loadValidWords("ru");
+    for (const word of ["книга", "кошка", "стена", "белый"]) expect(ru.has(word), word).toBe(true);
+    for (const word of ["ыыыыы", "йцуке", "ъъъъъ"]) expect(ru.has(word), word).toBe(false);
+  });
+
+  it("loads each dictionary once", async () => {
+    expect(loadValidWords("en")).toBe(loadValidWords("en"));
+  });
+});
 
 describe("word lists", () => {
   it.each([
@@ -108,10 +133,18 @@ describe("submitGuess", () => {
     expect(submitGuess(state, "clank", { hardMode: true }).error).toMatchObject({ kind: "hard-position", letter: "r" });
   });
 
-  it("accepts any five letters as a guess (no dictionary check)", () => {
-    const outcome = submitGuess(start("crane"), "zzzzz", { hardMode: false });
-    expect(outcome.error).toBeUndefined();
-    expect(outcome.state.guesses).toEqual(["zzzzz"]);
+  it("refuses non-words without using a guess or revealing anything", () => {
+    const state = start("crane");
+    const outcome = submitGuess(state, "asdfg", { hardMode: false, isWord: (guess) => guess !== "asdfg" });
+    expect(outcome).toEqual({ state, error: { kind: "unknown" } });
+    expect(outcome.evaluation).toBeUndefined();
+    expect(submitGuess(state, "slate", { hardMode: false, isWord: () => true }).state.guesses).toEqual(["slate"]);
+  });
+
+  it("checks the dictionary before hard-mode rules, as the original does", () => {
+    const after = submitGuess(start("crane"), "crate", { hardMode: false }).state;
+    const outcome = submitGuess(after, "zzzzz", { hardMode: true, isWord: () => false });
+    expect(outcome.error?.kind).toBe("unknown");
   });
 });
 

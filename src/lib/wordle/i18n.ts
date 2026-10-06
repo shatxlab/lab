@@ -15,7 +15,7 @@ export const tw = createTranslator({
     close: "Close",
 
     helpIntro: "Guess the hidden five-letter word in six tries. After each guess the tiles change colour to show how close you were.",
-    helpRule1: "Any five letters are accepted as a guess — there is no dictionary check.",
+    helpRule1: "Every guess must be a real word. Made-up letter combinations are rejected and cost nothing.",
     helpRule2: "Each guess shows which letters are in the right place, in the word elsewhere, or not in the word.",
     helpRule3: "A letter can appear more than once. Colours follow the usual Wordle rules for repeats.",
     helpExampleCorrect: "W is in the word and in the right spot.",
@@ -32,6 +32,7 @@ export const tw = createTranslator({
     keyUnused: "unused",
 
     short: "Not enough letters",
+    unknown: "Not in word list",
     hardPosition: "Hard mode: letter {n} must be {letter}",
     hardInclude: "Hard mode: guess must contain {letter}",
     giveUpTitle: "Start a new game?",
@@ -79,7 +80,7 @@ export const tw = createTranslator({
     close: "Закрыть",
 
     helpIntro: "Угадайте загаданное слово из пяти букв за шесть попыток. После каждой попытки плитки меняют цвет и показывают, насколько вы близки.",
-    helpRule1: "В качестве попытки принимаются любые пять букв — словаря для проверки нет.",
+    helpRule1: "Каждая попытка должна быть настоящим словом. Выдуманные сочетания букв отклоняются и попытку не тратят.",
     helpRule2: "Каждая попытка показывает, какие буквы стоят на своём месте, есть в слове в другом месте или отсутствуют.",
     helpRule3: "Буквы могут повторяться. Для повторов цвета считаются по привычным правилам Wordle.",
     helpExampleCorrect: "Буква К есть в слове и стоит на своём месте.",
@@ -96,6 +97,7 @@ export const tw = createTranslator({
     keyUnused: "не использована",
 
     short: "Не хватает букв",
+    unknown: "Нет такого слова",
     hardPosition: "Сложный режим: буква {n} должна быть {letter}",
     hardInclude: "Сложный режим: в слове должна быть буква {letter}",
     giveUpTitle: "Начать новую игру?",

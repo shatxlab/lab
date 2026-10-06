@@ -80,7 +80,7 @@ export function checkHardMode(guess: string, previous: readonly string[], answer
   return null;
 }
 
-export type SubmitError = "short" | "hard-position" | "hard-include";
+export type SubmitError = "short" | "unknown" | "hard-position" | "hard-include";
 
 export interface SubmitOutcome {
   state: GameState;
@@ -89,9 +89,15 @@ export interface SubmitOutcome {
 }
 
 /** Apply one complete guess to a game. Pure, so it is easy to test and to replay. */
-export function submitGuess(state: GameState, guess: string, options: { hardMode: boolean }): SubmitOutcome {
+export function submitGuess(
+  state: GameState,
+  guess: string,
+  options: { hardMode: boolean; /** Whether a guess is a real word. Omitted = anything goes (tests). */ isWord?: (guess: string) => boolean },
+): SubmitOutcome {
   if (state.status !== "playing") return { state };
   if (Array.from(guess).length !== WORD_LENGTH) return { state, error: { kind: "short" } };
+  // Like the original: a non-word is refused before it can reveal anything.
+  if (options.isWord && !options.isWord(guess)) return { state, error: { kind: "unknown" } };
 
   if (options.hardMode) {
     const violation = checkHardMode(guess, state.guesses, state.answer);

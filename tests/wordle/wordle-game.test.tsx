@@ -62,15 +62,16 @@ describe("WordleGame", () => {
     view.unmount();
   });
 
-  it("accepts any five letters, scores them and updates the keyboard", async () => {
+  it("scores a real word and updates the keyboard", async () => {
     seed();
     const view = await mount(<WordleGame />);
     await waitFor(() => expect(document.querySelectorAll('[role="row"]').length).toBe(6));
-    await typeWord("zzzzz");
+    await typeWord("crane");
     await key("Enter", "Enter");
-    await waitFor(() => expect(readWordleStore().games.en?.guesses).toEqual(["zzzzz"]));
-    await waitFor(() => expect(button("Z, not in the word")).toBeTruthy());
-    expect(row(0).querySelectorAll('[data-state="absent"]').length).toBe(5);
+    await waitFor(() => expect(readWordleStore().games.en?.guesses).toEqual(["crane"]));
+    await waitFor(() => expect(button("C, not in the word")).toBeTruthy());
+    expect(row(0).querySelectorAll('[data-state="absent"]').length).toBe(4);
+    expect(row(0).querySelectorAll('[data-state="present"]').length).toBe(1);
     expect(document.querySelector('[role="status"]')?.textContent).toContain("Guess 1 of 6");
     expect(await axeViolations()).toEqual([]);
     view.unmount();
@@ -105,7 +106,7 @@ describe("WordleGame", () => {
     const view = await mount(<WordleGame />);
     await waitFor(() => expect(document.querySelectorAll('[role="row"]').length).toBe(6));
     for (let i = 0; i < 6; i += 1) {
-      await typeWord("zzzzz");
+      await typeWord("crane");
       await key("Enter", "Enter");
       await waitFor(() => expect(readWordleStore().games.en?.guesses.length).toBe(i + 1));
       await act(async () => {
@@ -158,15 +159,15 @@ describe("WordleGame", () => {
     expect(readWordleStore().settings.hardMode).toBe(true);
     await click([...document.querySelectorAll("button")].find((b) => b.textContent === "Close"));
 
-    // First guess keeps the first letter in place and uses the rest as filler.
-    const first = `${answer[0]}zzzz`;
+    // 
+    const first = "adult"; // shares the answer's first letter and last letter, so both turn green
     await typeWord(first);
     await key("Enter", "Enter");
     await waitFor(() => expect(readWordleStore().games.en?.guesses.length).toBe(1));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
-    await typeWord("zzzzz");
+    await typeWord("crane");
     await key("Enter", "Enter");
     expect(toast()).toContain(`Hard mode: letter 1 must be ${answer[0]!.toUpperCase()}`);
     expect(readWordleStore().games.en?.guesses.length).toBe(1);
@@ -177,7 +178,7 @@ describe("WordleGame", () => {
     seed();
     const view = await mount(<WordleGame />);
     await waitFor(() => expect(document.querySelectorAll('[role="row"]').length).toBe(6));
-    await typeWord("zzzzz");
+    await typeWord("crane");
     await key("Enter", "Enter");
     await waitFor(() => expect(readWordleStore().games.en?.guesses.length).toBe(1));
     await act(async () => {
@@ -196,12 +197,46 @@ describe("WordleGame", () => {
     const view = await mount(<WordleGame />);
     await waitFor(() => expect(document.querySelectorAll('[role="row"]').length).toBe(6));
     await click(button("How to play"));
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain("no dictionary check");
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain("must be a real word");
     expect(await axeViolations()).toEqual([]);
     await click([...document.querySelectorAll("button")].find((b) => b.textContent === "Close"));
     await click(button("Statistics"));
     expect(document.querySelector('[role="dialog"]')?.textContent).toContain("No finished games yet");
     expect(await axeViolations()).toEqual([]);
+    view.unmount();
+  });
+});
+
+describe("WordleGame — word list", () => {
+  it("rejects a made-up word without using a guess or giving feedback", async () => {
+    seed();
+    const view = await mount(<WordleGame />);
+    await waitFor(() => expect(document.querySelectorAll('[role="row"]').length).toBe(6));
+    await typeWord("asdfg");
+    await key("Enter", "Enter");
+    await waitFor(() => expect(toast()).toBe("Not in word list"));
+    expect(readWordleStore().games.en?.guesses).toEqual([]);
+    expect(row(0).querySelectorAll('[data-state="absent"], [data-state="present"], [data-state="correct"]').length).toBe(0);
+    expect(rowText(0)).toBe("ASDFG");
+    expect(document.querySelector('button[aria-label^="A, "]')?.getAttribute("data-state")).toBe("unused");
+
+    // The row stays editable: fix it into a real word and it is accepted.
+    for (let i = 0; i < 5; i += 1) await key("Backspace", "Backspace");
+    await typeWord("crane");
+    await key("Enter", "Enter");
+    await waitFor(() => expect(readWordleStore().games.en?.guesses).toEqual(["crane"]));
+    view.unmount();
+  });
+
+  it("applies to Russian too", async () => {
+    localStorage.setItem("lab:lang", "ru");
+    seed();
+    const view = await mount(<WordleGame />);
+    await waitFor(() => expect(document.querySelector("h1")?.textContent).toBe("Вордли"));
+    for (const letter of "ыыыыы") await key(letter, "KeyS");
+    await key("Enter", "Enter");
+    await waitFor(() => expect(toast()).toBe("Нет такого слова"));
+    expect(readWordleStore().games.ru?.guesses).toEqual([]);
     view.unmount();
   });
 });
@@ -225,7 +260,7 @@ describe("WordleGame — Enter key", () => {
     seed();
     const view = await mount(<WordleGame />);
     await waitFor(() => expect(document.querySelectorAll('[role="row"]').length).toBe(6));
-    await typeWord("zzzzz");
+    await typeWord("crane");
     await click(button("Settings"));
     const close = [...document.querySelectorAll("button")].find((b) => b.textContent === "Close")!;
     close.focus();

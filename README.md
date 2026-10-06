@@ -17,7 +17,7 @@ locally, nothing is uploaded, and no accounts or telemetry are involved.
 | `/convert` | Data converter | JSON ⇄ YAML ⇄ TOML, Base64 / URL / hex, MD5 and SHA hashes (plus HMAC) for text or files, UUID v4/v7 generator and inspector. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts and synthesised sound feedback. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
-| `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; any five letters are accepted as a guess). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
+| `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
 | `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Fine or Cringe", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". 3 000 prompts per game per language across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode. |
 
 `/` is the landing page listing the tools, grouped by category.

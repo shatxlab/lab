@@ -20,6 +20,7 @@ import {
 import { tw } from "@/lib/wordle/i18n";
 import { KEYBOARD_ROWS, letterFromKeyEvent } from "@/lib/wordle/layout";
 import { createWordleSoundEngine, type WordleSoundEngine } from "@/lib/wordle/sound";
+import { loadValidWords } from "@/lib/wordle/words";
 import { defaultStore, readWordleStore, recordResult, writeWordleStore, type WordleStore } from "@/lib/wordle/storage";
 import { cn } from "@/lib/viewer/utils";
 
@@ -105,6 +106,7 @@ export default function WordleGame() {
   const errorMessage = React.useCallback(
     (error: { kind: SubmitError; letter?: string; index?: number }): string => {
       if (error.kind === "short") return tw(lang, "short");
+      if (error.kind === "unknown") return tw(lang, "unknown");
       const letter = (error.letter ?? "").toUpperCase();
       if (error.kind === "hard-position") return tw(lang, "hardPosition", { n: (error.index ?? 0) + 1, letter });
       return tw(lang, "hardInclude", { letter });
@@ -141,9 +143,19 @@ export default function WordleGame() {
     });
   }, [playing, sound]);
 
-  const submit = React.useCallback(() => {
-    if (!playing || !game) return;
-    const outcome = submitGuess(game, typed, { hardMode: store.settings.hardMode });
+  const checking = React.useRef(false);
+
+  const submit = React.useCallback(async () => {
+    if (!playing || !game || checking.current) return;
+    // The dictionary is fetched on demand (and cached); this is instant after the first guess.
+    checking.current = true;
+    let words: ReadonlySet<string>;
+    try {
+      words = await loadValidWords(lang);
+    } finally {
+      checking.current = false;
+    }
+    const outcome = submitGuess(game, typed, { hardMode: store.settings.hardMode, isWord: (guess) => words.has(guess) });
 
     if (outcome.error) {
       showToast(errorMessage(outcome.error));
@@ -185,6 +197,11 @@ export default function WordleGame() {
     }, duration);
   }, [playing, game, typed, store.settings.hardMode, showToast, errorMessage, sound, commit, lang, stateWord]);
 
+  // Warm the dictionary so the first guess is not delayed.
+  React.useEffect(() => {
+    void loadValidWords(lang).catch(() => undefined);
+  }, [lang]);
+
   // Physical keyboard.
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -198,7 +215,7 @@ export default function WordleGame() {
       if (event.key === "Enter") {
         if (ownsEnter) return;
         event.preventDefault();
-        submit();
+        void submit();
       } else if (event.key === "Backspace") {
         if (target?.closest("input, textarea")) return;
         event.preventDefault();
@@ -281,7 +298,7 @@ export default function WordleGame() {
         <Board lang={lang} game={game} typed={typed} revealed={revealed} revealing={revealing} shakeRow={shakeRow} />
       </div>
 
-      <Keyboard lang={lang} states={states} onLetter={addLetter} onEnter={submit} onBackspace={removeLetter} disabled={!playing && dialog === null} />
+      <Keyboard lang={lang} states={states} onLetter={addLetter} onEnter={() => void submit()} onBackspace={removeLetter} disabled={!playing && dialog === null} />
 
       <Modal open={dialog === "help"} onClose={() => setDialog(null)} label={tw(lang, "help")} className={modalClass}>
         <HelpDialog lang={lang} onClose={() => setDialog(null)} />

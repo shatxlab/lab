@@ -7,7 +7,6 @@ export const tw = createTranslator({
     keyboardLabel: "Keyboard",
     enter: "Enter",
     backspace: "Delete last letter",
-    keyEnter: "Submit guess",
 
     help: "How to play",
     stats: "Statistics",
@@ -72,7 +71,6 @@ export const tw = createTranslator({
     keyboardLabel: "Клавиатура",
     enter: "Ввод",
     backspace: "Стереть последнюю букву",
-    keyEnter: "Отправить слово",
 
     help: "Как играть",
     stats: "Статистика",

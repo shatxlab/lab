@@ -17,7 +17,7 @@ import type { AppLang } from "@/lib/apps/lang";
 import { saveBlob } from "@/lib/apps/file-open";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import { DataError, DATA_FORMATS, detectFormat, parseData, stringifyData, type DataFormat, type StringifyOptions } from "@/lib/convert/data";
-import { base64ToBytes, bytesToBase64, bytesToHex, decodeText, DecodeError, encodeText, type EncodeMode } from "@/lib/convert/encode";
+import { bytesToBase64, bytesToHex, decodeText, DecodeError, encodeText, type EncodeMode } from "@/lib/convert/encode";
 import { hashAll, type HashRow } from "@/lib/convert/hash";
 import { tv } from "@/lib/convert/i18n";
 import { generateUuids, inspectUuid, type UuidVersion } from "@/lib/convert/uuid";

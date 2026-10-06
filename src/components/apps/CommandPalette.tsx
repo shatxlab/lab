@@ -8,11 +8,13 @@ import { th } from "@/lib/apps/header-i18n";
 import { changeAppLang, readAppLang, subscribeToAppLang, type AppLang } from "@/lib/apps/lang";
 import { filterItems, type PaletteItem } from "@/lib/apps/palette";
 import { withBase } from "@/lib/apps/paths";
-import { applyTheme, initTheme, persistTheme } from "@/lib/apps/theme";
+import { applyTheme, persistTheme } from "@/lib/apps/theme";
 import { CATEGORY_TITLES, TOOLS, toolHref } from "@/lib/apps/tools";
 
 function isMac(): boolean {
-  return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  if (typeof navigator === "undefined") return false;
+  const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
+  return /Mac|iPhone|iPad/.test(uaData?.platform ?? navigator.userAgent);
 }
 
 function buildItems(lang: AppLang): PaletteItem[] {

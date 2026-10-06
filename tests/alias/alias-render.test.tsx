@@ -144,6 +144,7 @@ describe("ResultsScreen", () => {
         onNext={noop}
         onPlayAgain={noop}
         onSetup={noop}
+        onToggleWord={noop}
       />,
     );
 
@@ -167,10 +168,41 @@ describe("ResultsScreen", () => {
         onNext={noop}
         onPlayAgain={noop}
         onSetup={noop}
+        onToggleWord={noop}
       />,
     );
 
     expect(markup).toContain("Comets wins!");
     expect(markup).toContain("Play again");
+  });
+
+  it("lets a word chip be toggled", () => {
+    const onToggleWord = vi.fn();
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() =>
+      root?.render(
+        <ResultsScreen
+          lang="en"
+          theme={getTheme("everyday")}
+          teams={[team]}
+          result={result}
+          team={team}
+          targetScore={30}
+          isGameOver={false}
+          winner={null}
+          onNext={noop}
+          onPlayAgain={noop}
+          onSetup={noop}
+          onToggleWord={onToggleWord}
+        />,
+      ),
+    );
+
+    const chips = host.querySelectorAll<HTMLButtonElement>(".alias-word-chip");
+    expect(chips).toHaveLength(2);
+    act(() => chips[1]?.click());
+    expect(onToggleWord).toHaveBeenCalledWith(1);
   });
 });

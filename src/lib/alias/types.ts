@@ -65,7 +65,7 @@ export interface AliasSettings {
   themeId: ThemeId;
   /** Length of one team's turn, in seconds. */
   roundSeconds: number;
-  /** First team to reach this score wins. */
+  /** Ends the game once a full round is played; the highest score at or above it wins. */
   targetScore: number;
   /** Points deducted for skipping; 0 disables the penalty. */
   skipPenalty: number;

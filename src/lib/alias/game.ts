@@ -95,7 +95,20 @@ export function applyPoints(team: Team, points: number): Team {
   return { ...team, score: team.score + points };
 }
 
-/** First team to reach the target; ties fall back to the higher score. */
+/**
+ * True when the turn that just ended was the last of a round, i.e. every team
+ * has played the same number of turns. Turns run in fixed order starting at
+ * index 0, so the last team's turn completes the round.
+ */
+export function isRoundComplete(activeIndex: number, teamCount: number): boolean {
+  return teamCount > 0 && activeIndex === teamCount - 1;
+}
+
+/**
+ * Highest-scoring team among those that reached the target; ties keep the
+ * earlier team. Used once a full round has been played so that turn order no
+ * longer decides the winner.
+ */
 export function resolveWinner(teams: readonly Team[], targetScore: number): Team | null {
   const reached = teams.filter((team) => team.score >= targetScore);
   if (reached.length === 0) return null;

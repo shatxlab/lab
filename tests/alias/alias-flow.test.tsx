@@ -43,6 +43,10 @@ function tally(host: HTMLElement, selector: string): string {
   return host.querySelector(selector)?.textContent?.replace(/\D/g, "") ?? "";
 }
 
+function answerCorrect(host: HTMLElement, count: number) {
+  for (let i = 0; i < count; i += 1) click(host, ".alias-action-correct");
+}
+
 describe("AliasGame flow", () => {
   it("walks setup → ready → round → results → next team", () => {
     const host = mount();
@@ -73,6 +77,60 @@ describe("AliasGame flow", () => {
     click(host, ".alias-primary-button");
     expect(host.querySelector(".alias-ready")).not.toBeNull();
     expect(host.textContent).toContain("Team 2");
+  });
+
+  it("finishes the whole round before deciding the winner", () => {
+    const host = mount();
+    click(host, ".alias-primary-button");
+    click(host, ".alias-start-round");
+
+    // Team 1 races to the target (30) on the very first turn.
+    answerCorrect(host, 30);
+    // Crossing the target must not end the game mid-round.
+    expect(host.querySelector(".alias-round")).not.toBeNull();
+    expect(host.querySelector(".alias-results")).toBeNull();
+    click(host, ".alias-ghost-button");
+
+    // The round is not over: Team 2 still plays and the hint explains why.
+    expect(host.querySelector(".alias-results")).not.toBeNull();
+    expect(host.querySelector(".alias-target-hit")).not.toBeNull();
+    expect(host.textContent).toContain("Next team");
+
+    click(host, ".alias-primary-button");
+    click(host, ".alias-start-round");
+    answerCorrect(host, 31);
+    click(host, ".alias-ghost-button");
+
+    // Team 2 overtook Team 1, so the completed round is theirs.
+    expect(host.textContent).toContain("Team 2 wins!");
+    expect(host.textContent).toContain("Play again");
+  });
+
+  it("lets the round result be corrected from the results list", () => {
+    const host = mount();
+    click(host, ".alias-primary-button");
+    click(host, ".alias-start-round");
+    click(host, ".alias-action-correct");
+    click(host, ".alias-action-correct");
+    click(host, ".alias-action-skip");
+    click(host, ".alias-ghost-button");
+
+    const points = () => host.querySelector(".alias-result-stat.is-points strong")?.textContent ?? "";
+    expect(points()).toBe("+1");
+
+    // A word marked as skipped was actually guessed: tap it to fix the result.
+    const skippedIndex = Array.from(host.querySelectorAll(".alias-word-chip")).findIndex((chip) =>
+      chip.classList.contains("is-skipped"),
+    );
+    expect(skippedIndex).toBeGreaterThanOrEqual(0);
+    act(() => host.querySelectorAll<HTMLButtonElement>(".alias-word-chip")[skippedIndex]?.click());
+
+    expect(host.querySelector(".alias-word-chip.is-skipped")).toBeNull();
+    expect(points()).toBe("+3");
+
+    // Tapping the same word again reverts it to a skip.
+    act(() => host.querySelectorAll<HTMLButtonElement>(".alias-word-chip")[skippedIndex]?.click());
+    expect(points()).toBe("+1");
   });
 
   it("keeps the last word on screen after time runs out until it is marked", () => {

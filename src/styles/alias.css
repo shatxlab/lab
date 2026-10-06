@@ -807,6 +807,16 @@
   width: 2.6rem;
 }
 
+.alias-target-hit {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  text-align: center;
+}
+
 .alias-result-score {
   display: grid;
   gap: 0.6rem;
@@ -857,19 +867,52 @@
 .alias-word-chip {
   align-items: center;
   background: rgba(20, 22, 43, 0.07);
+  border: 0;
   border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
   display: inline-flex;
+  font: inherit;
   font-weight: 700;
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.alias-word-chip-item {
+  display: inline-flex;
+}
+
+.alias-word-chip-item .alias-word-chip:active {
+  transform: scale(0.95);
+}
+
+.alias-word-chip:focus-visible {
+  outline: 2px solid var(--alias-ink, #14162b);
+  outline-offset: 2px;
 }
 
 .alias-word-chip.is-correct {
   background: rgba(35, 197, 82, 0.16);
 }
 
+.alias-word-chip.is-correct:hover {
+  background: rgba(35, 197, 82, 0.28);
+}
+
 .alias-word-chip.is-skipped {
   background: rgba(255, 90, 95, 0.16);
+}
+
+.alias-word-chip.is-skipped:hover {
+  background: rgba(255, 90, 95, 0.28);
+}
+
+.alias-words-hint {
+  font-size: 0.72rem;
+  margin: 0.7rem 0 0.1rem;
+  opacity: 0.55;
+  text-align: center;
 }
 
 .alias-empty {

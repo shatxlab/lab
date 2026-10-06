@@ -17,6 +17,7 @@ interface ResultsScreenProps {
   onNext: () => void;
   onPlayAgain: () => void;
   onSetup: () => void;
+  onToggleWord: (index: number) => void;
 }
 
 export function ResultsScreen({
@@ -31,10 +32,12 @@ export function ResultsScreen({
   onNext,
   onPlayAgain,
   onSetup,
+  onToggleWord,
 }: ResultsScreenProps) {
   const correct = result.words.filter((entry) => entry.correct).length;
   const skipped = result.words.length - correct;
   const sign = result.points > 0 ? "+" : "";
+  const targetReached = !isGameOver && teams.some((entry) => entry.score >= targetScore);
 
   return (
     <div className="alias-play alias-results" style={{ background: theme.gradient } as CSSProperties}>
@@ -58,6 +61,12 @@ export function ResultsScreen({
           </header>
         )}
 
+        {targetReached ? (
+          <p className="alias-target-hit" role="status">
+            {t(lang, "targetReachedHint")}
+          </p>
+        ) : null}
+
         <div className="alias-result-score">
           <div className="alias-result-stat is-correct">
             <span>{t(lang, "guessed")}</span>
@@ -80,11 +89,20 @@ export function ResultsScreen({
           {result.words.length === 0 ? (
             <p className="alias-empty">{t(lang, "noWords")}</p>
           ) : (
-            <ul>
-              {result.words.map((entry, index) => (
-                <WordChip key={`${entry.word}-${index}`} word={entry.word} correct={entry.correct} />
-              ))}
-            </ul>
+            <>
+              <ul>
+                {result.words.map((entry, index) => (
+                  <WordChip
+                    key={`${entry.word}-${index}`}
+                    word={entry.word}
+                    correct={entry.correct}
+                    onToggle={() => onToggleWord(index)}
+                    toggleLabel={entry.correct ? t(lang, "markSkipped") : t(lang, "markCorrect")}
+                  />
+                ))}
+              </ul>
+              <p className="alias-words-hint">{t(lang, "editWordsHint")}</p>
+            </>
           )}
         </section>
 

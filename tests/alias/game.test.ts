@@ -8,6 +8,7 @@ import {
   defaultSettings,
   defaultTeamName,
   defaultTeams,
+  isRoundComplete,
   makeTeam,
   nextTeam,
   rankTeams,
@@ -36,7 +37,7 @@ describe("alias scoring", () => {
     expect(team.score).toBe(4);
   });
 
-  it("finds the first team to reach the target and ranks the rest", () => {
+  it("picks the highest score at or above the target and ranks the rest", () => {
     const teams = [
       makeTeam("a", "A", "#111", 9),
       makeTeam("b", "B", "#222", 12),
@@ -45,6 +46,15 @@ describe("alias scoring", () => {
     expect(resolveWinner(teams, 10)?.score).toBe(12);
     expect(resolveWinner(teams, 20)).toBeNull();
     expect(rankTeams(teams).map((team) => team.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("only completes a round after the last team has played", () => {
+    expect(isRoundComplete(0, 3)).toBe(false);
+    expect(isRoundComplete(1, 3)).toBe(false);
+    expect(isRoundComplete(2, 3)).toBe(true);
+    expect(isRoundComplete(0, 2)).toBe(false);
+    expect(isRoundComplete(1, 2)).toBe(true);
+    expect(isRoundComplete(0, 0)).toBe(false);
   });
 });
 

@@ -15,7 +15,7 @@ locally, nothing is uploaded, and no accounts or telemetry are involved.
 | `/qr` | QR code | Generate QR codes for text, links, Wi-Fi, email, phone, SMS, vCard contacts and locations (PNG/SVG); scan with the camera or from an image. |
 | `/text` | Text tools | Diff (side by side / unified, word-level highlights), word and character counter, case converter (incl. camel/snake/kebab), regex tester (runs in a Worker with a timeout). |
 | `/convert` | Data converter | JSON ⇄ YAML ⇄ TOML, Base64 / URL / hex, MD5 and SHA hashes (plus HMAC) for text or files, UUID v4/v7 generator and inspector. |
-| `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts and synthesised sound feedback. |
+| `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
 | `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Fine or Cringe", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". 3 000 prompts per game per language across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode. |
@@ -145,6 +145,11 @@ template strings in `src/lib/alias/words/{en,ru}.ts`.
 Within a game, a shuffled session deck plus a used-word set means a word is
 never shown twice until the entire pool is consumed. Skipped words are dropped
 for the session rather than re-queued.
+
+The target score does not end the game mid-round: every team plays the same
+number of turns, and once a full round is complete the highest score above the
+target wins. This stops the team that happens to play first from winning just
+by crossing the target first.
 
 ### Couples games
 

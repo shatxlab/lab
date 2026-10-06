@@ -8,6 +8,7 @@ import {
   defaultSettings,
   defaultTeamName,
   defaultTeams,
+  isRoundComplete,
   makeTeam,
   nextTeam as makeNextTeam,
   resolveWinner,
@@ -122,9 +123,14 @@ export default function AliasGame() {
       const updatedTeams = teams.map((team, index) =>
         index === activeIndex ? applyPoints(team, points) : team,
       );
-      const champion = resolveWinner(updatedTeams, settings.targetScore);
       setTeams(updatedTeams);
       setLastResult({ teamId: teams[activeIndex].id, words: used, points });
+
+      // The target only ends the game once the round is complete, so every
+      // team gets the same number of turns and the highest score wins.
+      const champion = isRoundComplete(activeIndex, teams.length)
+        ? resolveWinner(updatedTeams, settings.targetScore)
+        : null;
       if (champion) {
         setWinnerId(champion.id);
         setPhase("gameOver");
@@ -235,20 +241,14 @@ export default function AliasGame() {
     soundRef.current?.play("correct");
     setWords(nextWords);
     setDeck((current) => refillDeck(advanceDeck(current), pool, usedWordsRef.current));
-    const team = teams[activeIndex];
-    if (!team) return;
-    if (timeExpired || team.score + turnPoints(nextWords, settings.skipPenalty) >= settings.targetScore) {
-      endRound(nextWords);
-    }
+    // A team keeps playing its full turn even after passing the target: the
+    // game only ends at the end of the round, so extra points still matter.
+    if (timeExpired) endRound(nextWords);
   }, [
     phase,
     deck,
     words,
     pool,
-    teams,
-    activeIndex,
-    settings.skipPenalty,
-    settings.targetScore,
     timeExpired,
     endRound,
   ]);
@@ -275,6 +275,33 @@ export default function AliasGame() {
     }
     endRound();
   }, [phase, deck, pool, endRound]);
+
+  // Fix a word's result from the results list (e.g. it was guessed but the
+  // explainer tapped skip). Recomputes the turn points, adjusts the team's
+  // score by the difference, and re-checks whether the game is over.
+  const handleToggleWord = useCallback(
+    (index: number) => {
+      if (!lastResult) return;
+      const nextWords = lastResult.words.map((entry, i) =>
+        i === index ? { ...entry, correct: !entry.correct } : entry,
+      );
+      const points = turnPoints(nextWords, settings.skipPenalty);
+      const delta = points - lastResult.points;
+      const updatedTeams = teams.map((team) =>
+        team.id === lastResult.teamId ? applyPoints(team, delta) : team,
+      );
+      // Only a completed round can produce a winner; mid-round corrections
+      // just update the score and the game continues.
+      const champion = isRoundComplete(activeIndex, teams.length)
+        ? resolveWinner(updatedTeams, settings.targetScore)
+        : null;
+      setTeams(updatedTeams);
+      setLastResult({ ...lastResult, words: nextWords, points });
+      setWinnerId(champion ? champion.id : null);
+      setPhase(champion ? "gameOver" : "turnResults");
+    },
+    [lastResult, teams, activeIndex, settings.skipPenalty, settings.targetScore],
+  );
 
   const handleNextTeam = useCallback(() => {
     roundActiveRef.current = false;
@@ -381,6 +408,7 @@ export default function AliasGame() {
           onNext={handleNextTeam}
           onPlayAgain={handlePlayAgain}
           onSetup={handleSetup}
+          onToggleWord={handleToggleWord}
         />
       ) : null}
 

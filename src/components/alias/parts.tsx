@@ -110,13 +110,38 @@ export function Scoreboard({ teams, activeTeamId }: ScoreboardProps) {
 interface WordChipProps {
   word: string;
   correct: boolean;
+  /** When provided, the chip becomes a button that toggles the result. */
+  onToggle?: () => void;
+  /** Accessible label / tooltip describing what the next tap does. */
+  toggleLabel?: string;
 }
 
-export function WordChip({ word, correct }: WordChipProps) {
+export function WordChip({ word, correct, onToggle, toggleLabel }: WordChipProps) {
+  const className = `alias-word-chip${correct ? " is-correct" : " is-skipped"}`;
+  const marker = <span aria-hidden="true">{correct ? "✓" : "✕"}</span>;
+
+  if (!onToggle) {
+    return (
+      <li className={className}>
+        {marker}
+        {word}
+      </li>
+    );
+  }
+
   return (
-    <li className={`alias-word-chip${correct ? " is-correct" : " is-skipped"}`}>
-      <span aria-hidden="true">{correct ? "✓" : "✕"}</span>
-      {word}
+    <li className="alias-word-chip-item">
+      <button
+        type="button"
+        className={className}
+        onClick={onToggle}
+        aria-pressed={correct}
+        aria-label={toggleLabel ? `${word} — ${toggleLabel}` : word}
+        title={toggleLabel}
+      >
+        {marker}
+        {word}
+      </button>
     </li>
   );
 }

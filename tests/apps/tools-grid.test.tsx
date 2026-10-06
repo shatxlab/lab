@@ -9,7 +9,7 @@ import { mount } from "../helpers/dom";
 describe("ToolsGrid", () => {
   it("renders English cards by default", () => {
     const html = renderToStaticMarkup(<ToolsGrid />);
-    expect(html).toContain("Pick a tool");
+    expect(html).toContain("Nothing uploaded.");
     expect(html).toContain("EPUB reader");
     expect(html).toContain("Document viewer");
     expect(html).toContain("Alias word game");
@@ -21,8 +21,8 @@ describe("ToolsGrid", () => {
     localStorage.setItem("lab:lang", "ru");
     const view = await mount(<ToolsGrid />);
     const text = view.container.textContent ?? "";
-    expect(text).toContain("Инструменты");
-    expect(text).toContain("Выберите инструмент");
+    expect(text).toContain("Ваши инструменты.");
+    expect(text).toContain("Ничего не загружается.");
     expect(text).toContain("EPUB-читалка");
     expect(text).toContain("Просмотр документов");
     expect(text).toContain("Алиас");
@@ -34,7 +34,7 @@ describe("ToolsGrid", () => {
 
   it("prerenders English even when another language is stored (hydration-safe)", () => {
     localStorage.setItem("lab:lang", "ru");
-    expect(renderToStaticMarkup(<ToolsGrid />)).toContain("Pick a tool");
+    expect(renderToStaticMarkup(<ToolsGrid />)).toContain("Your tools.");
   });
 
   it("groups the tools by category and lists every registered tool", () => {

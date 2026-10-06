@@ -1,4 +1,4 @@
-# lab
+# Local Lab
 
 A local-first toolbox of free browser tools, shipped as **one application**.
 Every tool runs entirely in your browser tab — files are parsed and rendered
@@ -182,6 +182,17 @@ localStorage round-trip. The board types with the phone's stock keyboard by
 parking one invisible `<input>` on the active cell, so no custom on-screen
 keyboard is needed.
 
+### Branding and link previews
+
+The name, tagline and descriptions live in `src/lib/brand.ts`; each tool's
+search/preview title and description live next to it in the registry
+(`seo` in `src/lib/apps/tools.ts`). `ToolsLayout` turns those into the
+`<title>`, description, canonical URL, Open Graph / Twitter card and
+schema.org JSON-LD, and the build emits `sitemap.xml`. The logo is
+`assets/favicon.svg` (mirrored by `components/apps/Logo.astro`); the PWA icons
+and the 1200×630 social card are generated from it by
+`scripts/generate-brand-assets.mjs` and committed.
+
 ### Adding a new tool
 
 1. Add the tool's island under `src/components/<tool>/` and its logic under
@@ -189,8 +200,10 @@ keyboard is needed.
    (`ToolPage`, `FilePicker`, `Tabs`, `CopyButton`, …), `src/lib/apps/` (theme,
    language via `useAppLang`, `createTranslator` for EN/RU copy, file open/save).
 2. Create `src/pages/<route>.astro` mounting the island inside `ToolsLayout`.
-3. Add one entry to `TOOLS` in `src/lib/apps/tools.ts` — the landing grid, the
-   command palette and the PWA shortcuts all read from it.
+3. Add one entry to `TOOLS` in `src/lib/apps/tools.ts` (including its `seo`
+   title and description) — the landing grid, the command palette, the PWA
+   shortcuts, the page metadata and the sitemap all read from it. Pass
+   `tool="<id>"` to `ToolsLayout` in the page.
 4. Add tests (including an `axeViolations()` check) next to the others.
 5. Persist anything under a `lab:<tool>:v1` key so the settings backup covers it.
 

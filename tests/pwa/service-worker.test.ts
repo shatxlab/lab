@@ -232,7 +232,7 @@ describe("build helpers", () => {
   it("generates a manifest scoped to the site base with real icon files", async () => {
     const { GET } = await import("../../src/pages/manifest.webmanifest");
     const manifest = await (await GET({} as never)).json();
-    expect(manifest).toMatchObject({ display: "standalone", short_name: "lab" });
+    expect(manifest).toMatchObject({ display: "standalone", short_name: "Local Lab" });
     // In tests BASE_URL is "/", so scope is the root; the paths stay under it.
     expect(manifest.start_url).toBe(manifest.scope);
     expect(manifest.icons.some((icon: { purpose?: string }) => icon.purpose === "maskable")).toBe(true);

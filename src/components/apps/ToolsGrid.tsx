@@ -1,3 +1,6 @@
+import { Languages, Gift, ShieldCheck, WifiOff } from "lucide-react";
+
+import { BRAND } from "@/lib/brand";
 import { CATEGORY_ORDER, CATEGORY_TITLES, toolHref, toolsByCategory } from "@/lib/apps/tools";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 
@@ -9,6 +12,7 @@ import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 export default function ToolsGrid() {
   const lang = useAppLang();
   const readyRef = useLangReady<HTMLElement>();
+  const sentences = BRAND.tagline[lang].split(/(?<=\.)\s+/);
 
   return (
     <section
@@ -16,17 +20,31 @@ export default function ToolsGrid() {
       data-lang-sensitive=""
       className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-[18px] py-10"
     >
-      <header className="flex flex-col gap-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-(--muted-fg)">
-          {lang === "ru" ? "Инструменты" : "Tools"}
-        </p>
-        <h1 className="text-2xl font-bold text-(--fg)">
-          {lang === "ru" ? "Выберите инструмент" : "Pick a tool"}
+      <header className="flex flex-col gap-4">
+        <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-(--fg) sm:text-5xl">
+          {sentences.map((sentence, index) => (
+            <span key={sentence} className={index === sentences.length - 1 ? "block text-(--accent)" : "mr-2"}>
+              {sentence}
+            </span>
+          ))}
         </h1>
+        <p className="max-w-2xl text-base text-(--muted-fg) sm:text-lg">{BRAND.pitch[lang]}</p>
+        <ul className="flex flex-wrap gap-2" aria-label={lang === "ru" ? "Главное" : "Highlights"}>
+          {BRAND.promises[lang].map((promise, index) => {
+            const Icon = [ShieldCheck, WifiOff, Gift, Languages][index] ?? ShieldCheck;
+            return (
+              <li
+                key={promise}
+                className="inline-flex items-center gap-1.5 rounded-full border border-(--border) bg-(--surface) px-3 py-1 text-sm text-(--fg)"
+              >
+                <Icon aria-hidden="true" className="size-4 text-(--accent)" />
+                {promise}
+              </li>
+            );
+          })}
+        </ul>
         <p className="text-sm text-(--muted-fg)">
-          {lang === "ru"
-            ? "Всё работает прямо в браузере. Нажмите Ctrl+K, чтобы быстро найти нужное."
-            : "Everything runs in your browser. Press Ctrl+K to jump to any tool."}
+          {lang === "ru" ? "Нажмите Ctrl+K, чтобы быстро найти нужный инструмент." : "Press Ctrl+K to jump to any tool."}
         </p>
       </header>
 

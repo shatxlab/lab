@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 
 import { TOOLS } from "@/lib/apps/tools";
+import { BRAND } from "@/lib/brand";
 import { withBase } from "@/lib/apps/paths";
 
 /** Tools offered as long-press shortcuts on the installed app icon. */
@@ -17,16 +18,16 @@ export const GET: APIRoute = () => {
 
   const manifest = {
     id: scope,
-    name: "lab — local-first browser tools",
-    short_name: "lab",
-    description: "Free tools that run entirely in your browser: documents, PDF, images, QR codes, text and data converters, and games. Nothing is uploaded.",
+    name: `${BRAND.name} — free browser tools that never upload your files`,
+    short_name: BRAND.name,
+    description: BRAND.description,
     lang: "en",
     start_url: scope,
     scope,
     display: "standalone",
     orientation: "any",
-    background_color: "#242424",
-    theme_color: "#242424",
+    background_color: BRAND.manifest.background,
+    theme_color: BRAND.manifest.theme,
     categories: ["utilities", "productivity"],
     icons: [icon("icon-192.png", "192x192"), icon("icon-512.png", "512x512"), icon("icon-maskable-512.png", "512x512", "maskable")],
     shortcuts: SHORTCUTS.flatMap((id) => {

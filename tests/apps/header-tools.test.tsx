@@ -93,7 +93,7 @@ describe("SettingsButton", () => {
     const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
     Object.defineProperty(input, "files", { value: [file], configurable: true });
     input.dispatchEvent(new Event("change", { bubbles: true }));
-    await waitFor(() => expect(document.body.textContent).toContain("not a lab backup"));
+    await waitFor(() => expect(document.body.textContent).toContain("not a Local Lab backup"));
     view.unmount();
   });
 });

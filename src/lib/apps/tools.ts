@@ -23,6 +23,8 @@ export interface ToolEntry {
   files: Localized;
   /** Extra words the command palette matches on (both languages). */
   keywords: string;
+  /** What search results and link previews show (English; the brand is appended to the title). */
+  seo: { title: string; description: string };
 }
 
 export const CATEGORY_ORDER: readonly ToolCategory[] = ["read", "utilities", "games"];
@@ -45,6 +47,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Открывайте EPUB и читайте прямо в браузере — навигация по главам, темы оформления, позиция чтения сохраняется локально.",
     },
     keywords: "book ebook epub read книга читалка чтение",
+    seo: {
+      title: "Free EPUB reader online — private",
+      description:
+        "Read EPUB books in your browser with search, bookmarks and reading themes. The book stays on your device — nothing is uploaded.",
+    },
   },
   {
     id: "viewer",
@@ -60,6 +67,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "PDF, Word, таблицы, JSON, Markdown, HTML, картинки и текст — локально. Правка и экспорт таблиц, сравнение двух файлов, печать в PDF.",
     },
     keywords: "document viewer pdf word docx excel xlsx csv json markdown html image diff compare документ просмотр таблица",
+    seo: {
+      title: "PDF, Word, Excel & Markdown viewer",
+      description:
+        "Open, convert and compare PDF, DOCX, XLSX, CSV, JSON, Markdown, HTML and images right in your browser. Export and print to PDF. Nothing is uploaded.",
+    },
   },
   {
     id: "pdf",
@@ -72,6 +84,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Склейка PDF, разделение на части, перестановка, поворот и удаление страниц — файлы не покидают устройство.",
     },
     keywords: "pdf merge split reorder rotate pages join склеить разделить страницы",
+    seo: {
+      title: "Merge, split & reorder PDF files",
+      description:
+        "Combine PDFs, split them into parts, and reorder, rotate or delete pages — free, in your browser, with no upload and no sign-up.",
+    },
   },
   {
     id: "image",
@@ -84,6 +101,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Конвертация, изменение размера и сжатие картинок, удаление EXIF-метаданных, например GPS.",
     },
     keywords: "image photo convert resize compress exif jpeg png webp картинка фото сжать размер",
+    seo: {
+      title: "Compress, resize & convert images",
+      description:
+        "Convert, resize and compress images in your browser, and strip EXIF and GPS metadata before you share. Your photos never leave your device.",
+    },
   },
   {
     id: "qr",
@@ -96,6 +118,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Создавайте QR-коды для текста, ссылок и Wi-Fi и сканируйте их камерой или с картинки.",
     },
     keywords: "qr code scanner generator barcode wifi камера сканер код",
+    seo: {
+      title: "QR code generator & scanner",
+      description:
+        "Create QR codes for links, Wi-Fi, contacts and more, and scan them with your camera or from an image. Free, private, works offline.",
+    },
   },
   {
     id: "text",
@@ -108,6 +135,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Сравнение двух текстов, подсчёт слов и символов, смена регистра и проверка регулярных выражений.",
     },
     keywords: "text diff compare word count characters case upper lower regex regexp текст сравнить подсчёт регистр",
+    seo: {
+      title: "Text diff, word counter & regex tester",
+      description:
+        "Compare two texts, count words and characters, change letter case and test regular expressions — instantly, in your browser.",
+    },
   },
   {
     id: "convert",
@@ -120,6 +152,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Конвертация JSON, YAML и TOML; кодирование Base64 и URL; хеши SHA; генерация UUID.",
     },
     keywords: "json yaml toml base64 url encode decode hash sha md5 uuid guid convert кодировать хеш конвертер",
+    seo: {
+      title: "JSON, YAML, TOML, Base64 & hash tools",
+      description:
+        "Convert JSON, YAML and TOML, encode Base64 and URLs, compute SHA and MD5 hashes and generate UUIDs. Runs locally; your data stays with you.",
+    },
   },
   {
     id: "alias",
@@ -132,6 +169,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Компания угадывает слова: один объясняет, команда угадывает. Десять тематических колод по 1000+ слов со звуковыми подсказками.",
     },
     keywords: "alias party word game team guess алиас игра слова компания",
+    seo: {
+      title: "Alias — the party word-guessing game",
+      description:
+        "Play Alias with friends: explain words, the team guesses. Ten themed decks with over 1000 words each, in English and Russian. Free and offline.",
+    },
   },
   {
     id: "crossword",
@@ -144,6 +186,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Кроссворды на русском и английском: крупная сетка, подсказки, проверка ошибок и сохранение прогресса.",
     },
     keywords: "crossword puzzle clues кроссворд головоломка",
+    seo: {
+      title: "Free crosswords in English & Russian",
+      description:
+        "Solve 100 crosswords with a phone-friendly grid, hints, mistake checking and saved progress. English and Russian, free and offline.",
+    },
   },
   {
     id: "wordle",
@@ -156,6 +203,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Угадайте слово из пяти букв за шесть попыток — на русском или английском. Сложный режим, контрастные цвета и сохранённая статистика.",
     },
     keywords: "wordle word guess puzzle five letter вордли слова угадай слово головоломка",
+    seo: {
+      title: "Wordle in English & Russian",
+      description:
+        "Guess the hidden five-letter word in six tries — in English or Russian, with hard mode, colour-blind colours and statistics. Free and offline.",
+    },
   },
   {
     id: "couples",
@@ -171,6 +223,11 @@ export const TOOLS: readonly ToolEntry[] = [
       ru: "Норм или стрём, ИлиТо и Кто из нас для двоих: отвечайте по очереди и смотрите, насколько вы совпадаете.",
     },
     keywords: "couples pairs two players this or that fine or cringe who of us пары двоих илито норм стрём",
+    seo: {
+      title: "Games for couples: This or That & more",
+      description:
+        "Fine or Cringe, This or That and Who of Us for two: 18,000 questions, secret voting and an agreement score. In English and Russian.",
+    },
   },
 ];
 

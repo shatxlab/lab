@@ -2,17 +2,17 @@ import { createTranslator } from "@/lib/apps/i18n";
 
 export const tpw = createTranslator({
   en: {
-    updateAvailable: "A new version of lab is available.",
+    updateAvailable: "A new version of Local Lab is available.",
     reload: "Reload",
     later: "Later",
-    offlineReady: "lab is ready to work offline.",
+    offlineReady: "Local Lab is ready to work offline.",
     dismiss: "Dismiss",
   },
   ru: {
-    updateAvailable: "Доступна новая версия lab.",
+    updateAvailable: "Доступна новая версия Local Lab.",
     reload: "Обновить",
     later: "Позже",
-    offlineReady: "lab готов работать без интернета.",
+    offlineReady: "Local Lab готов работать без интернета.",
     dismiss: "Закрыть",
   },
 });

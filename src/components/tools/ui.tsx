@@ -199,7 +199,7 @@ export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix 
             role="tab"
             id={`${idPrefix}-tab-${tab.id}`}
             aria-selected={active}
-            aria-controls={`${idPrefix}-panel-${tab.id}`}
+            aria-controls={active ? `${idPrefix}-panel-${tab.id}` : undefined}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(tab.id)}
             className={cn(

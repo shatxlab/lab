@@ -1,6 +1,7 @@
-import { Download, FileSpreadsheet, FileText, FileType, FolderOpen, RotateCcw, X } from "lucide-react";
+import { Diff, Download, FileCode, FileImage, FileSpreadsheet, FileText, FileType, FolderOpen, Printer, RotateCcw, X } from "lucide-react";
 
 import { Badge } from "@/components/viewer/ui/badge";
+import { MenuButton, type MenuItem } from "@/components/tools/MenuButton";
 import { Button } from "@/components/viewer/ui/button";
 import type { AppLang } from "@/lib/apps/lang";
 import { fileKindLabel } from "@/lib/viewer/i18n";
@@ -14,6 +15,9 @@ const KIND_ICONS = {
   docx: FileType,
   text: FileText,
   json: FileText,
+  html: FileCode,
+  pdf: FileType,
+  image: FileImage,
   "legacy-doc": FileType,
   unsupported: FileText,
 } satisfies Record<FileKind, typeof FileText>;
@@ -38,16 +42,19 @@ type FileBarProps = {
   onClose: () => void;
   onDownloadEdited?: () => void;
   onDiscardEdits?: () => void;
+  onCompare?: () => void;
+  onPrint?: () => void;
+  exportItems?: readonly MenuItem[];
 };
 
-export function FileBar({ lang, name, size, kind, detail, edited, onOpen, onClose, onDownloadEdited, onDiscardEdits }: FileBarProps) {
+export function FileBar({ lang, name, size, kind, detail, edited, onOpen, onClose, onDownloadEdited, onDiscardEdits, onCompare, onPrint, exportItems }: FileBarProps) {
   const Icon = KIND_ICONS[kind];
 
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-(--border) bg-(--bg) px-4 py-3 sm:px-6">
+    <div data-no-print="" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--border) bg-(--bg) px-4 py-3 sm:px-6">
       <Icon className="size-5 shrink-0 text-(--muted-fg)" />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-40">
         <p className="truncate font-medium" title={name}>
           {name}
         </p>
@@ -89,6 +96,31 @@ export function FileBar({ lang, name, size, kind, detail, edited, onOpen, onClos
         >
           <RotateCcw aria-hidden="true" />
           <span className="hidden sm:inline">{t(lang, "discardEdits")}</span>
+        </Button>
+      )}
+
+      {exportItems && exportItems.length > 0 && (
+        <MenuButton
+          label={t(lang, "export")}
+          menuLabel={t(lang, "exportMenu")}
+          items={exportItems}
+          icon={<Download aria-hidden="true" className="size-3.5" />}
+        />
+      )}
+
+      {onPrint && (
+        <Button variant="outline" size="sm" onClick={onPrint} title={t(lang, "printTitle")}>
+          <Printer aria-hidden="true" />
+          <span className="hidden sm:inline">{t(lang, "printPdf")}</span>
+          <span className="sr-only sm:hidden">{t(lang, "printPdf")}</span>
+        </Button>
+      )}
+
+      {onCompare && (
+        <Button variant="outline" size="sm" onClick={onCompare} title={t(lang, "compareTitle")}>
+          <Diff aria-hidden="true" />
+          <span className="hidden sm:inline">{t(lang, "compare")}</span>
+          <span className="sr-only sm:hidden">{t(lang, "compareTitle")}</span>
         </Button>
       )}
 

@@ -15,10 +15,10 @@ export function DocxView({ lang, html, warnings }: DocxViewProps) {
   const [showWarnings, setShowWarnings] = React.useState(false);
 
   return (
-    <div className="h-full overflow-auto px-4 py-8 sm:px-6 sm:py-10">
+    <div className="h-full overflow-auto px-4 py-8 sm:px-6 sm:py-10" data-print-flow="">
       <div className="mx-auto w-full max-w-2xl">
         {warnings.length > 0 && (
-          <div className="mb-6 rounded-lg border border-(--border) bg-(--surface)/60 text-sm">
+          <div data-no-print="" className="mb-6 rounded-lg border border-(--border) bg-(--surface)/60 text-sm">
             <button
               type="button"
               onClick={() => setShowWarnings((open) => !open)}

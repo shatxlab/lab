@@ -63,3 +63,20 @@ describe("resolveFileKind", () => {
     expect(resolveFileKind("notes.txt", bytes)).toBe("text");
   });
 });
+
+describe("binary sniffing for extension-less files", () => {
+  it.each([
+    ["pdf", [0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]],
+    ["image", [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]],
+    ["image", [0xff, 0xd8, 0xff, 0xe0, 0, 0]],
+    ["image", [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]],
+    ["image", [0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]],
+  ])("resolves a nameless %s", (kind, bytes) => {
+    expect(resolveFileKind("download", new Uint8Array(bytes))).toBe(kind);
+  });
+
+  it("does not take a RIFF/WAV file for an image", () => {
+    const wav = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45]);
+    expect(resolveFileKind("sound", wav)).toBe("unsupported");
+  });
+});

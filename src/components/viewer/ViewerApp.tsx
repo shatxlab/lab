@@ -1,14 +1,36 @@
 import * as React from "react";
-import { FileText, FileWarning, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, FileWarning, Loader2 } from "lucide-react";
+import type { PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 import { DropZone } from "@/components/viewer/DropZone";
 import { FileBar } from "@/components/viewer/FileBar";
 import { DocxView } from "@/components/viewer/viewers/DocxView";
 import { JsonView } from "@/components/viewer/viewers/JsonView";
 import { MarkdownView } from "@/components/viewer/viewers/MarkdownView";
+import { ImageView } from "@/components/viewer/viewers/ImageView";
+import { PdfView } from "@/components/viewer/viewers/PdfView";
 import { SheetView, type SheetViewHandle } from "@/components/viewer/viewers/SheetView";
 import { TextView } from "@/components/viewer/viewers/TextView";
-import { decodeTextBytes } from "@/lib/viewer/charset";
+import { DiffView } from "@/components/tools/DiffView";
+import type { MenuItem } from "@/components/tools/MenuButton";
+import { Button } from "@/components/viewer/ui/button";
+import { CompareError, extractComparableText } from "@/lib/viewer/comparable";
+import {
+  baseFileName,
+  htmlToMarkdown,
+  htmlToText,
+  jsonToCsv,
+  rowsToXlsx,
+  sheetDataToCsv,
+  sheetDataToJson,
+  standaloneHtml,
+  workbookSheetToCsv,
+  workbookSheetToJson,
+  workbookToXlsx,
+} from "@/lib/viewer/export";
+import { printDocument } from "@/lib/viewer/print";
+import { decodeMarkupBytes, decodeTextBytes } from "@/lib/viewer/charset";
+import { sanitizeDocumentHtml } from "@/lib/viewer/sanitize";
 import { ACCEPTED_EXTENSIONS, detectFileKind, fileExtension, resolveFileKind, type FileKind } from "@/lib/viewer/file-kind";
 import { formatBytesLimit, MAX_FILE_BYTES } from "@/lib/limits";
 import { parseJson, prettifyJson } from "@/lib/viewer/json";
@@ -20,11 +42,28 @@ import { stringsFor, t } from "@/lib/viewer/i18n";
 import type { AppLang } from "@/lib/apps/lang";
 
 const FILE_INPUT_ID = "docviewer-open";
+const COMPARE_INPUT_ID = "docviewer-compare";
+
+type CompareState =
+  | { status: "loading" }
+  | { status: "ready"; nameA: string; nameB: string; textA: string; textB: string }
+  | { status: "error"; message: string; hint?: string };
+
+/** Everything between <body> tags (or the whole markup when there are none). */
+function htmlBodyMarkup(source: string): string {
+  const body = /<body[^>]*>([\s\S]*?)(?:<\/body>|$)/i.exec(source)?.[1] ?? source;
+  return body
+    .replace(/<head[\s>][\s\S]*?<\/head>/gi, "")
+    .replace(/<title[\s>][\s\S]*?<\/title>/gi, "");
+}
 
 type FileMeta = { name: string; size: number; kind: FileKind };
 
 type LoadedDocument =
-  | { kind: "markdown"; html: string }
+  | { kind: "markdown"; html: string; source: string }
+  | { kind: "html"; html: string; source: string }
+  | { kind: "pdf"; bytes: Uint8Array }
+  | { kind: "image"; bytes: Uint8Array; extension: string }
   | { kind: "docx"; html: string; warnings: string[] }
   | { kind: "sheet"; sheets: SheetData[]; workbook: RawWorkbook | null }
   | { kind: "text"; text: string }
@@ -43,13 +82,6 @@ const BOOK_MIME_TYPES: Record<string, string> = {
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   xlsm: "application/vnd.ms-excel.sheet.macroEnabled.12",
 };
-
-/** `report.q1.xlsx` -> `report.q1`, and a name without an extension stays whole. */
-function baseFileName(name: string): string {
-  const base = name.replace(/\\/g, "/").split("/").pop() ?? name;
-  const dot = base.lastIndexOf(".");
-  return dot > 0 ? base.slice(0, dot) : base;
-}
 
 export default function ViewerApp() {
   const lang = useAppLang();
@@ -74,6 +106,13 @@ export default function ViewerApp() {
    * open claims a token and stale results are dropped.
    */
   const requestToken = React.useRef(0);
+  /** The File on screen, kept so "Compare" can read it again. */
+  const currentFileRef = React.useRef<File | null>(null);
+  const pdfDocRef = React.useRef<PDFDocumentProxy | null>(null);
+  const compareInputRef = React.useRef<HTMLInputElement>(null);
+  const [compare, setCompare] = React.useState<CompareState | null>(null);
+  const [activeSheet, setActiveSheet] = React.useState<string | null>(null);
+  const [exportError, setExportError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const sheetRef = React.useRef<SheetViewHandle>(null);
   const dragDepth = React.useRef(0);
@@ -83,6 +122,10 @@ export default function ViewerApp() {
     // A new file starts with a clean edit slate, whatever was open before.
     setEdits([]);
     setJsonEdit(null);
+    setCompare(null);
+    setExportError(null);
+    pdfDocRef.current = null;
+    currentFileRef.current = file;
 
     // Size is checked before reading so an oversized file never hits memory.
     if (file.size > MAX_FILE_BYTES) {
@@ -139,6 +182,10 @@ export default function ViewerApp() {
 
   const close = React.useCallback(() => {
     requestToken.current += 1;
+    currentFileRef.current = null;
+    pdfDocRef.current = null;
+    setCompare(null);
+    setExportError(null);
     setEdits([]);
     setJsonEdit(null);
     setState({ status: "idle" });
@@ -203,6 +250,59 @@ export default function ViewerApp() {
   const openPicker = React.useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  const startCompare = React.useCallback(
+    async (fileB: File) => {
+      const fileA = currentFileRef.current;
+      if (!fileA) return;
+      setCompare({ status: "loading" });
+      try {
+        const [textA, textB] = await Promise.all([extractComparableText(fileA), extractComparableText(fileB)]);
+        setCompare({ status: "ready", nameA: fileA.name, nameB: fileB.name, textA, textB });
+      } catch (error) {
+        const password = error instanceof CompareError && error.failure === "password";
+        const tooLarge = error instanceof CompareError && error.failure === "tooLarge";
+        setCompare({
+          status: "error",
+          message: tooLarge ? t(lang, "fileTooLarge") : t(lang, "compareUnsupported"),
+          hint: password
+            ? t(lang, "comparePasswordPdf")
+            : tooLarge
+              ? t(lang, "filesUpTo", { limit: formatBytesLimit(MAX_FILE_BYTES) })
+              : error instanceof CompareError
+                ? t(lang, "compareUnsupportedHint")
+                : error instanceof Error
+                  ? error.message
+                  : t(lang, "corruptedHint"),
+        });
+      }
+    },
+    [lang],
+  );
+
+  const handleCompareInput = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.item(0);
+      if (file) void startCompare(file);
+      event.target.value = "";
+    },
+    [startCompare],
+  );
+
+  /** Run an export, surfacing any failure instead of swallowing it. */
+  const runExport = React.useCallback(
+    async (produce: () => Promise<{ data: BlobPart; filename: string; type: string } | null>) => {
+      setExportError(null);
+      try {
+        const result = await produce();
+        if (result) saveBlob(new Blob([result.data], { type: result.type }), result.filename);
+      } catch (error) {
+        console.error("Export failed", error);
+        setExportError(t(lang, "exportFailed"));
+      }
+    },
+    [lang],
+  );
 
   const handleInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -290,13 +390,126 @@ export default function ViewerApp() {
       }
 
       if (event.key === "Escape" && state.status !== "idle") {
-        close();
+        if (compare) setCompare(null);
+        else close();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [state, openPicker, close]);
+  }, [state, compare, openPicker, close]);
+
+  const exportItems = React.useMemo<MenuItem[]>(() => {
+    if (state.status !== "ready" || compare) return [];
+    const { doc, file } = state;
+    const base = baseFileName(file.name);
+    const item = (id: string, label: string, produce: () => Promise<{ data: BlobPart; filename: string; type: string } | null>): MenuItem => ({
+      id,
+      label,
+      onSelect: () => void runExport(produce),
+    });
+
+    if (doc.kind === "sheet") {
+      const sheetName = activeSheet ?? doc.sheets[0]?.name ?? "Sheet1";
+      const sheetData = doc.sheets.find((sheet) => sheet.name === sheetName) ?? doc.sheets[0];
+      const workbook = doc.workbook ? applyEdits(doc.workbook, edits) : null;
+      const safe = sheetName.replace(/[\\/:*?"<>|]+/g, "_");
+      const items = [
+        item("csv", t(lang, "exportCsv"), async () => ({
+          data: workbook ? await workbookSheetToCsv(workbook, sheetName) : sheetData ? sheetDataToCsv(sheetData) : "",
+          filename: `${base}${doc.sheets.length > 1 ? `-${safe}` : ""}.csv`,
+          type: "text/csv;charset=utf-8",
+        })),
+        item("json", t(lang, "exportJsonSheet"), async () => ({
+          data: workbook ? await workbookSheetToJson(workbook, sheetName) : sheetData ? sheetDataToJson(sheetData) : "[]",
+          filename: `${base}${doc.sheets.length > 1 ? `-${safe}` : ""}.json`,
+          type: "application/json",
+        })),
+      ];
+      const extension = fileExtension(file.name);
+      if (!SAVABLE_BOOK_TYPES.has(extension)) {
+        items.push(
+          item("xlsx", t(lang, "exportXlsx"), async () => ({
+            data: (workbook ? await workbookToXlsx(workbook) : await rowsToXlsx(doc.sheets)) as unknown as BlobPart,
+            filename: `${base}.xlsx`,
+            type: BOOK_MIME_TYPES.xlsx!,
+          })),
+        );
+      }
+      return items;
+    }
+
+    if (doc.kind === "json") {
+      const value = jsonEdit ? jsonEdit.value : doc.value;
+      const csv = jsonToCsv(value);
+      const items = [
+        item("json-pretty", t(lang, "exportJsonPretty"), async () => ({
+          data: `${prettifyJson(value)}\n`,
+          filename: `${base}.formatted.json`,
+          type: "application/json",
+        })),
+        item("json-min", t(lang, "exportJsonMin"), async () => ({
+          data: JSON.stringify(value),
+          filename: `${base}.min.json`,
+          type: "application/json",
+        })),
+      ];
+      if (csv !== null) {
+        items.push(item("csv", t(lang, "exportJsonCsv"), async () => ({ data: csv, filename: `${base}.csv`, type: "text/csv;charset=utf-8" })));
+      }
+      return items;
+    }
+
+    if (doc.kind === "markdown" || doc.kind === "html" || doc.kind === "docx") {
+      const items = [
+        item("html", t(lang, "exportHtml"), async () => ({
+          data: standaloneHtml(base, doc.html, lang),
+          filename: `${base}.html`,
+          type: "text/html;charset=utf-8",
+        })),
+      ];
+      if (doc.kind !== "markdown") {
+        items.push(
+          item("md", t(lang, "exportMarkdown"), async () => ({
+            data: `${htmlToMarkdown(doc.html)}\n`,
+            filename: `${base}.md`,
+            type: "text/markdown;charset=utf-8",
+          })),
+        );
+      }
+      items.push(
+        item("txt", t(lang, "exportText"), async () => ({
+          data: `${htmlToText(doc.html)}\n`,
+          filename: `${base}.txt`,
+          type: "text/plain;charset=utf-8",
+        })),
+      );
+      return items;
+    }
+
+    if (doc.kind === "pdf") {
+      return [
+        item("pdf-text", t(lang, "exportPdfText"), async () => {
+          const pdf = pdfDocRef.current;
+          if (!pdf) return null;
+          const { pdfToText } = await import("@/lib/viewer/pdf");
+          const text = await pdfToText(pdf);
+          if (text.trim() === "") {
+            setExportError(t(lang, "pdfNoText"));
+            return null;
+          }
+          return { data: `${text}\n`, filename: `${base}.txt`, type: "text/plain;charset=utf-8" };
+        }),
+      ];
+    }
+
+    return [];
+  }, [state, compare, activeSheet, edits, jsonEdit, lang, runExport]);
+
+  const printable =
+    state.status === "ready" &&
+    !compare &&
+    (state.doc.kind === "markdown" || state.doc.kind === "html" || state.doc.kind === "docx" || state.doc.kind === "text");
 
   const fileInput = (
     <input
@@ -304,6 +517,7 @@ export default function ViewerApp() {
       ref={fileInputRef}
       type="file"
       className="sr-file-input"
+      aria-label={t(lang, "openFile")}
       accept={ACCEPTED_EXTENSIONS.join(",")}
       onChange={handleInputChange}
     />
@@ -340,11 +554,21 @@ export default function ViewerApp() {
       className="contents"
     >
       {fileInput}
+      <input
+        id={COMPARE_INPUT_ID}
+        ref={compareInputRef}
+        type="file"
+        className="sr-file-input"
+        tabIndex={-1}
+        aria-label={t(lang, "compareTitle")}
+        accept={ACCEPTED_EXTENSIONS.join(",")}
+        onChange={handleCompareInput}
+      />
 
       {state.status === "idle" ? (
         <Landing lang={lang} inputId={FILE_INPUT_ID} dragging={dragging} />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-print-flow="">
           <FileBar
             lang={lang}
             name={state.file?.name ?? ""}
@@ -356,19 +580,33 @@ export default function ViewerApp() {
             onClose={close}
             onDownloadEdited={downloadEdited}
             onDiscardEdits={discardEdits}
+            onCompare={state.status === "ready" && !compare ? () => compareInputRef.current?.click() : undefined}
+            onPrint={printable ? () => printDocument(baseFileName(state.file.name)) : undefined}
+            exportItems={exportItems}
           />
 
-          <div className="min-h-0 flex-1">
+          {exportError && (
+            <p role="alert" data-no-print="" className="border-b border-(--border) bg-(--warning)/10 px-4 py-2 text-sm text-(--warning) sm:px-6">
+              {exportError}
+            </p>
+          )}
+
+          <div className="min-h-0 flex-1" data-print-flow="">
             {state.status === "loading" && <LoadingPane lang={lang} />}
 
             {state.status === "error" && (
               <ErrorPane lang={lang} message={state.message} hint={state.hint} inputId={FILE_INPUT_ID} dragging={dragging} />
             )}
 
-            {state.status === "ready" && (
+            {state.status === "ready" && compare && (
+              <ComparePane lang={lang} compare={compare} onBack={() => setCompare(null)} />
+            )}
+
+            {state.status === "ready" && !compare && (
               <DocumentPane
                 lang={lang}
                 doc={state.doc}
+                fileName={state.file.name}
                 edits={edits}
                 jsonEdit={jsonEdit}
                 sheetRef={sheetRef}
@@ -377,6 +615,10 @@ export default function ViewerApp() {
                 onEditCell={commitCellEdit}
                 onApplyJson={commitJsonDocument}
                 onRevertJson={discardEdits}
+                onActiveSheet={setActiveSheet}
+                onPdfLoaded={(pdf) => {
+                  pdfDocRef.current = pdf;
+                }}
               />
             )}
           </div>
@@ -401,7 +643,21 @@ async function loadDocument(
 
   if (kind === "markdown") {
     const { renderMarkdown } = await import("@/lib/viewer/markdown");
-    return { kind: "markdown", html: renderMarkdown(decodeTextBytes(bytes)) };
+    const source = decodeTextBytes(bytes);
+    return { kind: "markdown", html: renderMarkdown(source), source };
+  }
+
+  if (kind === "html") {
+    const source = decodeMarkupBytes(bytes);
+    return { kind: "html", html: sanitizeDocumentHtml(htmlBodyMarkup(source)), source };
+  }
+
+  if (kind === "pdf") {
+    return { kind: "pdf", bytes };
+  }
+
+  if (kind === "image") {
+    return { kind: "image", bytes, extension };
   }
 
   if (kind === "text") {
@@ -427,6 +683,7 @@ async function loadDocument(
 function DocumentPane({
   lang,
   doc,
+  fileName,
   edits,
   jsonEdit,
   sheetRef,
@@ -435,9 +692,12 @@ function DocumentPane({
   onEditCell,
   onApplyJson,
   onRevertJson,
+  onActiveSheet,
+  onPdfLoaded,
 }: {
   lang: AppLang;
   doc: LoadedDocument;
+  fileName: string;
   edits: SheetEdit[];
   jsonEdit: { value: unknown } | null;
   sheetRef: React.RefObject<SheetViewHandle | null>;
@@ -446,6 +706,8 @@ function DocumentPane({
   onEditCell: (sheetName: string, addr: string, value: string | number | null) => void;
   onApplyJson: (value: unknown) => void;
   onRevertJson: () => void;
+  onActiveSheet: (name: string) => void;
+  onPdfLoaded: (doc: PDFDocumentProxy) => void;
 }) {
   /*
    * The rendered sheets always come from the ORIGINAL workbook plus the edit
@@ -480,7 +742,10 @@ function DocumentPane({
     [sheets, onEditCell],
   );
 
-  if (doc.kind === "markdown") return <MarkdownView html={doc.html} />;
+  if (doc.kind === "markdown" || doc.kind === "html") return <MarkdownView lang={lang} html={doc.html} source={doc.source} />;
+  if (doc.kind === "pdf") return <PdfView lang={lang} bytes={doc.bytes} onLoaded={onPdfLoaded} />;
+  if (doc.kind === "image")
+    return <ImageView lang={lang} bytes={doc.bytes} name={fileName} extension={doc.extension} />;
   if (doc.kind === "docx") return <DocxView lang={lang} html={doc.html} warnings={doc.warnings} />;
   if (doc.kind === "text") return <TextView text={doc.text} />;
   if (doc.kind === "json")
@@ -501,13 +766,59 @@ function DocumentPane({
       resetKey={resetKey}
       onEditCell={doc.workbook ? onEditCell : undefined}
       onAddRow={doc.workbook ? addRow : undefined}
+      onActiveSheetChange={onActiveSheet}
     />
+  );
+}
+
+function ComparePane({ lang, compare, onBack }: { lang: AppLang; compare: CompareState; onBack: () => void }) {
+  if (compare.status === "loading") {
+    return (
+      <div className="flex h-full items-center justify-center gap-3 text-sm text-(--muted-fg)" role="status">
+        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+        {t(lang, "compareReading")}
+      </div>
+    );
+  }
+
+  const back = (
+    <Button variant="outline" size="sm" onClick={onBack}>
+      <ArrowLeft aria-hidden="true" />
+      {t(lang, "backToDocument")}
+    </Button>
+  );
+
+  if (compare.status === "error") {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-(--warning)/15 text-(--warning)">
+          <FileWarning aria-hidden="true" className="size-5" />
+        </span>
+        <h2 role="alert" className="font-medium">
+          {compare.message}
+        </h2>
+        {compare.hint && <p className="max-w-md text-sm text-(--muted-fg)">{compare.hint}</p>}
+        {back}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-3 border-b border-(--border) bg-(--surface)/50 px-4 py-2 sm:px-6">
+        {back}
+        <p className="min-w-0 truncate text-sm text-(--muted-fg)">{t(lang, "comparing", { a: compare.nameA, b: compare.nameB })}</p>
+      </div>
+      <div className="min-h-0 flex-1">
+        <DiffView lang={lang} leftName={compare.nameA} rightName={compare.nameB} leftText={compare.textA} rightText={compare.textB} fill />
+      </div>
+    </div>
   );
 }
 
 function Landing({ lang, inputId, dragging }: { lang: AppLang; inputId: string; dragging: boolean }) {
   return (
-    <main className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
+    <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-xl">
         <header className="mb-8 text-center">
           <h1 className="flex items-center justify-center gap-2.5 text-3xl font-semibold tracking-tight">
@@ -522,11 +833,11 @@ function Landing({ lang, inputId, dragging }: { lang: AppLang; inputId: string; 
         <DropZone lang={lang} inputId={inputId} dragging={dragging} />
 
         <p className="mt-6 text-center text-xs text-(--muted-fg)">
-          .md &middot; .xlsx &middot; .xls &middot; .csv &middot; .tsv &middot; .ods &middot; .json
-          &middot; .docx &middot; .txt
+          .pdf &middot; .docx &middot; .xlsx &middot; .csv &middot; .md &middot; .html &middot; .json
+          &middot; .txt &middot; .png &middot; .jpg &middot; .svg &middot; .webp
         </p>
       </div>
-    </main>
+    </div>
   );
 }
 

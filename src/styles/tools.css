@@ -1,0 +1,278 @@
+/*
+ * Styles for the smaller tools (diff view, PDF text layer, image tools, ...).
+ * Themed through the apps-suite tokens from apps.css.
+ */
+
+/* --------------------------------------------------------------- diff view */
+.diff-table {
+  --diff-add-bg: color-mix(in srgb, var(--success) 14%, transparent);
+  --diff-add-strong: color-mix(in srgb, var(--success) 38%, transparent);
+  --diff-del-bg: color-mix(in srgb, oklch(0.63 0.2 25) 14%, transparent);
+  --diff-del-strong: color-mix(in srgb, oklch(0.63 0.2 25) 38%, transparent);
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.diff-col-no {
+  width: 3.25rem;
+}
+
+.diff-col-sign {
+  width: 1.5rem;
+}
+
+.diff-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.35rem 0.75rem;
+  text-align: left;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.diff-no {
+  vertical-align: top;
+  padding: 0 0.5rem;
+  text-align: right;
+  color: var(--muted-fg);
+  user-select: none;
+}
+
+.diff-sign {
+  vertical-align: top;
+  text-align: center;
+  font-weight: 700;
+  user-select: none;
+}
+
+.diff-text {
+  vertical-align: top;
+  padding: 0 0.5rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-left-no,
+.diff-right-no {
+  border-left: 1px solid var(--border);
+}
+
+.diff-left-no {
+  border-left: 0;
+}
+
+.diff-change .diff-left-no,
+.diff-change > .diff-left,
+.diff-remove > .diff-left,
+.diff-remove .diff-left-no,
+.diff-table-unified .diff-remove > .diff-no,
+.diff-table-unified .diff-remove > .diff-sign,
+.diff-table-unified .diff-remove > .diff-text {
+  background: var(--diff-del-bg);
+}
+
+.diff-change .diff-right-no,
+.diff-change > .diff-right,
+.diff-add > .diff-right,
+.diff-add .diff-right-no,
+.diff-table-unified .diff-add > .diff-no,
+.diff-table-unified .diff-add > .diff-sign,
+.diff-table-unified .diff-add > .diff-text {
+  background: var(--diff-add-bg);
+}
+
+.diff-remove > .diff-right,
+.diff-add > .diff-left {
+  background: color-mix(in srgb, var(--muted-fg) 8%, transparent);
+}
+
+.diff-changed {
+  background: var(--diff-add-strong);
+  color: inherit;
+  border-radius: 2px;
+}
+
+.diff-change > .diff-left .diff-changed,
+.diff-table-unified .diff-remove .diff-changed {
+  background: var(--diff-del-strong);
+}
+
+.diff-current > td {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.diff-gap td {
+  border-block: 1px solid var(--border);
+  background: var(--surface);
+  text-align: center;
+}
+
+.diff-gap button {
+  width: 100%;
+  padding: 0.3rem;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.diff-gap button:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------- PDF view */
+.pdf-scroller {
+  background: color-mix(in srgb, var(--muted-fg) 12%, var(--bg));
+}
+
+.pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  width: max-content;
+  min-width: 100%;
+}
+
+.pdf-page {
+  position: relative;
+  flex: none;
+  background: #fff;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.25);
+}
+
+.pdf-page canvas {
+  display: block;
+}
+
+/* Condensed from pdf.js's pdf_viewer.css: an invisible, selectable text layer. */
+.pdf-text-layer {
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  transform-origin: 0 0;
+  color-scheme: only light;
+  forced-color-adjust: none;
+}
+
+.pdf-text-layer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+  user-select: text;
+}
+
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.pdf-text-layer .markedContent {
+  display: contents;
+}
+
+.pdf-text-layer ::selection {
+  background: rgb(0 100 255 / 0.3);
+}
+
+/* -------------------------------------------------------------- image view */
+.image-stage {
+  display: flex;
+  min-height: 100%;
+  min-width: 100%;
+  width: max-content;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(45deg, color-mix(in srgb, var(--muted-fg) 14%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--muted-fg) 14%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--muted-fg) 14%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--muted-fg) 14%, transparent) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+/* ------------------------------------------------------------------- print */
+@media print {
+  .lab-header,
+  .skip-link,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  html,
+  html[data-theme="dark"] {
+    --bg: #fff;
+    --fg: #000;
+    --surface: #fff;
+    --border: #ccc;
+    --muted-fg: #444;
+    background: #fff !important;
+  }
+
+  html,
+  body,
+  body > div,
+  main,
+  [data-print-flow] {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .doc-prose {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .doc-prose :is(pre, table, img, blockquote, figure) {
+    break-inside: avoid;
+  }
+
+  .doc-prose :is(h1, h2, h3, h4) {
+    break-after: avoid;
+  }
+
+  .pdf-pages {
+    display: block;
+    width: auto;
+    padding: 0;
+  }
+
+  .pdf-page {
+    break-inside: avoid;
+    box-shadow: none;
+    margin: 0 auto;
+  }
+}

@@ -33,6 +33,8 @@ export type SheetViewProps = {
   /** Present only when the file has a backing workbook and can be edited. */
   onEditCell?: (sheetName: string, addr: string, value: string | number | null) => void;
   onAddRow?: (sheetName: string) => void;
+  /** Reports which sheet tab is showing, for per-sheet exports. */
+  onActiveSheetChange?: (sheetName: string) => void;
   /**
    * Identity of the underlying document. The find query, sort and scroll
    * reset when a DIFFERENT file opens — not when the sheets array is
@@ -43,7 +45,7 @@ export type SheetViewProps = {
 };
 
 export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
-  function SheetView({ lang, sheets, onEditCell, onAddRow, resetKey }, ref) {
+  function SheetView({ lang, sheets, onEditCell, onAddRow, onActiveSheetChange, resetKey }, ref) {
     const [activeIndex, setActiveIndex] = React.useState(0);
     const [visibleRows, setVisibleRows] = React.useState(ROW_CHUNK);
     const [sort, setSort] = React.useState<SheetSort | null>(null);
@@ -60,6 +62,11 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
     const pendingMatch = React.useRef<SheetMatch | null>(null);
 
     const active = sheets[Math.min(activeIndex, sheets.length - 1)];
+
+    const activeName = active?.name;
+    React.useEffect(() => {
+      if (activeName !== undefined) onActiveSheetChange?.(activeName);
+    }, [activeName, onActiveSheetChange]);
 
     React.useImperativeHandle(ref, () => ({
       focusFind() {

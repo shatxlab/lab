@@ -1,11 +1,24 @@
-import { sniffOfficeKind } from "@/lib/viewer/sniff";
+import { sniffBinaryKind, sniffOfficeKind } from "@/lib/viewer/sniff";
 
-export type FileKind = "markdown" | "sheet" | "docx" | "text" | "json" | "legacy-doc" | "unsupported";
+export type FileKind =
+  | "markdown"
+  | "sheet"
+  | "docx"
+  | "text"
+  | "json"
+  | "html"
+  | "pdf"
+  | "image"
+  | "legacy-doc"
+  | "unsupported";
 
 const MARKDOWN_EXTENSIONS = new Set(["md", "markdown", "mdown", "mkd", "mkdn", "mdtext"]);
 const SHEET_EXTENSIONS = new Set(["xlsx", "xlsm", "xlsb", "xls", "csv", "tsv", "ods", "fods", "dbf"]);
 const TEXT_EXTENSIONS = new Set(["txt", "log"]);
 const JSON_EXTENSIONS = new Set(["json"]);
+const HTML_EXTENSIONS = new Set(["html", "htm", "xhtml"]);
+const PDF_EXTENSIONS = new Set(["pdf"]);
+export const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "svg", "ico"]);
 
 /** CSV-family files are text, so they get decoded before SheetJS sees them. */
 export const TEXT_SHEET_EXTENSIONS = new Set(["csv", "tsv"]);
@@ -15,6 +28,9 @@ export const ACCEPTED_EXTENSIONS = [
   ...SHEET_EXTENSIONS,
   ...TEXT_EXTENSIONS,
   ...JSON_EXTENSIONS,
+  ...HTML_EXTENSIONS,
+  ...PDF_EXTENSIONS,
+  ...IMAGE_EXTENSIONS,
   "docx",
   "doc",
 ].map((extension) => `.${extension}`);
@@ -37,6 +53,9 @@ export function detectFileKind(fileName: string): FileKind {
   if (SHEET_EXTENSIONS.has(extension)) return "sheet";
   if (TEXT_EXTENSIONS.has(extension)) return "text";
   if (JSON_EXTENSIONS.has(extension)) return "json";
+  if (HTML_EXTENSIONS.has(extension)) return "html";
+  if (PDF_EXTENSIONS.has(extension)) return "pdf";
+  if (IMAGE_EXTENSIONS.has(extension)) return "image";
   if (extension === "docx") return "docx";
   if (extension === "doc") return "legacy-doc";
 
@@ -52,6 +71,9 @@ export function detectFileKind(fileName: string): FileKind {
 export function resolveFileKind(fileName: string, bytes: Uint8Array): FileKind {
   const named = detectFileKind(fileName);
   if (named !== "unsupported") return named;
+
+  const binary = sniffBinaryKind(bytes);
+  if (binary !== "unsupported") return binary;
 
   const office = sniffOfficeKind(bytes);
   if (office !== "unsupported") return office;
@@ -78,6 +100,9 @@ const KIND_LABELS: Record<FileKind, string> = {
   docx: "Word",
   text: "Text",
   json: "JSON",
+  html: "HTML",
+  pdf: "PDF",
+  image: "Image",
   "legacy-doc": "Word 97-2003",
   unsupported: "Unsupported",
 };

@@ -54,7 +54,7 @@ describe("detectFileKind", () => {
     expect(detectFileKind("CONTRACT.DOC")).toBe("legacy-doc");
   });
 
-  it.each(["photo.png", "archive.zip", "slides.pptx", "README"])(
+  it.each(["archive.zip", "slides.pptx", "README", "movie.mp4"])(
     "reads %s as unsupported",
     (name) => {
       expect(detectFileKind(name)).toBe("unsupported");
@@ -62,6 +62,12 @@ describe("detectFileKind", () => {
   );
 
   it.each([
+    ["report.pdf", "pdf"],
+    ["photo.png", "image"],
+    ["photo.JPEG", "image"],
+    ["logo.svg", "image"],
+    ["page.html", "html"],
+    ["page.htm", "html"],
     ["notes.txt", "text"],
     ["build.log", "text"],
     ["data.json", "json"],
@@ -78,6 +84,9 @@ describe("ACCEPTED_EXTENSIONS", () => {
     expect(ACCEPTED_EXTENSIONS).toContain(".docx");
     expect(ACCEPTED_EXTENSIONS).toContain(".txt");
     expect(ACCEPTED_EXTENSIONS).toContain(".log");
+    expect(ACCEPTED_EXTENSIONS).toContain(".pdf");
+    expect(ACCEPTED_EXTENSIONS).toContain(".png");
+    expect(ACCEPTED_EXTENSIONS).toContain(".html");
     expect(ACCEPTED_EXTENSIONS).toContain(".json");
     // .doc is accepted so the picker can hand it over and get a real explanation
     // instead of the OS greying the file out.

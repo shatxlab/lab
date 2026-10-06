@@ -15,7 +15,7 @@
     "preview": "astro preview --host 127.0.0.1",
     "test": "vitest run",
     "gen:crosswords": "node scripts/generate-crosswords.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "astro sync && tsc --noEmit",
     "check": "astro check"
   },
   "dependencies": {

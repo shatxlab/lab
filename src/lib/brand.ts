@@ -23,9 +23,9 @@ export const BRAND = {
   },
   /** `<meta name="description">` for the home page. */
   description:
-    "Local Lab is a free toolbox that runs entirely in your browser: view and convert documents, merge and split PDFs, compress images, make QR codes, diff text, convert data — and play Wordle. Nothing is uploaded.",
+    "Local Lab is a free toolbox that runs entirely in your browser: view and convert documents, merge and split PDFs, compress images, make QR codes, diff text, convert data — and play Wordle. Your data stays on your device.",
   /** Home-page `<title>`. */
-  homeTitle: "Local Lab — free browser tools that never upload your files",
+  homeTitle: "Local Lab — free browser tools that run on your device",
   themeColor: { light: "#fafafa", dark: "#242424" },
   /** Colours used by the installed app's splash screen and toolbar. */
   manifest: { background: "#242424", theme: "#047857" },

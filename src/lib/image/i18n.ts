@@ -3,7 +3,7 @@ import { createTranslator } from "@/lib/apps/i18n";
 export const ti = createTranslator({
   en: {
     title: "Image tools",
-    tagline: "Convert, resize and compress images, and strip hidden metadata such as GPS location — nothing is uploaded.",
+    tagline: "Convert, resize and compress images, and strip hidden metadata such as GPS location — all in your browser.",
     pick: "Choose, drop or paste images",
     pickHint: "PNG, JPEG, WebP, AVIF, GIF, BMP and SVG",
 
@@ -66,7 +66,7 @@ export const ti = createTranslator({
   },
   ru: {
     title: "Инструменты для картинок",
-    tagline: "Конвертация, изменение размера и сжатие картинок, удаление скрытых метаданных (например, GPS) — ничего не загружается.",
+    tagline: "Конвертация, изменение размера и сжатие картинок, удаление скрытых метаданных (например, GPS) — всё в вашем браузере.",
     pick: "Выберите, перетащите или вставьте картинки",
     pickHint: "PNG, JPEG, WebP, AVIF, GIF, BMP и SVG",
 

@@ -50,7 +50,7 @@ export const TOOLS: readonly ToolEntry[] = [
     seo: {
       title: "Free EPUB reader online — private",
       description:
-        "Read EPUB books in your browser with search, bookmarks and reading themes. The book stays on your device — nothing is uploaded.",
+        "Read EPUB books in your browser with search, bookmarks and reading themes. The book stays on your device.",
     },
   },
   {
@@ -70,7 +70,7 @@ export const TOOLS: readonly ToolEntry[] = [
     seo: {
       title: "PDF, Word, Excel & Markdown viewer",
       description:
-        "Open, convert and compare PDF, DOCX, XLSX, CSV, JSON, Markdown, HTML and images right in your browser. Export and print to PDF. Nothing is uploaded.",
+        "Open, convert and compare PDF, DOCX, XLSX, CSV, JSON, Markdown, HTML and images right in your browser. Export and print to PDF, all on your device.",
     },
   },
   {
@@ -80,14 +80,14 @@ export const TOOLS: readonly ToolEntry[] = [
     files: { en: ".pdf", ru: ".pdf" },
     title: { en: "PDF tools", ru: "Инструменты PDF" },
     description: {
-      en: "Merge several PDFs, split one into parts, reorder, rotate or delete pages — nothing leaves your device.",
-      ru: "Склейка PDF, разделение на части, перестановка, поворот и удаление страниц — файлы не покидают устройство.",
+      en: "Merge several PDFs, split one into parts, reorder, rotate or delete pages — all on your device.",
+      ru: "Склейка PDF, разделение на части, перестановка, поворот и удаление страниц — всё на вашем устройстве.",
     },
     keywords: "pdf merge split reorder rotate pages join склеить разделить страницы",
     seo: {
       title: "Merge, split & reorder PDF files",
       description:
-        "Combine PDFs, split them into parts, and reorder, rotate or delete pages — free, in your browser, with no upload and no sign-up.",
+        "Combine PDFs, split them into parts, and reorder, rotate or delete pages — free, in your browser, with no sign-up.",
     },
   },
   {
@@ -104,7 +104,7 @@ export const TOOLS: readonly ToolEntry[] = [
     seo: {
       title: "Compress, resize & convert images",
       description:
-        "Convert, resize and compress images in your browser, and strip EXIF and GPS metadata before you share. Your photos never leave your device.",
+        "Convert, resize and compress images in your browser, and strip EXIF and GPS metadata before you share. Your photos stay on your device.",
     },
   },
   {

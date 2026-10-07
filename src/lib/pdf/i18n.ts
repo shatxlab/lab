@@ -3,7 +3,7 @@ import { createTranslator } from "@/lib/apps/i18n";
 export const tp = createTranslator({
   en: {
     title: "PDF tools",
-    tagline: "Merge PDFs, split them into parts, and reorder, rotate or delete pages — your files never leave this device.",
+    tagline: "Merge PDFs, split them into parts, and reorder, rotate or delete pages — your files stay on this device.",
     tabs: "Tool",
     tabMerge: "Merge",
     tabSplit: "Split",
@@ -74,7 +74,7 @@ export const tp = createTranslator({
   },
   ru: {
     title: "Инструменты PDF",
-    tagline: "Склейка PDF, разделение на части, перестановка, поворот и удаление страниц — файлы не покидают устройство.",
+    tagline: "Склейка PDF, разделение на части, перестановка, поворот и удаление страниц — файлы остаются на устройстве.",
     tabs: "Инструмент",
     tabMerge: "Склеить",
     tabSplit: "Разделить",

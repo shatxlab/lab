@@ -101,7 +101,7 @@ const STRINGS: Record<AppLang, Record<StringKey, string>> = {
   en: {
     viewerTitle: "Viewer",
     viewerTagline:
-      "Open PDF, Word, Excel, Markdown, HTML, JSON, text and image files right here. Everything is read in your browser — no file is ever uploaded.",
+      "Open PDF, Word, Excel, Markdown, HTML, JSON, text and image files right here. Everything is read in your browser — your files stay on your device.",
     dropToOpen: "Drop to open",
     dropPrompt: "Drop a file here, or click to browse",
     dropHint: "PDF, Word, Excel, CSV, Markdown, HTML, JSON, text and images · you can also paste a file",
@@ -193,7 +193,7 @@ const STRINGS: Record<AppLang, Record<StringKey, string>> = {
   ru: {
     viewerTitle: "Просмотр",
     viewerTagline:
-      "Открывайте файлы PDF, Word, Excel, Markdown, HTML, JSON, текст и картинки прямо здесь. Всё читается в вашем браузере — файлы никуда не загружаются.",
+      "Открывайте файлы PDF, Word, Excel, Markdown, HTML, JSON, текст и картинки прямо здесь. Всё читается в вашем браузере — файлы остаются на вашем устройстве.",
     dropToOpen: "Отпустите, чтобы открыть",
     dropPrompt: "Перетащите файл сюда или нажмите, чтобы выбрать",
     dropHint: "PDF, Word, Excel, CSV, Markdown, HTML, JSON, текст и картинки · файл можно вставить из буфера",

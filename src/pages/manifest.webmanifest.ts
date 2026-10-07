@@ -18,7 +18,7 @@ export const GET: APIRoute = () => {
 
   const manifest = {
     id: scope,
-    name: `${BRAND.name} — free browser tools that never upload your files`,
+    name: `${BRAND.name} — free browser tools that run on your device`,
     short_name: BRAND.name,
     description: BRAND.description,
     lang: "en",

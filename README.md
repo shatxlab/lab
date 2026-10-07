@@ -2,7 +2,7 @@
 
 A local-first toolbox of free browser tools, shipped as **one application**.
 Every tool runs entirely in your browser tab — files are parsed and rendered
-locally, nothing is uploaded, and no accounts or telemetry are involved.
+locally, your files stay on your device, and no accounts or telemetry are involved.
 
 ## Tools
 
@@ -212,7 +212,7 @@ and the 1200×630 social card are generated from it by
 4. Add tests (including an `axeViolations()` check) next to the others.
 5. Persist anything under a `lab:<tool>:v1` key so the settings backup covers it.
 
-Parse/render locally in the browser — no file uploads, no accounts.
+Parse/render locally in the browser — your files stay on your device, and no accounts.
 
 ## License
 

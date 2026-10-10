@@ -2,15 +2,10 @@ import * as React from "react";
 import { ArrowLeft, FileText, FileWarning, Loader2 } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
 
+import { DocumentPane } from "@/components/viewer/DocumentPane";
 import { DropZone } from "@/components/viewer/DropZone";
 import { FileBar } from "@/components/viewer/FileBar";
-import { DocxView } from "@/components/viewer/viewers/DocxView";
-import { JsonView } from "@/components/viewer/viewers/JsonView";
-import { MarkdownView } from "@/components/viewer/viewers/MarkdownView";
-import { ImageView } from "@/components/viewer/viewers/ImageView";
-import { PdfView } from "@/components/viewer/viewers/PdfView";
-import { SheetView, type SheetViewHandle } from "@/components/viewer/viewers/SheetView";
-import { TextView } from "@/components/viewer/viewers/TextView";
+import { type SheetViewHandle } from "@/components/viewer/viewers/SheetView";
 import { DiffView } from "@/components/tools/DiffView";
 import type { MenuItem } from "@/components/tools/MenuButton";
 import { Button } from "@/components/viewer/ui/button";
@@ -29,12 +24,10 @@ import {
   workbookToXlsx,
 } from "@/lib/viewer/export";
 import { printDocument } from "@/lib/viewer/print";
-import { decodeMarkupBytes, decodeTextBytes } from "@/lib/viewer/charset";
-import { sanitizeDocumentHtml } from "@/lib/viewer/sanitize";
+import { loadDocument, type LoadedDocument } from "@/lib/viewer/load";
 import { ACCEPTED_EXTENSIONS, detectFileKind, fileExtension, resolveFileKind, type FileKind } from "@/lib/viewer/file-kind";
 import { formatBytesLimit, MAX_FILE_BYTES } from "@/lib/limits";
-import { parseJson, prettifyJson } from "@/lib/viewer/json";
-import { parseWorkbook, workbookToSheets, columnLabel, type RawWorkbook, type SheetData } from "@/lib/viewer/sheet";
+import { prettifyJson } from "@/lib/viewer/json";
 import { applyEdits, serializeWorkbook, type SheetEdit, type SheetJsWriter } from "@/lib/viewer/sheet-edit";
 import { saveBlob } from "@/lib/apps/file-open";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
@@ -49,25 +42,7 @@ type CompareState =
   | { status: "ready"; nameA: string; nameB: string; textA: string; textB: string }
   | { status: "error"; message: string; hint?: string };
 
-/** Everything between <body> tags (or the whole markup when there are none). */
-function htmlBodyMarkup(source: string): string {
-  const body = /<body[^>]*>([\s\S]*?)(?:<\/body>|$)/i.exec(source)?.[1] ?? source;
-  return body
-    .replace(/<head[\s>][\s\S]*?<\/head>/gi, "")
-    .replace(/<title[\s>][\s\S]*?<\/title>/gi, "");
-}
-
 type FileMeta = { name: string; size: number; kind: FileKind };
-
-type LoadedDocument =
-  | { kind: "markdown"; html: string; source: string }
-  | { kind: "html"; html: string; source: string }
-  | { kind: "pdf"; bytes: Uint8Array }
-  | { kind: "image"; bytes: Uint8Array; extension: string }
-  | { kind: "docx"; html: string; warnings: string[] }
-  | { kind: "sheet"; sheets: SheetData[]; workbook: RawWorkbook | null }
-  | { kind: "text"; text: string }
-  | { kind: "json"; value: unknown; warnings: string[] };
 
 type ViewerState =
   | { status: "idle" }
@@ -632,143 +607,6 @@ export default function ViewerApp() {
         </div>
       )}
     </div>
-  );
-}
-
-async function loadDocument(
-  buffer: ArrayBuffer,
-  kind: Exclude<FileKind, "legacy-doc" | "unsupported">,
-  extension: string,
-): Promise<LoadedDocument> {
-  const bytes = new Uint8Array(buffer);
-
-  if (kind === "markdown") {
-    const { renderMarkdown } = await import("@/lib/viewer/markdown");
-    const source = decodeTextBytes(bytes);
-    return { kind: "markdown", html: renderMarkdown(source), source };
-  }
-
-  if (kind === "html") {
-    const source = decodeMarkupBytes(bytes);
-    return { kind: "html", html: sanitizeDocumentHtml(htmlBodyMarkup(source)), source };
-  }
-
-  if (kind === "pdf") {
-    return { kind: "pdf", bytes };
-  }
-
-  if (kind === "image") {
-    return { kind: "image", bytes, extension };
-  }
-
-  if (kind === "text") {
-    return { kind: "text", text: decodeTextBytes(bytes) };
-  }
-
-  if (kind === "json") {
-    // decodeTextBytes first: a JSON export saved as UTF-16 must still open.
-    const { value, warnings } = parseJson(decodeTextBytes(bytes));
-    return { kind: "json", value, warnings };
-  }
-
-  if (kind === "sheet") {
-    const workbook = await parseWorkbook({ buffer, extension });
-    return { kind: "sheet", sheets: workbook.sheets, workbook: workbook.workbook };
-  }
-
-  const { renderDocx } = await import("@/lib/viewer/docx");
-  const { html, warnings } = await renderDocx(buffer);
-  return { kind: "docx", html, warnings };
-}
-
-function DocumentPane({
-  lang,
-  doc,
-  fileName,
-  edits,
-  jsonEdit,
-  sheetRef,
-  resetKey,
-  jsonResetKey,
-  onEditCell,
-  onApplyJson,
-  onRevertJson,
-  onActiveSheet,
-  onPdfLoaded,
-}: {
-  lang: AppLang;
-  doc: LoadedDocument;
-  fileName: string;
-  edits: SheetEdit[];
-  jsonEdit: { value: unknown } | null;
-  sheetRef: React.RefObject<SheetViewHandle | null>;
-  resetKey: string;
-  jsonResetKey: string;
-  onEditCell: (sheetName: string, addr: string, value: string | number | null) => void;
-  onApplyJson: (value: unknown) => void;
-  onRevertJson: () => void;
-  onActiveSheet: (name: string) => void;
-  onPdfLoaded: (doc: PDFDocumentProxy) => void;
-}) {
-  /*
-   * The rendered sheets always come from the ORIGINAL workbook plus the edit
-   * list, never from mutating anything: that is what lets "discard edits"
-   * just drop the list. Re-deriving per edit also keeps every display row's
-   * `sourceRow` truthful, so find and sort keep working across edits.
-   */
-  const sheets = React.useMemo(
-    () =>
-      doc.kind === "sheet"
-        ? doc.workbook
-          ? workbookToSheets(applyEdits(doc.workbook, edits))
-          : doc.sheets
-        : [],
-    [doc, edits],
-  );
-
-  const jsonValue = React.useMemo(
-    () => (doc.kind === "json" ? (jsonEdit ? jsonEdit.value : doc.value) : undefined),
-    [doc, jsonEdit],
-  );
-
-  const addRow = React.useCallback(
-    (sheetName: string) => {
-      // The next free row is one past the sheet's current range; writing a
-      // (blank) cell there grows `!ref`, so the re-read shows the new row.
-      const sheet = sheets.find((entry) => entry.name === sheetName);
-      const startColumn = sheet?.range?.startColumn ?? 0;
-      const endRow = sheet?.range?.endRow ?? -1;
-      onEditCell(sheetName, `${columnLabel(startColumn)}${endRow + 2}`, "");
-    },
-    [sheets, onEditCell],
-  );
-
-  if (doc.kind === "markdown" || doc.kind === "html") return <MarkdownView lang={lang} html={doc.html} source={doc.source} />;
-  if (doc.kind === "pdf") return <PdfView lang={lang} bytes={doc.bytes} onLoaded={onPdfLoaded} />;
-  if (doc.kind === "image")
-    return <ImageView lang={lang} bytes={doc.bytes} name={fileName} extension={doc.extension} />;
-  if (doc.kind === "docx") return <DocxView lang={lang} html={doc.html} warnings={doc.warnings} />;
-  if (doc.kind === "text") return <TextView text={doc.text} />;
-  if (doc.kind === "json")
-    return (
-      <JsonView
-        lang={lang}
-        value={jsonValue}
-        resetKey={jsonResetKey}
-        onApply={onApplyJson}
-        onRevert={onRevertJson}
-      />
-    );
-  return (
-    <SheetView
-      ref={sheetRef}
-      lang={lang}
-      sheets={sheets}
-      resetKey={resetKey}
-      onEditCell={doc.workbook ? onEditCell : undefined}
-      onAddRow={doc.workbook ? addRow : undefined}
-      onActiveSheetChange={onActiveSheet}
-    />
   );
 }
 

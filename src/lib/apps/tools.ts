@@ -74,6 +74,26 @@ export const TOOLS: readonly ToolEntry[] = [
     },
   },
   {
+    id: "tools",
+    path: "/tools",
+    category: "utilities",
+    files: {
+      en: "any file · every tool that fits",
+      ru: "любой файл · все подходящие инструменты",
+    },
+    title: { en: "Workbench", ru: "Рабочая область" },
+    description: {
+      en: "Drop one file and every tool that applies to it is already there: view, edit, convert, compare, hash and more.",
+      ru: "Перетащите один файл — и все подходящие инструменты уже здесь: просмотр, правка, конвертация, сравнение, хеш и другое.",
+    },
+    keywords: "workbench tools hub open file view edit convert compare all-in-one инструменты файл просмотр правка конвертация",
+    seo: {
+      title: "Workbench — every file tool in one place",
+      description:
+        "Open one file and get every matching tool: view, edit, convert, compare, hash, encode and more. Runs locally; your files never leave your device.",
+    },
+  },
+  {
     id: "pdf",
     path: "/pdf",
     category: "utilities",

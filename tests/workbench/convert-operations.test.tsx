@@ -48,7 +48,6 @@ describe("workbench convert operations", () => {
   it("registers the convert capabilities", async () => {
     expect(hasOperation("data.convert")).toBe(true);
     expect(hasOperation("data.hash")).toBe(true);
-    expect(hasOperation("data.uuid")).toBe(true);
     expect(await loadOperation("data.encode")).toBeTypeOf("function");
   });
 });

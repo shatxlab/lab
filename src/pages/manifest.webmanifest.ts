@@ -5,7 +5,7 @@ import { BRAND } from "@/lib/brand";
 import { withBase } from "@/lib/apps/paths";
 
 /** Tools offered as long-press shortcuts on the installed app icon. */
-const SHORTCUTS = ["viewer", "pdf", "wordle", "qr"];
+const SHORTCUTS = ["tools", "wordle"];
 
 export const GET: APIRoute = () => {
   const scope = `${withBase("/")}${withBase("/").endsWith("/") ? "" : "/"}`;

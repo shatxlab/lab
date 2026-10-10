@@ -53,7 +53,9 @@ export type MatchReason =
   | "reasonNeedsText"
   | "reasonNeedsSheet"
   | "reasonNeedsDocument"
-  | "reasonNeedsTextual";
+  | "reasonNeedsTextual"
+  | "reasonNotForPdf"
+  | "reasonNeedsBook";
 
 export interface Match {
   ok: boolean;
@@ -61,11 +63,12 @@ export interface Match {
 }
 
 export type CapabilityId =
+  | "book.read"
   | "viewer.view"
   | "viewer.edit"
   | "viewer.print"
   | "docx.edit"
-  | "pdf.edit"
+  | "pdf.sign"
   | "doc.convert"
   | "sheet.convert"
   | "data.convert"
@@ -81,8 +84,6 @@ export type CapabilityId =
   | "image.strip"
   | "pdf.merge"
   | "pdf.split"
-  | "pdf.organize"
-  | "pdf.unlock"
   | "qr.generate"
   | "qr.scan";
 
@@ -113,16 +114,38 @@ const everySet = (assets: readonly Asset[], set: ReadonlySet<AssetKind>): boolea
   every(assets, (kind) => set.has(kind));
 
 const isPdf = (kind: AssetKind): boolean => kind === "pdf";
+
+/**
+ * PDFs get a deliberately small toolset — view, merge, split and sign — so a
+ * PDF never opens onto a wall of generic actions. Any selection that contains
+ * a PDF is limited to these, whatever the individual predicates say.
+ */
+const PDF_CAPABILITIES: ReadonlySet<CapabilityId> = new Set<CapabilityId>([
+  "viewer.view",
+  "pdf.merge",
+  "pdf.split",
+  "pdf.sign",
+]);
 const isImage = (kind: AssetKind): boolean => kind === "image";
 
 export const CAPABILITIES: readonly Capability[] = [
   /* --------------------------------------------------------------- view */
   {
+    id: "book.read",
+    group: "view",
+    label: { en: "Read", ru: "Читать" },
+    weight: 900,
+    match: (assets) => ({ ok: only(assets) && kindOf(assets) === "epub", reason: "reasonNeedsBook" }),
+  },
+  {
     id: "viewer.view",
     group: "view",
     label: { en: "View", ru: "Просмотр" },
     weight: 800,
-    match: (assets) => ({ ok: every(assets, (kind) => kind !== "binary"), reason: "reasonNeedsDocument" }),
+    match: (assets) => ({
+      ok: every(assets, (kind) => kind !== "binary" && kind !== "epub"),
+      reason: "reasonNeedsDocument",
+    }),
   },
   {
     id: "viewer.edit",
@@ -139,9 +162,9 @@ export const CAPABILITIES: readonly Capability[] = [
     match: (assets) => ({ ok: only(assets) && kindOf(assets) === "docx", reason: "reasonNeedsDocument" }),
   },
   {
-    id: "pdf.edit",
+    id: "pdf.sign",
     group: "edit",
-    label: { en: "Edit PDF", ru: "Редактировать PDF" },
+    label: { en: "Sign PDF", ru: "Подписать PDF" },
     weight: 770,
     match: (assets) => ({ ok: only(assets) && isPdf(kindOf(assets)), reason: "reasonNeedsPdf" }),
   },
@@ -222,13 +245,6 @@ export const CAPABILITIES: readonly Capability[] = [
     weight: 600,
     match: (assets) => ({ ok: only(assets) && isPdf(kindOf(assets)), reason: "reasonNeedsPdf" }),
   },
-  {
-    id: "pdf.organize",
-    group: "transform",
-    label: { en: "Organize pages", ru: "Страницы" },
-    weight: 660,
-    match: (assets) => ({ ok: only(assets) && isPdf(kindOf(assets)), reason: "reasonNeedsPdf" }),
-  },
 
   /* ------------------------------------------------------------ analyze */
   {
@@ -236,8 +252,9 @@ export const CAPABILITIES: readonly Capability[] = [
     group: "analyze",
     label: { en: "Compare", ru: "Сравнить" },
     weight: 1000,
+    // With nothing open it compares two typed or pasted texts instead.
     match: (assets) => ({
-      ok: assets.length >= 2 && assets.every((asset) => isComparable(asset.kind)),
+      ok: assets.length === 0 || (assets.length >= 2 && assets.every((asset) => isComparable(asset.kind))),
       reason: "reasonNeedsTwoFiles",
     }),
   },
@@ -264,13 +281,6 @@ export const CAPABILITIES: readonly Capability[] = [
     weight: 560,
     match: (assets) => ({ ok: only(assets) && isImage(kindOf(assets)), reason: "reasonNeedsImage" }),
   },
-  {
-    id: "pdf.unlock",
-    group: "secure",
-    label: { en: "Unlock PDF", ru: "Снять защиту" },
-    weight: 520,
-    match: (assets) => ({ ok: only(assets) && isPdf(kindOf(assets)), reason: "reasonNeedsPdf" }),
-  },
 
   /* ------------------------------------------------------------- create */
   {
@@ -295,12 +305,14 @@ export const CAPABILITIES: readonly Capability[] = [
       return { ok: false, reason: "reasonNeedsImage" };
     },
   },
+
   {
     id: "data.uuid",
     group: "create",
     label: { en: "Generate UUID", ru: "Создать UUID" },
     weight: 200,
-    match: () => ({ ok: true }),
+    // It ignores files, so it is only offered as a no-file starter.
+    match: (assets) => ({ ok: assets.length === 0 }),
   },
 
   /* -------------------------------------------------------------- share */
@@ -336,14 +348,21 @@ export interface CapabilitySet {
   suggested: CapabilityMatch | null;
 }
 
-/** How many enabled capabilities are promoted to primary buttons. */
-export const PRIMARY_COUNT = 2;
+/** How many enabled capabilities are shown as tabs; the rest go under "More". */
+export const PRIMARY_COUNT = 4;
+
+function matchCapability(capability: Capability, assets: readonly Asset[]): Match {
+  if (!PDF_CAPABILITIES.has(capability.id) && assets.some((asset) => isPdf(asset.kind))) {
+    return { ok: false, reason: "reasonNotForPdf" };
+  }
+  return capability.match(assets);
+}
 
 /** Resolve every capability against a selection, ordered by relevance. */
 export function capabilitiesFor(assets: readonly Asset[]): CapabilitySet {
   const all: CapabilityMatch[] = CAPABILITIES.map((capability) => ({
     capability,
-    match: capability.match(assets),
+    match: matchCapability(capability, assets),
     weight: capability.weight,
     primary: false,
   }));
@@ -352,7 +371,7 @@ export function capabilitiesFor(assets: readonly Asset[]): CapabilitySet {
     .filter((entry) => entry.match.ok)
     .sort((a, b) => b.weight - a.weight || (a.capability.id < b.capability.id ? -1 : 1));
 
-  // Create tools (UUID, QR) also apply to an empty selection; only a real
+  // No-file starters (QR, compare, UUID) also apply to an empty selection; only a real
   // selection gets promoted actions, so the empty state stays a drop zone.
   if (assets.length > 0) {
     for (let index = 0; index < enabled.length && index < PRIMARY_COUNT; index += 1) {
@@ -378,6 +397,21 @@ export function capabilitiesFor(assets: readonly Asset[]): CapabilitySet {
 /** The id of the operation a fresh drop should open, or null when empty. */
 export function suggestOperation(assets: readonly Asset[]): CapabilityId | null {
   return capabilitiesFor(assets).suggested?.capability.id ?? null;
+}
+
+/**
+ * Capabilities the selection is one file short of: disabled now, but enabled
+ * once another file like the last one is added (two PDFs merge, two texts
+ * compare). The shell turns these into a single hint instead of showing them
+ * as dead buttons.
+ */
+export function unlockedByAnother(assets: readonly Asset[]): Capability[] {
+  const last = assets.at(-1);
+  if (!last) return [];
+  const more = [...assets, last];
+  return CAPABILITIES.filter(
+    (capability) => !matchCapability(capability, assets).ok && matchCapability(capability, more).ok,
+  );
 }
 
 export function capabilityById(id: CapabilityId): Capability | undefined {

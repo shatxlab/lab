@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PdfMergeOperation,
-  PdfOrganizeOperation,
   PdfSplitOperation,
 } from "@/components/workbench/operations/PdfOperations";
 import { createAssetFromBytes } from "@/lib/workbench/asset";
@@ -107,20 +106,9 @@ describe("workbench PDF operations", () => {
     view.unmount();
   });
 
-  it("accepts a supplied single PDF asset in organize without a picker", async () => {
-    const view = await mount(
-      <PdfOrganizeOperation lang="en" assets={[await pdfAsset("doc.pdf", ["1", "2", "3"])]} />,
-    );
-    await waitFor(() => expect(document.querySelectorAll("ol li").length).toBe(3));
-    expect(document.body.textContent).toContain("doc.pdf");
-    expect(document.querySelector('input[type="file"]')).toBeNull();
-    view.unmount();
-  });
-
   it("registers the PDF capabilities", async () => {
     expect(hasOperation("pdf.merge")).toBe(true);
     expect(hasOperation("pdf.split")).toBe(true);
-    expect(hasOperation("pdf.organize")).toBe(true);
     expect(await loadOperation("pdf.merge")).toBeTypeOf("function");
   });
 });

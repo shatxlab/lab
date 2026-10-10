@@ -23,6 +23,7 @@ export type AssetKind =
   | "toml"
   | "sheet"
   | "image"
+  | "epub"
   | "binary";
 
 export const ASSET_KINDS: readonly AssetKind[] = [
@@ -36,6 +37,7 @@ export const ASSET_KINDS: readonly AssetKind[] = [
   "toml",
   "sheet",
   "image",
+  "epub",
   "binary",
 ];
 
@@ -54,6 +56,7 @@ export function dataFormatFor(kind: DataAssetKind): DataFormat {
 
 const YAML_EXTENSIONS = new Set(["yaml", "yml"]);
 const TOML_EXTENSIONS = new Set(["toml"]);
+const EPUB_EXTENSIONS = new Set(["epub"]);
 
 const FILE_KIND_TO_ASSET: Record<FileKind, AssetKind> = {
   markdown: "markdown",
@@ -81,6 +84,8 @@ export function detectAssetKind(fileName: string, bytes?: Uint8Array): AssetKind
   const extension = fileExtension(fileName);
   if (YAML_EXTENSIONS.has(extension)) return "yaml";
   if (TOML_EXTENSIONS.has(extension)) return "toml";
+  // An EPUB is a zip, so byte sniffing would misread it; the extension decides.
+  if (EPUB_EXTENSIONS.has(extension)) return "epub";
 
   const kind = bytes ? resolveFileKind(fileName, bytes) : detectFileKind(fileName);
   return assetKindFromFileKind(kind);

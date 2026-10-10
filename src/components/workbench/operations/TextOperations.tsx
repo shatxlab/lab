@@ -27,7 +27,9 @@ import { testRegex, type RegexMatch, type RegexResponse } from "@/lib/text/regex
 import { analyzeText, splitDuration, topWords } from "@/lib/text/stats";
 import type { OperationProps } from "@/lib/workbench/operation";
 import { useSeedAssets } from "@/lib/workbench/use-seed-assets";
+import { extractComparableText } from "@/lib/viewer/comparable";
 import { cn } from "@/lib/viewer/utils";
+import type { Asset } from "@/lib/workbench/asset";
 
 /** Text files above this are refused so the page stays responsive. */
 const MAX_TEXT_FILE_BYTES = 4 * 1024 * 1024;
@@ -96,12 +98,30 @@ function TextSide({
 
 /* ------------------------------------------------------------------ diff */
 
+/**
+ * Text a line diff makes sense on: spreadsheets as CSV, Word/PDF as extracted
+ * text, JSON pretty-printed. Anything the extractor refuses falls back to the
+ * asset's decoded text.
+ */
+async function comparableText(asset: Asset): Promise<string> {
+  try {
+    return await extractComparableText(asset.source);
+  } catch {
+    return asset.text();
+  }
+}
+
 export function TextDiffOperation({ lang, assets }: OperationProps) {
   const [left, setLeft] = React.useState("");
   const [right, setRight] = React.useState("");
-  useSeedAssets(assets, async (list) => {
-    setLeft(list[0] ? await list[0].text() : "");
-    setRight(list[1] ? await list[1].text() : "");
+  useSeedAssets(assets, async (list, isCancelled) => {
+    const [nextLeft, nextRight] = await Promise.all([
+      list[0] ? comparableText(list[0]) : "",
+      list[1] ? comparableText(list[1]) : "",
+    ]);
+    if (isCancelled()) return;
+    setLeft(nextLeft);
+    setRight(nextRight);
   });
   const standalone = assets.length === 0;
   const hasText = left !== "" || right !== "";

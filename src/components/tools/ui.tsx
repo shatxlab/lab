@@ -160,6 +160,8 @@ type TabsProps<T extends string> = {
   value: T;
   onChange: (id: T) => void;
   idPrefix: string;
+  /** Rendered after the tabs, outside the tablist (e.g. an overflow menu). */
+  trailing?: React.ReactNode;
 };
 
 /**
@@ -167,7 +169,7 @@ type TabsProps<T extends string> = {
  * keys. Panels are rendered by the caller with `role="tabpanel"` and
  * `id={`${idPrefix}-panel-${id}`}`.
  */
-export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix }: TabsProps<T>) {
+export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix, trailing }: TabsProps<T>) {
   const refs = React.useRef<Record<string, HTMLButtonElement | null>>({});
 
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -186,33 +188,36 @@ export function Tabs<T extends string>({ label, tabs, value, onChange, idPrefix 
   };
 
   return (
-    <div role="tablist" aria-label={label} onKeyDown={onKeyDown} className="flex flex-wrap gap-1 border-b border-(--border)">
-      {tabs.map((tab) => {
-        const active = tab.id === value;
-        return (
-          <button
-            key={tab.id}
-            ref={(node) => {
-              refs.current[tab.id] = node;
-            }}
-            type="button"
-            role="tab"
-            id={`${idPrefix}-tab-${tab.id}`}
-            aria-selected={active}
-            aria-controls={active ? `${idPrefix}-panel-${tab.id}` : undefined}
-            tabIndex={active ? 0 : -1}
-            onClick={() => onChange(tab.id)}
-            className={cn(
-              "-mb-px rounded-t-md border-b-2 px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--accent)",
-              active
-                ? "border-(--accent) text-(--accent)"
-                : "border-transparent text-(--muted-fg) hover:text-(--fg)",
-            )}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
+    <div className="flex flex-wrap items-end gap-1 border-b border-(--border)">
+      <div role="tablist" aria-label={label} onKeyDown={onKeyDown} className="flex flex-wrap gap-1">
+        {tabs.map((tab) => {
+          const active = tab.id === value;
+          return (
+            <button
+              key={tab.id}
+              ref={(node) => {
+                refs.current[tab.id] = node;
+              }}
+              type="button"
+              role="tab"
+              id={`${idPrefix}-tab-${tab.id}`}
+              aria-selected={active}
+              aria-controls={active ? `${idPrefix}-panel-${tab.id}` : undefined}
+              tabIndex={active ? 0 : -1}
+              onClick={() => onChange(tab.id)}
+              className={cn(
+                "-mb-px rounded-t-md border-b-2 px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--accent)",
+                active
+                  ? "border-(--accent) text-(--accent)"
+                  : "border-transparent text-(--muted-fg) hover:text-(--fg)",
+              )}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      {trailing && <div className="ml-auto self-center">{trailing}</div>}
     </div>
   );
 }

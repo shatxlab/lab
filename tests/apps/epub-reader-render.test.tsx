@@ -1,19 +1,12 @@
 // @vitest-environment jsdom
 import { act, type ReactElement } from "react";
 import { createRoot } from "react-dom/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { strToU8, zipSync } from "fflate";
 
 import EpubReader from "@/components/apps/EpubReader";
-import { openFiles, type FileSource } from "@/lib/apps/file-open";
 import { EPUB_READER_STORAGE_KEY } from "@/lib/apps/epub-reader-state";
-
-vi.mock("@/lib/apps/file-open", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/apps/file-open")>();
-  return { ...actual, openFiles: vi.fn() };
-});
-
-const openFilesMock = vi.mocked(openFiles);
+import { createAsset, type Asset } from "@/lib/workbench/asset";
 
 function epub(entries: Record<string, string | Uint8Array>): Uint8Array {
   const zipEntries: Record<string, Uint8Array> = {};
@@ -23,12 +16,17 @@ function epub(entries: Record<string, string | Uint8Array>): Uint8Array {
   return zipSync(zipEntries, { level: 0 });
 }
 
-function source(bytes: Uint8Array, name = "reader.epub"): FileSource {
-  const file = new File([bytes as unknown as BlobPart], name, {
-    type: "application/epub+zip",
-    lastModified: 1234,
-  });
-  return { file, readSlice: async () => bytes };
+function bookAsset(bytes: Uint8Array, name = "reader.epub"): Asset {
+  return createAsset(
+    {
+      name,
+      size: bytes.length,
+      type: "application/epub+zip",
+      lastModified: 1234,
+      arrayBuffer: async () => bytes.slice().buffer as ArrayBuffer,
+    },
+    "epub",
+  );
 }
 
 function bookBytes(): Uint8Array {
@@ -95,19 +93,14 @@ async function mount(ui: ReactElement) {
   };
 }
 
-async function openBook(container: HTMLElement, fileSource = source(bookBytes())) {
-  openFilesMock.mockResolvedValue([fileSource]);
-  const openButton = [...container.querySelectorAll("button")].find((button) =>
-    button.textContent?.includes("Open EPUB"),
-  );
-  expect(openButton).toBeTruthy();
-  await act(async () => {
-    openButton!.click();
-  });
+/** Mount the reader on a book asset and wait for the first chapter. */
+async function openBook(asset = bookAsset(bookBytes())) {
+  const view = await mount(<EpubReader asset={asset} />);
   await waitFor(() => {
-    expect(container.textContent).toContain("Rendered Book");
-    expect(container.textContent).toContain("First rendered chapter.");
+    expect(view.container.textContent).toContain("Rendered Book");
+    expect(view.container.textContent).toContain("First rendered chapter.");
   });
+  return view;
 }
 
 function storageJson(): unknown {
@@ -116,18 +109,13 @@ function storageJson(): unknown {
 
 describe("EpubReader", () => {
   beforeEach(() => {
-    openFilesMock.mockReset();
     localStorage.clear();
     delete (window as { __epubXss?: unknown }).__epubXss;
   });
 
-  it("opens an EPUB and immediately renders text without a chapter-select step", async () => {
-    const { container, unmount } = await mount(<EpubReader />);
+  it("opens the EPUB asset and immediately renders text without a chapter-select step", async () => {
+    const { container, unmount } = await openBook();
     try {
-      expect(container.textContent).toContain("Open a book and start reading immediately.");
-
-      await openBook(container);
-
       expect(container.textContent).toContain("First rendered chapter.");
       expect(container.querySelector("article.epub-reader-prose")).toBeTruthy();
     } finally {
@@ -136,9 +124,8 @@ describe("EpubReader", () => {
   });
 
   it("uses the paper reader theme by default and keeps readable article variables", async () => {
-    const { container, unmount } = await mount(<EpubReader />);
+    const { container, unmount } = await openBook();
     try {
-      await openBook(container);
 
       const shell = container.querySelector(".epub-reader-shell") as HTMLElement;
       const article = container.querySelector("article.epub-reader-prose") as HTMLElement;
@@ -152,9 +139,8 @@ describe("EpubReader", () => {
   });
 
   it("changes and persists reading preferences through CSS variables", async () => {
-    const { container, unmount } = await mount(<EpubReader />);
+    const { container, unmount } = await openBook();
     try {
-      await openBook(container);
       await act(async () => {
         [...container.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Aa")!.click();
       });
@@ -175,11 +161,11 @@ describe("EpubReader", () => {
   });
 
   it("changes chapters from the TOC and stores progress metadata only", async () => {
-    const fileSource = source(bookBytes(), "remember.epub");
-    const identity = `epub:${fileSource.file.name}:${fileSource.file.size}:${fileSource.file.lastModified}`;
-    const { container, unmount } = await mount(<EpubReader />);
+    const asset = bookAsset(bookBytes(), "remember.epub");
+    // Same identity shape as the old standalone reader, so stored progress survives.
+    const identity = `epub:remember.epub:${asset.size}:1234`;
+    const { container, unmount } = await openBook(asset);
     try {
-      await openBook(container, fileSource);
 
       const securityButton = [...container.querySelectorAll("button")].find(
         (button) => button.textContent?.includes("Security chapter") && button.textContent?.includes("2"),
@@ -205,9 +191,8 @@ describe("EpubReader", () => {
   });
 
   it("searches, jumps to a result, and marks the sanitized chapter text", async () => {
-    const { container, unmount } = await mount(<EpubReader />);
+    const { container, unmount } = await openBook();
     try {
-      await openBook(container);
       await act(async () => {
         [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("Search"))!.click();
       });
@@ -237,9 +222,8 @@ describe("EpubReader", () => {
   });
 
   it("adds and removes a bookmark while storing only bookmark metadata", async () => {
-    const { container, unmount } = await mount(<EpubReader />);
+    const { container, unmount } = await openBook();
     try {
-      await openBook(container);
       await act(async () => {
         [...container.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Bookmark")!.click();
       });
@@ -260,9 +244,8 @@ describe("EpubReader", () => {
   });
 
   it("advances chapters with the bracket keyboard shortcut outside inputs", async () => {
-    const { container, unmount } = await mount(<EpubReader />);
+    const { container, unmount } = await openBook();
     try {
-      await openBook(container);
       await act(async () => {
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "]", bubbles: true }));
       });
@@ -274,9 +257,8 @@ describe("EpubReader", () => {
   });
 
   it("sanitizes rendered chapter markup and strips non-data image sources", async () => {
-    const { container, unmount } = await mount(<EpubReader />);
+    const { container, unmount } = await openBook();
     try {
-      await openBook(container);
       const securityButton = [...container.querySelectorAll("button")].find(
         (button) => button.textContent?.includes("Security chapter") && button.textContent?.includes("2"),
       );

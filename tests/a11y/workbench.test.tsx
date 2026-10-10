@@ -22,6 +22,14 @@ async function addTextFile(name: string, contents: string) {
 }
 
 describe.each([["en"], ["ru"]] as const)("accessibility of the workbench shell (%s)", (lang) => {
+  it("has no detectable violations on the empty screen with its starters", async () => {
+    localStorage.setItem("lab:lang", lang);
+    const view = await mount(<WorkbenchApp />);
+    await waitFor(() => expect(document.querySelector('[aria-labelledby="wb-starters"]')).toBeTruthy());
+    expect(await axeViolations(view.container)).toEqual([]);
+    view.unmount();
+  }, 40_000);
+
   it("has no detectable violations once a text file is open", async () => {
     localStorage.setItem("lab:lang", lang);
     const view = await mount(<WorkbenchApp />);

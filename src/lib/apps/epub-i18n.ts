@@ -32,15 +32,9 @@ type StringKey =
   | "widenPage"
   | "noBookmarks"
   | "deleteBookmark"
-  | "landingEyebrow"
-  | "landingTitle"
-  | "landingDescription"
-  | "openEpub"
-  | "dropNote"
   | "byAuthor"
   | "chaptersCount"
   | "bookmark"
-  | "closeBook"
   | "previous"
   | "next"
   | "chapterOf"
@@ -76,16 +70,9 @@ const STRINGS: Record<AppLang, Record<StringKey, string>> = {
     widenPage: "Widen page",
     noBookmarks: "No bookmarks yet.",
     deleteBookmark: "Delete bookmark {label}",
-    landingEyebrow: "Local EPUB reader",
-    landingTitle: "Open a book and start reading immediately.",
-    landingDescription:
-      "Files stay in this browser session. After choosing the same book again, this reader restores your chapter, progress, bookmarks, and reading settings.",
-    openEpub: "Open EPUB",
-    dropNote: "Drop a .epub file here, or use the button.",
     byAuthor: "by {author} · ",
     chaptersCount: "{count} {countPlural}",
     bookmark: "Bookmark",
-    closeBook: "Close book",
     previous: "Previous",
     next: "Next",
     chapterOf: "{index} of {count}",
@@ -120,16 +107,9 @@ const STRINGS: Record<AppLang, Record<StringKey, string>> = {
     widenPage: "Шире страница",
     noBookmarks: "Закладок пока нет.",
     deleteBookmark: "Удалить закладку {label}",
-    landingEyebrow: "Локальная EPUB-читалка",
-    landingTitle: "Откройте книгу и читайте сразу.",
-    landingDescription:
-      "Файлы остаются в этой сессии браузера. Когда вы снова откроете ту же книгу, читалка восстановит главу, прогресс, закладки и настройки чтения.",
-    openEpub: "Открыть EPUB",
-    dropNote: "Перетащите файл .epub сюда или нажмите кнопку.",
     byAuthor: "автор: {author} · ",
     chaptersCount: "{count} {countPlural}",
     bookmark: "Закладка",
-    closeBook: "Закрыть книгу",
     previous: "Назад",
     next: "Далее",
     chapterOf: "{index} из {count}",

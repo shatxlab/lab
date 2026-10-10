@@ -23,6 +23,8 @@ export interface AssetSource {
   name: string;
   size: number;
   type?: string;
+  /** `File.lastModified`, when the source is a real file. */
+  lastModified?: number;
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 
@@ -116,6 +118,7 @@ export function createAssetFromFile(file: File): Asset {
     name: file.name,
     size: file.size,
     type: file.type,
+    lastModified: file.lastModified,
     arrayBuffer: () => file.arrayBuffer(),
   });
 }

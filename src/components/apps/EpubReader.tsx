@@ -5,24 +5,18 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type DragEvent,
 } from "react";
 import {
   Bookmark,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
-  FilePlus2,
   Library,
-  Loader2,
   PanelLeft,
   Search,
   SlidersHorizontal,
   Trash2,
-  X,
 } from "lucide-react";
 
-import { openFiles, defaultOpenDeps, type FileSource } from "@/lib/apps/file-open";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 import {
   chapterPlural,
@@ -49,8 +43,7 @@ import {
   type ReaderTheme,
 } from "@/lib/apps/epub-reader-state";
 import { sanitizeDocumentHtml } from "@/lib/viewer/sanitize";
-
-const EPUB_ACCEPT = ".epub,application/epub+zip";
+import type { Asset } from "@/lib/workbench/asset";
 
 type LoadedBook = EpubBook & {
   fileName: string;
@@ -59,27 +52,9 @@ type LoadedBook = EpubBook & {
 
 type ReaderPanel = "contents" | "search" | "prefs" | "bookmarks";
 
-function pickEpub(): Promise<FileSource[]> {
-  return openFiles({
-    multiple: false,
-    accept: EPUB_ACCEPT,
-    deps: { createFileInput: defaultOpenDeps().createFileInput },
-  });
-}
-
-function sourceFromFile(file: File): FileSource {
-  return {
-    file,
-    readSlice: async (offset: number, length: number) => {
-      const start = Math.max(0, offset);
-      const buffer = await file.slice(start, start + Math.max(0, length)).arrayBuffer();
-      return new Uint8Array(buffer);
-    },
-  };
-}
-
-function bookIdentity(file: File): string {
-  return `epub:${file.name}:${file.size}:${file.lastModified}`;
+/** Keyed like the old standalone reader, so remembered progress still matches. */
+function bookIdentity(asset: Asset): string {
+  return `epub:${asset.name}:${asset.size}:${asset.source.lastModified ?? 0}`;
 }
 
 function displayTitle(lang: "en" | "ru", book: LoadedBook): string {
@@ -170,7 +145,12 @@ function themeLabel(lang: "en" | "ru", theme: ReaderTheme): string {
 
 const FALLBACK_TITLE = "Untitled EPUB";
 
-export default function EpubReader() {
+/**
+ * The EPUB reader, mounted by the workbench's `book.read` operation for the
+ * open `.epub` asset. Opening, replacing and closing the file belong to the
+ * workbench; this component only reads.
+ */
+export default function EpubReader({ asset }: { asset: Asset }) {
   const lang = useAppLang();
   const readyRef = useLangReady<HTMLDivElement>();
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -190,7 +170,6 @@ export default function EpubReader() {
       : window.matchMedia("(min-width: 900px)").matches,
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     const state = readReaderState();
@@ -266,24 +245,23 @@ export default function EpubReader() {
     [book, focusReader, persistProgress],
   );
 
-  const openSources = useCallback(
-    async (sources: FileSource[]) => {
-      const picked = sources[0];
-      if (!picked) return;
+  const openAsset = useCallback(
+    async (picked: Asset, isCancelled: () => boolean) => {
       // Size is checked before the whole file is read into memory.
-      if (picked.file.size > MAX_FILE_BYTES) {
+      if (picked.size > MAX_FILE_BYTES) {
         setError(t(lang, "bookTooLarge", { limit: formatBytesLimit(MAX_FILE_BYTES) }));
         return;
       }
       setError(null);
       setBusy(t(lang, "readingEpub"));
       try {
-        const bytes = await picked.readSlice(0, picked.file.size);
+        const bytes = await picked.bytes();
+        if (isCancelled()) return;
         const parsed = parseEpubBytes(bytes);
-        const identity = bookIdentity(picked.file);
+        const identity = bookIdentity(picked);
         const loaded: LoadedBook = {
           ...parsed,
-          fileName: picked.file.name,
+          fileName: picked.name,
           identity,
         };
         const state = readReaderState();
@@ -317,29 +295,29 @@ export default function EpubReader() {
           focusReader(nextProgress);
         }, 0);
       } catch (err) {
+        if (isCancelled()) return;
         setBook(null);
         setCurrentChapterIndex(0);
         setChapterProgressValue(0);
         setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setBusy(null);
+        if (!isCancelled()) setBusy(null);
       }
     },
     [focusReader, persistState, lang],
   );
 
-  const openBook = useCallback(async () => {
-    const sources = await pickEpub();
-    await openSources(sources);
-  }, [openSources]);
-
-  const closeBook = useCallback(() => {
-    setBook(null);
-    setCurrentChapterIndex(0);
-    setChapterProgressValue(0);
-    setError(null);
-    setSearchQuery("");
-  }, []);
+  // Open the asset on mount and whenever the workbench swaps it. Keyed on the
+  // asset only (via a ref for the opener), so a language switch never reloads.
+  const openAssetRef = useRef(openAsset);
+  openAssetRef.current = openAsset;
+  useEffect(() => {
+    let cancelled = false;
+    void openAssetRef.current(asset, () => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [asset]);
 
   const updatePrefs = useCallback(
     (patch: Partial<ReaderPrefs>) => {
@@ -432,18 +410,6 @@ export default function EpubReader() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [book, currentChapterIndex, selectChapter]);
-
-  const onDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      setDragActive(false);
-      const file = Array.from(event.dataTransfer.files).find((candidate) =>
-        candidate.name.toLowerCase().endsWith(".epub"),
-      );
-      if (file) void openSources([sourceFromFile(file)]);
-    },
-    [openSources],
-  );
 
   const canGoPrevious = Boolean(book && currentChapterIndex > 0);
   const canGoNext = Boolean(book && currentChapterIndex < book.chapters.length - 1);
@@ -629,37 +595,21 @@ export default function EpubReader() {
       className="epub-reader-shell"
       data-reader-theme={prefs.theme}
       style={readerVars}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragActive(true);
-      }}
-      onDragLeave={() => setDragActive(false)}
-      onDrop={onDrop}
     >
       {error && <p role="alert" className="epub-reader-alert">{error}</p>}
 
       {!book || !currentChapter ? (
-        <section className={`epub-reader-landing${dragActive ? " is-dragging" : ""}`} aria-label={t(lang, "landingEyebrow")}>
-          <div className="epub-reader-landing-icon" aria-hidden="true">
-            <BookOpen className="size-8" />
-          </div>
-          <div>
-            <p className="epub-reader-eyebrow">{t(lang, "landingEyebrow")}</p>
-            <h1>{t(lang, "landingTitle")}</h1>
-            <p>{t(lang, "landingDescription")}</p>
-          </div>
-          <button type="button" onClick={() => void openBook()} disabled={busy !== null} className="epub-reader-primary-button">
-            {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <FilePlus2 aria-hidden="true" className="size-4" />}
-            {t(lang, "openEpub")}
-          </button>
-          <p className="epub-reader-drop-note">{t(lang, "dropNote")}</p>
-        </section>
+        busy && (
+          <p role="status" className="px-2 py-6 text-center text-sm text-(--muted-fg)">
+            {busy}
+          </p>
+        )
       ) : (
         <div className="epub-reader-workspace">
           <header className="epub-reader-toolbar">
             <div>
               <p className="epub-reader-eyebrow">EPUB Reader</p>
-              <h1>{displayTitle(lang, book)}</h1>
+              <h2>{displayTitle(lang, book)}</h2>
               <p>
                 {book.author ? t(lang, "byAuthor", { author: book.author }) : ""}
                 {t(lang, "chaptersCount", {
@@ -684,13 +634,6 @@ export default function EpubReader() {
               <button type="button" onClick={addCurrentBookmark}>
                 <Bookmark aria-hidden="true" className="size-4" />
                 {t(lang, "bookmark")}
-              </button>
-              <button type="button" onClick={() => void openBook()} disabled={busy !== null}>
-                {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <FilePlus2 aria-hidden="true" className="size-4" />}
-                {t(lang, "openEpub")}
-              </button>
-              <button type="button" onClick={closeBook} aria-label={t(lang, "closeBook")}>
-                <X aria-hidden="true" className="size-4" />
               </button>
             </div>
           </header>

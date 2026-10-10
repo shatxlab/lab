@@ -24,10 +24,15 @@ describe("detectAssetKind", () => {
     ["config.yml", "yaml"],
     ["Cargo.toml", "toml"],
     ["photo.png", "image"],
+    ["novel.epub", "epub"],
     ["archive.zip", "binary"],
     ["holiday.mp4", "binary"],
   ])("reads %s as %s", (name, kind) => {
     expect(detectAssetKind(name)).toBe(kind);
+  });
+
+  it("keeps an EPUB an EPUB even though its bytes are a zip", () => {
+    expect(detectAssetKind("novel.epub", new Uint8Array([0x50, 0x4b, 0x03, 0x04]))).toBe("epub");
   });
 
   it("sniffs extension-less JSON from its bytes", () => {

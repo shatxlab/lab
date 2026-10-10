@@ -23,6 +23,19 @@ describe("workbench text operations", () => {
     view.unmount();
   });
 
+  it("compares JSON by content, not layout", async () => {
+    const view = await mount(
+      <TextDiffOperation
+        lang="en"
+        assets={[createAssetFromText("a.json", '{"a":1,"b":[2,3]}'), createAssetFromText("b.json", '{\n  "a": 1,\n  "b": [2, 3]\n}')]}
+      />,
+    );
+    // Both sides are pretty-printed before diffing, so only whitespace differed.
+    await waitFor(() => expect(document.querySelectorAll("textarea")[0]!.value).toContain('"a": 1'));
+    expect(document.querySelectorAll("textarea")[0]!.value).toBe(document.querySelectorAll("textarea")[1]!.value);
+    view.unmount();
+  });
+
   it("hides the file picker when assets are supplied", async () => {
     const view = await mount(
       <TextDiffOperation lang="en" assets={[createAssetFromText("a.txt", "x"), createAssetFromText("b.txt", "y")]} />,

@@ -15,9 +15,9 @@
  */
 
 import * as React from "react";
-import { Download, X } from "lucide-react";
+import { ChevronDown, Download, X } from "lucide-react";
 
-import { ActionButton, FilePicker, ToolPage, panelClass } from "@/components/tools/ui";
+import { ActionButton, FilePicker, Tabs, ToolPage, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
 import { useAppLang } from "@/lib/apps/use-app-lang";
@@ -26,14 +26,14 @@ import {
   PRIMARY_COUNT,
   capabilityById,
   capabilitiesFor,
+  unlockedByAnother,
   type CapabilityGroup,
   type CapabilityId,
   type CapabilityMatch,
-  type CapabilitySet,
 } from "@/lib/workbench/capabilities";
 import { createAssetFromBytes, createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
 import { wb, type WorkbenchKey } from "@/lib/workbench/i18n";
-import { hasOperation, loadOperation } from "@/lib/workbench/operations";
+import { hasOperation, loadOperation, operationDefaults } from "@/lib/workbench/operations";
 import type { OperationComponent, OperationOutput, OperationProps } from "@/lib/workbench/operation";
 import { cn, formatBytes } from "@/lib/viewer/utils";
 
@@ -114,20 +114,34 @@ export interface AssetTrayProps {
   onClear: () => void;
 }
 
+/**
+ * The open files. A single file collapses to a one-line header; the heading
+ * and "Clear all" only appear once there is a list worth managing.
+ */
 export function AssetTray({ lang, assets, onRemove, onClear }: AssetTrayProps) {
+  const single = assets.length === 1;
   return (
-    <section className={cn(panelClass, "flex flex-col gap-3")} aria-labelledby="wb-assets">
-      <div className="flex items-center justify-between gap-2">
-        <h2 id="wb-assets" className="text-sm font-semibold">
+    <section className={cn(panelClass, "flex flex-col gap-3", single && "py-2.5")} aria-labelledby="wb-assets">
+      {single ? (
+        <h2 id="wb-assets" className="sr-only">
           {wb(lang, "assets")}
         </h2>
-        <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={onClear}>
-          {wb(lang, "clear")}
-        </ActionButton>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <h2 id="wb-assets" className="text-sm font-semibold">
+            {wb(lang, "assets")}
+          </h2>
+          <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={onClear}>
+            {wb(lang, "clear")}
+          </ActionButton>
+        </div>
+      )}
       <ul className="flex flex-col gap-2">
         {assets.map((asset) => (
-          <li key={asset.id} className="flex items-center gap-3 rounded-lg border border-(--border) bg-(--bg) px-3 py-2">
+          <li
+            key={asset.id}
+            className={cn("flex items-center gap-3", !single && "rounded-lg border border-(--border) bg-(--bg) px-3 py-2")}
+          >
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-medium" title={asset.name}>
                 {asset.name}
@@ -151,106 +165,147 @@ export function AssetTray({ lang, assets, onRemove, onClear }: AssetTrayProps) {
   );
 }
 
-/* ----------------------------------------------------------- suggested next */
+/* ----------------------------------------------------------------- starters */
 
-export interface SuggestedNextProps {
+export interface StartersProps {
   lang: AppLang;
-  items: readonly CapabilityMatch[];
+  /** Capabilities that work with nothing open (compare text, QR, UUID). */
+  starters: readonly CapabilityMatch[];
+  activeId: CapabilityId | null;
   onSelect: (id: CapabilityId) => void;
 }
 
-export function SuggestedNext({ lang, items, onSelect }: SuggestedNextProps) {
-  if (items.length === 0) return null;
+/** The empty screen's short "start without a file" row. */
+export function Starters({ lang, starters, activeId, onSelect }: StartersProps) {
+  if (starters.length === 0) return null;
   return (
-    <section className={cn(panelClass, "flex flex-col gap-3")} aria-labelledby="wb-suggested">
-      <h2 id="wb-suggested" className="text-sm font-semibold">
-        {wb(lang, "suggested")}
+    <section className="flex flex-col gap-2" aria-labelledby="wb-starters">
+      <h2 id="wb-starters" className="text-sm text-(--muted-fg)">
+        {wb(lang, "startWithout")}
       </h2>
       <div className="flex flex-wrap gap-2">
-        {items.map((entry) => (
-          <ActionButton key={entry.capability.id} onClick={() => onSelect(entry.capability.id)}>
-            {capabilityLabel(lang, entry.capability.id)}
-          </ActionButton>
-        ))}
+        {starters.map((entry) => {
+          const id = entry.capability.id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={activeId === id}
+              onClick={() => onSelect(id)}
+              className={cn(
+                "inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent)",
+                activeId === id
+                  ? "border-(--accent) bg-(--accent)/10 text-(--accent)"
+                  : "border-(--border) bg-(--bg) text-(--fg) hover:bg-(--surface)",
+              )}
+            >
+              {capabilityLabel(lang, id)}
+            </button>
+          );
+        })}
       </div>
     </section>
   );
 }
 
-/* -------------------------------------------------------------- action rail */
+/* --------------------------------------------------------------- action bar */
 
-export interface ActionRailProps {
+interface MoreMenuProps {
   lang: AppLang;
-  set: CapabilitySet;
-  /** Whether a component exists for the capability (registry or injected). */
-  isRenderable: (id: CapabilityId) => boolean;
-  activeId: CapabilityId | null;
+  items: readonly CapabilityMatch[];
+  activeId: CapabilityId;
   onSelect: (id: CapabilityId) => void;
 }
 
-/**
- * The grouped "everything that could apply" rail. Enabled-but-unregistered
- * capabilities stay visible but disabled (they are coming), and capabilities
- * that do not match the selection are shown disabled with their reason, so the
- * rail doubles as an explanation of what the selection unlocks.
- */
-export function ActionRail({ lang, set, isRenderable, activeId, onSelect }: ActionRailProps) {
-  const enabledByGroup = new Map<CapabilityGroup, CapabilityMatch[]>();
-  for (const group of set.byGroup) enabledByGroup.set(group.group, group.items);
+/** The overflow menu: every remaining action, grouped, behind one button. */
+function MoreMenu({ lang, items, activeId, onSelect }: MoreMenuProps) {
+  const ref = React.useRef<HTMLDetailsElement>(null);
 
-  const sections = CAPABILITY_GROUPS.map((group) => ({
+  // A <details> only closes from its own summary; close it on an outside click.
+  React.useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const details = ref.current;
+      if (details?.open && event.target instanceof Node && !details.contains(event.target)) details.open = false;
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
+  const groups = CAPABILITY_GROUPS.map((group) => ({
     group,
-    enabled: enabledByGroup.get(group) ?? [],
-    disabled: set.disabled.filter((entry) => entry.capability.group === group),
-  })).filter((section) => section.enabled.length > 0 || section.disabled.length > 0);
+    entries: items.filter((entry) => entry.capability.group === group),
+  })).filter((section) => section.entries.length > 0);
 
   return (
-    <section className={cn(panelClass, "flex flex-col gap-4")} aria-label={wb(lang, "actions")}>
-      {sections.map(({ group, enabled, disabled }) => (
-        <div key={group} className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-(--muted-fg)">{wb(lang, GROUP_KEY[group])}</h3>
-          <div className="flex flex-wrap gap-2">
-            {enabled.map((entry) => {
+    <details ref={ref} className="relative">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-(--muted-fg) transition-colors hover:text-(--fg) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent) [&::-webkit-details-marker]:hidden">
+        {wb(lang, "more")}
+        <ChevronDown aria-hidden="true" className="size-4" />
+      </summary>
+      <div className="absolute right-0 z-20 mt-1 flex min-w-56 flex-col gap-3 rounded-lg border border-(--border) bg-(--surface) p-3 shadow-lg">
+        {groups.map(({ group, entries }) => (
+          <div key={group} role="group" aria-label={wb(lang, GROUP_KEY[group])} className="flex flex-col gap-1">
+            <p aria-hidden="true" className="text-xs font-semibold uppercase tracking-wide text-(--muted-fg)">
+              {wb(lang, GROUP_KEY[group])}
+            </p>
+            {entries.map((entry) => {
               const id = entry.capability.id;
-              const available = isRenderable(id);
               return (
                 <button
                   key={id}
                   type="button"
-                  disabled={!available}
                   aria-pressed={activeId === id}
-                  onClick={() => onSelect(id)}
+                  onClick={() => {
+                    if (ref.current) ref.current.open = false;
+                    onSelect(id);
+                  }}
                   className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent) disabled:pointer-events-none disabled:opacity-50",
-                    activeId === id
-                      ? "border-(--accent) bg-(--accent)/10 text-(--accent)"
-                      : "border-(--border) bg-(--bg) text-(--fg) hover:bg-(--surface)",
+                    "rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-(--bg) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent)",
+                    activeId === id ? "text-(--accent)" : "text-(--fg)",
                   )}
                 >
                   {capabilityLabel(lang, id)}
-                  {!available && <span className="font-normal text-(--muted-fg)">{wb(lang, "unavailable")}</span>}
-                </button>
-              );
-            })}
-            {disabled.map((entry) => {
-              const reason = entry.match.reason ? wb(lang, entry.match.reason) : wb(lang, "unavailable");
-              return (
-                <button
-                  key={entry.capability.id}
-                  type="button"
-                  disabled
-                  title={reason}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border) bg-(--bg) px-3 text-xs font-medium text-(--muted-fg) opacity-60"
-                >
-                  {capabilityLabel(lang, entry.capability.id)}
-                  <span className="font-normal">{reason}</span>
                 </button>
               );
             })}
           </div>
-        </div>
-      ))}
-    </section>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+export interface ActionBarProps {
+  lang: AppLang;
+  /** Renderable capabilities for the selection, most relevant first. */
+  actions: readonly CapabilityMatch[];
+  activeId: CapabilityId;
+  onSelect: (id: CapabilityId) => void;
+}
+
+/**
+ * The action switcher: the most relevant capabilities as tabs and everything
+ * else in a grouped "More" menu. An action picked from the menu joins the tabs
+ * while it is active, so the selected tab always exists.
+ */
+export function ActionBar({ lang, actions, activeId, onSelect }: ActionBarProps) {
+  const primary = actions.slice(0, PRIMARY_COUNT);
+  const overflow = actions.slice(PRIMARY_COUNT);
+  const tabs = primary.some((entry) => entry.capability.id === activeId)
+    ? primary
+    : [...primary, ...overflow.filter((entry) => entry.capability.id === activeId)];
+
+  return (
+    <Tabs
+      idPrefix="wb-action"
+      label={wb(lang, "actions")}
+      value={activeId}
+      onChange={onSelect}
+      tabs={tabs.map((entry) => ({ id: entry.capability.id, label: capabilityLabel(lang, entry.capability.id) }))}
+      trailing={
+        overflow.length > 0 ? <MoreMenu lang={lang} items={overflow} activeId={activeId} onSelect={onSelect} /> : undefined
+      }
+    />
   );
 }
 
@@ -308,9 +363,7 @@ export function OperationHost({
     return <p className="text-sm text-(--muted-fg)">{wb(lang, "loading")}</p>;
   }
 
-  const extras: Record<string, unknown> = {};
-  if (id === "image.strip") extras.defaultTask = "strip";
-  else if (id === "image.convert" || id === "image.transform") extras.defaultTask = "convert";
+  const extras: Record<string, unknown> = { ...operationDefaults(id) };
   if (id === "qr.generate") extras.seed = seed;
   if (id === "qr.scan") extras.onUse = onUse;
 
@@ -343,51 +396,48 @@ export interface OutputTrayProps {
 }
 
 export function OutputTray({ lang, outputs, onOpenAsAsset, onRemove }: OutputTrayProps) {
+  if (outputs.length === 0) return null;
   return (
     <section className={cn(panelClass, "flex flex-col gap-3")} aria-labelledby="wb-outputs">
       <h2 id="wb-outputs" className="text-sm font-semibold">
         {wb(lang, "outputs")}
       </h2>
-      {outputs.length === 0 ? (
-        <p className="text-sm text-(--muted-fg)">{wb(lang, "noOutputs")}</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {outputs.map((entry) => (
-            <li key={entry.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-(--border) bg-(--bg) px-3 py-2">
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-medium" title={entry.output.name}>
-                  {entry.output.name}
-                </span>
-                <span className="text-xs text-(--muted-fg)">{formatBytes(entry.output.bytes.length)}</span>
-              </div>
-              <ActionButton
-                variant="secondary"
-                className="h-8 px-3 text-xs"
-                onClick={() =>
-                  saveBlob(
-                    new Blob([entry.output.bytes as unknown as BlobPart], { type: entry.output.type }),
-                    entry.output.name,
-                  )
-                }
-              >
-                <Download aria-hidden="true" className="size-3.5" />
-                {wb(lang, "download")}
-              </ActionButton>
-              <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => onOpenAsAsset(entry)}>
-                {wb(lang, "openAsAsset")}
-              </ActionButton>
-              <button
-                type="button"
-                aria-label={wb(lang, "removeOutput", { name: entry.output.name })}
-                onClick={() => onRemove(entry.id)}
-                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-(--muted-fg) transition-colors hover:bg-(--surface) hover:text-(--fg) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent)"
-              >
-                <X aria-hidden="true" className="size-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="flex flex-col gap-2">
+        {outputs.map((entry) => (
+          <li key={entry.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-(--border) bg-(--bg) px-3 py-2">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate font-medium" title={entry.output.name}>
+                {entry.output.name}
+              </span>
+              <span className="text-xs text-(--muted-fg)">{formatBytes(entry.output.bytes.length)}</span>
+            </div>
+            <ActionButton
+              variant="secondary"
+              className="h-8 px-3 text-xs"
+              onClick={() =>
+                saveBlob(
+                  new Blob([entry.output.bytes as unknown as BlobPart], { type: entry.output.type }),
+                  entry.output.name,
+                )
+              }
+            >
+              <Download aria-hidden="true" className="size-3.5" />
+              {wb(lang, "download")}
+            </ActionButton>
+            <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => onOpenAsAsset(entry)}>
+              {wb(lang, "openAsAsset")}
+            </ActionButton>
+            <button
+              type="button"
+              aria-label={wb(lang, "removeOutput", { name: entry.output.name })}
+              onClick={() => onRemove(entry.id)}
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-(--muted-fg) transition-colors hover:bg-(--surface) hover:text-(--fg) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent)"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -403,6 +453,7 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
 
   // Single owner of every piece of shell state.
   const [assets, setAssets] = React.useState<readonly Asset[]>([]);
+  // The user's explicit choice; null means "use the suggested action".
   const [activeId, setActiveId] = React.useState<CapabilityId | null>(null);
   const [paramsById, setParamsById] = React.useState<Record<string, Record<string, unknown>>>({});
   const [outputs, setOutputs] = React.useState<OutputEntry[]>([]);
@@ -412,18 +463,24 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
   const addFiles = React.useCallback((files: File[]) => {
     if (files.length === 0) return;
     setAssets((current) => [...current, ...files.map((file) => createAssetFromFile(file))]);
+    setActiveId(null);
   }, []);
 
   const addText = React.useCallback((text: string) => {
     if (text === "") return;
     setAssets((current) => [...current, createAssetFromText("paste.txt", text)]);
+    setActiveId(null);
   }, []);
 
   const removeAsset = React.useCallback((assetId: string) => {
     setAssets((current) => current.filter((asset) => asset.id !== assetId));
+    setActiveId(null);
   }, []);
 
-  const clearAssets = React.useCallback(() => setAssets([]), []);
+  const clearAssets = React.useCallback(() => {
+    setAssets([]);
+    setActiveId(null);
+  }, []);
 
   // Per-capability parameters: an operation can never stomp another's draft.
   const setParamsFor = React.useCallback(
@@ -448,6 +505,7 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     const asset = createAssetFromBytes(entry.output.name, entry.output.bytes, entry.output.kind);
     setAssets((current) => [...current, asset]);
     setOutputs((current) => current.filter((item) => item.id !== entry.id));
+    setActiveId(null);
   }, []);
 
   const handleUse = React.useCallback((text: string) => {
@@ -459,56 +517,77 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     setActiveId("qr.generate");
   }, []);
 
-  const set = React.useMemo(() => capabilitiesFor(assets), [assets]);
-  // Promotions must come from capabilities that actually render; unregistered
-  // viewer operations would otherwise be suggested but lead nowhere.
-  const renderable = React.useMemo(
-    () => set.enabled.filter((entry) => hasOperation(entry.capability.id) || operations?.[entry.capability.id] !== undefined),
-    [set, operations],
-  );
-  const primaries = renderable.slice(0, PRIMARY_COUNT);
   const isRenderable = React.useCallback(
     (id: CapabilityId) => hasOperation(id) || operations?.[id] !== undefined,
     [operations],
   );
-  // Never leave a stale operation mounted after the selection changes shape:
-  // the active capability must still apply (and be renderable) to the assets.
-  const active = React.useMemo(
-    () => (activeId !== null && renderable.some((entry) => entry.capability.id === activeId) ? activeId : null),
-    [activeId, renderable],
+  // Only capabilities that actually render are offered; an unregistered one
+  // would be a button that leads nowhere.
+  const actions = React.useMemo(
+    () => capabilitiesFor(assets).enabled.filter((entry) => isRenderable(entry.capability.id)),
+    [assets, isRenderable],
   );
-  React.useEffect(() => {
-    if (activeId !== null && active === null) setActiveId(null);
-  }, [active, activeId]);
+  const hint = React.useMemo(
+    () => unlockedByAnother(assets).filter((capability) => isRenderable(capability.id)),
+    [assets, isRenderable],
+  );
+  const empty = assets.length === 0;
+  // Every asset change clears the explicit choice, so a drop opens straight
+  // into the best action; a choice that no longer applies falls back the same
+  // way. With nothing open, actions are the no-file starters and none opens
+  // until the user picks one.
+  const chosen = activeId !== null && actions.some((entry) => entry.capability.id === activeId) ? activeId : null;
+  const active = empty ? chosen : (chosen ?? actions[0]?.capability.id ?? null);
   // A scan hands its text to generate once; never re-apply it on a later visit.
   React.useEffect(() => {
     if (seedText !== null && active !== "qr.generate") setSeedText(null);
   }, [active, seedText]);
 
+  const operation = active && (
+    <OperationHost
+      key={active}
+      id={active}
+      lang={lang}
+      assets={assets}
+      params={paramsById[active]}
+      setParams={setParamsFor(active)}
+      onProduce={handleProduce}
+      operations={operations}
+      seed={seedText}
+      onUse={handleUse}
+    />
+  );
+
   return (
     <ToolPage title={wb(lang, "title")} tagline={wb(lang, "tagline")} wide>
       <InputBar lang={lang} onFiles={addFiles} onText={addText} compact={assets.length > 0} />
 
-      {assets.length === 0 ? (
-        <p className="text-sm text-(--muted-fg)">{wb(lang, "empty")}</p>
+      {empty ? (
+        <>
+          <p className="text-sm text-(--muted-fg)">{wb(lang, "empty")}</p>
+          <Starters lang={lang} starters={actions} activeId={active} onSelect={setActiveId} />
+          {operation}
+        </>
       ) : (
         <>
           <AssetTray lang={lang} assets={assets} onRemove={removeAsset} onClear={clearAssets} />
-          <SuggestedNext lang={lang} items={primaries} onSelect={setActiveId} />
-          <ActionRail lang={lang} set={set} isRenderable={isRenderable} activeId={active} onSelect={setActiveId} />
+          {hint.length > 0 && (
+            <p className="text-sm text-(--muted-fg)">
+              {wb(lang, "addMoreHint", { actions: hint.map((capability) => capability.label[lang]).join(", ") })}
+            </p>
+          )}
           {active && (
-            <OperationHost
-              key={active}
-              id={active}
-              lang={lang}
-              assets={assets}
-              params={paramsById[active]}
-              setParams={setParamsFor(active)}
-              onProduce={handleProduce}
-              operations={operations}
-              seed={seedText}
-              onUse={handleUse}
-            />
+            <>
+              <ActionBar lang={lang} actions={actions} activeId={active} onSelect={setActiveId} />
+              <div
+                role="tabpanel"
+                id={`wb-action-panel-${active}`}
+                aria-labelledby={`wb-action-tab-${active}`}
+                className="flex flex-col gap-4"
+              >
+                {operation}
+              </div>
+            </>
           )}
         </>
       )}

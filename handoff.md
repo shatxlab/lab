@@ -1,9 +1,13 @@
 # Handoff — intent-driven workbench
 
-Status: **Phases 0–3 complete, and Phase 4 (PDF editing) now covers document
-properties, form fill/flatten, and signature/text stamps. Redaction remains.**
+Status: **Phases 0–3 complete. `/tools` is now the only file-tools page** —
+the seven tool pages (`/viewer`, `/pdf`, `/image`, `/qr`, `/text`,
+`/convert`, `/reader`) were retired on 2026-10-10 and their URLs deliberately
+404 (no redirects). EPUB reading is the `book.read` capability. PDF scope was
+cut back on purpose: a PDF only gets View, Merge, Split and Sign (see §2).
 Verification at handoff: `npx tsc --noEmit` clean · `npm run check` clean
-(0 errors) · `npm test` → **780 passing (81 files)**.
+(0 errors) · `npm test` → **all passing** · `npm run build` emits only `/`,
+`/tools` and the games.
 
 This document is the single source of truth for continuing the work. It is
 written so that a fresh pi session (or a subagent) can pick up without the
@@ -33,12 +37,13 @@ capability registry.
 | Topic | Decision |
 |---|---|
 | DOCX editing | Rich-text edit of the rendered HTML; save as DOCX/HTML/MD/TXT. **Lossy regenerate**, no OOXML round-trip. |
-| PDF editing | Adobe-**Reader** level only: fill/flatten forms, annotate, sign, redact, metadata, page ops. No text reflow (Acrobat-Pro). Uses existing `@cantoo/pdf-lib` + `pdfjs-dist`; **no new deps**. |
+| PDF scope | **View, Merge, Split, Sign only** (product decision, 2026-10-10 — too many options overwhelmed users). Enforced by `PDF_CAPABILITIES` in `capabilities.ts`: any selection containing a PDF is limited to those four. Metadata, form fill/flatten and redaction were built and then removed (last present in commit `02a8f17`). Organize pages was removed along with `/pdf`. |
+| Shell layout | No disabled/"coming soon" buttons. The best action opens on drop; the top `PRIMARY_COUNT` (4) renderable actions are tabs, the rest sit in a grouped "More" menu; a one-line hint names what one more file would unlock (`unlockedByAnother`). |
 | Rich-text engine | **No dependency.** `contentEditable` + existing DOMPurify + own toolbar/undo. |
 | DOCX writer | **No dependency.** Hand-rolled OOXML zip via existing `fflate`/`jszip` (fallback first: save as HTML/MD/TXT). |
 | Source editors | Own editor reusing `lib/viewer/highlight*` and the `JsonView` transparent-textarea trick. No CodeMirror. |
 | New runtime deps | **None.** Do not add packages. |
-| Routes | Keep all six routes as presets/deep links (SEO, PWA). Add `/tools` as the workbench; routes preselect an operation. |
+| Routes | **Superseded 2026-10-10:** one page, `/tools`. The old tool routes and `/reader` were deleted outright (404, no redirects); PWA shortcuts are `tools` + `wordle`. File-less tools survive as empty-screen starters (capabilities whose `match` accepts an empty selection: compare text, create/scan QR, UUID). |
 | Save semantics | "Save a copy" always; in-place save only via File System Access `showSaveFilePicker`. |
 
 ---
@@ -87,8 +92,8 @@ capability registry.
   read-only mount hides the editors). Test:
   `tests/workbench/viewer-operations.test.tsx`.
 - **Phase 2 — workbench shell**: `src/components/workbench/WorkbenchApp.tsx`
-  (default export plus `InputBar`, `AssetTray`, `ActionRail`, `OperationHost`,
-  `OutputTray`, `SuggestedNext`) and the `/tools` route
+  (default export plus `InputBar`, `AssetTray`, `ActionBar`, `OperationHost`,
+  `OutputTray`) and the `/tools` route
   (`src/pages/tools.astro`). Test: `tests/workbench/workbench-app.test.tsx`.
 - `wb` i18n gained `loading`, `unavailable`, `noOutputs`, `removeOutput`.
 - **Phase 2.5 — editing foundation**: `src/lib/workbench/editor.ts`
@@ -107,21 +112,16 @@ capability registry.
   is produced by the hand-rolled OOXML writer `src/lib/docx/write.ts`
   (`htmlToDocx`, zipped with `fflate`; no new deps). Tests:
   `tests/workbench/{docx-operations,docx-write}.test.*`.
-- **PDF editing**: `pdf.edit` capability + `operations/PdfEditOperations.tsx`
-  (`PdfEditOperation`) — document properties (title/author/subject/keywords/
-  creator; producer read-only), form fill with optional flatten (text/checkbox/
-  dropdown/radio/option-list), and pending text/signature-image stamps drawn on
-  Save (`StandardFonts.Helvetica`, `embedPng`/`embedJpg`). A dirty-gated Save
-  writes a new PDF via `@cantoo/pdf-lib`. Test:
-  `tests/workbench/pdf-edit-operations.test.tsx`.
+- **PDF signing**: `pdf.sign` capability + `operations/PdfSignOperations.tsx`
+  (`PdfSignOperation`) — pending signature-image and text stamps drawn on Save
+  (`StandardFonts.Helvetica`, `embedPng`/`embedJpg`). A dirty-gated Save
+  writes `<name>-signed.pdf` via `@cantoo/pdf-lib`. Test:
+  `tests/workbench/pdf-sign-operations.test.tsx`.
 - `/tools` is now an entry in `src/lib/apps/tools.ts` (landing grid + sitemap).
 
 ### Not done yet
 
-- **PDF redaction** — the last Reader-level feature; must truly remove the
-  underlying content (content-stream editing), not merely cover it. See §11.
-- `pdf.unlock` has no standalone operation (unlock stays embedded in the PDF
-  loaders); its registry line is intentionally omitted.
+- Nothing PDF-related is planned beyond the four PDF actions (see §2).
 
 ---
 
@@ -165,7 +165,7 @@ const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
   "text.diff": async () => (await import("@/components/workbench/operations/TextOperations")).TextDiffOperation,
   // ... text.count / text.case / text.regex
   "data.convert": async () => (await import("@/components/workbench/operations/ConvertOperations")).DataConvertOperation,
-  // ... data.encode / data.hash / data.uuid
+  // ... data.encode / data.hash
 };
 ```
 
@@ -187,7 +187,7 @@ const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
 | `viewer.view` | view | 800 | any non-binary |
 | `viewer.edit` | edit | 780 | text, markdown, html, json, yaml, toml, sheet |
 | `docx.edit` | edit | 770 | docx (single) |
-| `pdf.edit` | edit | 770 | pdf (single) |
+| `pdf.sign` | edit | 770 | pdf (single) |
 | `viewer.print` | share | 640 | markdown, html, docx, text |
 | `data.convert` | convert | 750 | json, yaml, toml (single) |
 | `doc.convert` | convert | 680 | pdf, docx, markdown, html (single) |
@@ -199,26 +199,25 @@ const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
 | `text.regex` | transform | 380 | textual (single) |
 | `pdf.merge` | transform | 1000 | ≥2 pdf |
 | `pdf.split` | transform | 600 | pdf (single) |
-| `pdf.organize` | transform | 660 | pdf (single) |
 | `text.diff` | analyze | 1000 | ≥2 comparable |
 | `text.count` | analyze | 420 | textual (single) |
 | `data.hash` | analyze | 300 | any single |
 | `image.strip` | secure | 560 | image (single) |
-| `pdf.unlock` | secure | 520 | pdf (single) |
 | `qr.generate` | create | 320 | empty, or textual single |
 | `qr.scan` | create | 600 | empty, or image single |
-| `data.uuid` | create | 200 | always |
 
 Inference (`suggestOperation`): 2 PDFs→`pdf.merge`; 2 texts→`text.diff`;
 1 image→`image.convert`; 1 pdf/json/sheet/markdown→`viewer.view`; empty→null.
-`PRIMARY_COUNT = 2`.
+`PRIMARY_COUNT = 4`. Any selection containing a PDF is limited to
+`viewer.view`, `pdf.merge`, `pdf.split`, `pdf.sign` (`PDF_CAPABILITIES`).
+`book.read` (view, 900) opens `.epub` assets in `EpubReader`; `viewer.view`
+excludes EPUB. `data.uuid` matches only an empty selection, and `text.diff`
+also matches an empty selection (two typed texts) — together with the QR pair
+these are the empty screen's "Start without a file" row.
 
-**Wired operations:** `text.*`, `data.*`, `qr.generate`, `qr.scan`, `pdf.merge`,
-`pdf.split`, `pdf.organize`, `image.convert`, `image.transform`, `image.strip`,
-`viewer.view`, `viewer.edit`, `docx.edit`, `pdf.edit`, `doc.convert`,
-`sheet.convert`, `viewer.print`. Only `pdf.unlock` remains unwired by design
-(unlock stays embedded in the PDF loaders); the shell renders it disabled with
-`wb(lang, "unavailable")`.
+**Wired operations:** every capability in the table. Fixed per-capability
+props (e.g. the image `defaultTask`) live in `operationDefaults()` in
+`operations.ts`, not in the shell.
 
 ---
 
@@ -266,10 +265,11 @@ capability-driven bar, and keep `DocumentPane` as the `viewer.view` operation.
 ### 6c. Phase 2 — workbench shell
 
 New `src/components/workbench/WorkbenchApp.tsx` (+ `InputBar`, `AssetTray`,
-`ActionRail`, `OperationHost`, `OutputTray`, `SuggestedNext`). Layout: input
-strip; Assets tray; grouped action rail from `capabilitiesFor(assets).byGroup`;
-`OperationHost` lazy-loads `loadOperation(id)`; Outputs tray; inferred primary
-actions; disabled ops show `wb(lang, match.reason)`.
+`ActionBar`, `OperationHost`, `OutputTray`). Layout: input strip; Assets tray
+(one-line for a single file); "add one more file to unlock…" hint;
+`ActionBar` tabs + grouped "More" menu; the active operation in the tab panel;
+Outputs tray only once something was produced. Every asset change resets the
+choice so the suggested action opens.
 
 Route: add `src/pages/tools.astro` mounting the shell; convert the six existing
 routes to presets (ViewerApp etc. can stay until the shell covers them).
@@ -285,9 +285,8 @@ routes to presets (ViewerApp etc. can stay until the shell covers them).
   JSON; every pane now runs on `EditSession` + `EditorToolbar`.
 - DOCX (contentEditable rich text + hand-rolled OOXML writer). **Done** —
   `DocxOperations.tsx` + `src/lib/docx/write.ts` (HTML/MD/TXT/DOCX).
-- PDF editing (`src/lib/pdf/edit.ts`: forms, annotations, signature, redaction,
-  metadata). **Metadata, form fill/flatten and text/signature stamps done**
-  (`PdfEditOperations.tsx`); redaction **TODO.**
+- PDF: signature/text stamps only (`PdfSignOperations.tsx`). Metadata, forms
+  and redaction were removed by product decision (§2).
 
 ### 6e. Follow-ups from the integration review
 
@@ -398,7 +397,7 @@ src/components/workbench/
   operations/
     TextOperations.tsx  ConvertOperations.tsx  QrOperations.tsx
     PdfOperations.tsx   ImageOperations.tsx   ViewerOperations.tsx  (view/edit/convert/print)
-    DocxOperations.tsx  (docx.edit)  PdfEditOperations.tsx  (pdf.edit)
+    DocxOperations.tsx  (docx.edit)  PdfSignOperations.tsx  (pdf.sign)
 tests/workbench/
   asset.test.ts  capabilities.test.ts  kinds.test.ts
   editor.test.ts  editor-toolbar.test.tsx  source-editor.test.tsx
@@ -406,32 +405,18 @@ tests/workbench/
   qr-operations.test.tsx    pdf-operations.test.tsx
   image-operations.test.tsx viewer-operations.test.tsx
   docx-operations.test.tsx  docx-write.test.ts
-  pdf-edit-operations.test.tsx  workbench-app.test.tsx
+  pdf-sign-operations.test.tsx  workbench-app.test.tsx
 src/lib/viewer/load.ts                 (LoadedDocument + loadDocument)
-src/components/viewer/DocumentPane.tsx (moved out of ViewerApp)
-src/components/viewer/ViewerApp.tsx    (thin host of the above; still owns edit/export/compare/print)
-src/components/tools/
-  TextTools.tsx     (thin host — done)
-  ConvertTools.tsx  (thin host — done)
-  QrTools.tsx       (thin host — done)
-  PdfTools.tsx      (thin host — done)
-  ImageTools.tsx    (thin host — done)
+src/components/viewer/DocumentPane.tsx (document renderer used by viewer.view)
+src/components/apps/EpubReader.tsx     (reader; takes the workbench asset)
+src/components/workbench/operations/ReaderOperations.tsx (book.read)
 src/pages/tools.astro  (mounts <WorkbenchApp client:load />)
 ```
 
 ## 11. Next immediate action
 
-Phases 0–3 are complete and Phase 4 (PDF editing) covers metadata, form
-fill/flatten and text/signature stamps. One Adobe-Reader-level feature remains:
+Phases 0–3 are complete and the PDF scope is final (View, Merge, Split, Sign).
 
-1. **Redaction** — mark rectangles (page + x/y/w/h) and produce a PDF where the
-   underlying content is actually removed, not merely covered: a visual black
-   box with extractable text underneath is NOT a safe redaction. This needs
-   content-stream editing (masking/rewriting the page content or rasterising
-   affected pages) and must be verified by confirming the removed text no longer
-   extracts (`pdfToText`). Treat this as its own focused effort, not a UI-only
-   add-on.
-
-After that, the open follow-ups are all §6e items (shared `useSeedAssets`,
+The open follow-ups are all §6e items (shared `useSeedAssets`,
 cancellation guards, an axe smoke test for the shell, and a dedicated
 “Unsaved changes” i18n key for the toolbar badge).

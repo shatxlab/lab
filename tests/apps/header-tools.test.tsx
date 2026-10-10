@@ -22,10 +22,11 @@ describe("CommandPalette", () => {
     expect(document.activeElement?.getAttribute("role")).toBe("combobox");
 
     const input = document.querySelector<HTMLInputElement>('[role="combobox"]');
+    // The retired tool pages' keywords now lead to the single workbench page.
     await type(input, "pdf");
     const options = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent);
-    expect(options.some((text) => text?.includes("PDF tools"))).toBe(true);
-    expect(options.some((text) => text?.includes("EPUB reader"))).toBe(false);
+    expect(options.some((text) => text?.includes("Workbench"))).toBe(true);
+    expect(options.some((text) => text?.includes("Crossword"))).toBe(false);
 
     expect(await axeViolations()).toEqual([]);
 

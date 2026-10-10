@@ -8,13 +8,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 
 | Route | Tool | What it does |
 |---|---|---|
-| `/reader` | EPUB reader | Unzip + parse EPUB, chapter navigation, in-book search, bookmarks, themeable UI, reading position persisted in localStorage. |
-| `/viewer` | Document viewer | PDF (PDF.js, selectable text, password prompt), Word (`.docx`), spreadsheets (`.xlsx`/`.ods`/`.csv`/…, editable and saveable), JSON, Markdown, HTML (sanitized preview + source), images and plain text — all rendered locally. **Export** sheets to CSV/JSON/XLSX, JSON to CSV, Word/Markdown/HTML to HTML/Markdown/text, PDF to text; **print / save as PDF** any rendered document; **compare** two files (text, JSON, sheets, Word, PDF) side by side or unified. |
-| `/pdf` | PDF tools | Merge PDFs (per-file page ranges), split (extract / every page / every N / custom parts, zipped), and reorder, rotate or delete pages with thumbnails and drag-and-drop. Reads password-protected files. |
-| `/image` | Image tools | Convert (PNG/JPEG/WebP/AVIF where the browser can write it), resize, compress, batch + zip, and strip EXIF/GPS — losslessly for JPEG and PNG. Shows what metadata the original contained. |
-| `/qr` | QR code | Generate QR codes for text, links, Wi-Fi, email, phone, SMS, vCard contacts and locations (PNG/SVG); scan with the camera or from an image. |
-| `/text` | Text tools | Diff (side by side / unified, word-level highlights), word and character counter, case converter (incl. camel/snake/kebab), regex tester (runs in a Worker with a timeout). |
-| `/convert` | Data converter | JSON ⇄ YAML ⇄ TOML, Base64 / URL / hex, MD5 and SHA hashes (plus HMAC) for text or files, UUID v4/v7 generator and inspector. |
+| `/tools` | Workbench | One page for every file. Drop, pick or paste a file and the actions that fit it appear as tabs (the best one opens straight away; the rest sit under "More"). **Documents:** view PDF, Word (`.docx`), spreadsheets (`.xlsx`/`.ods`/`.csv`/…), JSON, Markdown, HTML, images and text; edit text, data, sheets and Word; export and print. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** view, merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS. **Text & data:** compare (JSON, sheets and Word compared by content), count, change case, regex, JSON ⇄ YAML ⇄ TOML, Base64/URL/hex, hashes. **Without a file:** compare two texts, create or scan a QR code, generate a UUID. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
@@ -95,9 +89,10 @@ an interactive island, everything else is pre-rendered HTML.
 src/
   components/apps/   EPUB reader, header controls (command palette, settings
                      backup, language/theme), PWA registration, tools grid
-  components/tools/  Text, converter, QR, image and PDF tool islands + shared UI
-                     (FilePicker, tabs, menus, diff view)
-  components/viewer/ Document viewer islands (PDF, image, sheet, JSON, …)
+  components/workbench/ The /tools workbench shell + one operation per capability
+                     (operations/: text, data, QR, PDF, image, viewer, DOCX, reader)
+  components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
+  components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/wordle/ Wordle island
   components/alias/  Alias game island (setup, round, results screens)
   components/crossword/ Crossword island (picker, board, grid, clues, completion)
@@ -110,6 +105,7 @@ src/
   lib/qr/            payload builders/parsers, QR matrix + SVG, scanner
   lib/image/         EXIF reading and lossless stripping, resize plan, canvas pipeline
   lib/pdf/           page-range parsing and pdf-lib operations
+  lib/workbench/     asset model, capability registry, operation registry, i18n
   lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
   lib/crossword/     Generated puzzles + word bank, grid builder, reducer, i18n, sound, storage
@@ -128,7 +124,8 @@ tests/
   viewer/            document viewer unit tests
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
-  text/ convert/ qr/ image/ pdf/ wordle/  logic + UI tests per tool (jsdom)
+  workbench/         capability registry, shell and per-operation UI tests (jsdom)
+  text/ convert/ qr/ image/ pdf/ wordle/  logic tests per tool
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers
@@ -199,6 +196,11 @@ and the 1200×630 social card are generated from it by
 `scripts/generate-brand-assets.mjs` and committed.
 
 ### Adding a new tool
+
+Anything that works on a file belongs in the workbench, not on its own page:
+add a capability to `src/lib/workbench/capabilities.ts` (label, group, weight,
+`match`), its component under `src/components/workbench/operations/`, and one
+line in `src/lib/workbench/operations.ts`. For a standalone page (games):
 
 1. Add the tool's island under `src/components/<tool>/` and its logic under
    `src/lib/<tool>/` — reuse the shared helpers in `src/components/tools/ui.tsx`

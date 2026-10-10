@@ -10,8 +10,7 @@ describe("ToolsGrid", () => {
   it("renders English cards by default", () => {
     const html = renderToStaticMarkup(<ToolsGrid />);
     expect(html).toContain("Your data stays yours.");
-    expect(html).toContain("EPUB reader");
-    expect(html).toContain("Document viewer");
+    expect(html).toContain("Workbench");
     expect(html).toContain("Alias word game");
     expect(html).toContain("Crossword");
     expect(html).toContain("Games for couples");
@@ -23,8 +22,7 @@ describe("ToolsGrid", () => {
     const text = view.container.textContent ?? "";
     expect(text).toContain("Ваши инструменты.");
     expect(text).toContain("Данные остаются у вас.");
-    expect(text).toContain("EPUB-читалка");
-    expect(text).toContain("Просмотр документов");
+    expect(text).toContain("Рабочая область");
     expect(text).toContain("Алиас");
     expect(text).toContain("Кроссворд");
     expect(text).toContain("Вордли");
@@ -39,7 +37,7 @@ describe("ToolsGrid", () => {
 
   it("groups the tools by category and lists every registered tool", () => {
     const html = renderToStaticMarkup(<ToolsGrid />);
-    for (const heading of ["Read &amp; view", "Utilities", "Games"]) expect(html).toContain(heading);
+    for (const heading of ["Files", "Games"]) expect(html).toContain(heading);
     for (const tool of TOOLS) expect(html).toContain(`href="${toolHref(tool)}"`);
   });
 });

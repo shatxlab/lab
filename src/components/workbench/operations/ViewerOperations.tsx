@@ -63,6 +63,7 @@ const ASSET_TO_FILE_KIND: Record<AssetKind, FileKind> = {
   toml: "text",
   sheet: "sheet",
   image: "image",
+  epub: "unsupported",
   binary: "unsupported",
 };
 

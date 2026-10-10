@@ -4,11 +4,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import AliasGame from "@/components/alias/AliasGame";
 import CouplesGame from "@/components/couples/CouplesGame";
 import CrosswordGame from "@/components/crossword/CrosswordGame";
-import EpubReader from "@/components/apps/EpubReader";
 import LangToggle from "@/components/apps/LangToggle";
 import ThemeToggle from "@/components/apps/ThemeToggle";
 import ToolsGrid from "@/components/apps/ToolsGrid";
-import ViewerApp from "@/components/viewer/ViewerApp";
 import { axeViolations, mount, waitFor } from "../helpers/dom";
 
 afterEach(() => {
@@ -28,8 +26,6 @@ describe.each([
         <ThemeToggle />
       </header>
     )],
-    ["EPUB reader", () => <EpubReader />],
-    ["document viewer", () => <ViewerApp />],
     ["Alias", () => <AliasGame />],
     ["Crossword", () => <CrosswordGame />],
     ["Couples", () => <CouplesGame />],

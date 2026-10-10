@@ -20,7 +20,11 @@ export class CompareError extends Error {
  * source text as-is, JSON pretty-printed (so layout differences vanish),
  * spreadsheets as CSV per sheet, Word and PDF as extracted text.
  */
-export async function extractComparableText(file: File): Promise<string> {
+export async function extractComparableText(file: {
+  name: string;
+  size: number;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}): Promise<string> {
   if (file.size > MAX_FILE_BYTES) throw new CompareError("tooLarge", "File is too large");
   const bytes = new Uint8Array(await file.arrayBuffer());
   const kind = resolveFileKind(file.name, bytes);

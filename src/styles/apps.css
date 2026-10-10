@@ -155,34 +155,6 @@ html:not([data-theme="dark"]) .theme-glyph-moon {
   padding: 0.85rem 1.25rem;
 }
 
-.epub-reader-landing {
-  align-items: center;
-  display: grid;
-  gap: 1.25rem;
-  justify-items: center;
-  margin: 0 auto;
-  max-width: 46rem;
-  padding: clamp(2.5rem, 8vw, 6rem) 1.5rem;
-  text-align: center;
-}
-
-.epub-reader-landing.is-dragging {
-  background: color-mix(in srgb, var(--epub-reader-accent) 10%, transparent);
-}
-
-.epub-reader-landing-icon {
-  align-items: center;
-  background: var(--epub-reader-page);
-  border: 1px solid var(--epub-reader-border);
-  border-radius: 1.5rem;
-  box-shadow: var(--epub-reader-shadow);
-  color: var(--epub-reader-accent);
-  display: flex;
-  height: 5rem;
-  justify-content: center;
-  width: 5rem;
-}
-
 .epub-reader-eyebrow {
   color: var(--epub-reader-muted);
   font-size: 0.72rem;
@@ -192,8 +164,7 @@ html:not([data-theme="dark"]) .theme-glyph-moon {
   text-transform: uppercase;
 }
 
-.epub-reader-landing h1,
-.epub-reader-toolbar h1 {
+.epub-reader-toolbar h2 {
   color: var(--epub-reader-text);
   font-size: clamp(1.75rem, 4vw, 2.8rem);
   font-weight: 800;
@@ -202,27 +173,9 @@ html:not([data-theme="dark"]) .theme-glyph-moon {
   margin: 0;
 }
 
-.epub-reader-landing p,
 .epub-reader-toolbar p {
   color: var(--epub-reader-muted);
   margin: 0;
-}
-
-.epub-reader-primary-button {
-  background: var(--epub-reader-accent);
-  color: var(--epub-reader-accent-fg);
-  font-weight: 800;
-  padding: 0.85rem 1.35rem;
-}
-
-.epub-reader-primary-button:hover {
-  background: var(--epub-reader-accent-strong);
-}
-
-.epub-reader-drop-note {
-  border: 1px dashed var(--epub-reader-border);
-  border-radius: 999px;
-  padding: 0.65rem 1rem;
 }
 
 .epub-reader-workspace {
@@ -244,7 +197,7 @@ html:not([data-theme="dark"]) .theme-glyph-moon {
   z-index: 3;
 }
 
-.epub-reader-toolbar h1 {
+.epub-reader-toolbar h2 {
   font-size: clamp(1.2rem, 2vw, 1.75rem);
 }
 
@@ -671,13 +624,13 @@ html:not([data-theme="dark"]) .theme-glyph-moon {
     position: static;
   }
 
-  .epub-reader-toolbar h1 {
+  .epub-reader-toolbar h2 {
     font-size: 1.2rem;
   }
 
   .epub-reader-toolbar-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .epub-reader-toolbar-actions button {

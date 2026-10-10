@@ -13,6 +13,8 @@ import type { OperationComponent } from "@/lib/workbench/operation";
 export type OperationLoader = () => Promise<OperationComponent>;
 
 const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
+  "book.read": async () =>
+    (await import("@/components/workbench/operations/ReaderOperations")).BookReadOperation,
   "data.convert": async () =>
     (await import("@/components/workbench/operations/ConvertOperations")).DataConvertOperation,
   "data.encode": async () =>
@@ -37,8 +39,6 @@ const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
     (await import("@/components/workbench/operations/PdfOperations")).PdfMergeOperation,
   "pdf.split": async () =>
     (await import("@/components/workbench/operations/PdfOperations")).PdfSplitOperation,
-  "pdf.organize": async () =>
-    (await import("@/components/workbench/operations/PdfOperations")).PdfOrganizeOperation,
   "image.convert": async () =>
     (await import("@/components/workbench/operations/ImageOperations")).ImageOperation,
   "image.transform": async () =>
@@ -51,8 +51,8 @@ const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
     (await import("@/components/workbench/operations/ViewerOperations")).ViewerEditOperation,
   "docx.edit": async () =>
     (await import("@/components/workbench/operations/DocxOperations")).DocxEditOperation,
-  "pdf.edit": async () =>
-    (await import("@/components/workbench/operations/PdfEditOperations")).PdfEditOperation,
+  "pdf.sign": async () =>
+    (await import("@/components/workbench/operations/PdfSignOperations")).PdfSignOperation,
   "doc.convert": async () =>
     (await import("@/components/workbench/operations/ViewerOperations")).ViewerConvertOperation,
   "sheet.convert": async () =>
@@ -60,6 +60,23 @@ const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
   "viewer.print": async () =>
     (await import("@/components/workbench/operations/ViewerOperations")).ViewerPrintOperation,
 };
+
+/**
+ * Fixed extra props for capabilities that share one component, so the shell
+ * never has to special-case an id (e.g. the three image capabilities all
+ * mount `ImageOperation`, preselecting a different task).
+ */
+const DEFAULT_PROPS: Partial<Record<CapabilityId, Record<string, unknown>>> = {
+  "image.convert": { defaultTask: "convert" },
+  "image.transform": { defaultTask: "convert" },
+  "image.strip": { defaultTask: "strip" },
+};
+
+const NO_PROPS: Record<string, unknown> = {};
+
+export function operationDefaults(id: CapabilityId): Record<string, unknown> {
+  return DEFAULT_PROPS[id] ?? NO_PROPS;
+}
 
 export function operationLoader(id: CapabilityId): OperationLoader | undefined {
   return REGISTRY[id];

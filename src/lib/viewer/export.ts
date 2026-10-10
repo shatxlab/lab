@@ -80,40 +80,6 @@ export async function rowsToXlsx(sheets: readonly SheetData[]): Promise<Uint8Arr
   return serializeWorkbook(XLSX as unknown as SheetJsWriter, book as unknown as RawWorkbook, "xlsx");
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function toCell(value: unknown): Cell {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "object") return JSON.stringify(value);
-  return value as Cell;
-}
-
-/**
- * Tabular JSON → CSV. Handles an array of objects (columns are the union of
- * keys), an array of arrays and an array of primitives. Anything else has no
- * natural table shape, so `null` tells the UI to hide the option.
- */
-export function jsonToCsv(value: unknown): string | null {
-  if (!Array.isArray(value) || value.length === 0) return null;
-
-  if (value.every(isPlainObject)) {
-    const columns: string[] = [];
-    for (const item of value) {
-      for (const key of Object.keys(item)) if (!columns.includes(key)) columns.push(key);
-    }
-    return rowsToDelimited([columns, ...value.map((item) => columns.map((column) => toCell(item[column])))]);
-  }
-  if (value.every(Array.isArray)) {
-    return rowsToDelimited(value.map((row) => (row as unknown[]).map(toCell)));
-  }
-  if (value.every((item) => item === null || typeof item !== "object")) {
-    return rowsToDelimited([["value"], ...value.map((item) => [toCell(item)])]);
-  }
-  return null;
-}
-
 /* -------------------------------------------------------------- HTML → text */
 
 const BLOCK_TAGS = new Set([

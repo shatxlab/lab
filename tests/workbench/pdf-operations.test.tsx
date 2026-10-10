@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 describe("workbench PDF operations", () => {
-  it("lists the supplied PDF assets and hides its own picker", async () => {
+  it("lists the supplied PDF assets", async () => {
     const view = await mount(
       <PdfMergeOperation lang="en" assets={[await pdfAsset("a.pdf", ["1", "2"]), await pdfAsset("b.pdf", ["1"])]} />,
     );
@@ -76,7 +76,7 @@ describe("workbench PDF operations", () => {
     view.unmount();
   });
 
-  it("accepts a supplied single PDF asset in split without a picker", async () => {
+  it("accepts a supplied single PDF asset in split", async () => {
     const view = await mount(
       <PdfSplitOperation lang="en" assets={[await pdfAsset("doc.pdf", ["1", "2", "3", "4"])]} />,
     );

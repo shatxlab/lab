@@ -16,6 +16,8 @@ export type JsonViewProps = {
   resetKey?: string;
   /** Drops applied edits and returns to the opened document (Escape). */
   onRevert?: () => void;
+  /** The current draft's parse error, or null once it parses. */
+  onError?: (error: string | null) => void;
 };
 
 /*
@@ -24,9 +26,12 @@ export type JsonViewProps = {
  * wrapping), so typing edits the pretty-printed document in place with live
  * syntax colors and no visible input chrome.
  */
-export function JsonView({ lang, value, onApply, resetKey, onRevert }: JsonViewProps) {
+export function JsonView({ lang, value, onApply, resetKey, onRevert, onError }: JsonViewProps) {
   const [draft, setDraft] = React.useState(() => prettifyJson(value));
   const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    onError?.(error);
+  }, [error, onError]);
   // The highlight mirrors the draft text itself, not the parsed value: while
   // the draft is invalid there is no value to prettify, and mirroring the text
   // keeps every glyph aligned under the caret.

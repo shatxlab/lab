@@ -4,7 +4,10 @@ Status: **Phases 0–3 complete. `/tools` is now the only file-tools page** —
 the seven tool pages (`/viewer`, `/pdf`, `/image`, `/qr`, `/text`,
 `/convert`, `/reader`) were retired on 2026-10-10 and their URLs deliberately
 404 (no redirects). EPUB reading is the `book.read` capability. PDF scope was
-cut back on purpose: a PDF only gets View, Merge, Split and Sign (see §2).
+cut back on purpose: a PDF only gets Open, Merge, Split and Sign (see §2).
+Second simplification pass (same day): selected-file model, View/Edit/Export/
+Print merged into one **Open** tab, one **Image** tab, and every tool a
+one-line terminal command covers retired (§2, §5).
 Verification at handoff: `npx tsc --noEmit` clean · `npm run check` clean
 (0 errors) · `npm test` → **all passing** · `npm run build` emits only `/`,
 `/tools` and the games.
@@ -37,14 +40,17 @@ capability registry.
 | Topic | Decision |
 |---|---|
 | DOCX editing | Rich-text edit of the rendered HTML; save as DOCX/HTML/MD/TXT. **Lossy regenerate**, no OOXML round-trip. |
-| PDF scope | **View, Merge, Split, Sign only** (product decision, 2026-10-10 — too many options overwhelmed users). Enforced by `PDF_CAPABILITIES` in `capabilities.ts`: any selection containing a PDF is limited to those four. Metadata, form fill/flatten and redaction were built and then removed (last present in commit `02a8f17`). Organize pages was removed along with `/pdf`. |
-| Shell layout | No disabled/"coming soon" buttons. The best action opens on drop; the top `PRIMARY_COUNT` (4) renderable actions are tabs, the rest sit in a grouped "More" menu; a one-line hint names what one more file would unlock (`unlockedByAnother`). |
+| PDF scope | **Open (view), Merge, Split, Sign only** (product decision, 2026-10-10 — too many options overwhelmed users). Only those capabilities list `pdf` in their `kinds`. Metadata, form fill/flatten, redaction and Organize pages were built and then removed (last present in commit `02a8f17`). |
+| Terminal rule | **If a one-line terminal command does it, the workbench doesn't** (owner's call: "if I can use the terminal for word count — anybody can"). Retired: hash, Base64/URL/hex, UUID, regex tester, change case, word count, QR scanning, PDF→text. Kept because the terminal can't easily: document compare by content, PDF merge/split/sign, image convert/resize/strip, EPUB reading, QR creation, document view/edit. |
+| Selection model | One **selected** file. File capabilities act on it; set capabilities (`set` in the registry) act on every open file of their kinds and only appear while the selected file belongs to a qualifying set (Merge 2+ PDFs, Compare exactly 2, Image 1+ batch). Mixed sets never cancel each other out. |
+| Unsaved work | Operations report it via `onDirtyChange`. While dirty, adding files never switches away (the tab is pinned) and leaving (tab, file, remove, open result) asks `window.confirm`. Saving a copy calls `EditSession.markSaved()`, so a saved draft is clean. |
+| Shell layout | Tabs only (≤4 per kind, so no "More" menu); no disabled/"coming soon" buttons; operations have no file pickers or remove buttons of their own — the tray is the single place files enter and leave. A one-line hint names what one more file would unlock (`unlockedByAnother`). |
 | Rich-text engine | **No dependency.** `contentEditable` + existing DOMPurify + own toolbar/undo. |
 | DOCX writer | **No dependency.** Hand-rolled OOXML zip via existing `fflate`/`jszip` (fallback first: save as HTML/MD/TXT). |
 | Source editors | Own editor reusing `lib/viewer/highlight*` and the `JsonView` transparent-textarea trick. No CodeMirror. |
 | New runtime deps | **None.** Do not add packages. |
-| Routes | **Superseded 2026-10-10:** one page, `/tools`. The old tool routes and `/reader` were deleted outright (404, no redirects); PWA shortcuts are `tools` + `wordle`. File-less tools survive as empty-screen starters (capabilities whose `match` accepts an empty selection: compare text, create/scan QR, UUID). |
-| Save semantics | "Save a copy" always; in-place save only via File System Access `showSaveFilePicker`. |
+| Routes | **Superseded 2026-10-10:** one page, `/tools`. The old tool routes and `/reader` were deleted outright (404, no redirects); PWA shortcuts are `tools` + `wordle`. File-less tools are empty-screen starters (`starter: true`): Compare (typed text) and Create QR code. |
+| Save semantics | Saving always produces a copy in the Outputs tray; the original file is never modified. |
 
 ---
 
@@ -182,42 +188,28 @@ const REGISTRY: Partial<Record<CapabilityId, OperationLoader>> = {
 
 ## 5. Capability registry (source of truth: `src/lib/workbench/capabilities.ts`)
 
-| id | group | weight | applies to |
-|---|---|---|---|
-| `viewer.view` | view | 800 | any non-binary |
-| `viewer.edit` | edit | 780 | text, markdown, html, json, yaml, toml, sheet |
-| `docx.edit` | edit | 770 | docx (single) |
-| `pdf.sign` | edit | 770 | pdf (single) |
-| `viewer.print` | share | 640 | markdown, html, docx, text |
-| `data.convert` | convert | 750 | json, yaml, toml (single) |
-| `doc.convert` | convert | 680 | pdf, docx, markdown, html (single) |
-| `sheet.convert` | convert | 700 | sheet (single) |
-| `image.convert` | convert | 850 | image (single) |
-| `data.encode` | convert | 300 | any single |
-| `image.transform` | transform | 740 | image (single) |
-| `text.case` | transform | 380 | textual (single) |
-| `text.regex` | transform | 380 | textual (single) |
-| `pdf.merge` | transform | 1000 | ≥2 pdf |
-| `pdf.split` | transform | 600 | pdf (single) |
-| `text.diff` | analyze | 1000 | ≥2 comparable |
-| `text.count` | analyze | 420 | textual (single) |
-| `data.hash` | analyze | 300 | any single |
-| `image.strip` | secure | 560 | image (single) |
-| `qr.generate` | create | 320 | empty, or textual single |
-| `qr.scan` | create | 600 | empty, or image single |
+| id | label | weight | selected file kinds | set? |
+|---|---|---|---|---|
+| `pdf.merge` | Merge PDFs | 1000 | pdf | 2+ PDFs |
+| `text.diff` | Compare | 1000 | text, md, html, json, yaml, toml, sheet, docx | exactly 2; starter |
+| `book.read` | Read | 900 | epub | — |
+| `image.edit` | Image | 850 | image | 1+ images (batch) |
+| `doc.open` | Open | 800 | pdf, docx, md, html, text, json, yaml, toml, sheet | — |
+| `pdf.sign` | Sign | 770 | pdf | — |
+| `pdf.split` | Split | 600 | pdf | — |
+| `qr.generate` | Create QR code | 320 | textual kinds | starter |
 
-Inference (`suggestOperation`): 2 PDFs→`pdf.merge`; 2 texts→`text.diff`;
-1 image→`image.convert`; 1 pdf/json/sheet/markdown→`viewer.view`; empty→null.
-`PRIMARY_COUNT = 4`. Any selection containing a PDF is limited to
-`viewer.view`, `pdf.merge`, `pdf.split`, `pdf.sign` (`PDF_CAPABILITIES`).
-`book.read` (view, 900) opens `.epub` assets in `EpubReader`; `viewer.view`
-excludes EPUB. `data.uuid` matches only an empty selection, and `text.diff`
-also matches an empty selection (two typed texts) — together with the QR pair
-these are the empty screen's "Start without a file" row.
+The first offered capability (by weight) opens by default: two PDFs → Merge,
+two texts → Compare, one PDF/document → Open, an image → Image, an EPUB → Read.
+Binary files get no tabs and a "no tools for this file type" line.
 
-**Wired operations:** every capability in the table. Fixed per-capability
-props (e.g. the image `defaultTask`) live in `operationDefaults()` in
-`operations.ts`, not in the shell.
+`doc.open` (`OpenOperations.tsx`) is Preview | Edit. Preview renders the
+document with **Save as ▾** (sheet → CSV/JSON/XLSX; md/html/docx →
+HTML/Markdown/text; json/yaml/toml → the other two) and **Print** for
+page-like kinds. Edit mounts the JSON/sheet/source/Word editor; Preview is
+locked while an edit is unsaved. JSON, YAML and TOML drafts are parsed as you
+type: the error shows under the editor and Save is disabled until it parses.
+Edited copies are always named `name-edited.ext`.
 
 ---
 
@@ -395,19 +387,21 @@ src/lib/workbench/
 src/components/workbench/
   WorkbenchApp.tsx  EditorToolbar.tsx  SourceEditor.tsx
   operations/
-    TextOperations.tsx  ConvertOperations.tsx  QrOperations.tsx
-    PdfOperations.tsx   ImageOperations.tsx   ViewerOperations.tsx  (view/edit/convert/print)
-    DocxOperations.tsx  (docx.edit)  PdfSignOperations.tsx  (pdf.sign)
+    OpenOperations.tsx  (doc.open: preview / Save as / print / editors)
+    DocxOperations.tsx  (Word editor pane used by Open)
+    TextOperations.tsx  (text.diff)   QrOperations.tsx  (qr.generate)
+    PdfOperations.tsx   (merge, split) PdfSignOperations.tsx  (pdf.sign)
+    ImageOperations.tsx (image.edit)  ReaderOperations.tsx  (book.read)
 tests/workbench/
   asset.test.ts  capabilities.test.ts  kinds.test.ts
   editor.test.ts  editor-toolbar.test.tsx  source-editor.test.tsx
-  text-operations.test.tsx  convert-operations.test.tsx
+  text-operations.test.tsx  open-operations.test.tsx
   qr-operations.test.tsx    pdf-operations.test.tsx
-  image-operations.test.tsx viewer-operations.test.tsx
+  image-operations.test.tsx
   docx-operations.test.tsx  docx-write.test.ts
   pdf-sign-operations.test.tsx  workbench-app.test.tsx
 src/lib/viewer/load.ts                 (LoadedDocument + loadDocument)
-src/components/viewer/DocumentPane.tsx (document renderer used by viewer.view)
+src/components/viewer/DocumentPane.tsx (document renderer used by Open's Preview)
 src/components/apps/EpubReader.tsx     (reader; takes the workbench asset)
 src/components/workbench/operations/ReaderOperations.tsx (book.read)
 src/pages/tools.astro  (mounts <WorkbenchApp client:load />)

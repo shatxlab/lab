@@ -1,9 +1,9 @@
+import jsQR from "jsqr";
 import QRCode from "qrcode";
 import { describe, expect, it } from "vitest";
 
 import { buildMatrix, contrastRatio, matrixToSvg, QrTooLongError, styleWarning, DEFAULT_QR_STYLE } from "@/lib/qr/generate";
-import { contactPayload, emailPayload, locationPayload, parseScanResult, phonePayload, smsPayload, wifiPayload } from "@/lib/qr/payload";
-import { decodeImageData } from "@/lib/qr/scan";
+import { contactPayload, emailPayload, locationPayload, phonePayload, smsPayload, wifiPayload } from "@/lib/qr/payload";
 
 describe("payloads", () => {
   it("builds Wi-Fi payloads with escaping", () => {
@@ -23,28 +23,6 @@ describe("payloads", () => {
   it("builds a vCard", () => {
     const card = contactPayload({ firstName: "Ann", lastName: "Lee", organization: "A;B", phone: "+1 555", email: "a@b.co", url: "" });
     expect(card.split("\r\n")).toEqual(["BEGIN:VCARD", "VERSION:3.0", "N:Lee;Ann;;;", "FN:Ann Lee", "ORG:A\\;B", "TEL:+1 555", "EMAIL:a@b.co", "END:VCARD"]);
-  });
-});
-
-describe("parseScanResult", () => {
-  it("round-trips a Wi-Fi payload", () => {
-    const text = wifiPayload({ ssid: 'a;b:c"d', password: "p\\w,x", security: "WPA", hidden: true });
-    expect(parseScanResult(text)).toMatchObject({ kind: "wifi", ssid: 'a;b:c"d', password: "p\\w,x", security: "WPA", hidden: true });
-  });
-
-  it("recognises links, mail, phone, sms, geo and contacts", () => {
-    expect(parseScanResult("https://example.com/a?b=1")).toMatchObject({ kind: "url", url: "https://example.com/a?b=1" });
-    expect(parseScanResult("mailto:a%40b.co?subject=x")).toMatchObject({ kind: "email", address: "a@b.co" });
-    expect(parseScanResult("tel:+123")).toMatchObject({ kind: "phone", number: "+123" });
-    expect(parseScanResult("SMSTO:+123:hi there")).toMatchObject({ kind: "sms", number: "+123", message: "hi there" });
-    expect(parseScanResult("geo:1.5,2.5")).toMatchObject({ kind: "geo", latitude: "1.5", longitude: "2.5" });
-    expect(parseScanResult("BEGIN:VCARD\nEND:VCARD")).toMatchObject({ kind: "contact" });
-  });
-
-  it("never treats javascript: or other schemes as links", () => {
-    expect(parseScanResult("javascript:alert(1)").kind).toBe("text");
-    expect(parseScanResult("data:text/html,<script>").kind).toBe("text");
-    expect(parseScanResult("just words").kind).toBe("text");
   });
 });
 
@@ -94,7 +72,8 @@ describe("QR matrix", () => {
           }
         }
       }
-      expect(decodeImageData(data, side, side)).toBe(text);
+      // A reference decoder must read back exactly what was encoded.
+      expect(jsQR(data, side, side)?.data).toBe(text);
     }
   });
 

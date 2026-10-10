@@ -81,23 +81,3 @@ export async function mergePdfs(parts: readonly MergePart[]): Promise<Uint8Array
   return save(output);
 }
 
-export interface PagePlan {
-  /** 0-based index of the page in the source. */
-  source: number;
-  /** Extra clockwise rotation in degrees (multiple of 90). */
-  rotate: number;
-}
-
-/** Re-order, rotate and drop pages: only the pages in `plan` are kept, in that order. */
-export async function organizePdf(source: PdfSource, plan: readonly PagePlan[]): Promise<Uint8Array> {
-  const { PDFDocument, degrees } = await lib();
-  const input = await loadPdf(source.bytes, source.password);
-  const output = await PDFDocument.create({ updateMetadata: false });
-  const copied = await output.copyPages(input, plan.map((entry) => entry.source));
-  copied.forEach((page, index) => {
-    const extra = plan[index]!.rotate;
-    if (extra % 360 !== 0) page.setRotation(degrees((((page.getRotation().angle + extra) % 360) + 360) % 360));
-    output.addPage(page);
-  });
-  return save(output);
-}

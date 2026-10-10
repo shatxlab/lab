@@ -24,7 +24,7 @@ describe("MarkdownView", () => {
   it("renders a parsed document into the shared prose scope", () => {
     const html = renderMarkdown("# Release notes\n\n| Fix | Ticket |\n| --- | --- |\n| Login | QA-1 |");
 
-    const markup = renderToStaticMarkup(<MarkdownView lang="en" html={html} source="# Release notes" />);
+    const markup = renderToStaticMarkup(<MarkdownView html={html} />);
 
     expect(markup).toContain('class="doc-prose');
     expect(markup).toContain("Release notes");

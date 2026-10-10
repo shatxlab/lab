@@ -1,25 +1,20 @@
 /**
- * The QR operation family, extracted from the old Qr tools tabs.
- *
- * Both operations are asset-aware: the generator seeds its payload text from a
- * textual asset, the scanner decodes an image asset, and each falls back to its
- * own file picker when rendered standalone (no assets from the workbench).
+ * `qr.generate` — make a QR code for text, a link, Wi-Fi, a contact and more.
+ * With a text file selected it starts from the file's contents; on the empty
+ * screen it starts blank.
  */
 
 import * as React from "react";
-import { Camera, CameraOff, Download } from "lucide-react";
+import { Download } from "lucide-react";
 
 import {
   ActionButton,
-  CopyButton,
-  FilePicker,
   SelectField,
   inputClass,
   labelClass,
   panelClass,
   textareaClass,
 } from "@/components/tools/ui";
-import type { AppLang } from "@/lib/apps/lang";
 import { saveBlob } from "@/lib/apps/file-open";
 import {
   buildMatrix,
@@ -37,15 +32,12 @@ import {
   contactPayload,
   emailPayload,
   locationPayload,
-  parseScanResult,
   phonePayload,
   smsPayload,
   wifiPayload,
   type PayloadKind,
-  type ScanResult,
   type WifiSecurity,
 } from "@/lib/qr/payload";
-import { decodeFrame, decodeImageFile } from "@/lib/qr/scan";
 import { isTextual } from "@/lib/workbench/kinds";
 import type { OperationProps } from "@/lib/workbench/operation";
 import { useSeedAssets } from "@/lib/workbench/use-seed-assets";
@@ -62,7 +54,7 @@ function Field({ label, value, onChange, type = "text", ...rest }: { label: stri
 
 /* ---------------------------------------------------------------- create */
 
-export function QrGenerateOperation({ lang, assets, seed = null }: OperationProps & { seed?: string | null }) {
+export function QrGenerateOperation({ lang, assets }: OperationProps) {
   const [kind, setKind] = React.useState<PayloadKind>("text");
   const [text, setText] = React.useState("");
   const [wifi, setWifi] = React.useState({ ssid: "", password: "", security: "WPA" as WifiSecurity, hidden: false });
@@ -75,15 +67,6 @@ export function QrGenerateOperation({ lang, assets, seed = null }: OperationProp
   const [size, setSize] = React.useState(512);
   const [copyState, setCopyState] = React.useState<"idle" | "ok" | "failed">("idle");
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-
-  const standalone = assets.length === 0;
-
-  React.useEffect(() => {
-    if (seed !== null) {
-      setKind("text");
-      setText(seed);
-    }
-  }, [seed]);
 
   useSeedAssets(assets, async (list, isCancelled) => {
     if (list.length !== 1) return;
@@ -245,24 +228,6 @@ export function QrGenerateOperation({ lang, assets, seed = null }: OperationProp
           </div>
         )}
 
-        {kind === "text" && standalone && (
-          <FilePicker
-            lang={lang}
-            accept="text/*,.txt,.md,.csv,.json"
-            compact
-            onFiles={([file]) => {
-              if (!file) return;
-              void file
-                .text()
-                .then((value) => {
-                  setKind("text");
-                  setText(value);
-                })
-                .catch(() => undefined);
-            }}
-          />
-        )}
-
         <fieldset className={cn(panelClass, "grid gap-3 sm:grid-cols-2")}>
           <legend className="px-1 text-sm font-semibold">{tq(lang, "appearance")}</legend>
           <SelectField
@@ -350,258 +315,5 @@ export function QrGenerateOperation({ lang, assets, seed = null }: OperationProp
         )}
       </div>
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ scan */
-
-type CameraState = "off" | "starting" | "scanning" | "denied" | "unavailable" | { error: string };
-
-export function QrScanOperation({ lang, assets, onUse }: OperationProps & { onUse?: (text: string) => void }) {
-  const [camera, setCamera] = React.useState<CameraState>("off");
-  const [results, setResults] = React.useState<ScanResult[]>([]);
-  const [imageMessage, setImageMessage] = React.useState<string | null>(null);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const streamRef = React.useRef<MediaStream | null>(null);
-  const frameRef = React.useRef<number>(0);
-  const lastTextRef = React.useRef<string>("");
-
-  const standalone = assets.length === 0;
-
-  const addResult = React.useCallback((text: string) => {
-    if (text === lastTextRef.current) return;
-    lastTextRef.current = text;
-    setResults((previous) => [parseScanResult(text), ...previous.filter((item) => item.text !== text)].slice(0, 8));
-  }, []);
-
-  const stopCamera = React.useCallback(() => {
-    window.cancelAnimationFrame(frameRef.current);
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
-    setCamera("off");
-  }, []);
-
-  React.useEffect(() => stopCamera, [stopCamera]);
-
-  const startCamera = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCamera("unavailable");
-      return;
-    }
-    setCamera("starting");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
-      streamRef.current = stream;
-      const video = videoRef.current;
-      if (!video) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-      video.srcObject = stream;
-      await video.play();
-      setCamera("scanning");
-      let last = 0;
-      let busy = false;
-      const tick = (time: number) => {
-        frameRef.current = window.requestAnimationFrame(tick);
-        if (busy || time - last < 120 || video.videoWidth === 0) return;
-        last = time;
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ratio = Math.min(1, 800 / video.videoWidth);
-        canvas.width = Math.round(video.videoWidth * ratio);
-        canvas.height = Math.round(video.videoHeight * ratio);
-        canvas.getContext("2d", { willReadFrequently: true })?.drawImage(video, 0, 0, canvas.width, canvas.height);
-        busy = true;
-        decodeFrame(canvas)
-          .then((text) => {
-            if (text) addResult(text);
-          })
-          .finally(() => {
-            busy = false;
-          });
-      };
-      frameRef.current = window.requestAnimationFrame(tick);
-    } catch (error) {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      const name = (error as { name?: string })?.name;
-      if (name === "NotAllowedError" || name === "SecurityError") setCamera("denied");
-      else if (name === "NotFoundError" || name === "OverconstrainedError") setCamera("unavailable");
-      else setCamera({ error: error instanceof Error ? error.message : String(error) });
-    }
-  };
-
-  const scanImage = React.useCallback(
-    async (file: Blob, notifyUse = false, isCancelled?: () => boolean) => {
-      if (isCancelled?.()) return;
-      setImageMessage(null);
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      try {
-        const text = await decodeImageFile(file, canvas);
-        if (isCancelled?.()) return;
-        if (text) {
-          lastTextRef.current = "";
-          addResult(text);
-          if (notifyUse) onUse?.(text);
-        } else {
-          setImageMessage(tq(lang, "imageNone"));
-        }
-      } catch {
-        if (isCancelled?.()) return;
-        setImageMessage(tq(lang, "imageError"));
-      }
-    },
-    [addResult, lang, onUse],
-  );
-
-  useSeedAssets(assets, async (list, isCancelled) => {
-    const first = list[0];
-    if (!first || first.kind !== "image") return;
-    const bytes = await first.bytes();
-    if (isCancelled()) return;
-    const blob = new Blob([bytes as unknown as BlobPart], { type: first.source.type ?? "image/png" });
-    await scanImage(new File([blob], first.name, { type: blob.type }), true, isCancelled);
-  });
-
-  React.useEffect(() => {
-    const onPaste = (event: ClipboardEvent) => {
-      const file = Array.from(event.clipboardData?.files ?? []).find((item) => item.type.startsWith("image/"));
-      if (file) {
-        event.preventDefault();
-        void scanImage(file);
-      }
-    };
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [scanImage]);
-
-  const cameraMessage = (() => {
-    if (camera === "starting") return tq(lang, "cameraStarting");
-    if (camera === "scanning") return tq(lang, "cameraScanning");
-    if (camera === "denied") return tq(lang, "cameraDenied");
-    if (camera === "unavailable") return tq(lang, "cameraUnavailable");
-    if (typeof camera === "object") return tq(lang, "cameraError", { message: camera.error });
-    return "";
-  })();
-  const cameraOn = camera === "starting" || camera === "scanning";
-  const latest = results[0];
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="flex min-w-0 flex-col gap-4">
-        <div className={cn(panelClass, "flex flex-col gap-3")}>
-          <div className={cn("relative aspect-video overflow-hidden rounded-md bg-black", !cameraOn && "hidden")}>
-            <video ref={videoRef} aria-label={tq(lang, "cameraLabel")} className="size-full object-cover" playsInline muted />
-          </div>
-          <div className="flex items-center gap-3">
-            {cameraOn ? (
-              <ActionButton variant="secondary" onClick={stopCamera}>
-                <CameraOff aria-hidden="true" className="size-4" />
-                {tq(lang, "stopCamera")}
-              </ActionButton>
-            ) : (
-              <ActionButton onClick={startCamera}>
-                <Camera aria-hidden="true" className="size-4" />
-                {tq(lang, "startCamera")}
-              </ActionButton>
-            )}
-          </div>
-          <p role="status" className={cn("text-sm", typeof camera === "object" || camera === "denied" || camera === "unavailable" ? "text-(--warning)" : "text-(--muted-fg)")}>
-            {cameraMessage}
-          </p>
-        </div>
-
-        <section aria-labelledby="qr-image-title" className="flex flex-col gap-2">
-          <h2 id="qr-image-title" className="text-sm font-semibold">
-            {tq(lang, "orImage")}
-          </h2>
-          {standalone && <FilePicker lang={lang} accept="image/*" prompt={tq(lang, "pickImage")} compact onFiles={([file]) => file && void scanImage(file)} />}
-          {imageMessage && (
-            <p role="alert" className="text-sm text-(--warning)">
-              {imageMessage}
-            </p>
-          )}
-        </section>
-        {/* Frames and images are decoded on this offscreen canvas. */}
-        <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
-      </div>
-
-      <div className="flex min-w-0 flex-col gap-4" aria-live="polite">
-        {latest && (
-          <section className={cn(panelClass, "flex flex-col gap-3")} aria-labelledby="qr-result-title">
-            <h2 id="qr-result-title" className="text-sm font-semibold">
-              {tq(lang, "result")} · {tq(lang, kindLabelKey(latest))}
-            </h2>
-            <ResultBody lang={lang} result={latest} />
-            <div className="flex flex-wrap gap-2">
-              <CopyButton lang={lang} text={latest.text} />
-              <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => onUse?.(latest.text)}>
-                {tq(lang, "useResult")}
-              </ActionButton>
-            </div>
-          </section>
-        )}
-        {results.length > 1 && (
-          <section aria-labelledby="qr-history-title" className="flex flex-col gap-2">
-            <h2 id="qr-history-title" className="text-sm font-semibold">
-              {tq(lang, "history")}
-            </h2>
-            <ul className="flex flex-col gap-1.5 text-sm">
-              {results.slice(1).map((item) => (
-                <li key={item.text} className="truncate rounded-md border border-(--border) px-2.5 py-1.5" title={item.text}>
-                  {item.text}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function kindLabelKey(result: ScanResult) {
-  return ({ url: "kindUrl", wifi: "kindWifi", email: "kindEmail", phone: "kindPhone", sms: "kindSms", geo: "kindGeo", contact: "kindContact", text: "kindText" } as const)[result.kind];
-}
-
-function ResultBody({ lang, result }: { lang: AppLang; result: ScanResult }) {
-  if (result.kind === "wifi") {
-    return (
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-(--muted-fg)">{tq(lang, "ssidLabel")}</dt>
-        <dd className="break-all font-medium">{result.ssid}</dd>
-        <dt className="text-(--muted-fg)">{tq(lang, "passwordLabel")}</dt>
-        <dd className="break-all font-mono">{result.password || tq(lang, "noPasswordOpen")}</dd>
-        <dt className="text-(--muted-fg)">{tq(lang, "securityLabel")}</dt>
-        <dd>{result.security || "—"}</dd>
-      </dl>
-    );
-  }
-  return (
-    <>
-      <p className="max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-sm">{result.text}</p>
-      {result.kind === "url" && (
-        <div className="flex flex-col gap-1">
-          <a href={result.url} target="_blank" rel="noopener noreferrer" className="self-start text-sm font-medium text-(--accent) underline underline-offset-2">
-            {tq(lang, "openLink")} ↗
-          </a>
-          <p className="text-xs text-(--muted-fg)">{tq(lang, "linkWarning")}</p>
-        </div>
-      )}
-      {result.kind === "geo" && Number.isFinite(Number.parseFloat(result.latitude)) && Number.isFinite(Number.parseFloat(result.longitude)) && (
-        <a
-          href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(result.latitude)}&mlon=${encodeURIComponent(result.longitude)}#map=16/${encodeURIComponent(result.latitude)}/${encodeURIComponent(result.longitude)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="self-start text-sm font-medium text-(--accent) underline underline-offset-2"
-        >
-          {tq(lang, "openMap")} ↗
-        </a>
-      )}
-    </>
   );
 }

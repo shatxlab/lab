@@ -1,418 +1,164 @@
 /**
  * The capability registry: the single source of truth for what the workbench
- * can do with a given selection of assets.
+ * offers for the files that are open.
  *
- * Each capability is a small declarative descriptor — a group, a label, a
- * weight and a `match` predicate. The UI is generated from these, so adding an
- * operation (or a format it applies to) means editing one record here instead
- * of threading another tab through a tool page.
+ * The workbench always has one *selected* file. A capability is offered when
+ * the selected file's kind is one it handles:
  *
- * This module is deliberately pure: it never imports a React component, a
- * heavy parser, or a browser global, so `capabilitiesFor` can be unit-tested
- * as a table. Operations are wired to capability ids separately (Phase 1) so
- * the registry can describe them before their components exist.
+ * - a **file** capability then works on the selected file alone (Open, Sign,
+ *   Split, Read, Create QR);
+ * - a **set** capability works on every open file of its kinds, and is only
+ *   offered while that set has the right size (Merge needs 2+ PDFs, Compare
+ *   exactly 2 comparable files, Image takes all open images as a batch).
+ *
+ * Tabs therefore always relate to the file the user is looking at, and mixed
+ * selections (a spreadsheet next to a photo) never cancel each other out.
+ *
+ * This module is deliberately pure: no React, no heavy parser, no browser
+ * global, so it can be unit-tested as a table.
  */
 
 import type { AppLang } from "@/lib/apps/lang";
 import type { Asset } from "@/lib/workbench/asset";
-import { isComparable, isDataAssetKind, isEditable, isTextual, type AssetKind } from "@/lib/workbench/kinds";
+import { TEXTUAL_ASSET_KINDS, type AssetKind } from "@/lib/workbench/kinds";
 
 export type Localized = Record<AppLang, string>;
 
-export type CapabilityGroup =
-  | "view"
-  | "edit"
-  | "convert"
-  | "transform"
-  | "analyze"
-  | "secure"
-  | "create"
-  | "share";
-
-export const CAPABILITY_GROUPS: readonly CapabilityGroup[] = [
-  "view",
-  "edit",
-  "convert",
-  "transform",
-  "analyze",
-  "secure",
-  "create",
-  "share",
-];
-
-/**
- * Why a capability is not available. Each value is also the workbench i18n
- * key, so the UI renders `wb(lang, match.reason)` with no extra mapping.
- */
-export type MatchReason =
-  | "reasonNeedsTwoFiles"
-  | "reasonNeedsPdf"
-  | "reasonNeedsTwoPdfs"
-  | "reasonNeedsImage"
-  | "reasonNeedsData"
-  | "reasonNeedsText"
-  | "reasonNeedsSheet"
-  | "reasonNeedsDocument"
-  | "reasonNeedsTextual"
-  | "reasonNotForPdf"
-  | "reasonNeedsBook";
-
-export interface Match {
-  ok: boolean;
-  reason?: MatchReason;
-}
-
 export type CapabilityId =
+  | "doc.open"
   | "book.read"
-  | "viewer.view"
-  | "viewer.edit"
-  | "viewer.print"
-  | "docx.edit"
+  | "image.edit"
   | "pdf.sign"
-  | "doc.convert"
-  | "sheet.convert"
-  | "data.convert"
-  | "data.encode"
-  | "data.hash"
-  | "data.uuid"
-  | "text.diff"
-  | "text.count"
-  | "text.case"
-  | "text.regex"
-  | "image.convert"
-  | "image.transform"
-  | "image.strip"
-  | "pdf.merge"
   | "pdf.split"
-  | "qr.generate"
-  | "qr.scan";
+  | "pdf.merge"
+  | "text.diff"
+  | "qr.generate";
 
 export interface Capability {
   id: CapabilityId;
-  group: CapabilityGroup;
   label: Localized;
-  /** Higher weight sorts earlier; the top entries become the default action. */
+  /** Higher sorts earlier; the first offered capability opens by default. */
   weight: number;
-  match(assets: readonly Asset[]): Match;
+  /** Kinds of the selected file this capability is offered for. */
+  kinds: ReadonlySet<AssetKind>;
+  /**
+   * Present for set capabilities: how many open files of `kinds` it needs.
+   * The operation then receives all of them, in tray order.
+   */
+  set?: (count: number) => boolean;
+  /** Also offered on the empty screen, working on typed input instead of files. */
+  starter?: boolean;
 }
 
-const DOCUMENT_KINDS: ReadonlySet<AssetKind> = new Set<AssetKind>(["pdf", "docx", "markdown", "html"]);
-const PRINTABLE_KINDS: ReadonlySet<AssetKind> = new Set<AssetKind>(["markdown", "html", "docx", "text"]);
+const kinds = (...list: AssetKind[]): ReadonlySet<AssetKind> => new Set(list);
 
-function kindOf(assets: readonly Asset[]): AssetKind {
-  const first = assets[0];
-  if (!first) throw new Error("kindOf: expected at least one asset");
-  return first.kind;
-}
-
-const only = (assets: readonly Asset[]): boolean => assets.length === 1;
-
-const every = (assets: readonly Asset[], predicate: (kind: AssetKind) => boolean): boolean =>
-  assets.length > 0 && assets.every((asset) => predicate(asset.kind));
-
-const everySet = (assets: readonly Asset[], set: ReadonlySet<AssetKind>): boolean =>
-  every(assets, (kind) => set.has(kind));
-
-const isPdf = (kind: AssetKind): boolean => kind === "pdf";
-
-/**
- * PDFs get a deliberately small toolset — view, merge, split and sign — so a
- * PDF never opens onto a wall of generic actions. Any selection that contains
- * a PDF is limited to these, whatever the individual predicates say.
- */
-const PDF_CAPABILITIES: ReadonlySet<CapabilityId> = new Set<CapabilityId>([
-  "viewer.view",
-  "pdf.merge",
-  "pdf.split",
-  "pdf.sign",
-]);
-const isImage = (kind: AssetKind): boolean => kind === "image";
+/** Kinds whose extracted text a line diff makes sense on (PDFs are view/merge/split/sign only). */
+const COMPARE_KINDS = kinds("text", "markdown", "html", "json", "yaml", "toml", "sheet", "docx");
 
 export const CAPABILITIES: readonly Capability[] = [
-  /* --------------------------------------------------------------- view */
+  {
+    id: "pdf.merge",
+    label: { en: "Merge PDFs", ru: "Склеить PDF" },
+    weight: 1000,
+    kinds: kinds("pdf"),
+    set: (count) => count >= 2,
+  },
+  {
+    id: "text.diff",
+    label: { en: "Compare", ru: "Сравнить" },
+    weight: 1000,
+    kinds: COMPARE_KINDS,
+    set: (count) => count === 2,
+    starter: true,
+  },
   {
     id: "book.read",
-    group: "view",
     label: { en: "Read", ru: "Читать" },
     weight: 900,
-    match: (assets) => ({ ok: only(assets) && kindOf(assets) === "epub", reason: "reasonNeedsBook" }),
+    kinds: kinds("epub"),
   },
   {
-    id: "viewer.view",
-    group: "view",
-    label: { en: "View", ru: "Просмотр" },
+    id: "image.edit",
+    label: { en: "Image", ru: "Изображение" },
+    weight: 850,
+    kinds: kinds("image"),
+    set: (count) => count >= 1,
+  },
+  {
+    id: "doc.open",
+    label: { en: "Open", ru: "Открыть" },
     weight: 800,
-    match: (assets) => ({
-      ok: every(assets, (kind) => kind !== "binary" && kind !== "epub"),
-      reason: "reasonNeedsDocument",
-    }),
-  },
-  {
-    id: "viewer.edit",
-    group: "edit",
-    label: { en: "Edit", ru: "Редактировать" },
-    weight: 780,
-    match: (assets) => ({ ok: only(assets) && every(assets, isEditable), reason: "reasonNeedsTextual" }),
-  },
-  {
-    id: "docx.edit",
-    group: "edit",
-    label: { en: "Edit document", ru: "Редактировать документ" },
-    weight: 770,
-    match: (assets) => ({ ok: only(assets) && kindOf(assets) === "docx", reason: "reasonNeedsDocument" }),
+    kinds: kinds("pdf", "docx", "markdown", "html", "text", "json", "yaml", "toml", "sheet"),
   },
   {
     id: "pdf.sign",
-    group: "edit",
-    label: { en: "Sign PDF", ru: "Подписать PDF" },
+    label: { en: "Sign", ru: "Подписать" },
     weight: 770,
-    match: (assets) => ({ ok: only(assets) && isPdf(kindOf(assets)), reason: "reasonNeedsPdf" }),
-  },
-
-  /* ------------------------------------------------------------ convert */
-  {
-    id: "data.convert",
-    group: "convert",
-    label: { en: "Convert data", ru: "Конвертировать данные" },
-    weight: 750,
-    match: (assets) => ({ ok: only(assets) && isDataAssetKind(kindOf(assets)), reason: "reasonNeedsData" }),
-  },
-  {
-    id: "doc.convert",
-    group: "convert",
-    label: { en: "Export document", ru: "Экспорт документа" },
-    weight: 680,
-    match: (assets) => ({ ok: only(assets) && DOCUMENT_KINDS.has(kindOf(assets)), reason: "reasonNeedsDocument" }),
-  },
-  {
-    id: "sheet.convert",
-    group: "convert",
-    label: { en: "Export spreadsheet", ru: "Экспорт таблицы" },
-    weight: 700,
-    match: (assets) => ({ ok: only(assets) && kindOf(assets) === "sheet", reason: "reasonNeedsSheet" }),
-  },
-  {
-    id: "image.convert",
-    group: "convert",
-    label: { en: "Convert image", ru: "Конвертировать изображение" },
-    weight: 850,
-    match: (assets) => ({ ok: only(assets) && isImage(kindOf(assets)), reason: "reasonNeedsImage" }),
-  },
-  {
-    id: "data.encode",
-    group: "convert",
-    label: { en: "Encode / decode", ru: "Кодировать / декодировать" },
-    weight: 300,
-    match: (assets) => ({ ok: only(assets), reason: "reasonNeedsDocument" }),
-  },
-
-  /* ---------------------------------------------------------- transform */
-  {
-    id: "image.transform",
-    group: "transform",
-    label: { en: "Resize & compress", ru: "Размер и сжатие" },
-    weight: 740,
-    match: (assets) => ({ ok: only(assets) && isImage(kindOf(assets)), reason: "reasonNeedsImage" }),
-  },
-  {
-    id: "text.case",
-    group: "transform",
-    label: { en: "Change case", ru: "Сменить регистр" },
-    weight: 380,
-    match: (assets) => ({ ok: only(assets) && isTextual(kindOf(assets)), reason: "reasonNeedsText" }),
-  },
-  {
-    id: "text.regex",
-    group: "transform",
-    label: { en: "Regex", ru: "Regex" },
-    weight: 380,
-    match: (assets) => ({ ok: only(assets) && isTextual(kindOf(assets)), reason: "reasonNeedsText" }),
-  },
-  {
-    id: "pdf.merge",
-    group: "transform",
-    label: { en: "Merge PDFs", ru: "Склеить PDF" },
-    weight: 1000,
-    match: (assets) => ({
-      ok: assets.length >= 2 && assets.every((asset) => isPdf(asset.kind)),
-      reason: "reasonNeedsTwoPdfs",
-    }),
+    kinds: kinds("pdf"),
   },
   {
     id: "pdf.split",
-    group: "transform",
-    label: { en: "Split PDF", ru: "Разделить PDF" },
+    label: { en: "Split", ru: "Разделить" },
     weight: 600,
-    match: (assets) => ({ ok: only(assets) && isPdf(kindOf(assets)), reason: "reasonNeedsPdf" }),
+    kinds: kinds("pdf"),
   },
-
-  /* ------------------------------------------------------------ analyze */
-  {
-    id: "text.diff",
-    group: "analyze",
-    label: { en: "Compare", ru: "Сравнить" },
-    weight: 1000,
-    // With nothing open it compares two typed or pasted texts instead.
-    match: (assets) => ({
-      ok: assets.length === 0 || (assets.length >= 2 && assets.every((asset) => isComparable(asset.kind))),
-      reason: "reasonNeedsTwoFiles",
-    }),
-  },
-  {
-    id: "text.count",
-    group: "analyze",
-    label: { en: "Count", ru: "Подсчёт" },
-    weight: 420,
-    match: (assets) => ({ ok: only(assets) && isTextual(kindOf(assets)), reason: "reasonNeedsText" }),
-  },
-  {
-    id: "data.hash",
-    group: "analyze",
-    label: { en: "Hash", ru: "Хеш" },
-    weight: 300,
-    match: (assets) => ({ ok: only(assets), reason: "reasonNeedsDocument" }),
-  },
-
-  /* ------------------------------------------------------------- secure */
-  {
-    id: "image.strip",
-    group: "secure",
-    label: { en: "Strip metadata", ru: "Удалить метаданные" },
-    weight: 560,
-    match: (assets) => ({ ok: only(assets) && isImage(kindOf(assets)), reason: "reasonNeedsImage" }),
-  },
-
-  /* ------------------------------------------------------------- create */
   {
     id: "qr.generate",
-    group: "create",
     label: { en: "Create QR code", ru: "Создать QR-код" },
     weight: 320,
-    match: (assets) => {
-      if (assets.length === 0) return { ok: true };
-      if (only(assets) && isTextual(kindOf(assets))) return { ok: true };
-      return { ok: false, reason: "reasonNeedsTextual" };
-    },
-  },
-  {
-    id: "qr.scan",
-    group: "create",
-    label: { en: "Scan QR code", ru: "Сканировать QR-код" },
-    weight: 600,
-    match: (assets) => {
-      if (assets.length === 0) return { ok: true };
-      if (only(assets) && isImage(kindOf(assets))) return { ok: true };
-      return { ok: false, reason: "reasonNeedsImage" };
-    },
-  },
-
-  {
-    id: "data.uuid",
-    group: "create",
-    label: { en: "Generate UUID", ru: "Создать UUID" },
-    weight: 200,
-    // It ignores files, so it is only offered as a no-file starter.
-    match: (assets) => ({ ok: assets.length === 0 }),
-  },
-
-  /* -------------------------------------------------------------- share */
-  {
-    id: "viewer.print",
-    group: "share",
-    label: { en: "Print / save as PDF", ru: "Печать / сохранить в PDF" },
-    weight: 640,
-    match: (assets) => ({ ok: everySet(assets, PRINTABLE_KINDS), reason: "reasonNeedsDocument" }),
+    kinds: TEXTUAL_ASSET_KINDS,
+    starter: true,
   },
 ];
 
-export interface CapabilityMatch {
+/** A capability offered for the current selection, with the files it acts on. */
+export interface OfferedCapability {
   capability: Capability;
-  match: Match;
-  /** Effective weight, copied out so callers don't reach through `capability`. */
-  weight: number;
-  /** One of the top inferred actions; the UI renders these as buttons. */
-  primary: boolean;
+  assets: readonly Asset[];
 }
 
-export interface CapabilityGroupMatches {
-  group: CapabilityGroup;
-  items: CapabilityMatch[];
+function byWeight(a: Capability, b: Capability): number {
+  return b.weight - a.weight || (a.id < b.id ? -1 : 1);
 }
 
-export interface CapabilitySet {
-  enabled: CapabilityMatch[];
-  disabled: CapabilityMatch[];
-  /** Enabled capabilities grouped for the action rail (empty groups removed). */
-  byGroup: CapabilityGroupMatches[];
-  /** The inferred default action, or null when nothing is open. */
-  suggested: CapabilityMatch | null;
+const SORTED = [...CAPABILITIES].sort(byWeight);
+
+/** The open files a set capability would work on. */
+function members(capability: Capability, assets: readonly Asset[]): Asset[] {
+  return assets.filter((asset) => capability.kinds.has(asset.kind));
 }
 
-/** How many enabled capabilities are shown as tabs; the rest go under "More". */
-export const PRIMARY_COUNT = 4;
-
-function matchCapability(capability: Capability, assets: readonly Asset[]): Match {
-  if (!PDF_CAPABILITIES.has(capability.id) && assets.some((asset) => isPdf(asset.kind))) {
-    return { ok: false, reason: "reasonNotForPdf" };
-  }
-  return capability.match(assets);
-}
-
-/** Resolve every capability against a selection, ordered by relevance. */
-export function capabilitiesFor(assets: readonly Asset[]): CapabilitySet {
-  const all: CapabilityMatch[] = CAPABILITIES.map((capability) => ({
-    capability,
-    match: matchCapability(capability, assets),
-    weight: capability.weight,
-    primary: false,
-  }));
-
-  const enabled = all
-    .filter((entry) => entry.match.ok)
-    .sort((a, b) => b.weight - a.weight || (a.capability.id < b.capability.id ? -1 : 1));
-
-  // No-file starters (QR, compare, UUID) also apply to an empty selection; only a real
-  // selection gets promoted actions, so the empty state stays a drop zone.
-  if (assets.length > 0) {
-    for (let index = 0; index < enabled.length && index < PRIMARY_COUNT; index += 1) {
-      enabled[index]!.primary = true;
+/** Everything offered for `selected` among the open `assets`, most relevant first. */
+export function capabilitiesFor(assets: readonly Asset[], selected: Asset | null): OfferedCapability[] {
+  if (!selected) return [];
+  const offered: OfferedCapability[] = [];
+  for (const capability of SORTED) {
+    if (!capability.kinds.has(selected.kind)) continue;
+    if (!capability.set) {
+      offered.push({ capability, assets: [selected] });
+      continue;
     }
+    const group = members(capability, assets);
+    if (capability.set(group.length)) offered.push({ capability, assets: group });
   }
-
-  const disabled = all.filter((entry) => !entry.match.ok);
-
-  const byGroup = CAPABILITY_GROUPS.map((group) => ({
-    group,
-    items: enabled.filter((entry) => entry.capability.group === group),
-  })).filter((entry) => entry.items.length > 0);
-
-  return {
-    enabled,
-    disabled,
-    byGroup,
-    suggested: assets.length > 0 ? (enabled[0] ?? null) : null,
-  };
-}
-
-/** The id of the operation a fresh drop should open, or null when empty. */
-export function suggestOperation(assets: readonly Asset[]): CapabilityId | null {
-  return capabilitiesFor(assets).suggested?.capability.id ?? null;
+  return offered;
 }
 
 /**
- * Capabilities the selection is one file short of: disabled now, but enabled
- * once another file like the last one is added (two PDFs merge, two texts
- * compare). The shell turns these into a single hint instead of showing them
- * as dead buttons.
+ * Set capabilities the selection is one file short of (one PDF → Merge, one
+ * text → Compare). The shell shows them as a single hint, not dead buttons.
  */
-export function unlockedByAnother(assets: readonly Asset[]): Capability[] {
-  const last = assets.at(-1);
-  if (!last) return [];
-  const more = [...assets, last];
-  return CAPABILITIES.filter(
-    (capability) => !matchCapability(capability, assets).ok && matchCapability(capability, more).ok,
-  );
+export function unlockedByAnother(assets: readonly Asset[], selected: Asset | null): Capability[] {
+  if (!selected) return [];
+  return SORTED.filter((capability) => {
+    if (!capability.set || !capability.kinds.has(selected.kind)) return false;
+    const count = members(capability, assets).length;
+    return !capability.set(count) && capability.set(count + 1);
+  });
 }
+
+/** Capabilities offered on the empty screen, most relevant first. */
+export const STARTERS: readonly Capability[] = SORTED.filter((capability) => capability.starter);
 
 export function capabilityById(id: CapabilityId): Capability | undefined {
   return CAPABILITIES.find((capability) => capability.id === id);

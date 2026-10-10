@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ImageOperation } from "@/components/workbench/operations/ImageOperations";
 import { createAssetFromBytes } from "@/lib/workbench/asset";
 import { hasOperation, loadOperation } from "@/lib/workbench/operations";
-import { EMPTY_ASSETS } from "@/lib/workbench/operation";
 import { click, mount, waitFor } from "../helpers/dom";
 
 const processImage = vi.fn();
@@ -45,16 +44,24 @@ describe("workbench image operation", () => {
     view.unmount();
   });
 
-  it("hides the format controls when defaultTask is strip", async () => {
-    const view = await mount(<ImageOperation lang="en" assets={EMPTY_ASSETS} defaultTask="strip" />);
-    expect(label("Output format")).toBeUndefined();
-    expect(document.body.textContent).toContain("keep their exact pixels");
+  it("works on every image it is given, as one batch", async () => {
+    const assets = [
+      createAssetFromBytes("one.png", new Uint8Array([137, 80, 78, 71]), "image"),
+      createAssetFromBytes("two.png", new Uint8Array([137, 80, 78, 71]), "image"),
+    ];
+    const view = await mount(<ImageOperation lang="en" assets={assets} />);
+    await waitFor(() => {
+      expect(document.body.textContent).toContain("one.png");
+      expect(document.body.textContent).toContain("two.png");
+    });
     view.unmount();
   });
 
   it("initialises strip mode from params and reports task changes to setParams", async () => {
     const setParams = vi.fn();
-    const view = await mount(<ImageOperation lang="en" assets={EMPTY_ASSETS} params={{ task: "strip" }} setParams={setParams} />);
+    const asset = createAssetFromBytes("holiday.png", new Uint8Array([137, 80, 78, 71]), "image");
+    const view = await mount(<ImageOperation lang="en" assets={[asset]} params={{ task: "strip" }} setParams={setParams} />);
+    expect(document.body.textContent).toContain("keep their exact pixels");
     expect(label("Output format")).toBeUndefined();
     await click(document.querySelector('input[name="image-task"][type="radio"]:not(:checked)'));
     expect(setParams).toHaveBeenCalledWith({ task: "convert" });
@@ -79,10 +86,8 @@ describe("workbench image operation", () => {
     view.unmount();
   });
 
-  it("registers the image capabilities against this operation", async () => {
-    expect(hasOperation("image.convert")).toBe(true);
-    expect(hasOperation("image.transform")).toBe(true);
-    expect(hasOperation("image.strip")).toBe(true);
-    expect(await loadOperation("image.strip")).toBeTypeOf("function");
+  it("registers the image capability", async () => {
+    expect(hasOperation("image.edit")).toBe(true);
+    expect(await loadOperation("image.edit")).toBeTypeOf("function");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countPages, extractPages, loadPdf, mergePdfs, organizePdf, PdfOpError } from "@/lib/pdf/ops";
+import { countPages, extractPages, loadPdf, mergePdfs, PdfOpError } from "@/lib/pdf/ops";
 import { parsePageRanges, partLabel, planSplit } from "@/lib/pdf/ranges";
 
 async function makePdf(labels: string[], password?: string): Promise<Uint8Array> {
@@ -76,23 +76,6 @@ describe("PDF operations", () => {
   it("extracts and reverses pages", async () => {
     const pdf = await makePdf(["1", "2", "3", "4"]);
     expect(await widths(await extractPages({ bytes: pdf }, [4, 2]))).toEqual([230, 210]);
-  });
-
-  it("reorders, rotates and drops pages", async () => {
-    const pdf = await makePdf(["1", "2", "3"]);
-    const out = await organizePdf({ bytes: pdf }, [
-      { source: 2, rotate: 90 },
-      { source: 0, rotate: 0 },
-    ]);
-    const doc = await loadPdf(out);
-    expect(doc.getPages().map((page) => [Math.round(page.getWidth()), page.getRotation().angle])).toEqual([
-      [220, 90],
-      [200, 0],
-    ]);
-    const twice = await organizePdf({ bytes: out }, [{ source: 0, rotate: 270 }]);
-    expect((await loadPdf(twice)).getPage(0).getRotation().angle).toBe(0);
-    const negative = await organizePdf({ bytes: pdf }, [{ source: 0, rotate: -90 }]);
-    expect((await loadPdf(negative)).getPage(0).getRotation().angle).toBe(270);
   });
 
   it("does not stamp pdf-lib metadata", async () => {

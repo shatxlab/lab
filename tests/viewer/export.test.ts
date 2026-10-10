@@ -5,7 +5,6 @@ import {
   baseFileName,
   htmlToMarkdown,
   htmlToText,
-  jsonToCsv,
   rowsToDelimited,
   sheetDataToJson,
   standaloneHtml,
@@ -23,27 +22,6 @@ describe("rowsToDelimited", () => {
 
   it("supports a tab delimiter", () => {
     expect(rowsToDelimited([["a", "b\tc"]], "\t")).toBe('a\t"b\tc"');
-  });
-});
-
-describe("jsonToCsv", () => {
-  it("builds columns from the union of object keys", () => {
-    expect(jsonToCsv([{ a: 1, b: "x" }, { a: 2, c: true }])).toBe("a,b,c\r\n1,x,\r\n2,,true");
-  });
-
-  it("stringifies nested values", () => {
-    expect(jsonToCsv([{ a: { n: 1 } }])).toBe('a\r\n"{""n"":1}"');
-  });
-
-  it("handles arrays of arrays and primitives", () => {
-    expect(jsonToCsv([[1, 2], [3, 4]])).toBe("1,2\r\n3,4");
-    expect(jsonToCsv(["x", "y"])).toBe("value\r\nx\r\ny");
-  });
-
-  it("returns null when there is no table shape", () => {
-    expect(jsonToCsv({ a: 1 })).toBeNull();
-    expect(jsonToCsv([])).toBeNull();
-    expect(jsonToCsv([1, { a: 1 }])).toBeNull();
   });
 });
 

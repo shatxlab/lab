@@ -2,11 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   assetKindFromFileKind,
-  dataFormatFor,
   detectAssetKind,
-  isComparable,
   isDataAssetKind,
-  isEditable,
   isTextual,
 } from "@/lib/workbench/kinds";
 
@@ -47,15 +44,6 @@ describe("detectAssetKind", () => {
 });
 
 describe("asset kind predicates", () => {
-  it("knows which kinds are editable", () => {
-    expect(isEditable("markdown")).toBe(true);
-    expect(isEditable("json")).toBe(true);
-    expect(isEditable("sheet")).toBe(true);
-    expect(isEditable("pdf")).toBe(false);
-    expect(isEditable("docx")).toBe(false);
-    expect(isEditable("image")).toBe(false);
-  });
-
   it("knows which kinds are textual", () => {
     expect(isTextual("yaml")).toBe(true);
     expect(isTextual("toml")).toBe(true);
@@ -63,19 +51,10 @@ describe("asset kind predicates", () => {
     expect(isTextual("image")).toBe(false);
   });
 
-  it("knows which kinds can be compared", () => {
-    expect(isComparable("pdf")).toBe(true);
-    expect(isComparable("docx")).toBe(true);
-    expect(isComparable("sheet")).toBe(true);
-    expect(isComparable("image")).toBe(false);
-    expect(isComparable("binary")).toBe(false);
-  });
-
   it("separates the structured data formats", () => {
     expect(isDataAssetKind("json")).toBe(true);
     expect(isDataAssetKind("yaml")).toBe(true);
     expect(isDataAssetKind("toml")).toBe(true);
     expect(isDataAssetKind("text")).toBe(false);
-    expect(dataFormatFor("toml")).toBe("toml");
   });
 });

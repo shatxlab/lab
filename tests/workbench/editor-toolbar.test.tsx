@@ -115,7 +115,7 @@ describe("EditorToolbar", () => {
     const view = await mount(<EditorToolbar {...makeProps({ formats: FORMATS, onSaveAs })} />);
 
     expect(document.querySelector('[role="menu"]')).toBeNull();
-    await click(button("Save a copy"));
+    await click(button("Save as"));
     await waitFor(() => expect(document.querySelectorAll('[role="menuitem"]').length).toBe(2));
 
     const markdown = [...document.querySelectorAll('[role="menuitem"]')].find(

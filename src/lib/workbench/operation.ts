@@ -38,9 +38,14 @@ export interface OperationProps {
   onProduce?: (output: OperationOutput) => void;
   /** True while the shell is running another operation. */
   busy?: boolean;
+  /**
+   * Report unsaved work. While dirty, the shell never switches away on its
+   * own and asks before the user does.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export type OperationComponent = ComponentType<OperationProps>;
 
-/** Shared empty selection so standalone rendering never allocates a new array. */
+/** Shared empty selection for starters, which run on typed input. */
 export const EMPTY_ASSETS: readonly Asset[] = [];

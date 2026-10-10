@@ -1,5 +1,6 @@
 /**
- * `docx.edit` — a rich-text editor over the HTML the DOCX renderer produced.
+ * The Word editor behind Open's Edit mode: rich text over the HTML the DOCX
+ * renderer produced.
  *
  * The loaded document is already sanitized by the loader; the editor keeps
  * the same trust boundary and re-sanitizes on every save. Saving is a lossy
@@ -16,20 +17,15 @@
 import * as React from "react";
 
 import { EditorToolbar } from "@/components/workbench/EditorToolbar";
-import { FilePicker } from "@/components/tools/ui";
-import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
 import { htmlToDocx } from "@/lib/docx/write";
 import { baseFileName, htmlToMarkdown, htmlToText, standaloneHtml } from "@/lib/viewer/export";
-import { ACCEPTED_EXTENSIONS } from "@/lib/viewer/file-kind";
-import { t } from "@/lib/viewer/i18n";
 import type { LoadedDocument } from "@/lib/viewer/load";
 import { sanitizeDocumentHtml } from "@/lib/viewer/sanitize";
-import { createAssetFromFile, type Asset } from "@/lib/workbench/asset";
+import type { Asset } from "@/lib/workbench/asset";
 import { createEditSession, type EditFormat, type EditSession } from "@/lib/workbench/editor";
 import { wb, type WorkbenchKey } from "@/lib/workbench/i18n";
-import type { OperationOutput, OperationProps } from "@/lib/workbench/operation";
-import { useViewerDocument } from "@/components/workbench/operations/ViewerOperations";
+import type { OperationOutput } from "@/lib/workbench/operation";
 import { cn } from "@/lib/viewer/utils";
 
 /** The formats the DOCX editor can write; every one is lossy in some way. */
@@ -65,95 +61,6 @@ function sanitizeHtml(html: string): string {
   return typeof document === "undefined" ? html : sanitizeDocumentHtml(html);
 }
 
-/** Reads a standalone operation's file into a local asset. */
-function useLocalAsset(): [Asset | null, (file: File) => void] {
-  const [asset, setAsset] = React.useState<Asset | null>(null);
-  const pick = React.useCallback((file: File) => setAsset(createAssetFromFile(file)), []);
-  return [asset, pick];
-}
-
-/** The shared picker standalone operations render when no asset is supplied. */
-function DocxFilePicker({ lang, onPick }: { lang: AppLang; onPick: (file: File) => void }) {
-  return (
-    <FilePicker
-      lang={lang}
-      accept={ACCEPTED_EXTENSIONS.join(",")}
-      compact
-      onFiles={(files) => {
-        const file = files[0];
-        if (file) onPick(file);
-      }}
-    />
-  );
-}
-
-export function DocxEditOperation({ lang, assets, onProduce }: OperationProps) {
-  const standalone = assets.length === 0;
-  const [localAsset, pickLocal] = useLocalAsset();
-  const asset = assets[0] ?? localAsset;
-  const state = useViewerDocument(asset, lang);
-  const [error, setError] = React.useState<string | null>(null);
-
-  // A message about the previous asset must not linger over the next one.
-  React.useEffect(() => {
-    setError(null);
-  }, [asset?.id]);
-
-  const emit = React.useCallback(
-    async (build: () => Promise<OperationOutput | null>) => {
-      setError(null);
-      try {
-        const output = await build();
-        if (!output) return;
-        if (onProduce) onProduce(output);
-        else saveBlob(new Blob([output.bytes.slice().buffer], { type: output.type }), output.name);
-      } catch (err) {
-        console.error("Document edit save failed", err);
-        setError(t(lang, "exportFailed"));
-      }
-    },
-    [lang, onProduce],
-  );
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {standalone && (
-        <div className="mb-4">
-          <DocxFilePicker lang={lang} onPick={pickLocal} />
-        </div>
-      )}
-
-      {asset && state.status === "loading" && (
-        <p role="status" className="px-2 py-6 text-center text-sm text-(--muted-fg)">
-          {t(lang, "readingFile")}
-        </p>
-      )}
-
-      {asset && state.status === "error" && (
-        <p role="alert" className="px-2 py-6 text-center text-sm text-(--warning)">
-          {state.message}
-        </p>
-      )}
-
-      {asset && state.status === "ready" && (
-        <>
-          {state.doc.kind === "docx" ? (
-            <DocxEditPane key={asset.id} lang={lang} asset={asset} doc={state.doc} emit={emit} />
-          ) : (
-            <p className="px-2 py-6 text-center text-sm text-(--muted-fg)">{wb(lang, "reasonNeedsDocument")}</p>
-          )}
-        </>
-      )}
-
-      {error && (
-        <p role="alert" className="rounded-lg border border-(--warning)/40 bg-(--warning)/10 p-3 text-sm text-(--warning)">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /** One rich-text command; `value` is the `formatBlock` payload when present. */
 type FormatCommand = {
   id: string;
@@ -178,16 +85,19 @@ const FORMAT_COMMANDS: readonly FormatCommand[] = [
 const FORMAT_BUTTON_CLASS =
   "inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-(--border) bg-(--bg) px-2 text-xs font-medium text-(--fg) transition-colors hover:bg-(--surface) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent)";
 
-function DocxEditPane({
+export function DocxEditPane({
   lang,
   asset,
   doc,
   emit,
+  onDirty,
 }: {
   lang: AppLang;
   asset: Asset;
   doc: Extract<LoadedDocument, { kind: "docx" }>;
-  emit: (build: () => Promise<OperationOutput | null>) => Promise<void>;
+  /** Resolves `true` once the output was published. */
+  emit: (build: () => Promise<OperationOutput | null>) => Promise<boolean>;
+  onDirty: (dirty: boolean) => void;
 }) {
   const base = baseFileName(asset.name);
   const [session] = React.useState<EditSession<string>>(() =>
@@ -290,14 +200,25 @@ function DocxEditPane({
         const output = session.output(formatId);
         return {
           // `kind` is deliberately omitted so the output name infers its kind.
-          name: output.name(base),
+          name: output.name(`${base}-edited`),
           type: output.mime,
           bytes: output.bytes,
         };
+      }).then((saved) => {
+        if (!saved) return;
+        session.markSaved();
+        bump();
       });
     },
-    [base, emit, session],
+    [base, emit, session, bump],
   );
+
+  const dirty = session.dirty;
+  React.useEffect(() => {
+    onDirty(dirty);
+  }, [dirty, onDirty]);
+  // An unmounted editor holds no draft.
+  React.useEffect(() => () => onDirty(false), [onDirty]);
 
   const handleSave = React.useCallback(() => saveWith(activeFormat), [saveWith, activeFormat]);
   const handleSaveAs = React.useCallback((id: string) => saveWith(id), [saveWith]);

@@ -1,19 +1,14 @@
 /**
- * The PDF operation family, extracted from the old Pdf tools tabs.
- *
- * Every operation seeds itself from the assets the workbench hands it and
- * falls back to its own file picker when rendered standalone. `readEntry` is
- * source-agnostic (`{ name, size, bytes() }`) so it can read both a picked
- * `File` and an `Asset` without duplicating the locked/wrong-password states.
+ * `pdf.merge` and `pdf.split`. Both read the PDFs the workbench hands them;
+ * `readEntry` owns the locked / wrong-password states so they behave alike.
  */
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, Download, Loader2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Loader2 } from "lucide-react";
 import { zipSync } from "fflate";
 
 import {
   ActionButton,
-  FilePicker,
   SelectField,
   inputClass,
   labelClass,
@@ -47,19 +42,11 @@ interface PdfEntry {
 
 let nextId = 0;
 
-/** A lazy byte source; a picked `File` or a workbench `Asset` both fit. */
+/** A lazy byte source: a workbench `Asset`, or an entry re-read with a password. */
 interface PdfEntrySource {
   name: string;
   size: number;
   bytes: () => Promise<Uint8Array>;
-}
-
-function fileSource(file: File): PdfEntrySource {
-  return {
-    name: file.name,
-    size: file.size,
-    bytes: async () => new Uint8Array(await file.arrayBuffer()),
-  };
 }
 
 function assetSource(asset: Asset): PdfEntrySource {
@@ -92,10 +79,6 @@ async function readEntry(lang: AppLang, source: PdfEntrySource, existing?: PdfEn
     if (error instanceof PdfOpError && error.code === "wrongPassword") return { ...base, bytes, state: "locked", error: tp(lang, "wrongPassword") };
     return { ...base, bytes, state: "error", error: tp(lang, "invalidPdf", { name: source.name }) };
   }
-}
-
-function isPdfFile(file: File): boolean {
-  return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
 }
 
 function isPdfAsset(asset: Asset): boolean {
@@ -158,8 +141,6 @@ export function PdfMergeOperation({ lang, assets, onProduce }: OperationProps) {
   const [result, setResult] = React.useState<{ blob: Blob; pages: number } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  const standalone = assets.length === 0;
-
   useSeedAssets(assets, async (list, isCancelled) => {
     const pdfs = list.filter(isPdfAsset);
     const loaded = await Promise.all(pdfs.map((asset) => readEntry(lang, assetSource(asset))));
@@ -168,16 +149,6 @@ export function PdfMergeOperation({ lang, assets, onProduce }: OperationProps) {
     setResult(null);
     setEntries(loaded.map((entry) => ({ ...entry, ranges: "" })));
   });
-
-  const add = async (files: File[]) => {
-    setResult(null);
-    const pdfs = files.filter(isPdfFile);
-    setNotice(pdfs.length < files.length ? tp(lang, "onlyPdf") : null);
-    for (const file of pdfs) {
-      const entry = await readEntry(lang, fileSource(file));
-      setEntries((current) => [...current, { ...entry, ranges: "" }]);
-    }
-  };
 
   const move = (index: number, delta: -1 | 1) => {
     setResult(null);
@@ -230,7 +201,6 @@ export function PdfMergeOperation({ lang, assets, onProduce }: OperationProps) {
 
   return (
     <>
-      {standalone && <FilePicker lang={lang} accept="application/pdf,.pdf" multiple prompt={tp(lang, "addPdfs")} onFiles={(files) => void add(files)} compact />}
       {notice && (
         <p role="alert" className="text-sm text-(--warning)">
           {notice}
@@ -261,15 +231,6 @@ export function PdfMergeOperation({ lang, assets, onProduce }: OperationProps) {
                     </IconButton>
                     <IconButton label={tp(lang, "moveDown", { name: entry.name })} onClick={() => move(index, 1)} disabled={index === entries.length - 1}>
                       <ArrowDown aria-hidden="true" className="size-4" />
-                    </IconButton>
-                    <IconButton
-                      label={tp(lang, "removeFile", { name: entry.name })}
-                      onClick={() => {
-                        setResult(null);
-                        setEntries((current) => current.filter((item) => item.id !== entry.id));
-                      }}
-                    >
-                      <X aria-hidden="true" className="size-4" />
                     </IconButton>
                   </div>
                 </div>
@@ -358,32 +319,9 @@ function ResultBar({ lang, error, done, onDownload, downloadLabel }: { lang: App
 
 /* ----------------------------------------------------------------- split */
 
-function SingleFileLoader({ lang, entry, onEntry, standalone = true }: { lang: AppLang; entry: PdfEntry | null; onEntry: (entry: PdfEntry | null) => void; standalone?: boolean }) {
-  const [notice, setNotice] = React.useState<string | null>(null);
+function SingleFileLoader({ lang, entry, onEntry }: { lang: AppLang; entry: PdfEntry | null; onEntry: (entry: PdfEntry | null) => void }) {
   return (
     <>
-      {!entry && standalone && (
-        <FilePicker
-          lang={lang}
-          accept="application/pdf,.pdf"
-          prompt={tp(lang, "addPdf")}
-          compact
-          onFiles={async ([file]) => {
-            if (!file) return;
-            if (!isPdfFile(file)) {
-              setNotice(tp(lang, "onlyPdf"));
-              return;
-            }
-            setNotice(null);
-            onEntry(await readEntry(lang, fileSource(file)));
-          }}
-        />
-      )}
-      {notice && (
-        <p role="alert" className="text-sm text-(--warning)">
-          {notice}
-        </p>
-      )}
       {entry && (
         <div className={cn(panelClass, "flex flex-col gap-3")}>
           <div className="flex items-start gap-3">
@@ -396,9 +334,6 @@ function SingleFileLoader({ lang, entry, onEntry, standalone = true }: { lang: A
                 {formatBytes(entry.size)}
               </p>
             </div>
-            <IconButton label={tp(lang, "removeFile", { name: entry.name })} onClick={() => onEntry(null)}>
-              <X aria-hidden="true" className="size-4" />
-            </IconButton>
           </div>
           {entry.state === "error" && (
             <p role="alert" className="text-sm text-(--warning)">
@@ -420,8 +355,6 @@ export function PdfSplitOperation({ lang, assets, onProduce }: OperationProps) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<{ blob: Blob; name: string; count: number; zip: boolean } | null>(null);
-
-  const standalone = assets.length === 0;
 
   useSeedAssets(assets, async (list, isCancelled) => {
     const first = list.find(isPdfAsset) ?? list[0];
@@ -476,7 +409,6 @@ export function PdfSplitOperation({ lang, assets, onProduce }: OperationProps) {
       <SingleFileLoader
         lang={lang}
         entry={entry}
-        standalone={standalone}
         onEntry={(next) => {
           setEntry(next);
           setResult(null);

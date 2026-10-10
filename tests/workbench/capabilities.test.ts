@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { createAsset, type Asset } from "@/lib/workbench/asset";
 import {
+  STARTERS,
   capabilitiesFor,
   capabilityById,
-  suggestOperation,
   unlockedByAnother,
   type CapabilityId,
 } from "@/lib/workbench/capabilities";
@@ -14,125 +14,99 @@ function asset(kind: AssetKind, name = `file.${kind}`): Asset {
   return createAsset({ name, size: 0, arrayBuffer: async () => new ArrayBuffer(0) }, kind);
 }
 
-const enabledIds = (assets: readonly Asset[]): CapabilityId[] =>
-  capabilitiesFor(assets).enabled.map((entry) => entry.capability.id);
+/** Offered ids for `selected` among `assets` (the selected file defaults to the first). */
+const offeredIds = (assets: readonly Asset[], selected: Asset | null = assets[0] ?? null): CapabilityId[] =>
+  capabilitiesFor(assets, selected).map((entry) => entry.capability.id);
+
+/** The files a given capability would act on. */
+const actsOn = (assets: readonly Asset[], selected: Asset, id: CapabilityId): string[] =>
+  capabilitiesFor(assets, selected)
+    .find((entry) => entry.capability.id === id)!
+    .assets.map((entry) => entry.name);
 
 describe("capabilitiesFor", () => {
-  it("limits a single PDF to view, split and sign", () => {
-    expect(enabledIds([asset("pdf")]).sort()).toEqual(["pdf.sign", "pdf.split", "viewer.view"]);
+  it("offers nothing until a file is selected", () => {
+    expect(offeredIds([], null)).toEqual([]);
   });
 
-  it("limits several PDFs to merge and view", () => {
-    expect(enabledIds([asset("pdf", "a.pdf"), asset("pdf", "b.pdf")]).sort()).toEqual(["pdf.merge", "viewer.view"]);
+  it("limits a single PDF to open, sign and split", () => {
+    expect(offeredIds([asset("pdf")])).toEqual(["doc.open", "pdf.sign", "pdf.split"]);
   });
 
-  it("applies the PDF limit to mixed selections too", () => {
-    const set = capabilitiesFor([asset("pdf", "a.pdf"), asset("text", "b.txt")]);
-    expect(set.enabled.map((entry) => entry.capability.id)).toEqual(["viewer.view"]);
-    expect(set.disabled.find((entry) => entry.capability.id === "text.diff")?.match.reason).toBe("reasonNotForPdf");
+  it("adds Merge, over every open PDF, once there are two", () => {
+    const a = asset("pdf", "a.pdf");
+    const b = asset("pdf", "b.pdf");
+    expect(offeredIds([a, b])).toEqual(["pdf.merge", "doc.open", "pdf.sign", "pdf.split"]);
+    expect(actsOn([a, b], b, "pdf.merge")).toEqual(["a.pdf", "b.pdf"]);
   });
 
-  it("offers editing for editable kinds but not images or binaries", () => {
-    expect(enabledIds([asset("markdown")])).toContain("viewer.edit");
-    expect(enabledIds([asset("json")])).toContain("viewer.edit");
-    expect(enabledIds([asset("sheet")])).toContain("viewer.edit");
-    expect(enabledIds([asset("image")])).not.toContain("viewer.edit");
-    expect(enabledIds([asset("binary")])).not.toContain("viewer.view");
+  it("opens documents, data and text, and offers a QR code for text", () => {
+    expect(offeredIds([asset("text")])).toEqual(["doc.open", "qr.generate"]);
+    expect(offeredIds([asset("json")])).toEqual(["doc.open", "qr.generate"]);
+    expect(offeredIds([asset("sheet")])).toEqual(["doc.open"]);
+    expect(offeredIds([asset("docx")])).toEqual(["doc.open"]);
   });
 
-  it("does not offer viewer.edit for a multi-file selection", () => {
-    expect(enabledIds([asset("markdown", "a.md"), asset("text", "b.txt")])).not.toContain(
-      "viewer.edit",
-    );
+  it("compares exactly two comparable files", () => {
+    const a = asset("text", "a.txt");
+    const b = asset("docx", "b.docx");
+    expect(offeredIds([a, b])[0]).toBe("text.diff");
+    expect(actsOn([a, b], a, "text.diff")).toEqual(["a.txt", "b.docx"]);
+    expect(offeredIds([a, b, asset("text", "c.txt")])).not.toContain("text.diff");
   });
 
-  it("offers dedicated document and PDF editing", () => {
-    expect(enabledIds([asset("docx")])).toContain("docx.edit");
-    expect(enabledIds([asset("docx")])).not.toContain("viewer.edit");
-    expect(enabledIds([asset("pdf")])).toContain("pdf.sign");
-    expect(enabledIds([asset("pdf")])).not.toContain("viewer.edit");
-    expect(enabledIds([asset("markdown")])).not.toContain("docx.edit");
+  it("never compares PDFs, and leaves them out of a text comparison", () => {
+    const pdf = asset("pdf", "a.pdf");
+    const one = asset("text", "one.txt");
+    const two = asset("text", "two.txt");
+    expect(offeredIds([pdf, one, two], pdf)).not.toContain("text.diff");
+    expect(actsOn([pdf, one, two], one, "text.diff")).toEqual(["one.txt", "two.txt"]);
   });
 
-  it("promotes merge once two PDFs are open and diff once two texts are", () => {
-    expect(suggestOperation([asset("pdf", "a.pdf"), asset("pdf", "b.pdf")])).toBe("pdf.merge");
-    expect(suggestOperation([asset("text", "a.txt"), asset("text", "b.txt")])).toBe("text.diff");
+  it("keeps each file's own tools in a mixed selection", () => {
+    const sheet = asset("sheet", "data.xlsx");
+    const photo = asset("image", "photo.png");
+    expect(offeredIds([sheet, photo], sheet)).toEqual(["doc.open"]);
+    expect(offeredIds([sheet, photo], photo)).toEqual(["image.edit"]);
+    expect(actsOn([sheet, photo], photo, "image.edit")).toEqual(["photo.png"]);
   });
 
-  it("infers the obvious first action for common single files", () => {
-    expect(suggestOperation([asset("pdf")])).toBe("viewer.view");
-    expect(suggestOperation([asset("image")])).toBe("image.convert");
-    expect(suggestOperation([asset("json")])).toBe("viewer.view");
-    expect(suggestOperation([asset("sheet")])).toBe("viewer.view");
-    expect(suggestOperation([asset("markdown")])).toBe("viewer.view");
+  it("batches every open image into the image tool", () => {
+    const one = asset("image", "one.png");
+    const two = asset("image", "two.jpg");
+    expect(actsOn([one, asset("text"), two], two, "image.edit")).toEqual(["one.png", "two.jpg"]);
   });
 
-  it("has no default action until something is open", () => {
-    expect(suggestOperation([])).toBeNull();
+  it("reads an EPUB and offers nothing for unknown binaries", () => {
+    expect(offeredIds([asset("epub")])).toEqual(["book.read"]);
+    expect(offeredIds([asset("binary")])).toEqual([]);
   });
+});
 
-  it("explains why an unavailable action is disabled", () => {
-    const set = capabilitiesFor([asset("text")]);
-    expect(set.disabled.find((entry) => entry.capability.id === "text.diff")?.match.reason).toBe(
-      "reasonNeedsTwoFiles",
-    );
-    expect(set.disabled.find((entry) => entry.capability.id === "image.convert")?.match.reason).toBe(
-      "reasonNeedsImage",
-    );
-    expect(capabilitiesFor([asset("pdf")]).disabled.find((entry) => entry.capability.id === "pdf.merge")?.match.reason).toBe(
-      "reasonNeedsTwoPdfs",
-    );
-  });
+describe("unlockedByAnother", () => {
+  const ids = (assets: readonly Asset[], selected: Asset | null = assets[0] ?? null) =>
+    unlockedByAnother(assets, selected).map((capability) => capability.id);
 
-  it("names what one more file would unlock", () => {
-    const ids = (assets: readonly Asset[]) => unlockedByAnother(assets).map((capability) => capability.id);
+  it("names what one more file of the selected kind would unlock", () => {
     expect(ids([asset("pdf")])).toEqual(["pdf.merge"]);
     expect(ids([asset("text")])).toEqual(["text.diff"]);
+  });
+
+  it("stays quiet when nothing is one file away", () => {
     expect(ids([asset("image")])).toEqual([]);
     expect(ids([asset("pdf", "a.pdf"), asset("pdf", "b.pdf")])).toEqual([]);
-    expect(ids([])).toEqual([]);
+    expect(ids([asset("text", "a.txt"), asset("text", "b.txt")])).toEqual([]);
+    expect(ids([], null)).toEqual([]);
   });
+});
 
-  it("groups enabled actions for the rail", () => {
-    const groups = capabilitiesFor([asset("json")]).byGroup.map((entry) => entry.group);
-    expect(groups).toContain("view");
-    expect(groups).toContain("edit");
-    expect(groups).toContain("convert");
-    expect(groups).toContain("analyze");
-  });
-
-  it("marks the inferred actions as primary for a real selection", () => {
-    const set = capabilitiesFor([asset("json")]);
-    const primaries = set.enabled.filter((entry) => entry.primary);
-    expect(primaries).toHaveLength(4);
-    expect(primaries[0]!.capability.id).toBe("viewer.view");
-    expect(primaries[1]!.capability.id).toBe("viewer.edit");
-  });
-
-  it("offers only the no-file starters with an empty selection", () => {
-    expect(enabledIds([]).sort()).toEqual(["data.uuid", "qr.generate", "qr.scan", "text.diff"]);
-  });
-
-  it("offers reading for an EPUB instead of the document viewer", () => {
-    const ids = enabledIds([asset("epub", "novel.epub")]);
-    expect(ids[0]).toBe("book.read");
-    expect(ids).not.toContain("viewer.view");
-    expect(suggestOperation([asset("epub", "novel.epub")])).toBe("book.read");
-  });
-
-  it("keeps UUID off once a file is open", () => {
-    expect(enabledIds([asset("text")])).not.toContain("data.uuid");
-  });
-
-  it("exposes QR generation with an empty selection", () => {
-    const ids = enabledIds([]);
-    expect(ids).toContain("qr.generate");
-    expect(ids).toContain("qr.scan");
-    expect(capabilitiesFor([]).suggested).toBeNull();
+describe("registry", () => {
+  it("offers compare and QR creation without a file", () => {
+    expect(STARTERS.map((capability) => capability.id)).toEqual(["text.diff", "qr.generate"]);
   });
 
   it("looks a capability up by id", () => {
-    expect(capabilityById("pdf.merge")?.group).toBe("transform");
+    expect(capabilityById("pdf.merge")?.set?.(2)).toBe(true);
     expect(capabilityById("nope" as CapabilityId)).toBeUndefined();
   });
 });

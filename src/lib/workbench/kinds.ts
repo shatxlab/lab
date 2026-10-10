@@ -9,7 +9,6 @@
  * two without re-implementing extension or byte sniffing.
  */
 
-import type { DataFormat } from "@/lib/convert/data";
 import { detectFileKind, fileExtension, resolveFileKind, type FileKind } from "@/lib/viewer/file-kind";
 
 export type AssetKind =
@@ -49,11 +48,6 @@ export function isDataAssetKind(kind: AssetKind): kind is DataAssetKind {
   return kind === "json" || kind === "yaml" || kind === "toml";
 }
 
-/** The converter's format name for a structured asset. */
-export function dataFormatFor(kind: DataAssetKind): DataFormat {
-  return kind;
-}
-
 const YAML_EXTENSIONS = new Set(["yaml", "yml"]);
 const TOML_EXTENSIONS = new Set(["toml"]);
 const EPUB_EXTENSIONS = new Set(["epub"]);
@@ -91,21 +85,6 @@ export function detectAssetKind(fileName: string, bytes?: Uint8Array): AssetKind
   return assetKindFromFileKind(kind);
 }
 
-/** Kinds an editor can write back without losing the document's structure. */
-export const EDITABLE_ASSET_KINDS: ReadonlySet<AssetKind> = new Set<AssetKind>([
-  "text",
-  "markdown",
-  "html",
-  "json",
-  "yaml",
-  "toml",
-  "sheet",
-]);
-
-export function isEditable(kind: AssetKind): boolean {
-  return EDITABLE_ASSET_KINDS.has(kind);
-}
-
 /** Text-bearing kinds: what text tools (count, case, regex, encode) accept. */
 export const TEXTUAL_ASSET_KINDS: ReadonlySet<AssetKind> = new Set<AssetKind>([
   "text",
@@ -120,22 +99,3 @@ export function isTextual(kind: AssetKind): boolean {
   return TEXTUAL_ASSET_KINDS.has(kind);
 }
 
-/**
- * Kinds `extractComparableText` can turn into text a line diff makes sense on.
- * Images and raw binary carry no text to compare.
- */
-export const COMPARABLE_ASSET_KINDS: ReadonlySet<AssetKind> = new Set<AssetKind>([
-  "text",
-  "markdown",
-  "html",
-  "json",
-  "yaml",
-  "toml",
-  "sheet",
-  "docx",
-  "pdf",
-]);
-
-export function isComparable(kind: AssetKind): boolean {
-  return COMPARABLE_ASSET_KINDS.has(kind);
-}

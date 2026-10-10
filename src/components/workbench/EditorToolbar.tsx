@@ -19,6 +19,8 @@ export interface EditorToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
   saving?: boolean;
+  /** False while the draft is invalid (it would save a broken file). */
+  canSave?: boolean;
 }
 
 /**
@@ -41,6 +43,7 @@ export function EditorToolbar({
   onUndo,
   onRedo,
   saving = false,
+  canSave = true,
 }: EditorToolbarProps) {
   const saveAsItems: MenuItem[] = formats.map((format) => ({
     id: format.id,
@@ -59,14 +62,14 @@ export function EditorToolbar({
         "flex flex-wrap items-center gap-2 rounded-lg border border-(--border) bg-(--surface) px-3 py-2",
       )}
     >
-      <ActionButton onClick={onSave} disabled={!dirty || saving}>
+      <ActionButton onClick={onSave} disabled={!dirty || saving || !canSave}>
         {wb(lang, "save")}
       </ActionButton>
 
       {formats.length > 1 && (
         <MenuButton
-          label={wb(lang, "saveCopy")}
-          menuLabel={wb(lang, "saveCopy")}
+          label={wb(lang, "saveAs")}
+          menuLabel={wb(lang, "saveAs")}
           items={saveAsItems}
         />
       )}

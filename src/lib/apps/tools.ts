@@ -45,11 +45,11 @@ export const TOOLS: readonly ToolEntry[] = [
     },
     title: { en: "Workbench", ru: "Рабочая область" },
     description: {
-      en: "One page for every file: view documents, read EPUBs, merge, split and sign PDFs, convert images and data, compare texts, make and scan QR codes.",
-      ru: "Одна страница для любых файлов: просмотр документов, чтение EPUB, склейка, разделение и подпись PDF, конвертация картинок и данных, сравнение текстов, QR-коды.",
+      en: "One page for every file: open and edit documents, read EPUBs, merge, split and sign PDFs, convert images, compare files and make QR codes.",
+      ru: "Одна страница для любых файлов: просмотр и правка документов, чтение EPUB, склейка, разделение и подпись PDF, конвертация картинок, сравнение файлов и QR-коды.",
     },
     keywords:
-      "workbench tools file document viewer pdf merge split sign word docx excel xlsx csv json yaml toml markdown html epub ebook book reader image photo convert resize compress exif qr code scanner generator text diff compare word count regex base64 hash uuid инструменты файл документ просмотр склеить разделить подписать книга читалка картинка сжать сравнить подсчёт регистр хеш кодировать",
+      "workbench tools file document viewer editor pdf merge split sign word docx excel xlsx csv json yaml toml markdown html epub ebook book reader image photo convert resize compress exif qr code generator text diff compare инструменты файл документ просмотр правка склеить разделить подписать книга читалка картинка сжать конвертировать сравнить",
     seo: {
       title: "PDF, Word, Excel, EPUB & image tools",
       description:

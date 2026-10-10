@@ -3,9 +3,8 @@ import { unzipSync } from "fflate";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DocxEditOperation } from "@/components/workbench/operations/DocxOperations";
+import { OpenOperation } from "@/components/workbench/operations/OpenOperations";
 import { createAssetFromBytes } from "@/lib/workbench/asset";
-import { hasOperation, loadOperation } from "@/lib/workbench/operations";
 import { click, mount, waitFor } from "../helpers/dom";
 
 // The real renderer needs a valid OOXML package; the operation only cares about
@@ -32,12 +31,13 @@ async function edit(node: HTMLElement, html: string) {
   });
 }
 
+/** Open the Word file and switch to Edit mode, where the rich-text editor lives. */
 async function ready(
   onProduce?: (output: { name: string; type: string; bytes: Uint8Array }) => void,
 ) {
-  const view = await mount(
-    <DocxEditOperation lang="en" assets={[asset()]} onProduce={onProduce} />,
-  );
+  const view = await mount(<OpenOperation lang="en" assets={[asset()]} onProduce={onProduce} />);
+  await waitFor(() => expect(buttonByText("Edit")).toBeTruthy());
+  await click(buttonByText("Edit"));
   await waitFor(() => expect(document.querySelector('[contenteditable="true"]')).toBeTruthy());
   return view;
 }
@@ -46,7 +46,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("docx.edit operation", () => {
+describe("Word editing in Open", () => {
   it("renders the document's sanitized HTML in a contentEditable surface", async () => {
     const view = await ready();
     expect(surface().innerHTML).toContain("<h1>Title</h1>");
@@ -65,7 +65,7 @@ describe("docx.edit operation", () => {
     await waitFor(() => expect(onProduce).toHaveBeenCalledTimes(1));
 
     const output = onProduce.mock.calls[0]![0] as { name: string; type: string; bytes: Uint8Array };
-    expect(output.name).toBe("sample.html");
+    expect(output.name).toBe("sample-edited.html");
     expect(output.type).toBe("text/html;charset=utf-8");
     const text = new TextDecoder().decode(output.bytes);
     expect(text).toContain("<!doctype html>");
@@ -73,12 +73,12 @@ describe("docx.edit operation", () => {
     view.unmount();
   });
 
-  it("writes Markdown from the Save a copy menu", async () => {
+  it("writes Markdown from the Save as menu", async () => {
     const onProduce = vi.fn();
     const view = await ready(onProduce);
 
     await edit(surface(), "<h1>Title</h1><p>Hello edited world</p>");
-    await click(buttonByText("Save a copy"));
+    await click(buttonByText("Save as"));
     await waitFor(() => expect(document.querySelectorAll('[role="menuitem"]').length).toBe(4));
     const markdown = [...document.querySelectorAll('[role="menuitem"]')].find(
       (node) => node.textContent?.trim() === "Markdown (.md)",
@@ -87,18 +87,18 @@ describe("docx.edit operation", () => {
     await waitFor(() => expect(onProduce).toHaveBeenCalledTimes(1));
 
     const output = onProduce.mock.calls[0]![0] as { name: string; type: string; bytes: Uint8Array };
-    expect(output.name).toBe("sample.md");
+    expect(output.name).toBe("sample-edited.md");
     expect(output.type).toBe("text/markdown;charset=utf-8");
     expect(new TextDecoder().decode(output.bytes)).toContain("Hello edited world");
     view.unmount();
   });
 
-  it("writes a Word document from the Save a copy menu", async () => {
+  it("writes a Word document from the Save as menu", async () => {
     const onProduce = vi.fn();
     const view = await ready(onProduce);
 
     await edit(surface(), "<h1>Title</h1><p>Hello <strong>Word</strong></p>");
-    await click(buttonByText("Save a copy"));
+    await click(buttonByText("Save as"));
     await waitFor(() => expect(document.querySelectorAll('[role="menuitem"]').length).toBe(4));
     const docx = [...document.querySelectorAll('[role="menuitem"]')].find(
       (node) => node.textContent?.trim() === "Word (.docx)",
@@ -107,7 +107,7 @@ describe("docx.edit operation", () => {
     await waitFor(() => expect(onProduce).toHaveBeenCalledTimes(1));
 
     const output = onProduce.mock.calls[0]![0] as { name: string; type: string; bytes: Uint8Array };
-    expect(output.name).toBe("sample.docx");
+    expect(output.name).toBe("sample-edited.docx");
     expect(output.type).toBe(
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
@@ -133,7 +133,9 @@ describe("docx.edit operation", () => {
 
   it("keeps an unsaved edit when the UI language changes", async () => {
     const sample = asset();
-    const view = await mount(<DocxEditOperation lang="en" assets={[sample]} />);
+    const view = await mount(<OpenOperation lang="en" assets={[sample]} />);
+    await waitFor(() => expect(buttonByText("Edit")).toBeTruthy());
+    await click(buttonByText("Edit"));
     await waitFor(() => expect(document.querySelector('[contenteditable="true"]')).toBeTruthy());
 
     await edit(surface(), "<h1>Title</h1><p>Unsaved draft</p>");
@@ -141,14 +143,29 @@ describe("docx.edit operation", () => {
 
     // Switching language re-renders the operation but must not reload the
     // asset (and so must not remount the editor and drop the draft).
-    await view.rerender(<DocxEditOperation lang="ru" assets={[sample]} />);
+    await view.rerender(<OpenOperation lang="ru" assets={[sample]} />);
     await waitFor(() => expect(surface()).toBeTruthy());
     expect(surface().innerHTML).toContain("Unsaved draft");
     view.unmount();
   });
 
-  it("registers the docx.edit capability", async () => {
-    expect(hasOperation("docx.edit")).toBe(true);
-    expect(await loadOperation("docx.edit")).toBeTypeOf("function");
+  it("reports an unsaved edit and locks Preview until it is saved", async () => {
+    const onDirtyChange = vi.fn();
+    const onProduce = vi.fn();
+    const view = await mount(<OpenOperation lang="en" assets={[asset()]} onProduce={onProduce} onDirtyChange={onDirtyChange} />);
+    await waitFor(() => expect(buttonByText("Edit")).toBeTruthy());
+    await click(buttonByText("Edit"));
+    await waitFor(() => expect(document.querySelector('[contenteditable="true"]')).toBeTruthy());
+
+    await edit(surface(), "<h1>Title</h1><p>Changed</p>");
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+    expect(buttonByText("Preview")?.disabled).toBe(true);
+
+    // Saving makes the draft the new baseline: clean again, Preview unlocked.
+    await click(buttonByText("Save"));
+    await waitFor(() => expect(onProduce).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(false));
+    expect(buttonByText("Preview")?.disabled).toBe(false);
+    view.unmount();
   });
 });

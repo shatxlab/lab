@@ -4,8 +4,6 @@ export const ti = createTranslator({
   en: {
     title: "Image tools",
     tagline: "Convert, resize and compress images, and strip hidden metadata such as GPS location — all in your browser.",
-    pick: "Choose, drop or paste images",
-    pickHint: "PNG, JPEG, WebP, AVIF, GIF, BMP and SVG",
 
     task: "What to do",
     taskConvert: "Convert, resize & compress",
@@ -27,7 +25,6 @@ export const ti = createTranslator({
     metadataNote: "Metadata (EXIF, GPS location, camera, comments) is always removed from the results.",
 
     results: "Results",
-    clearAll: "Remove all",
     downloadAll: "Download all (.zip)",
     download: "Download",
     remove: "Remove {name}",
@@ -67,8 +64,6 @@ export const ti = createTranslator({
   ru: {
     title: "Инструменты для картинок",
     tagline: "Конвертация, изменение размера и сжатие картинок, удаление скрытых метаданных (например, GPS) — всё в вашем браузере.",
-    pick: "Выберите, перетащите или вставьте картинки",
-    pickHint: "PNG, JPEG, WebP, AVIF, GIF, BMP и SVG",
 
     task: "Что сделать",
     taskConvert: "Конвертировать, изменить размер и сжать",
@@ -90,7 +85,6 @@ export const ti = createTranslator({
     metadataNote: "Метаданные (EXIF, GPS, камера, комментарии) всегда удаляются из результата.",
 
     results: "Результаты",
-    clearAll: "Убрать все",
     downloadAll: "Скачать все (.zip)",
     download: "Скачать",
     remove: "Убрать {name}",

@@ -76,7 +76,7 @@ export function DocumentPane({
     [sheets, onEditCell],
   );
 
-  if (doc.kind === "markdown" || doc.kind === "html") return <MarkdownView lang={lang} html={doc.html} source={doc.source} />;
+  if (doc.kind === "markdown" || doc.kind === "html") return <MarkdownView html={doc.html} />;
   if (doc.kind === "pdf") return <PdfView lang={lang} bytes={doc.bytes} onLoaded={onPdfLoaded} />;
   if (doc.kind === "image")
     return <ImageView lang={lang} bytes={doc.bytes} name={fileName} extension={doc.extension} />;

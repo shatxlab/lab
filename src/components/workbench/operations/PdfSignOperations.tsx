@@ -13,13 +13,12 @@ import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { StandardFonts, type PDFDocument, type PDFFont } from "@cantoo/pdf-lib";
 
-import { ActionButton, FilePicker, inputClass, labelClass, panelClass } from "@/components/tools/ui";
+import { ActionButton, inputClass, labelClass, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
 import { formatBytesLimit, MAX_FILE_BYTES } from "@/lib/limits";
 import { tp } from "@/lib/pdf/i18n";
 import { loadPdf, PdfOpError } from "@/lib/pdf/ops";
-import { createAssetFromFile, type Asset } from "@/lib/workbench/asset";
 import { wb } from "@/lib/workbench/i18n";
 import type { OperationProps } from "@/lib/workbench/operation";
 import { baseFileName } from "@/lib/viewer/export";
@@ -99,10 +98,6 @@ function StampNumberField({
   );
 }
 
-function isPdfFile(file: File): boolean {
-  return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-}
-
 function errorMessage(lang: AppLang, error: unknown, name: string): string {
   if (error instanceof PdfOpError) {
     if (error.code === "tooLarge") return tp(lang, "tooLarge", { name, limit: formatBytesLimit(MAX_FILE_BYTES) });
@@ -113,10 +108,8 @@ function errorMessage(lang: AppLang, error: unknown, name: string): string {
   return tp(lang, "errGeneric", { message: error instanceof Error ? error.message : String(error) });
 }
 
-export function PdfSignOperation({ lang, assets, onProduce }: OperationProps) {
-  const standalone = assets.length === 0;
-  const [localAsset, setLocalAsset] = React.useState<Asset | null>(null);
-  const asset = assets[0] ?? localAsset;
+export function PdfSignOperation({ lang, assets, onProduce, onDirtyChange }: OperationProps) {
+  const asset = assets[0] ?? null;
 
   const [doc, setDoc] = React.useState<PDFDocument | null>(null);
   const [loadedId, setLoadedId] = React.useState<string | null>(null);
@@ -212,6 +205,10 @@ export function PdfSignOperation({ lang, assets, onProduce }: OperationProps) {
 
   const ready = !loading && doc !== null && loadedId === asset?.id;
   const dirty = pendingStamps.length > 0;
+
+  React.useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const revert = () => {
     resetStamps();
@@ -328,30 +325,8 @@ export function PdfSignOperation({ lang, assets, onProduce }: OperationProps) {
     }
   };
 
-  const pick = (file: File) => {
-    if (!isPdfFile(file)) {
-      setNotice(tp(lang, "onlyPdf"));
-      return;
-    }
-    setNotice(null);
-    setLocalAsset(createAssetFromFile(file));
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      {standalone && (
-        <FilePicker
-          lang={lang}
-          accept="application/pdf,.pdf"
-          prompt={tp(lang, "addPdf")}
-          compact
-          onFiles={(files) => {
-            const file = files[0];
-            if (file) pick(file);
-          }}
-        />
-      )}
-
       {notice && (
         <p role="alert" className="text-sm text-(--warning)">
           {notice}

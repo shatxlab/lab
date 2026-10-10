@@ -137,6 +137,11 @@ export class EditSession<T> {
     this.cursor = 0;
   }
 
+  /** The current draft was saved: it becomes the clean baseline, history kept. */
+  markSaved(): void {
+    this.initial = this.value;
+  }
+
   /** Start a new document: `next` becomes both the initial and the draft. */
   reset(next: T): void {
     this.initial = next;

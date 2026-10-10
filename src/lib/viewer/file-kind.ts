@@ -23,18 +23,6 @@ export const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "a
 /** CSV-family files are text, so they get decoded before SheetJS sees them. */
 export const TEXT_SHEET_EXTENSIONS = new Set(["csv", "tsv"]);
 
-export const ACCEPTED_EXTENSIONS = [
-  ...MARKDOWN_EXTENSIONS,
-  ...SHEET_EXTENSIONS,
-  ...TEXT_EXTENSIONS,
-  ...JSON_EXTENSIONS,
-  ...HTML_EXTENSIONS,
-  ...PDF_EXTENSIONS,
-  ...IMAGE_EXTENSIONS,
-  "docx",
-  "doc",
-].map((extension) => `.${extension}`);
-
 export function fileExtension(fileName: string): string {
   const base = fileName.replace(/\\/g, "/").split("/").pop() ?? fileName;
   const dot = base.lastIndexOf(".");

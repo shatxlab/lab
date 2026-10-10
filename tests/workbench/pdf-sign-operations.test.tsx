@@ -101,15 +101,19 @@ afterEach(() => {
 });
 
 describe("pdf.sign operation", () => {
-  it("uses the supplied asset instead of its own picker", async () => {
-    const view = await ready();
-    expect(document.querySelector('input[type="file"][accept="application/pdf,.pdf"]')).toBeNull();
-    view.unmount();
-  });
+  it("reports staged stamps as unsaved work until they are saved", async () => {
+    const onDirtyChange = vi.fn();
+    const onProduce = vi.fn();
+    const view = await mount(<PdfSignOperation lang="en" assets={[await pdfAsset()]} onProduce={onProduce} onDirtyChange={onDirtyChange} />);
+    await waitFor(() => expect(stampButton("text")).toBeTruthy());
 
-  it("renders its own picker when standalone", async () => {
-    const view = await mount(<PdfSignOperation lang="en" assets={[]} />);
-    expect(document.querySelector('input[type="file"]')).not.toBeNull();
+    await type(field("Text"), "SIGNED");
+    await click(stampButton("text"));
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+
+    await click(button("Save"));
+    await waitFor(() => expect(onProduce).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(false));
     view.unmount();
   });
 

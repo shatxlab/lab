@@ -2,7 +2,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ACCEPTED_EXTENSIONS,
   detectFileKind,
   fileExtension,
   fileKindLabel,
@@ -73,38 +72,5 @@ describe("detectFileKind", () => {
     ["data.json", "json"],
   ])("reads %s as %s by extension", (name, kind) => {
     expect(detectFileKind(name)).toBe(kind);
-  });
-});
-
-describe("ACCEPTED_EXTENSIONS", () => {
-  it("offers every kind the viewer can act on to the file picker", () => {
-    expect(ACCEPTED_EXTENSIONS).toContain(".md");
-    expect(ACCEPTED_EXTENSIONS).toContain(".xlsx");
-    expect(ACCEPTED_EXTENSIONS).toContain(".csv");
-    expect(ACCEPTED_EXTENSIONS).toContain(".docx");
-    expect(ACCEPTED_EXTENSIONS).toContain(".txt");
-    expect(ACCEPTED_EXTENSIONS).toContain(".log");
-    expect(ACCEPTED_EXTENSIONS).toContain(".pdf");
-    expect(ACCEPTED_EXTENSIONS).toContain(".png");
-    expect(ACCEPTED_EXTENSIONS).toContain(".html");
-    expect(ACCEPTED_EXTENSIONS).toContain(".json");
-    // .doc is accepted so the picker can hand it over and get a real explanation
-    // instead of the OS greying the file out.
-    expect(ACCEPTED_EXTENSIONS).toContain(".doc");
-  });
-
-  it("prefixes every entry with a dot", () => {
-    expect(ACCEPTED_EXTENSIONS.every((entry) => entry.startsWith("."))).toBe(true);
-  });
-});
-
-describe("fileKindLabel", () => {
-  it("labels every kind", () => {
-    expect(fileKindLabel("markdown")).toBe("Markdown");
-    expect(fileKindLabel("sheet")).toBe("Spreadsheet");
-    expect(fileKindLabel("docx")).toBe("Word");
-    expect(fileKindLabel("text")).toBe("Text");
-    expect(fileKindLabel("json")).toBe("JSON");
-    expect(fileKindLabel("legacy-doc")).toBe("Word 97-2003");
   });
 });

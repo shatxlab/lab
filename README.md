@@ -8,7 +8,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 
 | Route | Tool | What it does |
 |---|---|---|
-| `/tools` | Workbench | One page for every file. Drop, pick or paste a file and the actions that fit it appear as tabs (the best one opens straight away; the rest sit under "More"). **Documents:** view PDF, Word (`.docx`), spreadsheets (`.xlsx`/`.ods`/`.csv`/…), JSON, Markdown, HTML, images and text; edit text, data, sheets and Word; export and print. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** view, merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS. **Text & data:** compare (JSON, sheets and Word compared by content), count, change case, regex, JSON ⇄ YAML ⇄ TOML, Base64/URL/hex, hashes. **Without a file:** compare two texts, create or scan a QR code, generate a UUID. |
+| `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
@@ -67,8 +67,7 @@ HSTS, immutable caching for `/_astro/*`) for hosts that understand the
 `_headers` convention (Netlify, Cloudflare Pages). GitHub Pages ignores
 `_headers`, so those extra response headers are absent there — the CSP
 `<meta>` policy still applies. On a host without `_headers` support,
-translate that file into the platform's header configuration. (It allows the
-camera for the same origin — the QR scanner needs it.)
+translate that file into the platform's header configuration.
 
 ### Offline support on GitHub Pages
 
@@ -90,7 +89,7 @@ src/
   components/apps/   EPUB reader, header controls (command palette, settings
                      backup, language/theme), PWA registration, tools grid
   components/workbench/ The /tools workbench shell + one operation per capability
-                     (operations/: text, data, QR, PDF, image, viewer, DOCX, reader)
+                     (operations/: open, compare, QR, PDF, image, DOCX editor, reader)
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/wordle/ Wordle island
@@ -100,9 +99,9 @@ src/
   lib/apps/          EPUB parsing + shared app logic: tool registry (tools.ts),
                      theme/lang, file open, settings backup, command-palette search
   lib/viewer/        Document parsing/rendering/export logic (+ PDF.js loader)
-  lib/text/          diff engine, text statistics, case conversion, regex runner
-  lib/convert/       data formats, encoders, hashes (incl. MD5), UUIDs
-  lib/qr/            payload builders/parsers, QR matrix + SVG, scanner
+  lib/text/          diff engine
+  lib/convert/       JSON / YAML / TOML parsing and conversion
+  lib/qr/            payload builders, QR matrix + SVG
   lib/image/         EXIF reading and lossless stripping, resize plan, canvas pipeline
   lib/pdf/           page-range parsing and pdf-lib operations
   lib/workbench/     asset model, capability registry, operation registry, i18n
@@ -125,7 +124,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  text/ convert/ qr/ image/ pdf/ wordle/  logic tests per tool
+  convert/ qr/ image/ pdf/ wordle/  logic tests per tool
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers

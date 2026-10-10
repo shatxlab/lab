@@ -1,19 +1,15 @@
 /**
- * The image operation family, extracted from the old Image tool page.
- *
- * One `ImageOperation` covers both tasks the capability registry exposes
- * (`image.convert` / `image.transform` / `image.strip`): it seeds its item list
- * from the image assets the workbench hands it and hides its own file picker,
- * or behaves exactly like the legacy `/image` page when rendered standalone.
+ * `image.edit` — convert, resize and compress images, or strip their
+ * metadata. It works on every image open in the workbench at once (a batch
+ * downloads as a zip).
  */
 
 import * as React from "react";
-import { Download, MapPin, Trash2, X } from "lucide-react";
+import { Download, MapPin } from "lucide-react";
 import { zipSync } from "fflate";
 
 import {
   ActionButton,
-  FilePicker,
   SelectField,
   inputClass,
   labelClass,
@@ -145,8 +141,7 @@ export function ImageOperation({
   params,
   setParams,
   onProduce,
-  defaultTask,
-}: OperationProps & { defaultTask?: ImageTask }) {
+}: OperationProps) {
   const [settings, setSettings] = React.useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
   const [hydrated, setHydrated] = React.useState(false);
   const [items, setItems] = React.useState<Item[]>([]);
@@ -154,7 +149,6 @@ export function ImageOperation({
   const idRef = React.useRef(0);
   const itemsRef = React.useRef(items);
   itemsRef.current = items;
-  const standalone = assets.length === 0;
   // Keep the latest props for the process effect without restarting it.
   const onProduceRef = React.useRef(onProduce);
   onProduceRef.current = onProduce;
@@ -163,7 +157,7 @@ export function ImageOperation({
   React.useEffect(() => {
     const stored = loadSettings();
     const requested = params?.task;
-    const task: ImageTask = requested === "strip" || requested === "convert" ? requested : defaultTask ?? stored.task;
+    const task: ImageTask = requested === "strip" || requested === "convert" ? requested : stored.task;
     setSettings({ ...stored, task });
     setAvifOk(supportedOutputMimes().has(MIME_BY_FORMAT.avif));
     setHydrated(true);
@@ -276,34 +270,6 @@ export function ImageOperation({
     if (files.length > 0) addFiles(files, keys);
   });
 
-  React.useEffect(() => {
-    // The workbench shell owns paste while it supplies assets; attaching here
-    // too would add the same clipboard image twice.
-    if (!standalone) return;
-    const onPaste = (event: ClipboardEvent) => {
-      const files = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith("image/"));
-      if (files.length > 0) {
-        event.preventDefault();
-        addFiles(files);
-      }
-    };
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [addFiles, standalone]);
-
-  const remove = (id: number) => {
-    setItems((current) => {
-      const target = current.find((item) => item.id === id);
-      if (target?.url) URL.revokeObjectURL(target.url);
-      return current.filter((item) => item.id !== id);
-    });
-  };
-
-  const clearAll = () => {
-    for (const item of itemsRef.current) if (item.url) URL.revokeObjectURL(item.url);
-    setItems([]);
-  };
-
   const downloadAll = async () => {
     const done = items.filter((item) => item.result);
     const names = uniqueNames(done.map((item) => item.result!.name));
@@ -327,10 +293,6 @@ export function ImageOperation({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
       <div className="flex min-w-0 flex-col gap-4">
-        {standalone && (
-          <FilePicker lang={lang} accept="image/*,.svg,.avif,.webp" multiple prompt={ti(lang, "pick")} hint={ti(lang, "pickHint")} onFiles={addFiles} compact />
-        )}
-
         <fieldset className={cn(panelClass, "flex flex-col gap-3")}>
           <legend className="px-1 text-sm font-semibold">{ti(lang, "task")}</legend>
           <div role="radiogroup" aria-label={ti(lang, "task")} className="flex flex-col gap-1.5">
@@ -419,25 +381,17 @@ export function ImageOperation({
           <h2 id="image-results" className="text-sm font-semibold">
             {ti(lang, "results")} {items.length > 0 && <span className="font-normal text-(--muted-fg)">({items.length})</span>}
           </h2>
-          {items.length > 0 && (
-            <div className="flex gap-2">
-              {doneCount > 1 && (
-                <ActionButton className="h-8 px-3 text-xs" onClick={() => void downloadAll()}>
-                  <Download aria-hidden="true" className="size-3.5" />
-                  {ti(lang, "downloadAll")}
-                </ActionButton>
-              )}
-              <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={clearAll}>
-                <Trash2 aria-hidden="true" className="size-3.5" />
-                {ti(lang, "clearAll")}
-              </ActionButton>
-            </div>
+          {doneCount > 1 && (
+            <ActionButton className="h-8 px-3 text-xs" onClick={() => void downloadAll()}>
+              <Download aria-hidden="true" className="size-3.5" />
+              {ti(lang, "downloadAll")}
+            </ActionButton>
           )}
         </div>
 
         <ul className="flex flex-col gap-3" aria-live="polite">
           {items.map((item) => (
-            <ResultCard key={item.id} lang={lang} item={item} onRemove={() => remove(item.id)} />
+            <ResultCard key={item.id} lang={lang} item={item} />
           ))}
         </ul>
       </section>
@@ -454,7 +408,7 @@ const NOTE_KEYS: Record<ProcessNote, "noteAlreadySmall" | "noteAnimatedGif" | "n
 
 const ERROR_KEYS = { fileTooLarge: "errFileTooLarge", tooManyPixels: "errTooManyPixels", decode: "errDecode", encode: "errEncode" } as const;
 
-function ResultCard({ lang, item, onRemove }: { lang: AppLang; item: Item; onRemove: () => void }) {
+function ResultCard({ lang, item }: { lang: AppLang; item: Item }) {
   const { result } = item;
   const percent = result ? savedPercent(item.file.size, result.blob.size) : 0;
 
@@ -496,14 +450,6 @@ function ResultCard({ lang, item, onRemove }: { lang: AppLang; item: Item; onRem
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={ti(lang, "remove", { name: item.file.name })}
-            className="inline-flex size-7 items-center justify-center rounded-md text-(--muted-fg) hover:bg-(--bg) hover:text-(--fg)"
-          >
-            <X aria-hidden="true" className="size-4" />
-          </button>
           {result && item.url && (
             <a
               href={item.url}

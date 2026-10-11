@@ -11,7 +11,7 @@ export const wb = createTranslator({
     tagline: "Open one file and every tool that fits it is already here — view, edit, convert, compare and more.",
     inputPrompt: "Drop files here or paste them",
     inputHint: "Files are parsed in your browser and never leave your device.",
-    assets: "Assets",
+    assets: "Files",
     outputs: "Outputs",
     empty: "Add a file to see every tool that applies to it.",
     startWithout: "Or start without a file",
@@ -37,7 +37,7 @@ export const wb = createTranslator({
     undo: "Undo",
     redo: "Redo",
     download: "Download",
-    openAsAsset: "Open as a new asset",
+    openAsAsset: "Open as a file",
 
     formatting: "Formatting",
     fmtBold: "Bold",
@@ -93,7 +93,7 @@ export const wb = createTranslator({
     undo: "Отменить",
     redo: "Повторить",
     download: "Скачать",
-    openAsAsset: "Открыть как новый файл",
+    openAsAsset: "Открыть как файл",
 
     formatting: "Форматирование",
     fmtBold: "Полужирный",

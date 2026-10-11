@@ -58,7 +58,7 @@ const COMPARE_KINDS = kinds("text", "markdown", "html", "json", "yaml", "toml", 
 export const CAPABILITIES: readonly Capability[] = [
   {
     id: "pdf.merge",
-    label: { en: "Merge PDFs", ru: "Склеить PDF" },
+    label: { en: "Merge", ru: "Объединить" },
     weight: 1000,
     kinds: kinds("pdf"),
     set: (count) => count >= 2,

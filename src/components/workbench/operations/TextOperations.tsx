@@ -44,7 +44,7 @@ async function comparableText(asset: Asset): Promise<string> {
   }
 }
 
-export function TextDiffOperation({ lang, assets }: OperationProps) {
+export function TextDiffOperation({ lang, assets, onProduce }: OperationProps) {
   const [left, setLeft] = React.useState("");
   const [right, setRight] = React.useState("");
   useSeedAssets(assets, async (list, isCancelled) => {
@@ -96,6 +96,7 @@ export function TextDiffOperation({ lang, assets }: OperationProps) {
             rightName={assets[1]?.name ?? tt(lang, "modified")}
             leftText={left}
             rightText={right}
+            onProduce={onProduce}
           />
         </div>
       ) : (

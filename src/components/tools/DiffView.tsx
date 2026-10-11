@@ -13,6 +13,7 @@ import {
   type DiffRow,
 } from "@/lib/text/diff";
 import { td } from "@/lib/text/diff-i18n";
+import { diffPatchOutput, diffReportOutput, type DiffExport } from "@/lib/text/diff-report";
 import { cn } from "@/lib/viewer/utils";
 
 type Mode = "split" | "unified";
@@ -28,6 +29,8 @@ type DiffViewProps = {
   rightText: string;
   /** Fill the parent's height and scroll internally (the viewer does). */
   fill?: boolean;
+  /** Workbench hook: emit the diff as a downloadable output (copy-only without it). */
+  onProduce?: (output: DiffExport) => void;
 };
 
 function Cell({ cell, kind, lang, side }: { cell: DiffCell | null; kind: DiffRow["kind"]; lang: AppLang; side: "left" | "right" }) {
@@ -56,7 +59,7 @@ function Cell({ cell, kind, lang, side }: { cell: DiffCell | null; kind: DiffRow
  * collapsible unchanged regions and previous/next change navigation.
  * Shared by the document viewer and the text tools.
  */
-export function DiffView({ lang, leftName, rightName, leftText, rightText, fill = false }: DiffViewProps) {
+export function DiffView({ lang, leftName, rightName, leftText, rightText, fill = false, onProduce }: DiffViewProps) {
   const [mode, setMode] = React.useState<Mode>("split");
   const [ignoreWhitespace, setIgnoreWhitespace] = React.useState(false);
   const [ignoreCase, setIgnoreCase] = React.useState(false);
@@ -159,6 +162,7 @@ export function DiffView({ lang, leftName, rightName, leftText, rightText, fill 
       "h-8 rounded-md border px-3 text-xs font-medium transition-colors",
       active ? "border-(--accent) bg-(--accent)/10 text-(--accent)" : "border-(--border) bg-(--bg) text-(--fg) hover:bg-(--surface)",
     );
+  const saveClass = toggleClass(false);
 
   return (
     <div className={cn("flex min-h-0 flex-col", fill ? "h-full" : "")}>
@@ -201,7 +205,31 @@ export function DiffView({ lang, leftName, rightName, leftText, rightText, fill 
           </label>
         </fieldset>
 
-        {patch && <CopyButton lang={lang} text={patch} label={td(lang, "copyPatch")} className="ml-auto" />}
+        {onProduce && patch && (
+          <>
+            <button
+              type="button"
+              onClick={() => onProduce(diffPatchOutput(leftName, rightName, patch))}
+              className={cn(saveClass, "ml-auto")}
+            >
+              {td(lang, "savePatch")}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onProduce(
+                  result
+                    ? diffReportOutput(lang, leftName, rightName, patch, td(lang, "summary", { added: result.added, removed: result.removed }))
+                    : diffReportOutput(lang, leftName, rightName, patch, ""),
+                )
+              }
+              className={saveClass}
+            >
+              {td(lang, "saveReport")}
+            </button>
+          </>
+        )}
+        {patch && <CopyButton lang={lang} text={patch} label={td(lang, "copyPatch")} className={onProduce ? undefined : "ml-auto"} />}
       </div>
 
       {result && !result.identical && (

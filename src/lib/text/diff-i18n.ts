@@ -23,6 +23,10 @@ export const td = createTranslator({
     lineNo: "Line",
     original: "Original",
     modified: "Modified",
+    savePatch: "Save patch",
+    saveReport: "Save report",
+    reportTitle: "Text comparison",
+    reportSub: "{leftName} → {rightName} · {summary}",
   },
   ru: {
     summary: "Добавлено: {added}, удалено: {removed}",
@@ -46,5 +50,9 @@ export const td = createTranslator({
     lineNo: "Строка",
     original: "Оригинал",
     modified: "Изменённый",
+    savePatch: "Сохранить патч",
+    saveReport: "Сохранить отчёт",
+    reportTitle: "Сравнение текстов",
+    reportSub: "{leftName} → {rightName} · {summary}",
   },
 });

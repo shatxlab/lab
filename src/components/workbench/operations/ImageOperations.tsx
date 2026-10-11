@@ -253,7 +253,7 @@ export function ImageOperation({
   );
 
   // Auto-add the image assets supplied by the workbench (no picker in that mode).
-  useSeedAssets(assets, async (list) => {
+  useSeedAssets(assets, async (list, isCancelled) => {
     const files: File[] = [];
     const keys: string[] = [];
     for (const asset of list) {
@@ -267,7 +267,8 @@ export function ImageOperation({
         // A file we cannot read simply never reaches the list.
       }
     }
-    if (files.length > 0) addFiles(files, keys);
+    if (files.length === 0 || isCancelled()) return;
+    addFiles(files, keys);
   });
 
   const downloadAll = async () => {

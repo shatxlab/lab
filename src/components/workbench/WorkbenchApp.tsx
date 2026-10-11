@@ -398,12 +398,26 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
   const operationAssets = current?.assets ?? EMPTY_ASSETS;
   const operationKey = `${active}:${operationAssets.map((asset) => asset.id).join("|")}`;
 
-  dirtyRef.current = dirtyReport.key === operationKey && dirtyReport.dirty;
+  const dirty = dirtyReport.key === operationKey && dirtyReport.dirty;
+  dirtyRef.current = dirty;
   activeRef.current = active;
   const reportDirty = React.useCallback(
     (dirty: boolean) => setDirtyReport({ key: operationKey, dirty }),
     [operationKey],
   );
+
+  // Closing or reloading the tab gets the same protection as in-page
+  // navigation: the browser asks when the running operation holds unsaved work.
+  React.useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Chrome only shows the dialog when returnValue is set; its text is ignored.
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   const selectFile = (id: string) => {
     if (id === selected?.id || !confirmLeave()) return;

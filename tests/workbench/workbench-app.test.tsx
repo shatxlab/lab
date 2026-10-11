@@ -224,6 +224,26 @@ describe("WorkbenchApp — unsaved work", () => {
     view.unmount();
   });
 
+  it("asks the browser before unload while unsaved, but not when clean", async () => {
+    const unload = () => {
+      const event = new Event("beforeunload", { cancelable: true }) as Event & { returnValue?: unknown };
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+
+    const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": DirtyStub }} />);
+    await addFiles(text("a.txt"));
+    await waitFor(() => expect(document.body.textContent).toContain("dirty editor"));
+    expect(unload()).toBe(true);
+    view.unmount();
+
+    const clean = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(text("a.txt"));
+    await waitFor(() => expect(document.body.textContent).toContain("open: a.txt"));
+    expect(unload()).toBe(false);
+    clean.unmount();
+  });
+
   it("does not ask when nothing is unsaved", async () => {
     const confirm = vi.spyOn(window, "confirm");
     const view = await mount(<WorkbenchApp operations={stubs} />);

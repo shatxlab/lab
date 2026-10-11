@@ -1,11 +1,14 @@
 # Roadmap — approved tools
 
-Status: **planning** — nothing here is implemented yet. `handoff.md` remains the
-source of truth for the current state; this file is the source of truth for
-*what gets built next*. A tool moves out of this file only when its work is
-merged and its entry is folded into `README.md` + `handoff.md`.
+Status: **planning** — nothing in §1–§7 is implemented yet. **This file is the
+single source of TODOs**: `handoff.md`, `workbench-review.md` and
+`workbench-ux-plan.md` were deleted (2026-10-11) after the workbench was
+declared complete at scope, and their still-open items were folded into §0. A
+tool moves out of §1–§7 only when its work is merged and its entry is folded
+into `README.md`.
 
-Owner decisions 2026-10-11 (supersede anything older in `handoff.md` §2):
+Owner decisions 2026-10-11 (they supersede the workbench's older locked
+scope: workbench itself stays dep-free and terminal-rule-scoped):
 
 - **New runtime deps are allowed again** — the "no new packages" rule was a
   workbench-consolidation decision, not a permanent policy. Each tool below
@@ -35,6 +38,105 @@ Owner decisions 2026-10-11 (supersede anything older in `handoff.md` §2):
 Ordering note: **OCR (the only tool needing lazy heavy-asset infrastructure)**
 can start its prerequisite work (CSP, cache helper) at any point; everything
 before it is dep-free. Dictation was **cut** on 2026-10-11 — see Parking lot.
+§0 is small, dep-free carry-over work — fine to do before or alongside #1.
+
+---
+
+## 0. Workbench UX follow-ups (carry-over from the deleted ux-plan)
+
+The workbench is complete at its locked scope (§2 decisions of the former
+handoff); what remains is polish, in this order. Shipped already: beforeunload
+guard, shared `useSeedAssets`, the no-"asset" i18n sweep, outputs-tray
+thumbnails + `Download all`, diff patch/HTML-report export.
+
+### 0a. Verbs and a quiet loading state
+- `src/lib/workbench/capabilities.ts`: rename `image.edit` label "Image" →
+  **"Edit image"** (ru: «Обработать изображения»; keep the hint reading
+  "add one more file to unlock Edit image"). Other labels are already verbs.
+  Update legacy image tool tests that assert the old label.
+- `OperationHost` loading (`WorkbenchApp.tsx:263`): replace the plain
+  `<p>Loading</p>` with a skeleton row (two rounded bars, subtle pulse,
+  `aria-busy="true"`, the `loading` i18n string moved to an `sr-only` span).
+  Reserve roughly a toolbar's height — no layout shift.
+
+### 0b. Set membership badges
+- `WorkbenchApp` derives `setMembers: ReadonlySet<string>` from
+  `current.assets` when `current?.capability.set`, passes it + `activeId` to
+  `AssetTray`.
+- Badges left of the name: `text.diff` → `A`/`B` in tray order (the order the
+  Compare panes use); `pdf.merge` → `1..n` (matches merge ordering);
+  `image.edit` → one `inBatch` chip. Non-members show nothing.
+- i18n: one key `inBatch` ("in batch" / «в пакетной обработке»); A/B/numbers
+  are plain text.
+- Tests (`workbench-app.test.tsx`): two texts → A/B rows; third text → still
+  A/B on the first two; mixed pdf+text on the Compare tab → pdf row no badge.
+
+### 0c. Paste lands where the intent is
+- `WorkbenchApp.addText`: on an empty, clean screen pasted text opens the
+  `text.diff` starter (`if (empty && !dirtyRef.current) setActiveId("text.diff")`,
+  guarded by a check that `text.diff` is in `STARTERS`). Non-empty case is
+  already correct (exactly-2 weight 1000 beats `doc.open`).
+- Tests: empty + paste → active tab is `text.diff`, side A seeded from
+  `paste.txt`; paste while dirty → tab stays pinned.
+
+### 0d. Asset tray thumbs and kind icons
+- New `src/components/workbench/AssetThumb.tsx`, used by `AssetTray` rows
+  (outputs got thumbnails in c5354c2; assets still don't):
+  image kind → 40×40 rounded `<img>` from a Blob object URL (revoked on
+  unmount/change, `alt=""`); every other kind → a lucide glyph chip:
+  `FileText` (pdf/docx/text/md/html), `Table` (sheet), `Braces`
+  (json/yaml/toml), `BookOpen` (epub), `FileQuestion` (binary).
+- Tests: jsdom can't decode images, but the `blob:` `<img>` is assertable;
+  glyph branch asserts the icon renders.
+
+### 0e. Unsaved work: forgive, then confirm (two tiers)
+- **Tier A now** — replace `window.confirm` with a `ConfirmSheet`
+  (`src/components/workbench/ConfirmSheet.tsx`): shell keeps
+  `pending: { run } | null`; `confirmLeave()` becomes `requestLeave(run)` —
+  clean → `run()`, dirty → `setPending`. Dialog (`role="dialog"` +
+  `aria-modal`, ESC/backdrop cancel, focus on first button):
+  `unsavedTitle` ("Unsaved changes in {capability label}"), `unsavedBody`
+  ("Your edits are kept only in this browser tab."), buttons **`keepEditing`**
+  (primary) · **`discardAndContinue`** (danger). Note the inversion vs
+  `window.confirm`: keep is primary, destructive is secondary. `beforeunload`
+  stays as is. Drop the `discardChanges` key (copy moves into the new keys).
+  Tests: dirty + tab switch → sheet, no `window.confirm`; cancel keeps tab and
+  dirty; discard switches; ESC cancels; `beforeunload` still registered.
+- **Tier B later, optional** — drafts survive tab switches: key `EditSession`s
+  by `operationKey` in shell state (a `Map` passed down as `initialSession`).
+  Leaving a tab then never asks; the sheet is only needed for remove/clear.
+  Do not attempt in the same pass as tier A.
+
+### 0f. The output stage (results take the stage)
+- New `src/components/workbench/ResultStage.tsx`, rendered under the tab
+  panel: shell state `produced: OutputEntry | null`; `handleProduce` sets it
+  (and still appends to the outputs list). Persists across file/tab switches
+  until acted on or replaced.
+- Layout: produced name as headline (`text-lg`), kind + size subline,
+  `OutputThumb`, one primary `Download`, secondary `Open`, × remove (removes
+  the tray entry too).
+- **Batch runs**: tag entries with a `runId` (increment a ref in
+  `handleProduce` when `outputs` was empty or the active capability changed).
+  Stage shows the first result + an `andMore` chip ("+{count} more"), actions:
+  `Download` (first) and `Download all` (zip via `fflate` `zipSync`, archive
+  named `<capability>-<timestamp>.zip`). "Open" opens the first.
+- Tray below shrinks to an audit list: name · size · thumb · one icon button
+  per row, plus `Download all` in its header when >1. No repeated text
+  buttons.
+- i18n: `andMore`, `result`; `openAsFile` already exists; `downloadAll`
+  already exists.
+- Tests: stage appears with name + primary Download; second produce replaces
+  it; batch → `+N more` chip and `Download all`; remove from stage clears it.
+
+### 0g. Optional, only if wanted
+- **Session restore** — refresh wipes the tray; a tiny opt-in "restore last
+  tray" (names + bytes in memory only) would soften the hard reset.
+- **Image print** — page-like kinds print; a photo print is a plausible ask
+  if print exists for images.
+
+Suggested commit split, each green before the next: 0a, 0b, 0c, 0d, 0e tier A,
+0f. Verify with `npx tsc --noEmit`, `npx vitest run tests/workbench`,
+`npm test`, `npm run build`.
 
 ---
 
@@ -301,5 +403,6 @@ parking lot)
    "Adding a new tool" steps (island, page, TOOLS entry with `seo`, i18n,
    tests with `axeViolations()`); the OCR capability follows the workbench
    steps (capabilities.ts + operations/ + operations.ts).
-5. **Update `handoff.md`** when each tool lands: new section, decisions
-   (deps policy change, terminal-rule scope) reconciled with §2.
+5. **Keep this file current** when each tool lands: strike its §1–§7 entry,
+   record decisions made during the build, and fold the shipped behaviour
+   into `README.md`.

@@ -37,6 +37,7 @@ export const wb = createTranslator({
     undo: "Undo",
     redo: "Redo",
     download: "Download",
+    downloadAll: "Download all",
     openAsAsset: "Open as a file",
 
     formatting: "Formatting",
@@ -93,6 +94,7 @@ export const wb = createTranslator({
     undo: "Отменить",
     redo: "Повторить",
     download: "Скачать",
+    downloadAll: "Скачать всё",
     openAsAsset: "Открыть как файл",
 
     formatting: "Форматирование",

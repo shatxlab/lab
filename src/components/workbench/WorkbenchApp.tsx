@@ -34,6 +34,8 @@ import {
   type OfferedCapability,
 } from "@/lib/workbench/capabilities";
 import { createAssetFromBytes, createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
+import { imageMime } from "@/components/viewer/viewers/ImageView";
+import { detectAssetKind } from "@/lib/workbench/kinds";
 import { wb } from "@/lib/workbench/i18n";
 import { loadOperation } from "@/lib/workbench/operations";
 import { EMPTY_ASSETS, type OperationComponent, type OperationOutput } from "@/lib/workbench/operation";
@@ -270,6 +272,28 @@ export interface OutputEntry {
   output: OperationOutput;
 }
 
+/** A thumbnail for image outputs; a neutral slot for everything else. */
+function OutputPreview({ output }: { output: OperationOutput }) {
+  const mime = output.type.startsWith("image/")
+    ? output.type
+    : output.kind === "image"
+      ? imageMime(output.name.slice(output.name.lastIndexOf(".") + 1))
+      : null;
+  const [url, setUrl] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!mime) return;
+    const objectUrl = URL.createObjectURL(new Blob([output.bytes as unknown as BlobPart], { type: mime }));
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [output, mime]);
+  if (!mime) return null;
+  return (
+    <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-(--border) bg-(--bg)" aria-hidden="true">
+      {url ? <img src={url} alt="" className="size-full object-cover" /> : null}
+    </span>
+  );
+}
+
 export interface OutputTrayProps {
   lang: AppLang;
   outputs: readonly OutputEntry[];
@@ -278,20 +302,41 @@ export interface OutputTrayProps {
 }
 
 export function OutputTray({ lang, outputs, onOpenAsAsset, onRemove }: OutputTrayProps) {
+  const downloadAll = React.useCallback(() => {
+    outputs.forEach((entry, index) => {
+      // Browsers swallow rapid programmatic downloads; stagger them a little.
+      window.setTimeout(
+        () =>
+          saveBlob(new Blob([entry.output.bytes as unknown as BlobPart], { type: entry.output.type }), entry.output.name),
+        index * 300,
+      );
+    });
+  }, [outputs]);
   if (outputs.length === 0) return null;
   return (
     <section className={cn(panelClass, "flex flex-col gap-3")} aria-labelledby="wb-outputs">
-      <h2 id="wb-outputs" className="text-sm font-semibold">
-        {wb(lang, "outputs")}
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="wb-outputs" className="text-sm font-semibold">
+          {wb(lang, "outputs")}
+        </h2>
+        {outputs.length > 1 ? (
+          <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={downloadAll}>
+            <Download aria-hidden="true" className="size-3.5" />
+            {wb(lang, "downloadAll")}
+          </ActionButton>
+        ) : null}
+      </div>
       <ul className="flex flex-col gap-2">
         {outputs.map((entry) => (
           <li key={entry.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-(--border) bg-(--bg) px-3 py-2">
+            <OutputPreview output={entry.output} />
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-medium" title={entry.output.name}>
                 {entry.output.name}
               </span>
-              <span className="text-xs text-(--muted-fg)">{formatBytes(entry.output.bytes.length)}</span>
+              <span className="text-xs text-(--muted-fg)">
+                {entry.output.kind ?? detectAssetKind(entry.output.name)} · {formatBytes(entry.output.bytes.length)}
+              </span>
             </div>
             <ActionButton
               variant="secondary"

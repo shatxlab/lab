@@ -208,7 +208,9 @@ touches `window`/`localStorage` and pixi must not SSR.
 The art is the **Pixel Office** pack by [2dPig](https://2dpig.itch.io/pixel-office),
 CC0, included unmodified in `assets/pixeloffice/` (`PixelOffice.png` room art
 and `PixelOfficeAssets.png` sprites), loaded via `withBase('/pixeloffice/')`.
-The `.aseprite` source files stay in the upstream repo and are not committed here.
+The `.aseprite` sources, the large preview and the CC0 licence text are in
+`art/pixeloffice/`, outside `assets/` (the public dir) so they are not published
+or precached.
 
 Autosaves and the mute flag live under the `lab:tycoon:*` keys, and on first
 run `save.ts` migrates a save left behind by the standalone app from its

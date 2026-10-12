@@ -4,34 +4,6 @@ import { downloadSave, importSaveFile, startNewGame } from '@/lib/tycoon/browser
 import { useGame, useSignal, useStore } from './context'
 import { Modal } from './Modal'
 
-/** Viewport numbers for diagnosing installed-app (standalone) layout differences. */
-function displayInfo(): string {
-  const probe = document.createElement('div')
-  probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;height:100dvh;width:100vw;padding-bottom:env(safe-area-inset-bottom);padding-top:env(safe-area-inset-top)'
-  document.body.appendChild(probe)
-  const cs = getComputedStyle(probe)
-  probe.style.height = '100lvh'
-  const lvh = Math.round(probe.getBoundingClientRect().height)
-  probe.style.height = '100svh'
-  const svh = Math.round(probe.getBoundingClientRect().height)
-  probe.style.height = '100dvh'
-  const info = [
-    `inner ${innerWidth}×${innerHeight}`,
-    `visual ${Math.round(visualViewport?.width ?? 0)}×${Math.round(visualViewport?.height ?? 0)}`,
-    `100dvh ${Math.round(probe.getBoundingClientRect().height)}`,
-    `100lvh ${lvh} 100svh ${svh}`,
-    `safe top ${cs.paddingTop} bottom ${cs.paddingBottom}`,
-    `screen ${screen.width}×${screen.height}`,
-    matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser tab',
-  ].join(' · ')
-  probe.remove()
-  const rect = (selector: string) => {
-    const box = document.querySelector(selector)?.getBoundingClientRect()
-    return box ? `${selector} ${Math.round(box.top)}→${Math.round(box.bottom)}` : `${selector} none`
-  }
-  return `${info} · ${['body', 'main', '.tycoon-root', '.game', '.topbar', '#scene-host', '#scene-host canvas', '.project'].map(rect).join(' · ')}`
-}
-
 export function MenuDialog() {
   const store = useStore()
   const state = useGame()
@@ -84,7 +56,6 @@ export function MenuDialog() {
         </a>{' '}
         (CC0).
       </p>
-      <p className="muted credits">Display: {displayInfo()}</p>
       <div className="actions">
         <button onClick={() => store.closeDialog()}>Close</button>
       </div>

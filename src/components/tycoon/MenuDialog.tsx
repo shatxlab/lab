@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import { withBase } from '@/lib/apps/paths'
 import { downloadSave, importSaveFile, startNewGame } from '@/lib/tycoon/browser'
 import { useGame, useSignal, useStore } from './context'
 import { Modal } from './Modal'
@@ -33,6 +34,9 @@ export function MenuDialog() {
         >
           Sound: {muted ? 'Off' : 'On'}
         </button>
+        <a className="button-link" href={withBase('/')}>
+          Back to lab
+        </a>
         <button onClick={() => downloadSave(state)}>Export save</button>
         <button onClick={() => fileInput.current?.click()}>Import save…</button>
         <button

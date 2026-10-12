@@ -71,10 +71,13 @@ export default function TycoonApp() {
       if (!host || destroyed) return
 
       // pixi and the renderer load together here, so the island's initial chunk stays small.
+      // 'pixi.js/unsafe-eval' swaps pixi's runtime-compiled shader helpers for precompiled ones: the
+      // site CSP forbids unsafe-eval, and without it the renderer throws and the scene stays black.
       const [{ Application }, { loadAtlas }, { OfficeScene }] = await Promise.all([
         import('pixi.js'),
         import('@/lib/tycoon/render/atlas'),
         import('@/lib/tycoon/render/OfficeScene'),
+        import('pixi.js/unsafe-eval'),
       ])
       if (destroyed) return
       const app = new Application()

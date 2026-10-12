@@ -4,7 +4,7 @@ import TycoonApp from "@/components/tycoon/TycoonApp";
 import "@/styles/tycoon.css";
 ---
 
-<ToolsLayout tool="tycoon">
+<ToolsLayout tool="tycoon" immersive>
   {/* client:only on purpose: the game touches window/localStorage and pixi must not SSR. */}
   <TycoonApp client:only="react" />
 </ToolsLayout>

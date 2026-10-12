@@ -16,9 +16,11 @@ interface Props {
   /** Registry id of the tool this page is for; drives the title, description and structured data. */
   tool?: string;
   lang?: string;
+  /** Full-viewport page (games): no site header, and the body is exactly one viewport tall. */
+  immersive?: boolean;
 }
 
-const { tool: toolId, lang = "en" } = Astro.props;
+const { tool: toolId, lang = "en", immersive = false } = Astro.props;
 const tool = TOOLS.find((entry) => entry.id === toolId);
 
 const title = tool ? pageTitle(tool.seo.title) : BRAND.homeTitle;
@@ -92,9 +94,10 @@ const structuredData = tool
     <ThemePrePaint />
     <LangPrePaint />
   </head>
-  <body class="flex min-h-screen flex-col bg-(--bg) text-(--fg) antialiased">
+  <body class:list={["flex flex-col bg-(--bg) text-(--fg) antialiased", immersive ? "h-dvh overflow-hidden" : "min-h-screen"]}>
     <a href="#main" class="skip-link"><span class="skip-en">Skip to content</span><span class="skip-ru">К содержимому</span></a>
     <div class="flex min-h-0 flex-1 flex-col">
+      {!immersive && (
       <header
         class="lab-header sticky top-0 z-50 flex h-[58px] shrink-0 items-center justify-between gap-4 border-b border-(--border) px-[18px] backdrop-blur"
       >
@@ -113,6 +116,7 @@ const structuredData = tool
           <ThemeToggle client:load />
         </div>
       </header>
+      )}
 
       <!--
         Local-first by construction: every tool on /tools opens, parses and

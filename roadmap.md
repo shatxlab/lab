@@ -40,6 +40,14 @@ can start its prerequisite work (CSP, cache helper) at any point; everything
 before it is dep-free. Dictation was **cut** on 2026-10-11 — see Parking lot.
 §0 is small, dep-free carry-over work — fine to do before or alongside #1.
 
+Done outside this build order (2026-10-12): **Software Tycoon** was merged in
+from the standalone `software-tycoon` repo as `/tycoon` — the engine ported to
+React under `lib/tycoon/`, the PixiJS office scene lazy-loaded, CSP gained
+`worker-src 'self' blob:` for pixi's blob: texture workers, and saves moved to
+`lab:tycoon:*` keys with a one-time migration from `software-tycoon:*`. Its
+deps: `pixi.js` (lazy) + dev-only `@types/pngjs`. Docs live in README.md
+(see "Software Tycoon"); the §1–§7 build order is unaffected.
+
 ---
 
 ## 0. Workbench UX follow-ups (carry-over from the deleted ux-plan)

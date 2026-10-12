@@ -127,6 +127,27 @@ export const TOOLS: readonly ToolEntry[] = [
         "Fine or Cringe, This or That and Who of Us for two: 18,000 questions, secret voting and an agreement score. In English and Russian.",
     },
   },
+  {
+    id: "tycoon",
+    path: "/tycoon",
+    category: "games",
+    files: {
+      en: "single-player · autosaves locally",
+      ru: "одиночная · автосохранение локально",
+    },
+    title: { en: "Software Tycoon", ru: "Империя софта" },
+    description: {
+      en: "Run a small software studio: hire a team, pick a product and its features, ship it, and grow from a garage to a company.",
+      ru: "Управляйте небольшой студией: нанимайте команду, выбирайте продукт и его возможности, выпускайте и растите от гаража до компании.",
+    },
+    keywords:
+      "tycoon management sim game software studio developer gamedev hire team ship products offices rivals career игра симулятор студия разработка менеджмент тайкун",
+    seo: {
+      title: "Software Tycoon — run a software studio",
+      description:
+        "Hire a team, build products, ship, and grow a studio — a free management sim that runs and saves entirely in your browser.",
+    },
+  },
 ];
 
 export function toolHref(tool: ToolEntry): string {

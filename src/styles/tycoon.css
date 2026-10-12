@@ -1,0 +1,1392 @@
+/* Software Tycoon UI, ported from the standalone game (src/ui/ui.css) and scoped under
+   .tycoon-root so nothing leaks into other lab pages. The game keeps its own dark palette
+   regardless of the lab theme: the CSS custom properties are defined on .tycoon-root itself. */
+
+/* Original index.css reset (html/body/#app) re-expressed on the root element: the game fills
+   the whole available area and its own flex column layout, without touching the lab page. */
+.tycoon-root {
+  --bg: #14141f;
+  --panel: #1d1d2e;
+  --panel-2: #272740;
+  --line: #36365a;
+  --text: #ecebf7;
+  --muted: #9b9ab8;
+  --accent: #ffcf5a;
+  --good: #8dff9a;
+  --bad: #ff7a8a;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The pixi canvas fills its host and never scrolls the page. */
+.tycoon-root canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* Available to screen readers and tests, but not shown (its content lives in the scene). */
+.tycoon-root .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tycoon-root button {
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.tycoon-root button:hover:not(:disabled) {
+  border-color: #6b6b9c;
+}
+
+.tycoon-root button:focus-visible,
+.tycoon-root input:focus-visible + .feature-name {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tycoon-root button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tycoon-root button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1b1526;
+  font-weight: 700;
+}
+
+.tycoon-root button.danger {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #1b1526;
+  font-weight: 700;
+}
+
+.tycoon-root button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tycoon-root .muted {
+  color: var(--muted);
+}
+
+.tycoon-root .good {
+  color: var(--good);
+}
+
+.tycoon-root .bad {
+  color: var(--bad);
+}
+
+/* ---- layout ---- */
+
+.tycoon-root .game {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* Inside the lab layout the root is a flex column; let the game flex into it. */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tycoon-root .scene-host {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tycoon-root .scene-host canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- top bar ---- */
+
+.tycoon-root .topbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.tycoon-root .topbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 22px;
+}
+
+/* Money on the left, speed in the middle, reputation on the right. */
+.tycoon-root .topbar-stats {
+  justify-content: space-between;
+}
+
+.tycoon-root .stat {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.tycoon-root .stat-right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.tycoon-root .stat .label {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tycoon-root .stat .value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root .stat .sub {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* Team / Research / Studio / Menu, stretched across their own row. */
+.tycoon-root .topbar-actions {
+  gap: 8px;
+}
+
+.tycoon-root .topbar-actions button {
+  flex: 1 1 auto;
+}
+
+.tycoon-root .speed {
+  display: flex;
+  gap: 4px;
+}
+
+/* ---- office tabs ---- */
+
+.tycoon-root .office-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+.tycoon-root .office-tabs button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 6px;
+  min-width: 0;
+  flex: 0 1 auto;
+  padding: 4px 10px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.tycoon-root .office-tabs button small {
+  grid-column: 2;
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tycoon-root .office-tabs button.active {
+  border-color: var(--c);
+}
+
+.tycoon-root .office-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+/* ---- project panel ---- */
+
+.tycoon-root .project {
+  display: grid;
+  gap: 10px;
+  padding: 10px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+.tycoon-root .project.idle {
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tycoon-root .project-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tycoon-root .idle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* A bug-fixing sprint or client work: a coloured edge so it reads differently from building a product. */
+.tycoon-root .project.fixing {
+  box-shadow: inset 0 3px 0 var(--bad);
+}
+
+.tycoon-root .project.contract {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.tycoon-root .bars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 14px;
+}
+
+.tycoon-root .bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.tycoon-root .bar-head > :first-child {
+  color: var(--c);
+  font-weight: 600;
+}
+
+.tycoon-root .bar-head .muted {
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root .track {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: #101019;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.tycoon-root .fill {
+  height: 100%;
+  background: var(--c);
+  opacity: 0.75;
+  transition: width 0.25s linear;
+}
+
+.tycoon-root .bar.done .fill {
+  opacity: 1;
+}
+
+.tycoon-root .target-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+  .tycoon-root .bars {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  /* Stacked: the line of text centred over a full-width button, idle or not. */
+  .tycoon-root .project.idle {
+    grid-auto-flow: row;
+    justify-content: stretch;
+    justify-items: stretch;
+    text-align: center;
+  }
+
+  .tycoon-root .project-head {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .tycoon-root .idle-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tycoon-root .stat .value {
+    font-size: 17px;
+  }
+}
+
+/* ---- dialogs ---- */
+
+.tycoon-root .backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(8, 8, 16, 0.72);
+}
+
+.tycoon-root .modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(640px, 100%);
+  max-height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.tycoon-root .modal h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.tycoon-root .modal p {
+  margin: 0;
+}
+
+.tycoon-root .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tycoon-root .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tycoon-root .chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+.tycoon-root .chip small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tycoon-root .features-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+.tycoon-root .cost-legend {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.tycoon-root .features {
+  display: grid;
+  gap: 4px;
+  max-height: 38vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.tycoon-root .feature {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  cursor: pointer;
+}
+
+.tycoon-root .feature.on {
+  border-color: var(--accent);
+}
+
+.tycoon-root .feature input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.tycoon-root .tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 99px;
+  border: 1px solid currentColor;
+}
+
+.tycoon-root .stars {
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 1px;
+  min-width: 36px;
+}
+
+.tycoon-root .costs {
+  display: flex;
+  gap: 8px;
+  min-width: 84px;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.tycoon-root .costs > span {
+  min-width: 22px;
+  text-align: right;
+}
+
+.tycoon-root .summary {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #101019;
+}
+
+.tycoon-root .targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.tycoon-root .target {
+  color: var(--c);
+}
+
+.tycoon-root .target b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root .result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.tycoon-root .table-wrap {
+  overflow-x: auto;
+}
+
+.tycoon-root table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root th,
+.tycoon-root td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.tycoon-root th {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tycoon-root .num {
+  text-align: right;
+}
+
+@media (max-width: 520px) {
+  .tycoon-root .feature {
+    grid-template-columns: auto 1fr auto;
+    row-gap: 2px;
+    padding: 6px 10px;
+  }
+
+  .tycoon-root .feature .tag {
+    display: none;
+  }
+
+  .tycoon-root .feature .costs {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+  }
+
+  .tycoon-root .result-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- team dialog ---- */
+
+.tycoon-root .section {
+  display: grid;
+  gap: 8px;
+}
+
+.tycoon-root .section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  font-size: 13px;
+}
+
+.tycoon-root .section-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.tycoon-root .upgrade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tycoon-root .person {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tycoon-root .person-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.tycoon-root .person-name .muted {
+  font-size: 12px;
+}
+
+.tycoon-root .skills {
+  display: flex;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tycoon-root .skills small {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.tycoon-root .person-action button {
+  min-width: 96px;
+}
+
+@media (max-width: 520px) {
+  .tycoon-root .person {
+    grid-template-columns: 1fr auto;
+  }
+
+  .tycoon-root .skills {
+    grid-column: 1;
+  }
+
+  .tycoon-root .person-action {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+  }
+}
+
+/* ---- messages over the office ---- */
+
+/* Warnings and news overlay the top of the scene's wall, under the top-bar buttons, instead of
+   pushing the room down. */
+.tycoon-root .scene-messages {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: min(460px, calc(100% - 20px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.tycoon-root .banner {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+
+.tycoon-root .banner.bad {
+  background: rgba(58, 27, 38, 0.96);
+  color: var(--bad);
+}
+
+.tycoon-root .banner.warn {
+  background: rgba(58, 48, 24, 0.96);
+  color: var(--accent);
+}
+
+.tycoon-root .unlock {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #2a3a1f;
+  color: var(--good);
+}
+
+/* ---- menu ---- */
+
+.tycoon-root .menu-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.tycoon-root .credits {
+  font-size: 12px;
+}
+
+.tycoon-root .credits a {
+  color: var(--accent);
+}
+
+/* ---- events and toasts ---- */
+
+.tycoon-root .event-choices {
+  display: grid;
+  gap: 8px;
+}
+
+.tycoon-root .event-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 14px;
+  text-align: left;
+}
+
+.tycoon-root .event-choice small {
+  font-size: 12px;
+}
+
+/* Positioned by .scene-messages; below dialogs (z-index 10), as outcomes appear as one closes. */
+.tycoon-root .toasts {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.tycoon-root .toast {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(39, 39, 64, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 14px;
+  animation: toast-in 0.2s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* ---- research ---- */
+
+.tycoon-root .research-active {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: #101019;
+}
+
+.tycoon-root .research-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+
+.tycoon-root .research-branches {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.tycoon-root .research-branch {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.tycoon-root .research-branch h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tycoon-root .research-node {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tycoon-root .research-node.done {
+  opacity: 0.7;
+}
+
+.tycoon-root .research-node.active {
+  border-color: var(--accent);
+}
+
+.tycoon-root .research-node p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.tycoon-root .research-node .unlocks {
+  color: var(--accent);
+}
+
+.tycoon-root .feature.locked {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .tycoon-root .research-branches {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- client work ---- */
+
+.tycoon-root .contracts {
+  display: grid;
+  gap: 8px;
+}
+
+.tycoon-root .contract-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tycoon-root .contract-offer .costs {
+  display: flex;
+  gap: 10px;
+  margin: 2px 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- products, promotions, launch campaigns ---- */
+
+.tycoon-root .products {
+  display: grid;
+  gap: 8px;
+}
+
+.tycoon-root .product {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tycoon-root .product-head,
+.tycoon-root .product-stats,
+.tycoon-root .product-health {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+
+.tycoon-root .product-stats {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root .product-health {
+  font-size: 13px;
+}
+
+.tycoon-root .product-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tycoon-root .tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.tycoon-root .tiers button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.tycoon-root .tiers small {
+  font-size: 11px;
+}
+
+.tycoon-root .campaigns {
+  display: grid;
+  gap: 4px;
+}
+
+.tycoon-root .campaign {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root .campaign.on {
+  border-color: var(--accent);
+}
+
+.tycoon-root .campaign.locked {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tycoon-root .campaign input {
+  accent-color: var(--accent);
+}
+
+@media (max-width: 520px) {
+  .tycoon-root .tiers {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- staff: traits, morale, training ---- */
+
+.tycoon-root .trait {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.tycoon-root .person {
+  grid-template-columns: minmax(130px, 1fr) auto minmax(90px, 120px) auto;
+}
+
+.tycoon-root .person.plain {
+  grid-template-columns: minmax(130px, 1fr) auto auto;
+}
+
+.tycoon-root .person-action {
+  display: flex;
+  gap: 6px;
+}
+
+.tycoon-root .morale {
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tycoon-root .morale .track {
+  height: 6px;
+}
+
+.tycoon-root .morale-track.good .fill {
+  background: var(--good);
+}
+
+.tycoon-root .morale-track.warn .fill {
+  background: var(--accent);
+}
+
+.tycoon-root .morale-track.bad .fill {
+  background: var(--bad);
+}
+
+.tycoon-root .outing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+}
+
+.tycoon-root .skill-row {
+  display: grid;
+  grid-template-columns: 92px 1fr 30px auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.tycoon-root .skill-name {
+  color: var(--c);
+  font-weight: 600;
+}
+
+.tycoon-root .skill-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root .skill-row button {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .tycoon-root .person,
+.tycoon-root .person.plain {
+    grid-template-columns: 1fr auto;
+  }
+
+  .tycoon-root .morale {
+    grid-column: 1;
+  }
+
+  .tycoon-root .skill-row {
+    grid-template-columns: 1fr 30px;
+  }
+
+  .tycoon-root .skill-row .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .tycoon-root .skill-row button {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---- studio: tabs, stats, charts ---- */
+
+.tycoon-root .tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tycoon-root .tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+}
+
+.tycoon-root .tabs button.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+/* No scroll area of its own: the dialog scrolls, so a chart is never cut off by a second scrollbar. */
+.tycoon-root .tab-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.tycoon-root .milestones {
+  display: grid;
+  gap: 6px;
+}
+
+.tycoon-root .milestones p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.tycoon-root .milestone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tycoon-root .milestone.done {
+  opacity: 0.7;
+}
+
+.tycoon-root .milestone > span {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.tycoon-root .stats {
+  display: grid;
+  gap: 14px;
+}
+
+.tycoon-root .tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.tycoon-root .tiles .stat {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #101019;
+}
+
+.tycoon-root .tiles .value {
+  font-size: 18px;
+}
+
+.tycoon-root .filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tycoon-root .segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: #101019;
+}
+
+.tycoon-root .segmented button {
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+}
+
+.tycoon-root .segmented button.active {
+  background: var(--panel-2);
+  color: var(--accent);
+}
+
+.tycoon-root .history-table {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+/* Chart colours are roles; the game is dark-only, so only the dark steps exist. */
+.tycoon-root .viz {
+  --viz-surface: #1d1d2e;
+  --viz-grid: #2a2a42;
+  --viz-axis: #3d3d5c;
+  --viz-ink: #ecebf7;
+  --viz-ink-2: #c3c2d7;
+  --viz-muted: #9b9ab8;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.tycoon-root .viz h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.tycoon-root .viz figcaption p {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.tycoon-root .viz .legend {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--viz-ink-2);
+}
+
+.tycoon-root .viz .legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A short stroke of the series colour keys a line: a box would be heavier than the mark it names. */
+.tycoon-root .viz .key {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.tycoon-root .viz-frame {
+  position: relative;
+  border-radius: 8px;
+  touch-action: pan-y;
+}
+
+.tycoon-root .viz-frame:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tycoon-root .viz svg {
+  display: block;
+  overflow: visible;
+}
+
+.tycoon-root .viz .grid {
+  stroke: var(--viz-grid);
+  stroke-width: 1;
+}
+
+.tycoon-root .viz .axis {
+  stroke: var(--viz-axis);
+  stroke-width: 1;
+}
+
+.tycoon-root .viz .crosshair {
+  stroke: var(--viz-axis);
+  stroke-width: 1;
+}
+
+.tycoon-root .viz .tick {
+  fill: var(--viz-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tycoon-root .viz .end-label {
+  fill: var(--viz-ink-2);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tycoon-root .viz .line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tycoon-root .viz .area {
+  fill-opacity: 0.1;
+  stroke: none;
+}
+
+/* A 2px ring in the surface colour keeps a dot legible where it meets a line. */
+.tycoon-root .viz .dot {
+  stroke: var(--viz-surface);
+  stroke-width: 2;
+}
+
+.tycoon-root .viz .tooltip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  min-width: 128px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(16, 16, 25, 0.96);
+  pointer-events: none;
+  font-size: 13px;
+}
+
+.tycoon-root .viz .tooltip-date {
+  color: var(--viz-muted);
+  font-size: 12px;
+}
+
+.tycoon-root .viz .tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--viz-ink-2);
+}
+
+.tycoon-root .viz .tooltip-row strong {
+  color: var(--viz-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 520px) {
+  .tycoon-root .tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tycoon-root .filters {
+    justify-content: flex-start;
+  }
+}
+
+/* ---- journey ---- */
+
+.tycoon-root .stages {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tycoon-root .stage {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tycoon-root .stage p {
+  margin: 4px 0 0;
+}
+
+.tycoon-root .stage.current {
+  border-color: var(--accent);
+}
+
+.tycoon-root .stage.ahead {
+  opacity: 0.6;
+}
+
+.tycoon-root .stage-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tycoon-root .goals {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tycoon-root .goals li.met {
+  color: var(--good);
+}
+
+.tycoon-root .office-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 4px 0;
+}
+
+/* ---- industry ---- */
+
+.tycoon-root .industry tr.you td {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tycoon-root .industry h3 {
+  margin: 12px 0 6px;
+}
+
+.tycoon-root .warn {
+  color: #ffcd75;
+}

@@ -43,6 +43,12 @@ export default defineConfig({
       directives: [
         "default-src 'self'",
         "img-src 'self' data: blob:",
+        /*
+         * The tycoon game's PixiJS renderer decodes textures in blob: workers
+         * (pixi.js WorkerManager / ImageBitmap worker); without an explicit
+         * worker-src they fall back to script-src (self) and are blocked.
+         */
+        "worker-src 'self' blob:",
         "font-src 'self' data:",
         "connect-src 'self'",
         "object-src 'none'",

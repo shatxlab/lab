@@ -13,6 +13,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
 | `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Fine or Cringe", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". 3 000 prompts per game per language across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode. |
+| `/tycoon` | Software Tycoon · Империя софта | A management sim about running a small software studio: hire a team, pick a product and its features, watch Design / Engineering / QA fill up, ship, and grow from a garage through offices to a company while rivals and events push back. The PixiJS office scene animates your staff; the whole simulation is pure TypeScript with an autosave to local storage. |
 
 `/` is the landing page listing the tools, grouped by category.
 
@@ -96,6 +97,8 @@ src/
   components/alias/  Alias game island (setup, round, results screens)
   components/crossword/ Crossword island (picker, board, grid, clues, completion)
   components/couples/ Couples game island (menu, setup, play, summary)
+  components/tycoon/  Tycoon game island (React port of the Preact UI; TycoonApp
+                      is the bootstrap that mounts the store, autosave and Pixi scene)
   lib/apps/          EPUB parsing + shared app logic: tool registry (tools.ts),
                      theme/lang, file open, settings backup, command-palette search
   lib/viewer/        Document parsing/rendering/export logic (+ PDF.js loader)
@@ -109,14 +112,22 @@ src/
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
   lib/crossword/     Generated puzzles + word bank, grid builder, reducer, i18n, sound, storage
   lib/couples/       Seed vocabulary + prompt builder, deck, i18n, sound, storage
+  lib/tycoon/        The whole game as pure TypeScript: sim/ rules (all tunables in
+                     sim/balance.ts), data/ content tables, save.ts (versioned save/load
+                     + one-time migration from the standalone app's software-tycoon:* keys),
+                     store.ts (game loop, speed, dialogs), audio.ts (synthesized sound),
+                     render/ + render-support/ (PixiJS office scene), signals.ts (a tiny
+                     stand-in for @preact/signals so the engine keeps its semantics)
   lib/limits.ts      raw-file + ZIP decompression caps for untrusted input
   layouts/           ToolsLayout (shared header, theme, CSP-tied prepaint)
   pages/             one .astro per route + manifest.webmanifest.ts
   styles/            apps.css (design tokens, header, a11y base) + viewer.css
                      + tools.css + alias.css + couples.css + crossword.css
-                     + wordle.css
+                     + wordle.css + tycoon.css (the game's own dark palette,
+                     scoped to .tycoon-root)
 scripts/             crossword generator, PDF.js asset copy, pwa/ (service worker
-                     generator, Astro integration)
+                     generator, Astro integration), tycoon/ (headless balance
+                     simulator, Chrome smoke test)
 assets/              static files served at / (favicon, icons, _headers)
 tests/
   apps/              theme + EPUB unit tests
@@ -182,6 +193,32 @@ backspace, navigation, hints, solved detection, locking) and checks the
 localStorage round-trip. The board types with the phone's stock keyboard by
 parking one invisible `<input>` on the active cell, so no custom on-screen
 keyboard is needed.
+
+### Software Tycoon
+
+The game came in as a separate Preact/Vite PWA
+(https://github.com/shatxlab/software-tycoon) and was rebuilt as an island:
+the engine and UI were ported to React 19 (`lib/tycoon/` +
+`components/tycoon/`), `@preact/signals` was replaced by a tiny stand-in
+(`lib/tycoon/signals.ts`) so the engine keeps its semantics, and the PixiJS 8
+office scene is loaded lazily in the island's second effect so pixi never
+enters the initial chunk. The page mounts `client:only` because the game
+touches `window`/`localStorage` and pixi must not SSR.
+
+The art is the **Pixel Office** pack by [2dPig](https://2dpig.itch.io/pixel-office),
+CC0, included unmodified in `assets/pixeloffice/` (`PixelOffice.png` room art
+and `PixelOfficeAssets.png` sprites), loaded via `withBase('/pixeloffice/')`.
+The `.aseprite` source files stay in the upstream repo and are not committed here.
+
+Autosaves and the mute flag live under the `lab:tycoon:*` keys, and on first
+run `save.ts` migrates a save left behind by the standalone app from its
+`software-tycoon:*` keys. The CSP needs `worker-src 'self' blob:` because
+pixi decodes textures in blob: workers. Two scripts ship with it:
+`node scripts/tycoon/simulate.ts [years] [seeds] [only]` plays bot strategies
+against the sim as a headless balance check, and
+`node scripts/tycoon/e2e.mjs` (after `npm run build`) drives real Chrome
+through the game's scenarios; its PWA scenario from the standalone app is not
+ported because the lab's own service worker covers it.
 
 ### Branding and link previews
 

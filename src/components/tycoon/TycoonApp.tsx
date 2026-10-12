@@ -13,7 +13,7 @@ import { createStore } from '@/lib/tycoon/store'
  * All service-worker / manifest wiring from the original stays out — the lab has its
  * own PWA layer and install flow.
  */
-export function TycoonApp() {
+export default function TycoonApp() {
   const [store, setStore] = useState<Store | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 

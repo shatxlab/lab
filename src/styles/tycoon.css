@@ -16,10 +16,15 @@
   --bad: #ff7a8a;
   color-scheme: dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Pinned to the window and sized by 100dvh instead of by the page's flex chain: in an installed
+     Android app the chain resolved ~56px taller than the window, pushing the bottom panel out of view. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
   overflow: hidden;
   margin: 0;
   background: var(--bg);

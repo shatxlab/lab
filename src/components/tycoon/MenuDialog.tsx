@@ -10,10 +10,16 @@ function displayInfo(): string {
   probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;height:100dvh;width:100vw;padding-bottom:env(safe-area-inset-bottom);padding-top:env(safe-area-inset-top)'
   document.body.appendChild(probe)
   const cs = getComputedStyle(probe)
+  probe.style.height = '100lvh'
+  const lvh = Math.round(probe.getBoundingClientRect().height)
+  probe.style.height = '100svh'
+  const svh = Math.round(probe.getBoundingClientRect().height)
+  probe.style.height = '100dvh'
   const info = [
     `inner ${innerWidth}×${innerHeight}`,
     `visual ${Math.round(visualViewport?.width ?? 0)}×${Math.round(visualViewport?.height ?? 0)}`,
     `100dvh ${Math.round(probe.getBoundingClientRect().height)}`,
+    `100lvh ${lvh} 100svh ${svh}`,
     `safe top ${cs.paddingTop} bottom ${cs.paddingBottom}`,
     `screen ${screen.width}×${screen.height}`,
     matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser tab',
@@ -23,7 +29,7 @@ function displayInfo(): string {
     const box = document.querySelector(selector)?.getBoundingClientRect()
     return box ? `${selector} ${Math.round(box.top)}→${Math.round(box.bottom)}` : `${selector} none`
   }
-  return `${info} · ${['.game', '.topbar', '#scene-host', '#scene-host canvas', '.project'].map(rect).join(' · ')}`
+  return `${info} · ${['body', 'main', '.tycoon-root', '.game', '.topbar', '#scene-host', '#scene-host canvas', '.project'].map(rect).join(' · ')}`
 }
 
 export function MenuDialog() {

@@ -94,7 +94,7 @@ const structuredData = tool
     <ThemePrePaint />
     <LangPrePaint />
   </head>
-  <body class:list={["flex flex-col bg-(--bg) text-(--fg) antialiased", immersive ? "h-dvh overflow-hidden" : "min-h-screen"]}>
+  <body class:list={["flex flex-col bg-(--bg) text-(--fg) antialiased", immersive ? "lab-immersive h-dvh overflow-hidden" : "min-h-screen"]}>
     <a href="#main" class="skip-link"><span class="skip-en">Skip to content</span><span class="skip-ru">К содержимому</span></a>
     <div class="flex min-h-0 flex-1 flex-col">
       {!immersive && (

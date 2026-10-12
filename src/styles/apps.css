@@ -968,6 +968,12 @@ html[data-lang="ru"] .skip-link .skip-ru {
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
 }
 
+/* Immersive pages (games) keep their controls along the bottom edge, so the toast moves to the top. */
+.lab-immersive .lab-toast {
+  top: max(0.75rem, env(safe-area-inset-top));
+  bottom: auto;
+}
+
 .lab-toast p {
   margin: 0;
 }

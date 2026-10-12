@@ -359,6 +359,38 @@
   .tycoon-root .stat .value {
     font-size: 17px;
   }
+
+  /* Keep the top bar to two short rows so the scene and the project panel both fit a phone screen. */
+  .tycoon-root .topbar {
+    gap: 6px;
+  }
+
+  .tycoon-root .topbar-row {
+    gap: 4px 10px;
+  }
+
+  .tycoon-root .speed button {
+    min-width: 38px;
+    padding: 0 8px;
+  }
+
+  .tycoon-root .topbar-actions button {
+    min-height: 40px;
+    padding: 0 8px;
+  }
+
+  /* The panel never takes more than a third of the screen: its content scrolls instead of pushing
+     the Start / Ship buttons off the bottom, and the scene gives up the space instead. */
+  .tycoon-root .project {
+    gap: 6px;
+    max-height: 34dvh;
+    overflow-y: auto;
+  }
+
+  .tycoon-root .bar-head {
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
 }
 
 /* ---- dialogs ---- */
@@ -387,6 +419,10 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
+.tycoon-root .modal > * {
+  flex-shrink: 0;
+}
+
 .tycoon-root .modal h2 {
   margin: 0;
   font-size: 20px;
@@ -397,10 +433,17 @@
 }
 
 .tycoon-root .actions {
+  position: sticky;
+  bottom: -16px;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 4px;
+  margin: 4px -16px -16px;
+  padding: 10px 16px 16px;
+  border-radius: 0 0 12px 12px;
+  background: var(--panel);
+  box-shadow: 0 -8px 12px -4px var(--panel);
 }
 
 .tycoon-root .chips {

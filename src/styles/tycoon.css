@@ -112,6 +112,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
   /* Inside the lab layout the root is a flex column; let the game flex into it. */
   flex: 1 1 auto;
   min-height: 0;
@@ -119,7 +120,10 @@
 
 .tycoon-root .scene-host {
   position: relative;
-  flex: 1;
+  /* Zero basis and zero height: the scene takes whatever the top bar and panels leave and can never
+     push them out of the window, whatever size the canvas inside it reports. */
+  flex: 1 1 0;
+  height: 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -241,6 +245,7 @@
 /* ---- project panel ---- */
 
 .tycoon-root .project {
+  flex: 0 0 auto;
   display: grid;
   gap: 10px;
   padding: 10px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));

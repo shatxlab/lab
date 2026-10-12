@@ -19,7 +19,11 @@ function displayInfo(): string {
     matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser tab',
   ].join(' · ')
   probe.remove()
-  return info
+  const rect = (selector: string) => {
+    const box = document.querySelector(selector)?.getBoundingClientRect()
+    return box ? `${selector} ${Math.round(box.top)}→${Math.round(box.bottom)}` : `${selector} none`
+  }
+  return `${info} · ${['.game', '.topbar', '#scene-host', '#scene-host canvas', '.project'].map(rect).join(' · ')}`
 }
 
 export function MenuDialog() {

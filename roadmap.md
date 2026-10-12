@@ -345,10 +345,6 @@ snapshot, tray round-trip, axe.
 
 ## 7. OCR — workbench capability
 
----
-
-## 7. OCR — workbench capability
-
 New `ocr` capability on the **image** kind and on **PDF** (pages rasterized
 with the already-bundled pdf.js). Tesseract via `tesseract.js` in a Web
 Worker: WASM core ≈ 2–4 MB + per-language `traineddata.gz` ≈ 2 MB ("fast"

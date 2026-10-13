@@ -1,301 +1,112 @@
 # Roadmap
 
-Status: Flashcards, Focus office, Send to phone, Charts, the Whiteboard and
-the CV builder and OCR have shipped, along with the workbench follow-ups in §0.
-**Nothing is left of the original build order; §8 (Tycoon) holds the open work.**
-**This file is the single source of TODOs.** A tool moves out of the build order only when its work is merged and its
-entry is folded into `README.md`; shipped entries stay as short notes of the
-decisions made along the way.
+Status: everything planned has shipped (Flashcards, Focus office, Send to phone,
+Charts, the Whiteboard, the CV builder and OCR, with their follow-ups).
+**What is left is the Software Tycoon list in §8, and a few optional ideas
+noted under each tool.** **This file is the single source of TODOs.** Behaviour
+is documented in `README.md`; the entries here keep only the decisions made
+along the way and what is still open.
 
-Owner decisions (2026-10-11) that still apply:
+Owner decisions that still apply:
 
-- **New runtime deps are allowed** — keep them small and lazy-loaded; each tool
-  below lists its deps. The workbench's own dependency freeze stays.
+- **New runtime deps are allowed** — keep them small and lazy-loaded. The
+  workbench's own dependency freeze stays.
 - **The terminal one-liner rule is scoped to the workbench.** Standalone tools
   may do things a terminal can trivially do (timers, generators) when the
   audience is a phone user on the landing page.
 - **Everything local-first stays non-negotiable.** No servers: devices share data
   through Send to phone (a QR link), export/import files, or the settings backup.
+- **Removed for good (2026-10-13), not to be built:** the Device bridge (Send to
+  phone and file export cover the real need: PC to phone), the Photo studio,
+  dictation / speech-to-text, and the old parking lot of loose ideas.
+- **OCR languages stay English and Russian**, no more.
 
 ---
 
-## Build order
+## Shipped, and what is still open
 
-| # | Tool | Page vs workbench | New deps | Status |
-|---|---|---|---|---|
-| 1 | Device bridge | standalone `/bridge` | none | **parked** 2026-10-13 (§1) |
-| 1a | Send to phone (QR link) | helper + per-tool actions | none | **shipped** 2026-10-13 (§1a) |
-| 2 | Flashcards | standalone `/flash` | none | **shipped** 2026-10-13 (§2) |
-| 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | **shipped** 2026-10-13 (§3) |
-| 4 | Charts | workbench capability | none | **shipped** 2026-10-13 (§4) |
-| 5 | Whiteboard | standalone `/board` | none | **shipped** 2026-10-13 (§5) |
-| 6 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | **shipped** 2026-10-13 (§6) |
-| 7 | OCR | workbench capability | tesseract.js (lazy) | **shipped** 2026-10-13 (§7) |
+Done outside this list (2026-10-12): **Software Tycoon** was merged in from the
+standalone `software-tycoon` repo as `/tycoon` (docs in README.md, open work in §8).
 
-Dictation was cut (see the parking lot).
+### Workbench
 
-Done outside this build order (2026-10-12): **Software Tycoon** was merged in
-from the standalone `software-tycoon` repo as `/tycoon` — the engine ported to
-React under `lib/tycoon/`, the PixiJS office scene lazy-loaded, CSP gained
-`worker-src 'self' blob:` for pixi's blob: texture workers, and saves moved to
-`lab:tycoon:*` keys with a one-time migration from `software-tycoon:*`. Its
-deps: `pixi.js` (lazy) + dev-only `@types/pngjs`. Docs live in README.md
-(see "Software Tycoon"); its open work list is §8.
+Follow-ups shipped: the "Edit image" label and a skeleton loading state,
+set-membership badges in the tray, thumbnails and kind glyphs, the unsaved-changes
+`ConfirmSheet`, the beforeunload guard, shared `useSeedAssets`, outputs-tray
+thumbnails with `Download all`, diff patch/HTML-report export, **Send to
+Flashcards** and **Open in Whiteboard** actions on files, and **Recognize text**.
+Dropped by the owner: paste opening Compare, drafts surviving tab switches, and
+a separate output stage. Still optional, only if wanted:
 
----
-
-## 0. Workbench follow-ups — done except one optional item
-
-Shipped 2026-10-13: **0a** the "Edit image" label and a skeleton loading state,
-**0b** set-membership badges in the tray (A/B for Compare, 1..n for Merge, an
-in-batch chip), **0d** tray thumbnails and kind glyphs, **0e tier A** the
-`ConfirmSheet` unsaved-changes dialog (keep editing is primary). Earlier:
-beforeunload guard, shared `useSeedAssets`, outputs-tray thumbnails + `Download
-all`, diff patch/HTML-report export.
-
-Dropped by the owner (2026-10-13), not to be built: **0c** paste opening Compare
-(Compare needs exactly two files, so a lone paste can't land there), **0e tier B**
-(drafts surviving tab switches) and **0f** the output stage (the tray,
-`Download all` and the dialog are enough). If results get missed on phones, try
-scrolling the outputs tray into view on the first output before building
-anything bigger.
-
-### 0g. Optional, only if wanted
 - **Session restore** — refresh wipes the tray; a tiny opt-in "restore last
-  tray" (names + bytes in memory only) would soften the hard reset.
-- **Image print** — page-like kinds print; a photo print is a plausible ask
-  if print exists for images.
-- **Send to Flashcards** — an action on workbench text assets that opens the
-  Flashcards import with the text (no bridge needed).
+  tray" (names and bytes in memory only) would soften the hard reset.
+- **Image print** — page-like kinds print; a photo print is a plausible ask.
 
+### Send to phone (QR link)
 
----
+Folded into `README.md`. The cap is 2 200 characters at QR error-correction level
+**M**, because jsQR fails on every version-23 code at L while M decoded at every
+size. Shared pieces: `lib/send/`, `components/tools/SendToPhone.tsx` and
+`ReceiveDialog.tsx`. To add Send to another tool: supply a `kind`, a `getData` and
+a receive handler. The other direction needs no feature: export a file and move it
+however you like. For larger things between tabs on one device there is the
+handoff helper (`lib/apps/handoff.ts`), used by Send to Flashcards and Open in
+Whiteboard.
 
-## 1. Device bridge (`/bridge`) — PARKED 2026-10-13
+### Flashcards (`/flash`)
 
-> **Reframed 2026-10-13: the real need is one-way PC → phone, and §1a covers
-> it with no WebRTC at all.** Everything below stays parked.
->
-> **Owner's call: not needed at the moment.** Nothing below is scheduled. Other
-> tools must not depend on it: where they say "moves via the bridge", read
-> "export/import file" until the bridge exists. Small desktop→phone text can
-> already go through the workbench's Create QR code capability (a "Send to
-> phone" shortcut on text outputs is a cheap future add). Spec and feasibility
-> findings are kept for when this is revisited.
+- **Scheduler:** FSRS-4.5 with the published default weights and no learning steps;
+  golden intervals are in `tests/flash/fsrs.test.ts`. *Again* requeues the card a
+  few cards later in the same session but schedules it once; cram never changes it.
+- **Imports:** paste, or a CSV, TSV, JSON or text file, on the deck list (a new deck)
+  or inside a deck; **Send to Flashcards** from the workbench adds the text to a new
+  or an existing deck. Decks export as TSV or JSON. Deck moves between devices use
+  Send to phone, file export, or the settings backup.
+- **Not built:** images, audio, `{{cloze}}`, deck-level tags and filters in study,
+  per-deck new-card limits. Never: cloud sync, accounts, plugins.
 
-Local file/text transfer between phone and desktop over WebRTC, signaled by QR
-code. No server, no accounts, no pairing code to type.
+### Focus office (`/focus`)
 
-**Flow.** Desktop: "Show code" → renders an offer QR containing the WebRTC
-offer (compressed SDP, fits a QR with STUN-only config). Phone: scans → answers
-→ data channel opens P2P. Roles are symmetric — either side can show or scan.
-Once connected: send text (clipboard-style) or files in either direction;
-progress per transfer; nothing is stored — the channel is live only while both
-tabs are open.
+Reworked 2026-10-13: it always opens as a full-screen office with generated lo-fi
+music and nothing to set up or save (no plan, history or streaks). Start runs the
+25 / 5 / 15 flow; giving a Pomodoro up (or the page really going away) sends one of
+six people out of the door; with nobody left you hire a new team. The music is
+synthesised in the browser: a live stream would break the local-first, offline and
+CSP rules. Nothing is open here.
 
-**Scope guards.** STUN only (no TURN — state that some corporate/symmetric-NAT
-networks won't connect). Files streamed in chunks over the data channel with a
-size cap consistent with `lib/limits.ts` philosophy. No multi-device mesh: one
-peer per session. The QR scan reuses the workbench QR scanner logic.
+### Charts (workbench capability)
 
-**Handoffs into the rest of lab.** "Send to other device" actions on workbench
-outputs (text, images, boards) and on flashcards decks — this is how settings,
-decks and drafts move between phone and desktop without a server.
+Line, bar, grouped, stacked, histogram and scatter; a pivot ("one series for each
+value of" a text column) that is also suggested for long data; settings remembered
+per file under `lab:charts:v1`; SVG and PNG export; the validated reference palette
+for both modes. Not built: secondary axes (deliberately never), pivoting into a
+sheet, and a "Send chart to phone" action (an SVG is far over the QR cap).
 
-**Feasibility check (2026-10-13) — corrections to the plan above.**
-- **There is no QR scanner to reuse.** `jsqr` is a devDependency used only by
-  `tests/qr/qr-libs.test.ts`; nothing in `src/` decodes a QR or opens a camera.
-- **The phone needs no in-page scanner.** The offer QR encodes a URL
-  (`/bridge#o=<codec>`; the fragment never reaches a server), so the phone's
-  native camera app scans it and opens the page. The return leg (answer) is
-  the catch: the other device must read the phone's screen, and a desktop can
-  only do that with a webcam. So one in-page scanner is still required, on the
-  desktop side: `getUserMedia` + `jsqr` (promote it to a lazy-loaded runtime
-  dep; `BarcodeDetector` as an optional fast path, absent on iOS Safari). "Zero
-  new deps" becomes "one small lazy dep". Fallback for desktops without a
-  webcam: show/copy the ~150-byte answer as text, or move it via the OS share
-  sheet.
-- **`Permissions-Policy` blocks the camera.** `assets/_headers` sets
-  `camera=()`; it must become `camera=(self)` (microphone etc. stay off) or the
-  desktop can never scan the answer.
-- **`connect-src` is probably not an issue** — CSP `connect-src` does not govern
-  RTCPeerConnection/STUN traffic, so the "must allow `stun:`" note in the
-  prerequisites is likely unnecessary. Unverified: confirm in a real browser.
-- **QR size.** A synthetic Chrome data-channel offer (1–4 candidates, 600–1000 B
-  of SDP) compressed with `fflate` deflate + base64 comes out at 580–690 chars →
-  QR version 16–18 (85–89 modules) at ECC L: scannable but dense. Do not ship
-  raw-SDP deflate. A custom binary codec (ice-ufrag, ice-pwd, the 32-byte
-  fingerprint, candidate ip/port list) should land near 100–150 bytes, QR
-  version ~6–8. Build the codec that way; the SDP is rebuilt from a template.
-  (Estimate from a hand-made SDP, not a real capture — re-measure once the
-  codec exists.)
+### Whiteboard (`/board`)
 
-**Implementation.** `src/components/bridge/` (PeerCard, QRPanel, TransferList)
-+ `src/lib/bridge/` (signaling codec: compress SDP with `fflate` → QR; chunked
-transfer protocol; peer connection lifecycle). Zero new deps.
+Rectangle, ellipse, arrow, text and pen; select, move, resize, marquee; undo and
+redo; pan and zoom; several boards; SVG, PNG and JSON export. Added 2026-10-13:
+arrows that attach to shapes and follow them, snap to grid, bring to front and send
+to back, copy / cut / paste across boards (its own clipboard, never the system one),
+and **Open in Whiteboard** from the workbench. Never: shape libraries, images,
+collaboration.
 
-**Tests.** Codec round-trip, SDP compression size bounds, chunk
-reassemble/integrity, i18n. Two-tab e2e is manual (jsdom has no RTC).
+### CV builder (`/cv`)
 
----
+Four ATS-safe single-column templates over one schema, printing to a PDF with
+selectable text, Word, plain text and a reopenable CV file. Added 2026-10-13: custom
+sections (certifications, languages, any heading), real hyperlinks in the Word file,
+drag-to-reorder, and import from pasted text (an old CV or a LinkedIn profile, in
+English or Russian). No photo field, on purpose. Not built: importing a Word or PDF
+file directly (paste its text instead).
 
-## 1a. Send to phone (QR link) — SHIPPED 2026-10-13
+### OCR (workbench capability)
 
-Folded into `README.md` ("Send to phone"). Built for Flashcards (send or receive
-a deck) and the workbench (send a text file or text output via a phone icon on
-tray rows; receive text as a new file, with a content preview). The cap is 2 200
-characters at QR error-correction level **M** — not 2.5 KB at L, because jsQR
-fails on every version-23 code at L while M decoded at every size. Shared pieces:
-`lib/send/` (codec, `useIncomingSend`, i18n), `components/tools/SendToPhone.tsx`
-and `ReceiveDialog.tsx`. To add Send to another tool: supply a `kind`, a
-`getData` and a receive handler. The other direction needs no feature: export a
-file and move it however you like.
-
----
-
-## 2. Flashcards (`/flash`) — SHIPPED 2026-10-13
-
-Folded into `README.md` ("Flashcards" and the tool table). Decisions made
-during the build, and what is still open:
-
-- **Scheduler:** FSRS-4.5 with the published default weights and no learning
-  steps (not a hand-rolled "lite"); golden intervals are in
-  `tests/flash/fsrs.test.ts`. *Again* requeues the card a few cards later in
-  the same session but schedules it once; cram never changes the schedule.
-- **"Learned"** on the stats row means graded at least once.
-- **New category:** the tool lives under a new `productivity` category
-  ("Study & focus" / «Учёба и фокус») in `lib/apps/tools.ts`, meant to also
-  hold Focus, Whiteboard and CV.
-- **Imports** are in-page only (paste, or a `.csv/.tsv/.txt` file). Not built:
-  the workbench "Send to Flashcards" action on text assets — worth adding as a
-  small workbench follow-up, no bridge needed. Deck moves between devices use
-  TSV export/import or the settings backup (the bridge is parked).
-- **Still v2/never:** images, audio, `{{cloze}}`; never cloud sync, accounts,
-  plugins. Also open: deck-level tags/filters in study, per-deck new-card limits.
-- `ActionButton` now accepts `ref` (typed as `ComponentProps<"button">`).
-
----
-
-## 3. Focus office (`/focus`) — SHIPPED 2026-10-13
-
-Folded into `README.md` ("Focus office"). Decisions made during the build, and
-what is still open:
-
-- **Scene:** Software Tycoon's Pixi `OfficeScene`, via a synthetic game state
-  and three small additions (`options.label`, `options.working`, `leave(id)`).
-  No new package.
-- **A day** is one run: one new office per day (seed + calendar day + run), one
-  person per Pomodoro, capped at twelve (the desks). Missed Pomodoros fire people
-  in a seeded order; the names are kept in the history. No merciful mode.
-- **Timer honesty:** a confirm dialog names who would leave; `beforeunload`
-  asks; a page that truly goes away gives the Pomodoro up; tab switches are free.
-- **Not built:** the ambient WebAudio office sounds (keyboard murmur, AC hum) —
-  only short cues; per-desk tap animations (a tap just names the person); a
-  garden-style calendar view of history (it is a list plus totals and a streak).
-- **Open ideas:** office growth over a streak of full days, notifications when
-  the tab is in the background, a long-press/keyboard shortcut for Start.
-
----
-
-## 4. Charts — workbench capability — SHIPPED 2026-10-13
-
-Folded into `README.md` ("Charts"). Decisions made during the build, and what is
-still open:
-
-- **Types:** line (with an area option), bar, grouped bar, histogram, scatter —
-  the UI shows four buttons because Bar becomes Grouped when more than one series
-  is chosen. Auto-detected from the data's shape; every choice can be overridden.
-- **Colour:** the reference data-viz palette, validated for both modes (run the
-  validator script again if the hues ever change). A column keeps its colour
-  whatever else is switched on; at most eight numeric columns can be plotted, six
-  at a time (three on a scatter), because a ninth hue would be indistinguishable.
-- **Responsive:** the chart is drawn at the width it is shown at, so a phone gets
-  fewer ticks and a wrapped legend rather than shrunken text; exports are 720 wide.
-- **Accessibility:** a legend for two or more series, a table twin, keyboard
-  navigation of the hover details, an opt-in hatch pattern.
-- **Export:** SVG and PNG go to the Outputs tray as images; the background is
-  light or dark independent of the page theme.
-- **Not built:** per-sheet persistence of chart settings (they reset when the
-  file or sheet changes), stacked bars, secondary axes (deliberately never),
-  pivoting a table, and a "Send chart to phone" action (an SVG is far over the
-  QR cap; export and move it).
-
----
-
-## 5. Whiteboard (`/board`) — SHIPPED 2026-10-13
-
-Folded into `README.md` ("Whiteboard"). Decisions made during the build, and
-what is still open:
-
-- **v1 as specced:** rectangle, ellipse, arrow, text, pen; select/move/resize
-  (handles), marquee and Shift multi-select; undo/redo; pan/zoom (two fingers,
-  wheel, Ctrl+wheel, Space-drag, hand tool); grid; SVG and PNG export; `.json`
-  board files; several boards with a switcher; autosave to `lab:board:v1`.
-- **Style changes apply to the selection** (like Excalidraw), but picking a
-  drawing tool lets go of it, so a colour chosen next applies to the next shape.
-- **Text** is edited in place with a textarea (Ctrl+Enter finishes), which is
-  the v2 "inline text editing" item done early.
-- **Phones:** the toolbar is one swipeable row so the canvas stays on screen.
-- **Not built (v2/never):** arrows that attach to shapes, grid snap, bring
-  to front/send to back, copy/paste across boards, a shared clipboard with other
-  tools. Never: shape libraries, images, collaboration.
-- **Boards as workbench assets:** a board file is plain JSON, so the workbench
-  already opens, saves and JSON-compares it like any JSON file; there is no
-  dedicated "open in Whiteboard" action from the workbench yet.
-
----
-
-## 6. CV builder (`/cv`) — SHIPPED 2026-10-13
-
-Folded into `README.md` ("CV builder"). Decisions made during the build, and what
-is still open:
-
-- **Templates:** classic, modern, minimal and plain (ATS) over one schema; all
-  single-column real text with standard headings. "Colour and rules" off gives
-  black on white whatever the template. No photo field at all (ATS-safe, and
-  nothing personal to leak).
-- **Printing:** the browser's print dialog, with paper and margins from static
-  named `@page` rules (CSP forbids inline `<style>`). Verified by printing every
-  template to PDF in Chrome and extracting the text.
-- **Exports:** print/PDF, `.docx` via `lib/docx`, plain text, and a JSON CV file.
-  The CV's language (headings, "Present") is separate from the interface
-  language, so a Russian speaker can write an English CV.
-- **Not built:** the "paste your old CV / LinkedIn text" heuristic importer
-  (the roadmap's bonus), custom sections beyond Experience / Education /
-  Projects / Skills, hyperlinks in the Word file (the writer keeps link text
-  only), drag-to-reorder (up/down buttons instead), a photo.
-
----
-
-## 7. OCR — workbench capability — SHIPPED 2026-10-13
-
-`ocr.recognize` on **images** and **PDFs** (scans: pages are drawn with the
-bundled pdf.js at about 200 dpi). Recognised text lands in the Outputs tray as a
-`.txt` asset. Behaviour is in `README.md` ("Recognize text"). Decisions:
-
-- **Self-hosted engine, no CDN.** tesseract.js 7 with its SIMD or plain WASM core
-  (chosen by feature detection) and "best, integer" LSTM models. Build-time copy
-  into `assets/ocr/` (`scripts/copy-ocr-assets.mjs`, git-ignored) with a
-  `manifest.json` of real file sizes: worker 0.1 MB, engine 3.9 MB, English
-  2.8 MB, Russian 2.6 MB.
-- **Languages: English and Russian only.** More would be ~2–3 MB each in the build
-  output or a CDN; neither without the owner's say. Adding one is dropping its
-  `.traineddata.gz` in and naming it in the copy script.
-- **No CSP change was needed.** The worker loads from a same-origin URL (not a
-  blob), so it does not inherit the page policy and `'wasm-unsafe-eval'` was never
-  required. The existing `worker-src 'self'` and `connect-src 'self'` suffice.
-- **Explicit download.** `src/lib/apps/heavy-assets.ts` (Cache Storage
-  `lab-ocr-v1`, streamed with progress, a file is stored only when complete, a
-  remove button). The service worker never precaches `/ocr/` (only the manifest)
-  but serves the cache to the worker, so it then works offline.
-- **Preprocessing** (`lib/ocr/preprocess.ts`): grey, 1%-percentile contrast
-  stretch, optional Otsu black and white, enlarge below 1600 px, cap at 4000 px,
-  transparent images placed on white.
-- Verified in Chrome by drawing English and Russian text on a canvas (read
-  exactly, in under 3 s), on a two-page scanned PDF, and with the network blocked.
-
-Not done, on purpose: deskew and layout analysis (columns, tables), handwriting,
-more languages (needs the owner), a per-word confidence overlay.
+`ocr.recognize` on images and scanned PDFs, English and Russian only, with the
+engine and language data self-hosted and downloaded on request (`lib/apps/heavy-assets.ts`).
+Preprocessing, straightening of tilted pages, columns, tables rebuilt into a `.csv`
+spreadsheet, and the words the engine was unsure of boxed on the page. No CSP change
+was needed. Not done, on purpose: handwriting, and any other language.
 
 ---
 
@@ -417,50 +228,27 @@ Balance so far comes only from bots; nobody has played the long journey.
 
 ## Pending decisions
 
-(none — all pitches are approved or parked; new ideas go straight to the
-parking lot)
-
----
-
-## Parking lot (ideas, not scheduled)
-
-- **Dictation / speech-to-text** — **cut 2026-10-11, owner's call.** Reasoning:
-  speech-to-text users are already inside a destination (a CLI piping to an
-  LLM, a chat app); a separate web page adds a device/app hop and friction to
-  a flow that OS keyboards (Gboard, iOS dictation) already serve for free.
-  If a real use case appears later (e.g. transcripts for the subtitles tool),
-  revisit as a workbench capability on audio files, not a standalone page.
-- **Device bridge** — parked 2026-10-13, full spec and feasibility notes in §1.
-- **Photo studio** — crop/rotate/flip/filters/watermark/collage on the existing
-  `lib/image` pipeline. Owner wants this thought through later, not now.
-- **Subtitles editor** — SRT/VTT shift/renumber/merge/convert; shares the
-  transcript model with dictation.
-- **PDF round 2** — page organize/rotate/delete, watermark, compress (qpdf-wasm)
-  as an opt-in "Advanced" group; the current simple scope stays default.
-- **Notes / scratchpad**, **audio recorder + trimmer**, **screen recorder**
-  (`getDisplayMedia`), **invoice generator** (form → pdf-lib), **metronome /
-  tuner / dB meter**, **sleep sounds** (synthesized noise), **password
-  generator**, **habit tracker**, **EPUB writer** (Markdown/HTML → EPUB).
+(none)
 
 ---
 
 ## Cross-cutting prerequisites (build once, reuse everywhere)
 
-1. **CSP / headers:** no change was needed for OCR (see §7). Screen recording, if
-   ever built, would need a `display-capture` permission in `assets/_headers`.
-   (The bridge's WebRTC and camera notes are in §1, which is parked.)
+1. **CSP / headers:** no change was needed for OCR or the lo-fi music. Screen
+   recording, if ever built, would need a `display-capture` permission in
+   `assets/_headers`.
 2. **Lazy heavy-asset pattern** — built: `src/lib/apps/heavy-assets.ts`. The
    service worker never precaches such files (`EXCLUDE` in `scripts/pwa/integration.mjs`);
    a tool lists its files with sizes, downloads them on request with progress into
    its own cache and offers removal. OCR is its only consumer so far.
 3. **Settings backup coverage:** every tool persists under its `lab:<tool>:v1`
-   key (flash and focus already do; board and cv will) so backup/restore carries
-   state across devices. Small data can also move with Send to phone.
+   key (flash, board, cv and charts do; focus no longer saves anything) so
+   backup/restore carries state across devices. Handoffs and the whiteboard
+   clipboard use non-`lab:` keys on purpose: they are transient.
 4. **Registry plumbing per tool:** standalone pages follow the README's
    "Adding a new tool" steps (island, page, TOOLS entry with `seo`, i18n,
    tests with `axeViolations()`); a workbench capability follows the workbench
    steps (capabilities.ts + operations/ + operations.ts). Standalone tools of the
    study/productivity kind go in the `productivity` category.
-5. **Keep this file current** when each tool lands: mark its entry shipped,
-   record decisions made during the build, and fold the shipped behaviour
-   into `README.md`.
+5. **Keep this file current** when something lands: record decisions made during
+   the build and fold the shipped behaviour into `README.md`.

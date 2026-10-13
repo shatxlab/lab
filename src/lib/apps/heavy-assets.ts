@@ -98,10 +98,14 @@ export async function downloadFiles(files: readonly HeavyFile[], options: Downlo
       onProgress?.({ loaded: Math.min(loaded, total), total, url: file.url });
     }
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-    await cache.put(
-      file.url,
-      new Response(new Blob(parts as BlobPart[]), { status: 200, headers: { "Content-Type": response.headers.get("Content-Type") ?? "application/octet-stream" } }),
-    );
+    // Joined into one array rather than a Blob: Response only takes its own realm's Blob (jsdom's has no stream()).
+    const whole = new Uint8Array(parts.reduce((sum, part) => sum + part.byteLength, 0));
+    let offset = 0;
+    for (const part of parts) {
+      whole.set(part, offset);
+      offset += part.byteLength;
+    }
+    await cache.put(file.url, new Response(whole, { status: 200, headers: { "Content-Type": response.headers.get("Content-Type") ?? "application/octet-stream" } }));
   }
 }
 

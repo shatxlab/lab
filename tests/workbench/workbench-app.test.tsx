@@ -7,7 +7,7 @@ import WorkbenchApp from "@/components/workbench/WorkbenchApp";
 import { capabilityById, type CapabilityId } from "@/lib/workbench/capabilities";
 import { wb } from "@/lib/workbench/i18n";
 import type { OperationProps } from "@/lib/workbench/operation";
-import { click, mount, waitFor } from "../helpers/dom";
+import { axeViolations, click, mount, waitFor } from "../helpers/dom";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -290,19 +290,57 @@ describe("WorkbenchApp — unsaved work", () => {
     view.unmount();
   });
 
-  it("asks before leaving unsaved work, and stays when the user says no", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  const sheet = () => document.querySelector<HTMLElement>('[role="dialog"]');
+
+  it("asks in a dialog before leaving unsaved work, and keeps the work on cancel", async () => {
+    const confirm = vi.spyOn(window, "confirm");
     const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": DirtyStub }} />);
     await addFiles(text("a.txt"));
     await waitFor(() => expect(document.body.textContent).toContain("dirty editor"));
 
     await click(tab("qr.generate"));
-    expect(confirm).toHaveBeenCalledWith(wb("en", "discardChanges"));
-    expect(document.body.textContent).toContain("dirty editor");
+    expect(confirm).not.toHaveBeenCalled();
+    expect(sheet()?.getAttribute("aria-modal")).toBe("true");
+    expect(sheet()!.textContent).toContain(wb("en", "unsavedTitle", { name: label("doc.open") }));
+    // Keeping is the primary, focused choice.
+    const keep = buttonWithText(sheet()!, wb("en", "keepEditing"))!;
+    expect(document.activeElement).toBe(keep);
+    expect(await axeViolations(sheet()!)).toEqual([]);
 
-    confirm.mockReturnValue(true);
+    await click(keep);
+    expect(sheet()).toBeNull();
+    expect(document.body.textContent).toContain("dirty editor");
+    expect(tab("doc.open")?.getAttribute("aria-selected")).toBe("true");
+    view.unmount();
+  });
+
+  it("switches tabs once the user discards", async () => {
+    const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": DirtyStub }} />);
+    await addFiles(text("a.txt"));
+    await waitFor(() => expect(document.body.textContent).toContain("dirty editor"));
+
     await click(tab("qr.generate"));
+    await click(buttonWithText(sheet()!, wb("en", "discardAndContinue")));
     await waitFor(() => expect(document.body.textContent).toContain("qr: a.txt"));
+    expect(sheet()).toBeNull();
+    view.unmount();
+  });
+
+  it("treats Escape and a backdrop click as keep editing", async () => {
+    const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": DirtyStub }} />);
+    await addFiles(text("a.txt"));
+    await waitFor(() => expect(document.body.textContent).toContain("dirty editor"));
+
+    await click(tab("qr.generate"));
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(sheet()).toBeNull();
+
+    await click(tab("qr.generate"));
+    await click(sheet()!.parentElement);
+    expect(sheet()).toBeNull();
+    expect(document.body.textContent).toContain("dirty editor");
     view.unmount();
   });
 

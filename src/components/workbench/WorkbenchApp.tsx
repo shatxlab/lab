@@ -10,7 +10,7 @@
  * - Adding files selects the first new one and opens its best action, unless
  *   the running operation has unsaved work; then the files just join the tray.
  * - Leaving an operation with unsaved work (another tab, another file,
- *   removing its file) asks first.
+ *   removing its file) asks first, in a dialog that defaults to keeping the work.
  * - A produced result joins the tray as the selected file when opened.
  *
  * SSR note: nothing here touches `window`/`document` at module scope — the
@@ -21,6 +21,7 @@ import * as React from "react";
 import { Download, X } from "lucide-react";
 
 import { AssetThumb } from "@/components/workbench/AssetThumb";
+import { ConfirmSheet } from "@/components/workbench/ConfirmSheet";
 import { ActionButton, FilePicker, Tabs, ToolPage, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
@@ -435,14 +436,15 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
   // Read through refs so the stable callbacks below always see the latest.
   const dirtyRef = React.useRef(false);
   const activeRef = React.useRef<CapabilityId | null>(null);
-  const langRef = React.useRef(lang);
-  langRef.current = lang;
 
-  /** True when it is fine to leave the running operation. */
-  const confirmLeave = React.useCallback(
-    () => !dirtyRef.current || window.confirm(wb(langRef.current, "discardChanges")),
-    [],
-  );
+  // The leave that is waiting on the unsaved-changes dialog.
+  const [pending, setPending] = React.useState<{ run: () => void } | null>(null);
+
+  /** Run `run` now when nothing is unsaved; otherwise ask first. */
+  const requestLeave = React.useCallback((run: () => void) => {
+    if (dirtyRef.current) setPending({ run });
+    else run();
+  }, []);
 
   /** Add assets; they take focus unless the running operation has unsaved work. */
   const addAssets = React.useCallback((added: Asset[]) => {
@@ -514,30 +516,33 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
   }, [dirty]);
 
   const selectFile = (id: string) => {
-    if (id === selected?.id || !confirmLeave()) return;
-    setSelectedId(id);
+    if (id === selected?.id) return;
+    requestLeave(() => setSelectedId(id));
   };
 
   const selectAction = (id: CapabilityId) => {
-    if (id === active || !confirmLeave()) return;
-    setActiveId(id);
+    if (id === active) return;
+    requestLeave(() => setActiveId(id));
   };
 
   const removeAsset = (id: string) => {
-    if (operationAssets.some((asset) => asset.id === id) && !confirmLeave()) return;
-    const index = assets.findIndex((asset) => asset.id === id);
-    const rest = assets.filter((asset) => asset.id !== id);
-    setAssets(rest);
-    // Removing the selected file selects its neighbour.
-    if (id === selected?.id) setSelectedId((rest[index] ?? rest[index - 1])?.id ?? null);
+    const remove = () => {
+      const index = assets.findIndex((asset) => asset.id === id);
+      const rest = assets.filter((asset) => asset.id !== id);
+      setAssets(rest);
+      // Removing the selected file selects its neighbour.
+      if (id === selected?.id) setSelectedId((rest[index] ?? rest[index - 1])?.id ?? null);
+    };
+    if (operationAssets.some((asset) => asset.id === id)) requestLeave(remove);
+    else remove();
   };
 
-  const clearAssets = () => {
-    if (!confirmLeave()) return;
-    setAssets([]);
-    setSelectedId(null);
-    setActiveId(null);
-  };
+  const clearAssets = () =>
+    requestLeave(() => {
+      setAssets([]);
+      setSelectedId(null);
+      setActiveId(null);
+    });
 
   // Per-capability parameters: an operation can never stomp another's draft.
   const setParamsFor = React.useCallback(
@@ -558,14 +563,14 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
 
   // The ONLY path from an output back into the tray — never automatic,
   // otherwise an operation that publishes while reading its own output loops.
-  const openAsAsset = (entry: OutputEntry) => {
-    if (!confirmLeave()) return;
-    const asset = createAssetFromBytes(entry.output.name, entry.output.bytes, entry.output.kind);
-    setAssets((list) => [...list, asset]);
-    setOutputs((list) => list.filter((item) => item.id !== entry.id));
-    setSelectedId(asset.id);
-    setActiveId(null);
-  };
+  const openAsAsset = (entry: OutputEntry) =>
+    requestLeave(() => {
+      const asset = createAssetFromBytes(entry.output.name, entry.output.bytes, entry.output.kind);
+      setAssets((list) => [...list, asset]);
+      setOutputs((list) => list.filter((item) => item.id !== entry.id));
+      setSelectedId(asset.id);
+      setActiveId(null);
+    });
 
   const operation = active && (
     <OperationHost
@@ -633,6 +638,19 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
       )}
 
       <OutputTray lang={lang} outputs={outputs} onOpenAsAsset={openAsAsset} onRemove={removeOutput} />
+
+      {pending && (
+        <ConfirmSheet
+          lang={lang}
+          capabilityLabel={active ? capabilityLabel(lang, active) : ""}
+          onKeep={() => setPending(null)}
+          onDiscard={() => {
+            const { run } = pending;
+            setPending(null);
+            run();
+          }}
+        />
+      )}
     </ToolPage>
   );
 }

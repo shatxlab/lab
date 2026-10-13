@@ -29,7 +29,8 @@ scope: workbench itself stays dep-free and terminal-rule-scoped):
 |---|---|---|---|---|
 | 1 | ~~Device bridge~~ **parked 2026-10-13** | standalone `/bridge` | none | Not needed yet; spec and feasibility notes kept in §1 |
 | 2 | ~~Flashcards~~ **shipped 2026-10-13** | standalone `/flash` | none | Proved the standalone pattern; see §2 |
-| 3 | Focus office | standalone `/focus` | none | Mood piece, perfect offline PWA shortcut |
+| 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | Mood piece, perfect offline PWA shortcut |
+| 3b | Send to phone (QR link) | helper + per-tool actions | none | Replaces the bridge's main use case; see §1a. Small, after Focus |
 | 4 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target |
 | 5 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | Print-to-PDF engine keeps it cheap |
 | 6 | Charts | workbench capability | none | Approved 2026-10-11; cheap, high delight |
@@ -160,6 +161,9 @@ Suggested commit split, each green before the next: 0a, 0b, 0c, 0d, 0e tier A,
 
 ## 1. Device bridge (`/bridge`) — PARKED 2026-10-13
 
+> **Reframed 2026-10-13: the real need is one-way PC → phone, and §1a covers
+> it with no WebRTC at all.** Everything below stays parked.
+>
 > **Owner's call: not needed at the moment.** Nothing below is scheduled. Other
 > tools must not depend on it: where they say "moves via the bridge", read
 > "export/import file" until the bridge exists. Small desktop→phone text can
@@ -223,6 +227,44 @@ reassemble/integrity, i18n. Two-tab e2e is manual (jsdom has no RTC).
 
 ---
 
+## 1a. Send to phone (QR link) — replaces the bridge's main use case
+
+Owner's framing (2026-10-13): what people actually want from the bridge is to
+**get what is on the PC/laptop onto the phone**. The other direction needs no
+feature: on the phone, *export/download* the data (TSV, JSON, the settings
+backup) and move it however you like.
+
+**Flow.** A "Send to phone" action shows a QR code; the phone's *built-in camera
+app* scans it and opens a link to the same tool with the data in the URL
+**fragment** (`/flash/#send=<kind>.<payload>`; fragments never reach a server).
+The tool reads the fragment on load, shows a preview ("12 cards — Spanish
+basics"), and imports only after the user confirms; then it clears the fragment.
+No scanner in the app, no camera permission, no handshake, no new dependency
+(`qrcode` is already a runtime dep for the workbench).
+
+**Payload.** JSON → `fflate` deflate → base64url, with a short version prefix.
+Hard cap around 2.5 KB of encoded payload (QR level L tops out near 2.9 KB, and
+dense codes scan badly): over the cap the dialog says so and points to Export.
+Rough fit: a flashcard deck of ~60–100 short cards; text snippets; small
+settings. Not files, not photos, not whole backups.
+
+**Safety.** The fragment is untrusted input: decode with size limits, run it
+through the same readers/sanitisers as a file import (e.g. `parseImport`,
+`readFlashStore`'s cleaning), never import without the preview step, and ignore
+a malformed or unknown `kind` silently. The QR is on a screen and the URL can
+land in browser history, so the dialog says what is being shared.
+
+**Implementation.** `src/lib/send/` (payload codec + size cap, fragment
+read/clear) + `src/components/tools/SendToPhone.tsx` (dialog with the QR via
+`lib/qr`, the byte count, and a "Copy link" fallback). First consumers:
+Flashcards (send a deck; receive on `/flash`) and the workbench text outputs
+(send text). Each tool supplies `kind`, `encode()` and `preview/import()`.
+
+**Tests.** Codec round-trip and cap, malformed/oversized/foreign-kind fragments,
+fragment cleared after import, preview-before-import, axe, i18n.
+
+---
+
 ## 2. Flashcards (`/flash`) — SHIPPED 2026-10-13
 
 Folded into `README.md` ("Flashcards" and the tool table). Decisions made
@@ -270,7 +312,21 @@ no real-world anything.)
   instead of firing them, for users who find the firing theme harsh. Default:
   as designed above.
 
-**Interactivity, cheap.** Canvas 2D, ~500 lines, zero deps, zero image assets.
+**Scene: reuse Software Tycoon's** (decided 2026-10-13). The Pixi `OfficeScene`
+(lazy-loaded; art in `assets/pixeloffice/`, CC0) already draws the room, desks,
+chairs, the cat and dog, and recolours characters from a plain id
+(`appearanceFor(id)`), so *seed + day → employee ids → faces* is free. The
+scene reads everything through a `getState()` callback, so Focus feeds it a
+synthetic `GameState` (one office, N employees; `office.project` non-null while a
+Pomodoro runs makes people type; low `morale` shows the red "!" marker). Small
+additions to `OfficeScene`, to be done without changing Tycoon's behaviour:
+ an optional label for the clock chip (shows the countdown instead of the game
+ date), and a `leave(employeeId, mode)` animation (the person stands up with a
+ box and exits toward the door; `mode: 'home'` for merciful mode). Pixi is
+ already a lazy dependency, so Focus adds no new package; the CSP
+`worker-src blob:` is already in place. Tap a person for a small reaction.
+
+**(superseded) Interactivity, cheap.** Canvas 2D, ~500 lines, zero deps, zero image assets.
 Sway/reactions on pointer move; tap a desk for a small animation. WebAudio
 ambient (keyboard murmurs, AC hum) + a completion chime, synthesized like the
 alias game's sound.
@@ -281,9 +337,9 @@ advisory, never blocking. Full-screen focus mode with a minimal clock.
 
 **PWA.** Ideal offline tool; add `focus` to the manifest shortcuts.
 
-**Implementation.** `src/components/focus/` (Office, TimerBar, DaySetup,
-History) + `src/lib/focus/` (timer reducer, poms math, scene painter, prng
-avatars, sound, i18n, storage).
+**Implementation.** `src/components/focus/` (Office host for the Tycoon scene,
+TimerBar, DaySetup, History) + `src/lib/focus/` (timer reducer, poms math,
+synthetic-state adapter, seeded office, sound, i18n, storage).
 
 **Tests.** Timer reducer (pause/complete/abandon), Pomodoro chunking math,
 prng determinism (same seed → same office), storage round-trip, i18n, axe on

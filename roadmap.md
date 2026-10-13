@@ -1,8 +1,8 @@
 # Roadmap
 
-Status: the standalone tools Flashcards, Focus office and Send to phone have
-shipped, along with the workbench follow-ups in §0. **Still to build: Charts,
-Whiteboard, CV builder and OCR (§4–§7).** **This file is the single source of
+Status: Flashcards, Focus office, Send to phone and Charts have
+shipped, along with the workbench follow-ups in §0. **Still to build:
+Whiteboard, CV builder and OCR (§5–§7).** **This file is the single source of
 TODOs.** A tool moves out of the build order only when its work is merged and its
 entry is folded into `README.md`; shipped entries stay as short notes of the
 decisions made along the way.
@@ -27,7 +27,7 @@ Owner decisions (2026-10-11) that still apply:
 | 1a | Send to phone (QR link) | helper + per-tool actions | none | **shipped** 2026-10-13 (§1a) |
 | 2 | Flashcards | standalone `/flash` | none | **shipped** 2026-10-13 (§2) |
 | 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | **shipped** 2026-10-13 (§3) |
-| 4 | Charts | workbench capability | none | next: cheap, high delight (§4) |
+| 4 | Charts | workbench capability | none | **shipped** 2026-10-13 (§4) |
 | 5 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target (§5) |
 | 6 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | print-to-PDF engine keeps it cheap (§6) |
 | 7 | OCR | workbench capability | tesseract.js | last: needs lazy heavy-asset infrastructure (§7) |
@@ -199,25 +199,28 @@ what is still open:
 
 ---
 
-## 4. Charts — workbench capability (approved 2026-10-11, in progress)
+## 4. Charts — workbench capability — SHIPPED 2026-10-13
 
-New `chart` capability on the **sheet** kind (CSV/XLSX via the existing
-`lib/viewer/sheet.ts`), reusing the workbench's set/selection model. Maximum
-**five chart types**: line/area, bar, grouped bar, histogram, scatter —
-auto-detected from the data's shape (time-ish first column → line; few text
-rows + numbers → bar; …) with manual column pickers to override.
+Folded into `README.md` ("Charts"). Decisions made during the build, and what is
+still open:
 
-**Rendering.** Hand-rolled SVG (~300 lines total, no chart library): axes with
-sensible ticks, legends, tooltip on hover/tap, theme-token colours (light/dark
-for free). Export **SVG** (into the Outputs tray, where it joins the asset
-loop) and **PNG** via canvas. No interactivity beyond tooltips — this is a
-"make the chart, take it away" tool, not a dashboard.
-
-**Implementation.** `src/components/workbench/operations/ChartOperations.tsx`
-+ `src/lib/charts/` (shape detection, scale/tick math, SVG builder, i18n).
-
-**Tests.** Scale/tick math (golden cases), shape detection table, SVG output
-snapshot, tray round-trip, axe.
+- **Types:** line (with an area option), bar, grouped bar, histogram, scatter —
+  the UI shows four buttons because Bar becomes Grouped when more than one series
+  is chosen. Auto-detected from the data's shape; every choice can be overridden.
+- **Colour:** the reference data-viz palette, validated for both modes (run the
+  validator script again if the hues ever change). A column keeps its colour
+  whatever else is switched on; at most eight numeric columns can be plotted, six
+  at a time (three on a scatter), because a ninth hue would be indistinguishable.
+- **Responsive:** the chart is drawn at the width it is shown at, so a phone gets
+  fewer ticks and a wrapped legend rather than shrunken text; exports are 720 wide.
+- **Accessibility:** a legend for two or more series, a table twin, keyboard
+  navigation of the hover details, an opt-in hatch pattern.
+- **Export:** SVG and PNG go to the Outputs tray as images; the background is
+  light or dark independent of the page theme.
+- **Not built:** per-sheet persistence of chart settings (they reset when the
+  file or sheet changes), stacked bars, secondary axes (deliberately never),
+  pivoting a table, and a "Send chart to phone" action (an SVG is far over the
+  QR cap; export and move it).
 
 ---
 

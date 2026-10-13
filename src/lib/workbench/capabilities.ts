@@ -32,7 +32,8 @@ export type CapabilityId =
   | "pdf.split"
   | "pdf.merge"
   | "text.diff"
-  | "qr.generate";
+  | "qr.generate"
+  | "chart.make";
 
 export interface Capability {
   id: CapabilityId;
@@ -89,6 +90,12 @@ export const CAPABILITIES: readonly Capability[] = [
     label: { en: "Open", ru: "Открыть" },
     weight: 800,
     kinds: kinds("pdf", "docx", "markdown", "html", "text", "json", "yaml", "toml", "sheet"),
+  },
+  {
+    id: "chart.make",
+    label: { en: "Make chart", ru: "Построить график" },
+    weight: 700,
+    kinds: kinds("sheet"),
   },
   {
     id: "pdf.sign",

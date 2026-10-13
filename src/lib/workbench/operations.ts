@@ -20,6 +20,7 @@ const REGISTRY: Record<CapabilityId, OperationLoader> = {
   "pdf.split": async () => (await import("@/components/workbench/operations/PdfOperations")).PdfSplitOperation,
   "pdf.merge": async () => (await import("@/components/workbench/operations/PdfOperations")).PdfMergeOperation,
   "text.diff": async () => (await import("@/components/workbench/operations/TextOperations")).TextDiffOperation,
+  "chart.make": async () => (await import("@/components/workbench/operations/ChartOperations")).ChartOperation,
   "qr.generate": async () => (await import("@/components/workbench/operations/QrOperations")).QrGenerateOperation,
 };
 

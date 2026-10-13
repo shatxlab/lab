@@ -43,7 +43,7 @@ describe("capabilitiesFor", () => {
   it("opens documents, data and text, and offers a QR code for text", () => {
     expect(offeredIds([asset("text")])).toEqual(["doc.open", "qr.generate"]);
     expect(offeredIds([asset("json")])).toEqual(["doc.open", "qr.generate"]);
-    expect(offeredIds([asset("sheet")])).toEqual(["doc.open"]);
+    expect(offeredIds([asset("sheet")])).toEqual(["doc.open", "chart.make"]);
     expect(offeredIds([asset("docx")])).toEqual(["doc.open"]);
   });
 
@@ -66,7 +66,7 @@ describe("capabilitiesFor", () => {
   it("keeps each file's own tools in a mixed selection", () => {
     const sheet = asset("sheet", "data.xlsx");
     const photo = asset("image", "photo.png");
-    expect(offeredIds([sheet, photo], sheet)).toEqual(["doc.open"]);
+    expect(offeredIds([sheet, photo], sheet)).toEqual(["doc.open", "chart.make"]);
     expect(offeredIds([sheet, photo], photo)).toEqual(["image.edit"]);
     expect(actsOn([sheet, photo], photo, "image.edit")).toEqual(["photo.png"]);
   });

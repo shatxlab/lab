@@ -83,6 +83,7 @@ const stubs = {
   "book.read": opened("read"),
   "text.diff": opened("compare"),
   "qr.generate": opened("qr"),
+  "chart.make": opened("chart"),
 };
 
 describe("WorkbenchApp — empty screen", () => {
@@ -169,7 +170,7 @@ describe("WorkbenchApp — several files", () => {
 
     await click(fileRow("data.csv"));
     await waitFor(() => expect(document.body.textContent).toContain("open: data.csv"));
-    expect(tabLabels()).toEqual([label("doc.open")]);
+    expect(tabLabels()).toEqual([label("doc.open"), label("chart.make")]);
     view.unmount();
   });
 

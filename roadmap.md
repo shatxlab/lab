@@ -57,8 +57,10 @@ The workbench is complete at its locked scope (§2 decisions of the former
 handoff); what remains is polish, in this order. Shipped already: beforeunload
 guard, shared `useSeedAssets`, the no-"asset" i18n sweep, outputs-tray
 thumbnails + `Download all`, diff patch/HTML-report export. **Shipped 2026-10-13: 0a, 0b, 0d, 0e tier A**
-(their sections below are the spec they were built from). Dropped: 0c. Open:
-0e tier B, 0f, 0g.
+(their sections below are the spec they were built from). Dropped (owner, 2026-10-13): 0c, 0f, 0e
+tier B — the tray, `Download all` and the unsaved dialog are enough. If results
+get missed on phones, try scrolling the outputs tray into view on the first
+output before building anything bigger. Open: 0g (optional).
 
 ### 0a. Verbs and a quiet loading state
 - `src/lib/workbench/capabilities.ts`: rename `image.edit` label "Image" →
@@ -123,7 +125,7 @@ thumbnails + `Download all`, diff patch/HTML-report export. **Shipped 2026-10-13
   Leaving a tab then never asks; the sheet is only needed for remove/clear.
   Do not attempt in the same pass as tier A.
 
-### 0f. The output stage (results take the stage)
+### 0f. The output stage (results take the stage) — DROPPED 2026-10-13
 - New `src/components/workbench/ResultStage.tsx`, rendered under the tab
   panel: shell state `produced: OutputEntry | null`; `handleProduce` sets it
   (and still appends to the outputs list). Persists across file/tab switches

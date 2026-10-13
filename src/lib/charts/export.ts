@@ -1,11 +1,16 @@
 /** Turning a chart scene into files: a standalone SVG, and a PNG drawn through a canvas. */
 
-import type { Scene } from "@/lib/charts/build";
+/** Anything drawn as a standalone SVG of a known size: a chart scene, a whiteboard. */
+export interface DrawnSvg {
+  svg: string;
+  width: number;
+  height: number;
+}
 
 const XML_HEADER = '<?xml version="1.0" encoding="UTF-8"?>\n';
 
 /** The SVG as a file: self-contained, with explicit colours and no external references. */
-export function svgBytes(scene: Scene): Uint8Array {
+export function svgBytes(scene: DrawnSvg): Uint8Array {
   return new TextEncoder().encode(XML_HEADER + scene.svg);
 }
 
@@ -16,7 +21,7 @@ export function exportName(sourceName: string, extension: "svg" | "png"): string
 }
 
 /** Draw the SVG onto a canvas at `scale`× and return the PNG. Needs a browser (canvas and image decoding). */
-export async function svgToPng(scene: Scene, scale = 2): Promise<Uint8Array> {
+export async function svgToPng(scene: DrawnSvg, scale = 2): Promise<Uint8Array> {
   const url = URL.createObjectURL(new Blob([scene.svg], { type: "image/svg+xml;charset=utf-8" }));
   try {
     const image = new Image();

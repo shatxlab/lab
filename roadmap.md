@@ -1,8 +1,8 @@
 # Roadmap
 
-Status: Flashcards, Focus office, Send to phone and Charts have
-shipped, along with the workbench follow-ups in §0. **Still to build:
-Whiteboard, CV builder and OCR (§5–§7).** **This file is the single source of
+Status: Flashcards, Focus office, Send to phone, Charts and the Whiteboard
+have shipped, along with the workbench follow-ups in §0. **Still to build:
+CV builder and OCR (§6–§7).** **This file is the single source of
 TODOs.** A tool moves out of the build order only when its work is merged and its
 entry is folded into `README.md`; shipped entries stay as short notes of the
 decisions made along the way.
@@ -28,7 +28,7 @@ Owner decisions (2026-10-11) that still apply:
 | 2 | Flashcards | standalone `/flash` | none | **shipped** 2026-10-13 (§2) |
 | 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | **shipped** 2026-10-13 (§3) |
 | 4 | Charts | workbench capability | none | **shipped** 2026-10-13 (§4) |
-| 5 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target (§5) |
+| 5 | Whiteboard | standalone `/board` | none | **shipped** 2026-10-13 (§5) |
 | 6 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | print-to-PDF engine keeps it cheap (§6) |
 | 7 | OCR | workbench capability | tesseract.js | last: needs lazy heavy-asset infrastructure (§7) |
 
@@ -224,35 +224,26 @@ still open:
 
 ---
 
-## 5. Whiteboard (`/board`)
+## 5. Whiteboard (`/board`) — SHIPPED 2026-10-13
 
-Mini-Excalidraw: the 10% of features 90% of users draw. Target size ≤ ~30 KB
-gzipped total; success = never needing a shape library.
+Folded into `README.md` ("Whiteboard"). Decisions made during the build, and
+what is still open:
 
-**v1 scope.** Rectangle, ellipse, arrow, text, freehand pen · select/move/
-resize · undo/redo · pan/zoom (two-finger, wheel) · grid · export PNG/SVG ·
-native `.json` board files.
-
-**v2.** Arrows attaching to shapes, grid snap, inline text editing.
-**Never:** shape libraries, images, collaboration, plugins.
-
-**Architecture.**
-- **SVG DOM rendering, not canvas** — each element a node: free hit-testing,
-  a11y, theme tokens, free SVG export. Canvas only wins at 10k+ objects,
-  which nobody hand-draws.
-- Pointer Events + capture: one path for mouse/touch/stylus; single finger
-  draws, two fingers pan/pinch.
-- Undo/redo: immutable element array + snapshot stack (copy-on-write).
-- **Boards are workbench assets**: the `.json` document can be dropped in the
-  tray, saved as copies, even JSON-compared with another board.
-- Autosave boards to `lab:board:v1`; multiple boards with a switcher.
-
-**Implementation.** `src/components/board/` (Canvas surface, Toolbar,
-Inspector) + `src/lib/board/` (element model, geometry, hit-test, history,
-svg-export, png-export via canvas, i18n, storage). Zero new deps.
-
-**Tests.** Geometry (resize handles, arrow math), history undo/redo, export
-SVG serialization, JSON round-trip, pointer reducer, axe.
+- **v1 as specced:** rectangle, ellipse, arrow, text, pen; select/move/resize
+  (handles), marquee and Shift multi-select; undo/redo; pan/zoom (two fingers,
+  wheel, Ctrl+wheel, Space-drag, hand tool); grid; SVG and PNG export; `.json`
+  board files; several boards with a switcher; autosave to `lab:board:v1`.
+- **Style changes apply to the selection** (like Excalidraw), but picking a
+  drawing tool lets go of it, so a colour chosen next applies to the next shape.
+- **Text** is edited in place with a textarea (Ctrl+Enter finishes), which is
+  the v2 "inline text editing" item done early.
+- **Phones:** the toolbar is one swipeable row so the canvas stays on screen.
+- **Not built (v2/never):** arrows that attach to shapes, grid snap, bring
+  to front/send to back, copy/paste across boards, a shared clipboard with other
+  tools. Never: shape libraries, images, collaboration.
+- **Boards as workbench assets:** a board file is plain JSON, so the workbench
+  already opens, saves and JSON-compares it like any JSON file; there is no
+  dedicated "open in Whiteboard" action from the workbench yet.
 
 ---
 

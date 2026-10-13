@@ -92,6 +92,23 @@ export const TOOLS: readonly ToolEntry[] = [
     },
   },
   {
+    id: "board",
+    path: "/board",
+    category: "productivity",
+    files: { en: "Boxes · arrows · pen · SVG, PNG and JSON export", ru: "Блоки · стрелки · карандаш · экспорт SVG, PNG и JSON" },
+    title: { en: "Whiteboard", ru: "Доска" },
+    description: {
+      en: "A small whiteboard for sketching: boxes, ellipses, arrows, notes and freehand, with undo, pan and zoom, several boards and SVG, PNG or JSON export.",
+      ru: "Небольшая доска для набросков: блоки, эллипсы, стрелки, заметки и рисование от руки, отмена, перемещение и масштаб, несколько досок, экспорт в SVG, PNG и JSON.",
+    },
+    keywords: "whiteboard draw sketch diagram boxes arrows shapes pen notes excalidraw доска рисовать набросок схема диаграмма стрелки фигуры заметки",
+    seo: {
+      title: "Online whiteboard and sketchpad",
+      description:
+        "A free, private whiteboard in your browser: draw boxes, arrows, text and freehand, pan and zoom, keep several boards and export SVG, PNG or JSON. Works offline.",
+    },
+  },
+  {
     id: "alias",
     path: "/alias",
     category: "games",

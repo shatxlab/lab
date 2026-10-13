@@ -11,6 +11,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
 | `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV or TSV (`front, back, tags`); export a deck as TSV; Markdown on both sides; EN/RU. |
 | `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes. Plan the day in hours (the quota is however many Pomodoros fit), open a pixel office with one person per Pomodoro, and work: finish the quota and everyone stays, give a Pomodoro up and someone packs a box and walks out the door. Pause, skip breaks, a full-screen focus mode, the countdown in the tab title, a history of past days (with who left) and a streak. |
+| `/board` | Whiteboard · Доска | A small whiteboard for sketching: rectangles, ellipses, arrows, text and freehand, with select/move/resize, undo and redo, pan and zoom (two fingers, wheel, Space-drag), a grid, several boards, and export to SVG, PNG or a plain-JSON board file you can open again. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
@@ -96,6 +97,7 @@ src/
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/wordle/ Wordle island
+  components/board/  Whiteboard island (shell with boards, Workspace canvas and toolbar)
   components/focus/  Focus island (setup, day panel, history; FocusScene hosts Tycoon's Pixi office)
   components/flash/  Flashcards island (deck list, deck editor/import, study session)
   components/alias/  Alias game island (setup, round, results screens)
@@ -115,6 +117,7 @@ src/
   lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
   lib/charts/        sheet → typed columns, chart spec + shape detection, scale/tick math, SVG builder, palette, export, i18n
   lib/send/          "Send to phone" payload codec (size-capped, defensive) + fragment hook
+  lib/board/         element model, geometry/hit-testing, history, viewport, gestures, SVG output, storage, i18n
   lib/focus/         day planner, timestamp-based timer state machine, seeded office, history, storage, i18n, sound
   lib/flash/         FSRS scheduler, deck model + queues, import parsers, store ops, i18n, sound, storage
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
@@ -143,7 +146,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  convert/ qr/ image/ pdf/ wordle/ flash/ focus/ send/ charts/  logic tests per tool (flash/ also has the jsdom flow tests)
+  convert/ qr/ image/ pdf/ wordle/ flash/ focus/ send/ charts/ board/  logic tests per tool (flash/ also has the jsdom flow tests)
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers
@@ -250,6 +253,25 @@ detected, not chosen (`parse.ts`): tab-separated rows, CSV with an optional
 line; `toTsv` writes a deck back out in a form `parseImport` reads. Logic tests
 are in `tests/flash/` (golden FSRS intervals, parsers, queues, storage) with a
 jsdom flow test of the whole island.
+
+### Whiteboard
+
+A board is a list of elements (rectangle, ellipse, arrow, pen stroke, text) in
+drawing order, in plain JSON; a board *file* is that list with a
+`format: "lab-board"` marker, so any text tool can open it. Rendering is SVG
+nodes, not canvas: `lib/board/svg.ts` describes each element once as a node
+tree, which the page turns into React elements and export serialises into a
+standalone SVG (PNG is drawn from that through a canvas), so the file is the
+board. Pointer handling is pure functions in `lib/board/gesture.ts` — begin,
+update, preview and finish a gesture (draw, move, resize, marquee, pan) — and
+the pinch maths keeps the point between two fingers under them; the component
+only forwards events (one Pointer Events path for mouse, touch and pen: one
+finger draws, two move and zoom). Undo is a snapshot stack (`history.ts`), one
+step per gesture. Everything read from storage or a file goes through
+`cleanElements`, which bounds coordinates, counts and text, repairs styles and
+drops anything malformed. Boards autosave (debounced, and on page hide) under
+`lab:board:v1`. Colours are the chart palette's validated hues, resolved per
+theme, so a board looks right in light and dark and exports with explicit colours.
 
 ### Charts
 

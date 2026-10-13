@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import AliasGame from "@/components/alias/AliasGame";
 import CouplesGame from "@/components/couples/CouplesGame";
 import CrosswordGame from "@/components/crossword/CrosswordGame";
+import BoardApp from "@/components/board/BoardApp";
 import FlashApp from "@/components/flash/FlashApp";
 import FocusApp from "@/components/focus/FocusApp";
 import LangToggle from "@/components/apps/LangToggle";
@@ -32,6 +33,7 @@ describe.each([
     ["Crossword", () => <CrosswordGame />],
     ["Couples", () => <CouplesGame />],
     ["Flashcards", () => <FlashApp />],
+    ["Whiteboard", () => <BoardApp />],
     ["Focus office", () => <FocusApp />],
   ];
 

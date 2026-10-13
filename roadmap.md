@@ -1,8 +1,8 @@
 # Roadmap
 
-Status: Flashcards, Focus office, Send to phone, Charts and the Whiteboard
-have shipped, along with the workbench follow-ups in §0. **Still to build:
-CV builder and OCR (§6–§7).** **This file is the single source of
+Status: Flashcards, Focus office, Send to phone, Charts, the Whiteboard and
+the CV builder have shipped, along with the workbench follow-ups in §0. **Still to build:
+OCR (§7).** **This file is the single source of
 TODOs.** A tool moves out of the build order only when its work is merged and its
 entry is folded into `README.md`; shipped entries stay as short notes of the
 decisions made along the way.
@@ -29,7 +29,7 @@ Owner decisions (2026-10-11) that still apply:
 | 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | **shipped** 2026-10-13 (§3) |
 | 4 | Charts | workbench capability | none | **shipped** 2026-10-13 (§4) |
 | 5 | Whiteboard | standalone `/board` | none | **shipped** 2026-10-13 (§5) |
-| 6 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | print-to-PDF engine keeps it cheap (§6) |
+| 6 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | **shipped** 2026-10-13 (§6) |
 | 7 | OCR | workbench capability | tesseract.js | last: needs lazy heavy-asset infrastructure (§7) |
 
 Ordering note: OCR is the only tool needing lazy heavy-asset infrastructure (CSP
@@ -247,38 +247,25 @@ what is still open:
 
 ---
 
-## 6. CV builder (`/cv`)
+## 6. CV builder (`/cv`) — SHIPPED 2026-10-13
 
-Form-driven résumé builder whose templates are **ATS-safe by construction**.
-Export paths: print-to-PDF (selectable text), real `.docx` (via the hand-rolled
-OOXML writer in `lib/docx`), JSON (re-edit/backup), plain text.
+Folded into `README.md` ("CV builder"). Decisions made during the build, and what
+is still open:
 
-**ATS facts baked into the design.** Single-column templates only; standard
-section headings (Experience, Education, Skills); no tables, no text boxes,
-no icons-as-contact-info; real text everywhere; a "remove photo/decorations"
-toggle per template.
-
-**Templates (v1, four).** Classic (serif), Modern (sans), Minimal, ATS-strict
-(plain). Templates are pure renderers over one shared schema — a template is a
-React component mapping `CVSchema` to HTML/CSS.
-
-**Data model.** One JSON schema: profile, experiences[], education[], skills[],
-links[]. Form editor with localStorage draft (`lab:cv:v1`), multiple CVs
-switchable.
-
-**Print engine.** Browser print-to-PDF with a print stylesheet + `@page`
-margins — zero layout code, pixel-perfect, selectable text. A "Print / Save as
-PDF" button; templates are print-tested.
-
-**Bonus later.** "Paste your old CV / LinkedIn text" → heuristic local parser
-into the schema.
-
-**Implementation.** `src/components/cv/` (Form sections, TemplatePreview,
-template components) + `src/lib/cv/` (schema, docx export reusing `lib/docx`,
-plain-text export, i18n, storage).
-
-**Tests.** Schema form reducer, docx export validity (open with the existing
-DOCX pipeline), plain-text export, print stylesheet snapshot, axe.
+- **Templates:** classic, modern, minimal and plain (ATS) over one schema; all
+  single-column real text with standard headings. "Colour and rules" off gives
+  black on white whatever the template. No photo field at all (ATS-safe, and
+  nothing personal to leak).
+- **Printing:** the browser's print dialog, with paper and margins from static
+  named `@page` rules (CSP forbids inline `<style>`). Verified by printing every
+  template to PDF in Chrome and extracting the text.
+- **Exports:** print/PDF, `.docx` via `lib/docx`, plain text, and a JSON CV file.
+  The CV's language (headings, "Present") is separate from the interface
+  language, so a Russian speaker can write an English CV.
+- **Not built:** the "paste your old CV / LinkedIn text" heuristic importer
+  (the roadmap's bonus), custom sections beyond Experience / Education /
+  Projects / Skills, hyperlinks in the Word file (the writer keeps link text
+  only), drag-to-reorder (up/down buttons instead), a photo.
 
 ---
 

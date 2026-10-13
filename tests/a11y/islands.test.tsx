@@ -5,6 +5,7 @@ import AliasGame from "@/components/alias/AliasGame";
 import CouplesGame from "@/components/couples/CouplesGame";
 import CrosswordGame from "@/components/crossword/CrosswordGame";
 import BoardApp from "@/components/board/BoardApp";
+import CvApp from "@/components/cv/CvApp";
 import FlashApp from "@/components/flash/FlashApp";
 import FocusApp from "@/components/focus/FocusApp";
 import LangToggle from "@/components/apps/LangToggle";
@@ -34,6 +35,7 @@ describe.each([
     ["Couples", () => <CouplesGame />],
     ["Flashcards", () => <FlashApp />],
     ["Whiteboard", () => <BoardApp />],
+    ["CV builder", () => <CvApp />],
     ["Focus office", () => <FocusApp />],
   ];
 

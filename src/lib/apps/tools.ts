@@ -109,6 +109,23 @@ export const TOOLS: readonly ToolEntry[] = [
     },
   },
   {
+    id: "cv",
+    path: "/cv",
+    category: "productivity",
+    files: { en: "Résumé · ATS-safe templates · PDF, Word, text", ru: "Резюме · шаблоны для ATS · PDF, Word, текст" },
+    title: { en: "CV builder", ru: "Конструктор резюме" },
+    description: {
+      en: "Fill in a form and get a clean one-column résumé that applicant-tracking systems can read. Print to PDF with selectable text, or download Word, text or JSON.",
+      ru: "Заполните форму и получите аккуратное резюме в одну колонку, которое читают системы отбора кандидатов. Печать в PDF с выделяемым текстом, скачивание в Word, текст или JSON.",
+    },
+    keywords: "cv resume curriculum vitae builder ats applicant tracking template pdf docx job application резюме конструктор шаблон ats вакансия работа pdf word",
+    seo: {
+      title: "ATS-friendly CV and résumé builder",
+      description:
+        "Build a clean one-column résumé that applicant-tracking systems can read: four templates, English or Russian, PDF with real text, Word, text or JSON. Free and private.",
+    },
+  },
+  {
     id: "alias",
     path: "/alias",
     category: "games",

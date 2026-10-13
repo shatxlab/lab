@@ -12,6 +12,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV or TSV (`front, back, tags`); export a deck as TSV; Markdown on both sides; EN/RU. |
 | `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes. Plan the day in hours (the quota is however many Pomodoros fit), open a pixel office with one person per Pomodoro, and work: finish the quota and everyone stays, give a Pomodoro up and someone packs a box and walks out the door. Pause, skip breaks, a full-screen focus mode, the countdown in the tab title, a history of past days (with who left) and a streak. |
 | `/board` | Whiteboard · Доска | A small whiteboard for sketching: rectangles, ellipses, arrows, text and freehand, with select/move/resize, undo and redo, pan and zoom (two fingers, wheel, Space-drag), a grid, several boards, and export to SVG, PNG or a plain-JSON board file you can open again. |
+| `/cv` | CV builder · Конструктор резюме | Fill in a form and get a clean one-column résumé that applicant-tracking systems can read: four templates (classic, modern, minimal, plain), English or Russian headings, A4 or Letter. Print to PDF with selectable text, or download Word (.docx), plain text or a CV file you can reopen; several CVs, live preview. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
@@ -97,6 +98,7 @@ src/
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/wordle/ Wordle island
+  components/cv/     CV builder island (shell, form editor, CvDocument templates)
   components/board/  Whiteboard island (shell with boards, Workspace canvas and toolbar)
   components/focus/  Focus island (setup, day panel, history; FocusScene hosts Tycoon's Pixi office)
   components/flash/  Flashcards island (deck list, deck editor/import, study session)
@@ -117,6 +119,7 @@ src/
   lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
   lib/charts/        sheet → typed columns, chart spec + shape detection, scale/tick math, SVG builder, palette, export, i18n
   lib/send/          "Send to phone" payload codec (size-capped, defensive) + fragment hook
+  lib/cv/            schema, section view-model, edit helpers, HTML/DOCX/text export, storage, i18n
   lib/board/         element model, geometry/hit-testing, history, viewport, gestures, SVG output, storage, i18n
   lib/focus/         day planner, timestamp-based timer state machine, seeded office, history, storage, i18n, sound
   lib/flash/         FSRS scheduler, deck model + queues, import parsers, store ops, i18n, sound, storage
@@ -146,7 +149,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  convert/ qr/ image/ pdf/ wordle/ flash/ focus/ send/ charts/ board/  logic tests per tool (flash/ also has the jsdom flow tests)
+  convert/ qr/ image/ pdf/ wordle/ flash/ focus/ send/ charts/ board/ cv/  logic tests per tool (flash/ also has the jsdom flow tests)
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers
@@ -253,6 +256,32 @@ detected, not chosen (`parse.ts`): tab-separated rows, CSV with an optional
 line; `toTsv` writes a deck back out in a form `parseImport` reads. Logic tests
 are in `tests/flash/` (golden FSRS intervals, parsers, queues, storage) with a
 jsdom flow test of the whole island.
+
+### CV builder
+
+One schema (`lib/cv/schema.ts`) feeds the form, every template and every
+export, and `lib/cv/sections.ts` turns it into the one view-model they all read
+(a header and ordered sections of blocks, empty things left out, standard
+headings in the CV's own language), so they cannot disagree. A template is a
+class on one `CvDocument` sheet styled in `styles/cv.css`: always a single column
+of real text in reading order, with no tables, floats, columns, grid, images or
+absolutely positioned boxes inside the sheet. Also no letter-spacing or
+small-caps, and only regular and bold weights, because Chrome's PDF output for
+those can come out as split text that a parser reads as "S U M M A R Y"; this
+was found by printing each template to PDF and extracting its text with pdf.js,
+and `tests/cv/ats.test.tsx` now guards it by reading the stylesheet.
+
+Printing uses the browser, so the PDF is real selectable text: the page hides
+everything but a print copy of the sheet (always in the DOM, so any tab can
+print). The site's CSP forbids an inline `<style>`, so paper and margins are four
+static named `@page` rules (`cv-a4`, `cv-letter` and their compact variants)
+chosen by a class on the print copy, with an unnamed A4 rule as the fallback for
+browsers without the `page` property. Word export goes through the existing
+`lib/docx` writer from plain structural HTML (`cvToHtml`), so the heading and
+bullet structure survives; plain text and a JSON CV file (`format: "lab-cv"`)
+are the other exports. Everything stored or opened goes through `cleanCv`, which
+bounds every field and list, repairs settings and ids, and only ever links
+`http(s)` addresses. CVs autosave under `lab:cv:v1`.
 
 ### Whiteboard
 

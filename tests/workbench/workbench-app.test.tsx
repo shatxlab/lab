@@ -84,6 +84,7 @@ const stubs = {
   "text.diff": opened("compare"),
   "qr.generate": opened("qr"),
   "chart.make": opened("chart"),
+  "ocr.recognize": opened("ocr"),
 };
 
 describe("WorkbenchApp — empty screen", () => {
@@ -126,7 +127,7 @@ describe("WorkbenchApp — one file", () => {
   it("offers open, sign and split for a PDF and hints at merge", async () => {
     const view = await mount(<WorkbenchApp operations={stubs} />);
     await addFiles(pdf("doc.pdf"));
-    await waitFor(() => expect(tabLabels()).toEqual([label("doc.open"), label("pdf.sign"), label("pdf.split")]));
+    await waitFor(() => expect(tabLabels()).toEqual([label("doc.open"), label("pdf.sign"), label("ocr.recognize"), label("pdf.split")]));
     expect(document.body.textContent).toContain(wb("en", "addMoreHint", { actions: label("pdf.merge") }));
     view.unmount();
   });
@@ -166,7 +167,7 @@ describe("WorkbenchApp — several files", () => {
     await waitFor(() => expect(document.body.textContent).toContain("open: data.csv"));
     await addFiles(png("photo.png"));
     await waitFor(() => expect(document.body.textContent).toContain("image: photo.png"));
-    expect(tabLabels()).toEqual([label("image.edit")]);
+    expect(tabLabels()).toEqual([label("image.edit"), label("ocr.recognize")]);
 
     await click(fileRow("data.csv"));
     await waitFor(() => expect(document.body.textContent).toContain("open: data.csv"));

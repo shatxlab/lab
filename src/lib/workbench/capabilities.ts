@@ -33,7 +33,8 @@ export type CapabilityId =
   | "pdf.merge"
   | "text.diff"
   | "qr.generate"
-  | "chart.make";
+  | "chart.make"
+  | "ocr.recognize";
 
 export interface Capability {
   id: CapabilityId;
@@ -96,6 +97,12 @@ export const CAPABILITIES: readonly Capability[] = [
     label: { en: "Make chart", ru: "Построить график" },
     weight: 700,
     kinds: kinds("sheet"),
+  },
+  {
+    id: "ocr.recognize",
+    label: { en: "Recognize text", ru: "Распознать текст" },
+    weight: 650,
+    kinds: kinds("image", "pdf"),
   },
   {
     id: "pdf.sign",

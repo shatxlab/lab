@@ -1,9 +1,9 @@
 # Roadmap
 
 Status: Flashcards, Focus office, Send to phone, Charts, the Whiteboard and
-the CV builder have shipped, along with the workbench follow-ups in §0. **Still to build:
-OCR (§7).** **This file is the single source of
-TODOs.** A tool moves out of the build order only when its work is merged and its
+the CV builder and OCR have shipped, along with the workbench follow-ups in §0.
+**Nothing is left of the original build order; §8 (Tycoon) holds the open work.**
+**This file is the single source of TODOs.** A tool moves out of the build order only when its work is merged and its
 entry is folded into `README.md`; shipped entries stay as short notes of the
 decisions made along the way.
 
@@ -30,11 +30,9 @@ Owner decisions (2026-10-11) that still apply:
 | 4 | Charts | workbench capability | none | **shipped** 2026-10-13 (§4) |
 | 5 | Whiteboard | standalone `/board` | none | **shipped** 2026-10-13 (§5) |
 | 6 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | **shipped** 2026-10-13 (§6) |
-| 7 | OCR | workbench capability | tesseract.js | last: needs lazy heavy-asset infrastructure (§7) |
+| 7 | OCR | workbench capability | tesseract.js (lazy) | **shipped** 2026-10-13 (§7) |
 
-Ordering note: OCR is the only tool needing lazy heavy-asset infrastructure (CSP
-`'wasm-unsafe-eval'`, a cache helper); that prerequisite work can start at any
-point. Everything else is dep-free. Dictation was cut (see the parking lot).
+Dictation was cut (see the parking lot).
 
 Done outside this build order (2026-10-12): **Software Tycoon** was merged in
 from the standalone `software-tycoon` repo as `/tycoon` — the engine ported to
@@ -269,22 +267,35 @@ is still open:
 
 ---
 
-## 7. OCR — workbench capability
+## 7. OCR — workbench capability — SHIPPED 2026-10-13
 
-New `ocr` capability on the **image** kind and on **PDF** (pages rasterized
-with the already-bundled pdf.js). Tesseract via `tesseract.js` in a Web
-Worker: WASM core ≈ 2–4 MB + per-language `traineddata.gz` ≈ 2 MB ("fast"
-models; EN + RU first, ~40 more selectable). Output lands in the **Outputs
-tray as a text asset** — recognized text then flows into Edit, Compare,
-Convert, QR seed.
+`ocr.recognize` on **images** and **PDFs** (scans: pages are drawn with the
+bundled pdf.js at about 200 dpi). Recognised text lands in the Outputs tray as a
+`.txt` asset. Behaviour is in `README.md` ("Recognize text"). Decisions:
 
-**Preprocessing wins accuracy:** reuse the `lib/image` canvas pipeline —
-grayscale → contrast/threshold → upscale small images → optional deskew.
-UI states honest limits: printed text good, handwriting poor, multi-column
-approximate. Progress bar (tesseract reports natively).
+- **Self-hosted engine, no CDN.** tesseract.js 7 with its SIMD or plain WASM core
+  (chosen by feature detection) and "best, integer" LSTM models. Build-time copy
+  into `assets/ocr/` (`scripts/copy-ocr-assets.mjs`, git-ignored) with a
+  `manifest.json` of real file sizes: worker 0.1 MB, engine 3.9 MB, English
+  2.8 MB, Russian 2.6 MB.
+- **Languages: English and Russian only.** More would be ~2–3 MB each in the build
+  output or a CDN; neither without the owner's say. Adding one is dropping its
+  `.traineddata.gz` in and naming it in the copy script.
+- **No CSP change was needed.** The worker loads from a same-origin URL (not a
+  blob), so it does not inherit the page policy and `'wasm-unsafe-eval'` was never
+  required. The existing `worker-src 'self'` and `connect-src 'self'` suffice.
+- **Explicit download.** `src/lib/apps/heavy-assets.ts` (Cache Storage
+  `lab-ocr-v1`, streamed with progress, a file is stored only when complete, a
+  remove button). The service worker never precaches `/ocr/` (only the manifest)
+  but serves the cache to the worker, so it then works offline.
+- **Preprocessing** (`lib/ocr/preprocess.ts`): grey, 1%-percentile contrast
+  stretch, optional Otsu black and white, enlarge below 1600 px, cap at 4000 px,
+  transparent images placed on white.
+- Verified in Chrome by drawing English and Russian text on a canvas (read
+  exactly, in under 3 s), on a two-page scanned PDF, and with the network blocked.
 
-**Assets never precached:** WASM + language data lazy-load on first use into a
-runtime cache (the shared lazy-asset helper below). CSP needs `'wasm-unsafe-eval'`.
+Not done, on purpose: deskew and layout analysis (columns, tables), handwriting,
+more languages (needs the owner), a per-word confidence overlay.
 
 ---
 
@@ -435,14 +446,13 @@ parking lot)
 
 ## Cross-cutting prerequisites (build once, reuse everywhere)
 
-1. **CSP updates** in `astro.config.mjs`: add `'wasm-unsafe-eval'` for script
-   (OCR and any future WASM tool). Screen recording, if ever built, would need a
-   `display-capture` permission in `assets/_headers`. (The bridge's WebRTC and
-   camera notes are in §1, which is parked.)
-2. **Lazy heavy-asset pattern** for the service worker: precache never includes
-   WASM cores or language data (>1 MB rule); runtime Cache Storage with
-   explicit download/progress/delete UI and honest size labeling. Shared
-   helper in `src/lib/apps/` — OCR is its only consumer.
+1. **CSP / headers:** no change was needed for OCR (see §7). Screen recording, if
+   ever built, would need a `display-capture` permission in `assets/_headers`.
+   (The bridge's WebRTC and camera notes are in §1, which is parked.)
+2. **Lazy heavy-asset pattern** — built: `src/lib/apps/heavy-assets.ts`. The
+   service worker never precaches such files (`EXCLUDE` in `scripts/pwa/integration.mjs`);
+   a tool lists its files with sizes, downloads them on request with progress into
+   its own cache and offers removal. OCR is its only consumer so far.
 3. **Settings backup coverage:** every tool persists under its `lab:<tool>:v1`
    key (flash and focus already do; board and cv will) so backup/restore carries
    state across devices. Small data can also move with Send to phone.

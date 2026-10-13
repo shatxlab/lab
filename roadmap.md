@@ -27,7 +27,7 @@ scope: workbench itself stays dep-free and terminal-rule-scoped):
 
 | # | Tool | Page vs workbench | New deps | Why this order |
 |---|---|---|---|---|
-| 1 | Device bridge | standalone `/bridge` | none | The flagship; other tools hand off to it |
+| 1 | ~~Device bridge~~ **parked 2026-10-13** | standalone `/bridge` | none | Not needed yet; spec and feasibility notes kept in §1 |
 | 2 | Flashcards | standalone `/flash` | none | Small, daily-use, proves the standalone pattern |
 | 3 | Focus office | standalone `/focus` | none | Mood piece, perfect offline PWA shortcut |
 | 4 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target |
@@ -156,7 +156,14 @@ Suggested commit split, each green before the next: 0a, 0b, 0c, 0d, 0e tier A,
 
 ---
 
-## 1. Device bridge (`/bridge`)
+## 1. Device bridge (`/bridge`) — PARKED 2026-10-13
+
+> **Owner's call: not needed at the moment.** Nothing below is scheduled. Other
+> tools must not depend on it: where they say "moves via the bridge", read
+> "export/import file" until the bridge exists. Small desktop→phone text can
+> already go through the workbench's Create QR code capability (a "Send to
+> phone" shortcut on text outputs is a cheap future add). Spec and feasibility
+> findings are kept for when this is revisited.
 
 Local file/text transfer between phone and desktop over WebRTC, signaled by QR
 code. No server, no accounts, no pairing code to type.
@@ -526,6 +533,7 @@ parking lot)
   a flow that OS keyboards (Gboard, iOS dictation) already serve for free.
   If a real use case appears later (e.g. transcripts for the subtitles tool),
   revisit as a workbench capability on audio files, not a standalone page.
+- **Device bridge** — parked 2026-10-13, full spec and feasibility notes in §1.
 - **Photo studio** — crop/rotate/flip/filters/watermark/collage on the existing
   `lib/image` pipeline. Owner wants this thought through later, not now.
 - **Subtitles editor** — SRT/VTT shift/renumber/merge/convert; shares the

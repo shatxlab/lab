@@ -79,7 +79,7 @@ export const CAPABILITIES: readonly Capability[] = [
   },
   {
     id: "image.edit",
-    label: { en: "Image", ru: "Изображение" },
+    label: { en: "Edit image", ru: "Обработать изображения" },
     weight: 850,
     kinds: kinds("image"),
     set: (count) => count >= 1,

@@ -260,7 +260,16 @@ export function OperationHost({ id, operations, lang, ...props }: OperationHostP
     };
   }, [id, injected]);
 
-  if (!loaded) return <p className="text-sm text-(--muted-fg)">{wb(lang, "loading")}</p>;
+  if (!loaded) {
+    // A toolbar-high skeleton so the panel doesn't jump when the operation arrives.
+    return (
+      <div aria-busy="true" className="flex min-h-12 flex-col justify-center gap-2 motion-safe:animate-pulse">
+        <span className="sr-only">{wb(lang, "loading")}</span>
+        <div aria-hidden="true" className="h-3 w-2/3 rounded-full bg-(--muted-fg)/20" />
+        <div aria-hidden="true" className="h-3 w-1/3 rounded-full bg-(--muted-fg)/20" />
+      </div>
+    );
+  }
   const Component = loaded;
   return <Component lang={lang} {...props} />;
 }

@@ -7,6 +7,14 @@ import type { Engine } from "@/lib/ocr/engine";
 
 const plan = { core: "c", worker: "w", langPath: "l", files: [] };
 
+/** Canvas operations that touch nothing, so a run is quick and deterministic in jsdom. */
+const tools = {
+  gray: () => ({ data: new Uint8Array(100).fill(255), width: 10, height: 10, scale: 1 }),
+  rotate: (canvas: HTMLCanvasElement) => canvas,
+  crop: (canvas: HTMLCanvasElement) => canvas,
+  blob: async () => null,
+};
+
 /** A canvas context that remembers nothing, so drawing and pixel work run in jsdom. */
 beforeEach(() => {
   const context = { fillStyle: "", fillRect() {}, drawImage() {}, getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4).fill(200), width: w, height: h }), putImageData() {}, imageSmoothingQuality: "" };
@@ -29,7 +37,7 @@ function fakeEngine(texts: string[], confidences: number[] = texts.map(() => 90)
     async recognize() {
       const i = engine.recognized++;
       if (delay) await new Promise((r) => setTimeout(r, delay));
-      return { text: texts[i] ?? "", confidence: confidences[i] ?? 0 };
+      return { text: texts[i] ?? "", confidence: confidences[i] ?? 0, words: [] };
     },
     async terminate() {
       engine.terminated++;
@@ -96,6 +104,7 @@ describe("runOcr", () => {
       source: { kind: "image", blob: new Blob(["x"]) },
       languages: ["eng"],
       plan,
+      tools,
       preprocess: DEFAULT_PREPROCESS,
       markPages: true,
       onProgress: (p) => seen.push(p.fraction),
@@ -105,7 +114,7 @@ describe("runOcr", () => {
         return engine;
       },
     });
-    expect(result).toEqual({ text: "Hello world\n", confidence: 93, pages: 1 });
+    expect(result).toMatchObject({ text: "Hello world\n", confidence: 93, pages: 1, table: null });
     expect(seen[0]).toBeCloseTo(0.05, 9);
     expect(seen.at(-1)).toBeCloseTo(1, 9);
     expect([...seen].sort((a, b) => a - b)).toEqual(seen);
@@ -119,6 +128,7 @@ describe("runOcr", () => {
       source: { kind: "pdf", pdf: fakePdf(5) as never, pages: [1, 3] },
       languages: ["eng", "rus"],
       plan,
+      tools,
       preprocess: DEFAULT_PREPROCESS,
       markPages: true,
       onProgress: (p) => pages.push(p.page),
@@ -138,6 +148,7 @@ describe("runOcr", () => {
       source: { kind: "image", blob: new Blob(["x"]) },
       languages: ["eng"],
       plan,
+      tools,
       preprocess: DEFAULT_PREPROCESS,
       markPages: false,
       onProgress: () => {},
@@ -154,7 +165,7 @@ describe("runOcr", () => {
     controller.abort();
     const start = vi.fn();
     await expect(
-      runOcr({ source: { kind: "image", blob: new Blob(["x"]) }, languages: ["eng"], plan, preprocess: DEFAULT_PREPROCESS, markPages: false, onProgress: () => {}, signal: controller.signal, createEngine: start as never }),
+      runOcr({ source: { kind: "image", blob: new Blob(["x"]) }, languages: ["eng"], plan, tools, preprocess: DEFAULT_PREPROCESS, markPages: false, onProgress: () => {}, signal: controller.signal, createEngine: start as never }),
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(start).not.toHaveBeenCalled();
   });
@@ -165,7 +176,7 @@ describe("runOcr", () => {
       throw new Error("bad image");
     };
     await expect(
-      runOcr({ source: { kind: "image", blob: new Blob(["x"]) }, languages: ["eng"], plan, preprocess: DEFAULT_PREPROCESS, markPages: false, onProgress: () => {}, createEngine: async () => engine }),
+      runOcr({ source: { kind: "image", blob: new Blob(["x"]) }, languages: ["eng"], plan, tools, preprocess: DEFAULT_PREPROCESS, markPages: false, onProgress: () => {}, createEngine: async () => engine }),
     ).rejects.toThrow("bad image");
     expect(engine.terminated).toBe(1);
   });

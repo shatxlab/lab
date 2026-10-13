@@ -10,13 +10,15 @@
 import * as React from "react";
 
 import { imageMime } from "@/components/viewer/viewers/ImageView";
-import { ActionButton, CopyButton, inputClass, labelClass, panelClass, textareaClass } from "@/components/tools/ui";
+import { ActionButton, CopyButton, SelectField, inputClass, labelClass, panelClass, textareaClass } from "@/components/tools/ui";
 import type { AppLang } from "@/lib/apps/lang";
 import { OCR_CACHE, cacheSupported, cachedFiles, downloadFiles, removeFiles, totalSize } from "@/lib/apps/heavy-assets";
 import { LANGUAGE_NAMES, allFiles, loadManifest, planFor, supportsSimd, type OcrManifest } from "@/lib/ocr/assets";
 import { toc } from "@/lib/ocr/i18n";
 import { DEFAULT_PREPROCESS, type PreprocessOptions } from "@/lib/ocr/preprocess";
-import { MAX_PDF_PAGES, runOcr, type OcrProgress, type OcrResult } from "@/lib/ocr/run";
+import { OcrWords } from "@/components/workbench/operations/OcrWords";
+import { tableToCsv } from "@/lib/ocr/layout";
+import { LAYOUTS, MAX_PDF_PAGES, runOcr, type Layout, type OcrProgress, type OcrResult } from "@/lib/ocr/run";
 import { parsePageRanges } from "@/lib/pdf/ranges";
 import { cn, formatBytes } from "@/lib/viewer/utils";
 import type { OperationProps } from "@/lib/workbench/operation";
@@ -26,7 +28,7 @@ type Run =
   | { status: "idle" }
   | { status: "downloading"; loaded: number; total: number }
   | { status: "running"; progress: OcrProgress | null }
-  | { status: "done"; result: OcrResult; name: string }
+  | { status: "done"; result: OcrResult; name: string; csv: boolean }
   | { status: "error"; message: string };
 
 const supported = (): boolean => typeof WebAssembly === "object" && typeof Worker !== "undefined";
@@ -66,6 +68,8 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
     enlarge: params?.enlarge !== false,
   };
   const markPages = params?.markPages !== false;
+  const straighten = params?.straighten !== false;
+  const layout: Layout = LAYOUTS.includes(params?.layout as Layout) ? (params!.layout as Layout) : "auto";
   const simd = React.useMemo(() => supportsSimd(), []);
 
   // What this build ships.
@@ -165,13 +169,21 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
         languages: chosen,
         plan,
         preprocess,
+        straighten,
+        layout,
         markPages,
         signal: controller.signal,
         onProgress: (progress) => setRun({ status: "running", progress }),
       });
-      const name = `${baseName(asset.name)}.txt`;
-      setRun({ status: "done", result, name });
-      if (result.text.trim() !== "") onProduce?.({ name, type: "text/plain;charset=utf-8", bytes: new TextEncoder().encode(result.text), kind: "text" });
+      // A table becomes a spreadsheet the workbench can open and chart; anything else is text.
+      const csv = result.table !== null;
+      const name = `${baseName(asset.name)}.${csv ? "csv" : "txt"}`;
+      setRun({ status: "done", result, name, csv });
+      if (result.table && result.table.length > 0) {
+        onProduce?.({ name, type: "text/csv;charset=utf-8", bytes: new TextEncoder().encode(tableToCsv(result.table)), kind: "sheet" });
+      } else if (!csv && result.text.trim() !== "") {
+        onProduce?.({ name, type: "text/plain;charset=utf-8", bytes: new TextEncoder().encode(result.text), kind: "text" });
+      }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") setRun({ status: "idle" }), setNote(toc(lang, "stopped"));
       else setRun({ status: "error", message: toc(lang, "failed", { detail: error instanceof Error ? error.message : String(error) }) });
@@ -261,6 +273,27 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
         {check("contrast", "contrastHint")}
         {check("blackWhite", "blackWhiteHint")}
         {check("enlarge")}
+        <label className="flex flex-col gap-0.5 text-sm font-medium">
+          <span className="flex items-center gap-2">
+            <input type="checkbox" checked={straighten} disabled={busy} onChange={(event) => setParams?.({ straighten: event.target.checked })} />
+            {toc(lang, "straighten")}
+          </span>
+          <span className="pl-6 text-xs font-normal text-(--muted-fg)">{toc(lang, "straightenHint")}</span>
+        </label>
+        <div className="flex flex-col gap-1">
+          <SelectField
+            label={toc(lang, "layout")}
+            value={layout}
+            onChange={(value) => setParams?.({ layout: value })}
+            options={[
+              { value: "auto", label: toc(lang, "layoutAuto") },
+              { value: "columns", label: toc(lang, "layoutColumns") },
+              { value: "block", label: toc(lang, "layoutBlock") },
+              { value: "table", label: toc(lang, "layoutTable") },
+            ]}
+          />
+          <span className="text-xs text-(--muted-fg)">{toc(lang, "layoutHint")}</span>
+        </div>
         {isPdf && check("markPages")}
         {isPdf && (
           <label className={labelClass}>
@@ -307,7 +340,32 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
           <h2 id="ocr-result" className="text-sm font-semibold">
             {toc(lang, "result")}
           </h2>
-          {run.result.text.trim() === "" ? (
+          {run.csv ? (
+            run.result.table && run.result.table.length > 0 ? (
+              <>
+                <p className="text-sm font-medium">{toc(lang, "tableFound", { rows: run.result.table.length, cols: run.result.table[0]!.length })}</p>
+                <div className="max-h-80 overflow-auto rounded-lg border border-(--border)">
+                  <table className="w-full border-collapse text-sm">
+                    <caption className="sr-only">{toc(lang, "tableCaption")}</caption>
+                    <tbody>
+                      {run.result.table.slice(0, 200).map((row, r) => (
+                        <tr key={r} className="odd:bg-(--bg)">
+                          {row.map((cell, c) => (
+                            <td key={c} className="border-b border-(--border) px-3 py-1.5">
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-(--muted-fg)">{toc(lang, "addedCsv", { name: run.name })}</p>
+              </>
+            ) : (
+              <p className="text-sm text-(--muted-fg)">{toc(lang, "tableNone")}</p>
+            )
+          ) : run.result.text.trim() === "" ? (
             <p className="text-sm text-(--muted-fg)">{toc(lang, "nothing")}</p>
           ) : (
             <>
@@ -320,6 +378,12 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
               <p className="text-xs text-(--muted-fg)">{toc(lang, "added", { name: run.name })}</p>
             </>
           )}
+          {run.result.details.some((page) => page.straightened !== 0 || page.columns > 1) && (
+            <p className="text-xs text-(--muted-fg)">
+              {toc(lang, "notes", { straight: run.result.details.filter((page) => page.straightened !== 0).length, columns: run.result.details.filter((page) => page.columns > 1).length })}
+            </p>
+          )}
+          {run.result.details.some((page) => page.words.length > 0) && <OcrWords lang={lang} details={run.result.details} />}
         </section>
       )}
 

@@ -8,7 +8,7 @@ import type { OperationOutput } from "@/lib/workbench/operation";
 import { hasOperation } from "@/lib/workbench/operations";
 import { axeViolations, click, mount, waitFor } from "../helpers/dom";
 
-const run = vi.hoisted(() => ({ calls: [] as Record<string, unknown>[], result: { text: "Hello world\n", confidence: 91.4, pages: 1 }, fail: null as Error | null, hang: false }));
+const run = vi.hoisted(() => ({ calls: [] as Record<string, unknown>[], result: { text: "Hello world\n", confidence: 91.4, pages: 1, details: [] as unknown[], table: null as string[][] | null }, fail: null as Error | null, hang: false }));
 vi.mock("@/lib/ocr/run", async (importActual) => {
   const actual = await importActual<typeof import("@/lib/ocr/run")>();
   return {
@@ -41,7 +41,7 @@ beforeEach(() => {
   run.calls = [];
   run.fail = null;
   run.hang = false;
-  run.result = { text: "Hello world\n", confidence: 91.4, pages: 1 };
+  run.result = { text: "Hello world\n", confidence: 91.4, pages: 1, details: [], table: null };
   store = new Map();
   fetched = [];
   manifest = MANIFEST;
@@ -208,7 +208,7 @@ describe("OcrOperation — recognising", () => {
   });
 
   it("adds nothing to the outputs, and says so, when no text was found", async () => {
-    run.result = { text: "  \n", confidence: 10, pages: 1 };
+    run.result = { text: "  \n", confidence: 10, pages: 1, details: [], table: null };
     const { view, outputs } = await ready(image());
     await click(button("Recognize text")!);
     await waitFor(() => expect(text()).toContain("No text was found"));

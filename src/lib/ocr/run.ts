@@ -3,8 +3,20 @@
 import type { PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 import type { Plan } from "@/lib/ocr/assets";
-import { createEngine, type Engine, type EngineStatus, type Recognition } from "@/lib/ocr/engine";
+import { canvasTools, type CanvasTools } from "@/lib/ocr/canvas";
+import { createEngine, type Engine, type EngineStatus, type RecognizeOptions } from "@/lib/ocr/engine";
+import { buildTable, estimateSkew, findColumnCuts, shiftWords, straightenAngle, type Word } from "@/lib/ocr/layout";
 import { prepareCanvas, type PreprocessOptions } from "@/lib/ocr/preprocess";
+
+/**
+ * How the page is divided before it is read:
+ * - `auto`: the engine decides;
+ * - `columns`: cut at the gutters between columns and read each in turn;
+ * - `block`: one block of text, as is (single lines, labels);
+ * - `table`: rebuild a table from the positions of the words.
+ */
+export type Layout = "auto" | "columns" | "block" | "table";
+export const LAYOUTS: readonly Layout[] = ["auto", "columns", "block", "table"];
 
 export type Source = { kind: "image"; blob: Blob } | { kind: "pdf"; pdf: Pick<PDFDocumentProxy, "getPage">; pages: number[] };
 
@@ -17,11 +29,31 @@ export interface OcrProgress {
   pages: number;
 }
 
+/** What was read from one page, with what the reader saw: the page as straightened, and every word's place. */
+export interface PageResult {
+  /** 1-based page number in the file. */
+  number: number;
+  text: string;
+  confidence: number;
+  words: Word[];
+  width: number;
+  height: number;
+  /** Degrees the page was turned to straighten it (0 if it was not). */
+  straightened: number;
+  /** How many columns it was read as. */
+  columns: number;
+  /** The page as read, to show doubtful words on; null where it cannot be encoded. */
+  image: Blob | null;
+}
+
 export interface OcrResult {
   text: string;
   /** Mean confidence over the pages, 0–100. */
   confidence: number;
   pages: number;
+  details: PageResult[];
+  /** In table layout, the rows and cells that were rebuilt; otherwise null. */
+  table: string[][] | null;
 }
 
 /** Pages are drawn at about this resolution before recognising; more is slower and no better. */
@@ -60,11 +92,15 @@ export interface RunOptions {
   languages: readonly string[];
   plan: Plan;
   preprocess: PreprocessOptions;
+  /** Turn a tilted page upright before reading it. */
+  straighten?: boolean;
+  layout?: Layout;
   markPages: boolean;
   onProgress: (progress: OcrProgress) => void;
   signal?: AbortSignal;
   /** For tests. */
   createEngine?: typeof createEngine;
+  tools?: CanvasTools;
 }
 
 const abortError = () => new DOMException("Aborted", "AbortError");
@@ -106,8 +142,24 @@ async function pdfPageCanvas(pdf: Pick<PDFDocumentProxy, "getPage">, number: num
   return canvas;
 }
 
+const MODES: Record<Layout, RecognizeOptions> = {
+  auto: { psm: "3" },
+  columns: { psm: "4" },
+  block: { psm: "6" },
+  table: { psm: "6", preserveSpaces: true },
+};
+
+/** Stack the tables of several pages, padding short rows so the result is a rectangle. */
+function stackTables(tables: string[][][]): string[][] {
+  const rows = tables.flat();
+  const width = Math.max(0, ...rows.map((row) => row.length));
+  return rows.map((row) => [...row, ...Array.from({ length: width - row.length }, () => "")]);
+}
+
 export async function runOcr(options: RunOptions): Promise<OcrResult> {
   const { source, languages, plan, preprocess, markPages, onProgress, signal } = options;
+  const layout = options.layout ?? "auto";
+  const tools = options.tools ?? canvasTools;
   const numbers = source.kind === "pdf" ? source.pages : [1];
   const pages = numbers.length;
   const start = options.createEngine ?? createEngine;
@@ -122,8 +174,7 @@ export async function runOcr(options: RunOptions): Promise<OcrResult> {
 
   try {
     engine = await guard(start(plan, languages, (status, fraction) => report(status, fraction)));
-    const texts: string[] = [];
-    const confidences: number[] = [];
+    const details: PageResult[] = [];
     for (let index = 0; index < pages; index += 1) {
       current = { page: numbers[index]!, index };
       report("render", 0);
@@ -138,14 +189,61 @@ export async function runOcr(options: RunOptions): Promise<OcrResult> {
         canvas = prepareCanvas(drawn, { ...preprocess, enlarge: false });
         drawn.width = drawn.height = 0;
       }
+
+      // Straighten a tilted page, so lines are level for the engine.
+      let straightened = 0;
+      if (options.straighten) {
+        const angle = straightenAngle(estimateSkew(tools.gray(canvas)));
+        if (angle !== 0) {
+          const turned = tools.rotate(canvas, -angle);
+          canvas.width = canvas.height = 0;
+          canvas = turned;
+          straightened = angle;
+        }
+      }
+
+      // Columns are read one after the other, left to right.
+      let strips: { canvas: HTMLCanvasElement; x: number }[] = [{ canvas, x: 0 }];
+      if (layout === "columns") {
+        const gray = tools.gray(canvas);
+        const cuts = findColumnCuts(gray).map((cut) => Math.round(cut / gray.scale));
+        if (cuts.length > 0) {
+          const edges = [0, ...cuts, canvas.width];
+          strips = edges.slice(0, -1).map((from, i) => ({ canvas: tools.crop(canvas, from, edges[i + 1]!), x: from }));
+        }
+      }
       report("render", 1);
-      const result: Recognition = await guard(engine.recognize(canvas));
+
+      const texts: string[] = [];
+      const words: Word[] = [];
+      let weighted = 0;
+      for (const strip of strips) {
+        const result = await guard(engine.recognize(strip.canvas, MODES[layout]));
+        texts.push(result.text.replace(/\s+$/g, ""));
+        words.push(...(strip.x === 0 ? result.words : shiftWords(result.words, strip.x, 0)));
+        weighted += result.confidence;
+        if (strip.canvas !== canvas) strip.canvas.width = strip.canvas.height = 0;
+      }
+      const image = await tools.blob(canvas);
+      details.push({
+        number: numbers[index]!,
+        text: texts.filter(Boolean).join("\n\n"),
+        confidence: weighted / strips.length,
+        words,
+        width: canvas.width,
+        height: canvas.height,
+        straightened,
+        columns: strips.length,
+        image,
+      });
       canvas.width = canvas.height = 0;
-      texts.push(result.text);
-      confidences.push(result.confidence);
       report("recognizing", 1);
     }
-    return { text: joinPages(texts, numbers, markPages), confidence: confidences.reduce((a, b) => a + b, 0) / Math.max(1, confidences.length), pages };
+
+    const table = layout === "table" ? stackTables(details.map((page) => buildTable(page.words))) : null;
+    // In table layout the text is the table, one row per line, cells separated by tabs.
+    const text = table ? `${table.map((row) => row.join("\t")).join("\n")}\n` : joinPages(details.map((page) => page.text), numbers, markPages);
+    return { text, confidence: details.reduce((sum, page) => sum + page.confidence, 0) / Math.max(1, details.length), pages, details, table };
   } finally {
     // Stopping the worker is what cancels a recognition in progress.
     await engine?.terminate().catch(() => {});

@@ -424,8 +424,26 @@ transparent areas become white). PDF pages are drawn at about 200 dpi, up to
 50 per run, chosen by a page range. Progress covers engine start-up and every
 page, and Stop terminates the worker. The text is shown with the mean confidence
 and added to the Outputs tray as `<name>.txt`, where Edit, Compare or the QR
-generator can take it on. The tool says plainly that handwriting, tiny or blurred
-text and multi-column layouts read poorly. To add a language, put its
+generator can take it on. The tool says plainly that handwriting and tiny or
+blurred text read poorly.
+
+Pages can be prepared and read in four ways (`lib/ocr/layout.ts` holds the maths,
+all of it on plain arrays so it is tested without a browser). **Straighten tilted
+pages** (on by default) estimates the tilt of a page by projecting its ink onto
+the vertical axis at trial angles within ±10° and taking the angle at which the
+text lines are sharpest, then turns the page if the tilt is at least 0.4° and
+clearly real. **Columns** finds the gutters between columns of text (runs of
+ink-free columns at least 1.5% of the width with a tenth of the ink on each
+side), cuts the page there and reads each strip in turn, left to right, so the
+columns are not interleaved line by line; a heading across the columns can hide
+the gutter, and then the page is read as one. **One block** is the engine's
+single-block mode. **Table** reads the page as one block with spacing preserved,
+then rebuilds the table from the word boxes: each line is cut into cells where
+the gap is wider than a space, and cells line up into columns by the horizontal
+bands they cover, so empty cells and right-aligned numbers stay in their columns.
+The result opens in the workbench as a `.csv` spreadsheet. After any read, the
+words the engine was unsure of (below 75% confidence, red below 50%) are listed
+and boxed on the page as it was read, so a person knows where to look first. To add a language, put its
 `.traineddata.gz` where the copy script looks and name it in `LANGUAGES` there
 (and in `LANGUAGE_NAMES` in `lib/ocr/assets.ts`).
 

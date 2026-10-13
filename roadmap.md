@@ -57,8 +57,8 @@ The workbench is complete at its locked scope (§2 decisions of the former
 handoff); what remains is polish, in this order. Shipped already: beforeunload
 guard, shared `useSeedAssets`, the no-"asset" i18n sweep, outputs-tray
 thumbnails + `Download all`, diff patch/HTML-report export. **Shipped 2026-10-13: 0a, 0b, 0d, 0e tier A**
-(their sections below are the spec they were built from). Open: 0c (blocked,
-see its note), 0e tier B, 0f, 0g.
+(their sections below are the spec they were built from). Dropped: 0c. Open:
+0e tier B, 0f, 0g.
 
 ### 0a. Verbs and a quiet loading state
 - `src/lib/workbench/capabilities.ts`: rename `image.edit` label "Image" →
@@ -83,12 +83,10 @@ see its note), 0e tier B, 0f, 0g.
   added → still A/B on the two texts (a third *text* removes Compare entirely); mixed pdf+text on the Compare tab → pdf row no badge.
 
 ### 0c. Paste lands where the intent is
-> **Blocked 2026-10-13 — needs a decision.** Pasting on an empty screen adds a
-> single `paste.txt` asset, and `text.diff` is only offered for exactly two
-> files (`set: count === 2`), so `setActiveId("text.diff")` is ignored and the
-> shell falls back to `doc.open`. Options: offer Compare for one text (side B
-> empty; changes the "add one more file to unlock Compare" hint and its tests),
-> or drop 0c and keep paste → Open.
+> **Dropped 2026-10-13 (owner: option B).** Pasted text keeps opening in Open:
+> Compare is offered only for exactly two files, so a lone `paste.txt` can't
+> land in it without changing that rule. The spec below is kept for reference
+> only; do not build it.
 
 - `WorkbenchApp.addText`: on an empty, clean screen pasted text opens the
   `text.diff` starter (`if (empty && !dirtyRef.current) setActiveId("text.diff")`,
@@ -182,12 +180,19 @@ decks and drafts move between phone and desktop without a server.
 **Feasibility check (2026-10-13) — corrections to the plan above.**
 - **There is no QR scanner to reuse.** `jsqr` is a devDependency used only by
   `tests/qr/qr-libs.test.ts`; nothing in `src/` decodes a QR or opens a camera.
-  The bridge needs a live-camera scanner: `getUserMedia` + `jsqr` (promote it to
-  a lazy-loaded runtime dep) with `BarcodeDetector` as an optional fast path
-  (absent on iOS Safari). So "zero new deps" becomes "one small lazy dep".
+- **The phone needs no in-page scanner.** The offer QR encodes a URL
+  (`/bridge#o=<codec>`; the fragment never reaches a server), so the phone's
+  native camera app scans it and opens the page. The return leg (answer) is
+  the catch: the other device must read the phone's screen, and a desktop can
+  only do that with a webcam. So one in-page scanner is still required, on the
+  desktop side: `getUserMedia` + `jsqr` (promote it to a lazy-loaded runtime
+  dep; `BarcodeDetector` as an optional fast path, absent on iOS Safari). "Zero
+  new deps" becomes "one small lazy dep". Fallback for desktops without a
+  webcam: show/copy the ~150-byte answer as text, or move it via the OS share
+  sheet.
 - **`Permissions-Policy` blocks the camera.** `assets/_headers` sets
   `camera=()`; it must become `camera=(self)` (microphone etc. stay off) or the
-  phone can never scan.
+  desktop can never scan the answer.
 - **`connect-src` is probably not an issue** — CSP `connect-src` does not govern
   RTCPeerConnection/STUN traffic, so the "must allow `stun:`" note in the
   prerequisites is likely unnecessary. Unverified: confirm in a real browser.

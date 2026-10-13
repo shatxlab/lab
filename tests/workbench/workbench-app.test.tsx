@@ -251,6 +251,32 @@ describe("WorkbenchApp — set membership badges", () => {
   });
 });
 
+describe("WorkbenchApp — tray thumbnails", () => {
+  it("shows a blob image for pictures and a kind glyph for other files", async () => {
+    const created: string[] = [];
+    const revoked: string[] = [];
+    (URL as unknown as Record<string, unknown>).createObjectURL = (blob: Blob) => {
+      const url = `blob:test/${created.length}`;
+      created.push(url);
+      void blob;
+      return url;
+    };
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = (url: string) => void revoked.push(url);
+
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(png("photo.png"), text("note.txt"));
+    const thumb = (name: string) => fileRow(name)!.closest("li")!.querySelector("[data-asset-thumb]")!;
+    await waitFor(() => expect(thumb("photo.png").querySelector("img")?.getAttribute("src")).toMatch(/^blob:/));
+    expect(thumb("photo.png").querySelector("img")?.getAttribute("alt")).toBe("");
+    expect(thumb("note.txt").getAttribute("data-asset-thumb")).toBe("text");
+    expect(thumb("note.txt").querySelector("svg")).toBeTruthy();
+
+    await click(document.querySelector<HTMLButtonElement>(`button[aria-label="${wb("en", "remove", { name: "photo.png" })}"]`));
+    await waitFor(() => expect(revoked).toContain(created[0]));
+    view.unmount();
+  });
+});
+
 describe("WorkbenchApp — unsaved work", () => {
   it("does not switch away when a file is added during unsaved work", async () => {
     const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": DirtyStub }} />);

@@ -3,7 +3,7 @@
  *
  * Open files sit in a tray with exactly one *selected* file. The tabs are the
  * capabilities offered for that file — file actions work on it alone, set
- * actions (Merge, Compare, Image) on every open file of their kinds — so a
+ * actions (Merge, Compare, Edit image) on every open file of their kinds — so a
  * spreadsheet and a photo can be open side by side and each keeps its tools.
  *
  * Rules the shell enforces:
@@ -20,6 +20,7 @@
 import * as React from "react";
 import { Download, X } from "lucide-react";
 
+import { AssetThumb } from "@/components/workbench/AssetThumb";
 import { ActionButton, FilePicker, Tabs, ToolPage, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
@@ -190,6 +191,7 @@ export function AssetTray({
                 !single && (selected ? "border-(--accent)" : "border-(--border)"),
               )}
             >
+              <AssetThumb asset={asset} />
               {single ? (
                 <div className="flex min-w-0 flex-1 flex-col">{details(asset)}</div>
               ) : (

@@ -6,6 +6,7 @@ import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
 import type { Atlas, FrameName } from './atlas'
 import { arrange, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
+import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
 import { pathLength, pointAlong, walkoutPath, type Point } from '../render-support/walkout'
 import { formatDateShort } from '@/lib/tycoon/format'
 
@@ -168,6 +169,11 @@ export interface SceneOptions {
   label?: () => string
   /** Whether people are typing right now; defaults to "a project is running". */
   working?: () => boolean
+  /**
+   * Dress desks nobody sits at (a bare desk, a tucked-in chair, a mug) so they look deliberately empty.
+   * Off by default: the game draws every free desk as a ready workstation.
+   */
+  vacancies?: boolean
 }
 
 /** Someone on their way out with a box. */
@@ -242,6 +248,11 @@ export class OfficeScene {
   private readonly dateBack = new Graphics()
   private dateHeight = 0
   private builtDesks = -1
+  /** Desks somebody sits at, and which of them the furniture was last dressed for (see `SceneOptions.vacancies`). */
+  private occupied = new Set<number>()
+  /** Desks somebody has left since the room was shown; they are cleared out rather than left as if on holiday. */
+  private vacated = new Set<number>()
+  private furnishedFor = ''
   /** How the desks are laid out, chosen for the shape of the screen. */
   private arrangement: Arrangement = 'wide'
   private areaW = SCENE_W
@@ -508,6 +519,8 @@ export class OfficeScene {
     }
     this.seats = seats
     this.builtDesks = -1
+    this.occupied = new Set()
+    this.vacated = new Set()
   }
 
   /** Draws the shown room's walls, floor and decor again, across the window as it is now. */
@@ -631,9 +644,7 @@ export class OfficeScene {
   /** (Re)builds partitions, chairs and desks for the given number of desks; a garage has no partitions. */
   private buildOffice(desks: number, kind: OfficeKind): void {
     const { atlas } = this
-    for (const layer of [this.officeBack, this.chairs, this.desks]) {
-      for (const child of layer.removeChildren()) child.destroy()
-    }
+    for (const child of this.officeBack.removeChildren()) child.destroy()
 
     for (let p = 0; p < Math.ceil(desks / 2) && kind === 'office'; p++) {
       const [px, py] = partitionAt(this.arrangement, p)
@@ -644,19 +655,50 @@ export class OfficeScene {
       }
     }
 
+    this.builtDesks = desks
+    this.furnishDesks(desks)
+    this.setBottom(roomBottom(this.arrangement, desks))
+    // People stay at their desks: only the furniture around them was rebuilt.
+  }
+
+  /** Puts a chair and a desk with its computer at every desk; with `vacancies`, empty ones are dressed as such. */
+  private furnishDesks(desks: number): void {
+    const { atlas } = this
+    for (const layer of [this.chairs, this.desks]) {
+      for (const child of layer.removeChildren()) child.destroy()
+    }
+    this.furnishedFor = this.occupancyKey()
+
     for (let i = 0; i < desks; i++) {
       const [px, py] = partitionAt(this.arrangement, i >> 1)
       const right = (i & 1) === 1
+      const vacancy = this.options.vacancies && !this.occupied.has(i) ? vacancyFor(i, this.vacated.has(i)) : null
       const chair = atlas.frame(CHAIRS[i % CHAIRS.length])
-      this.chairs.addChild(placed(chair, px + (right ? 56 : 7), py + 7, right))
-      this.desks.addChild(
-        placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), px + (right ? 40 : 19), py + 11),
-        placed(atlas.frame('computer'), px + (right ? 41 : 20), py + 6, right),
-      )
+      const tuck = vacancy && chairTucked(vacancy) ? (right ? -CHAIR_TUCK : CHAIR_TUCK) : 0
+      this.chairs.addChild(placed(chair, px + (right ? 56 : 7) + tuck, py + 7, right))
+
+      const deskX = px + (right ? 40 : 19)
+      this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
+      if (!vacancy || hasComputer(vacancy)) this.desks.addChild(placed(atlas.frame('computer'), px + (right ? 41 : 20), py + 6, right))
+      if (vacancy) this.dressVacantDesk(vacancy, deskX, py, right)
     }
-    this.builtDesks = desks
-    this.setBottom(roomBottom(this.arrangement, desks))
-    // People stay at their desks: only the furniture around them was rebuilt.
+  }
+
+  /** Whatever is left on a desk nobody sits at, by what kind of vacancy it is. */
+  private dressVacantDesk(vacancy: Vacancy, deskX: number, py: number, right: boolean): void {
+    const { atlas } = this
+    const frame = (name: FrameName, x: number, y: number) => this.desks.addChild(placed(atlas.frame(name), deskX + x, py + y))
+    if (vacancy === 'away') frame('mug', right ? 0 : 9, 22)
+    else if (vacancy === 'bare') frame('towerRed', 3, 19)
+    else {
+      frame('papers', right ? 9 : 3, 17)
+      frame('mug', right ? 1 : 8, 22)
+    }
+  }
+
+  /** Which desks have somebody at them, as a string to compare; empty when desks are not dressed by occupancy. */
+  private occupancyKey(): string {
+    return this.options.vacancies ? [...this.occupied].sort((a, b) => a - b).join(',') : ''
   }
 
   /** Fits the room to the rows of desks built so far and parks the pets just below them. */
@@ -686,6 +728,14 @@ export class OfficeScene {
       const sprite = new EmployeeSprite(this.atlas.character(id), this.arrangement, desk, id)
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
+    }
+
+    if (this.options.vacancies) {
+      const before = this.occupied
+      this.occupied = new Set(ids.flatMap((id) => this.seats.deskFor(id) ?? []))
+      for (const desk of before) if (!this.occupied.has(desk)) this.vacated.add(desk)
+      for (const desk of this.occupied) this.vacated.delete(desk)
+      if (this.occupancyKey() !== this.furnishedFor) this.furnishDesks(this.builtDesks)
     }
   }
 

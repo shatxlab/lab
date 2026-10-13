@@ -90,7 +90,7 @@ export function FocusScene({ lang, office, fired, working, label, onSelect, clas
             const person = office.roster.find((candidate) => candidate.id === id);
             if (person) live.current.onSelect(person);
           },
-          { label: () => live.current.label, working: () => live.current.working },
+          { label: () => live.current.label, working: () => live.current.working, vacancies: true },
         );
         app.stage.addChild(scene.view, scene.popups);
         sceneRef.current = scene;

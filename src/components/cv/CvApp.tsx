@@ -3,6 +3,7 @@ import { Download, FileText, Printer, Upload } from "lucide-react";
 
 import { CvDocument } from "@/components/cv/CvDocument";
 import { CvEditor } from "@/components/cv/CvEditor";
+import { ImportText } from "@/components/cv/ImportText";
 import { ActionButton, SelectField, Tabs, ToolPage, inputClass, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
 import { useAppLang } from "@/lib/apps/use-app-lang";
@@ -238,6 +239,15 @@ export default function CvApp() {
               {notice}
             </p>
           </section>
+
+          <ImportText
+            lang={lang}
+            disabled={store.cvs.length >= LIMITS.cvs}
+            onCreate={(created) => {
+              add(created);
+              setNotice(tcv(lang, "importedFromText", { name: created.name }));
+            }}
+          />
 
           <div data-no-print="" className="lg:hidden">
             <Tabs

@@ -109,7 +109,12 @@ describe("HTML export", () => {
     const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
     expect(doc.querySelector("h1")?.textContent).toBe("Alex Morgan");
     expect([...doc.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["Summary", "Experience", "Education", "Skills"]);
-    for (const tag of ["table", "img", "svg", "style", "script", "div", "span", "a"]) expect(doc.querySelector(tag)).toBeNull();
+    for (const tag of ["table", "img", "svg", "style", "script", "div", "span"]) expect(doc.querySelector(tag)).toBeNull();
+    // The only inline extra is a link to a web address, and the address itself stays visible.
+    for (const link of doc.querySelectorAll("a")) {
+      expect(link.getAttribute("href")).toMatch(/^https?:\/\//);
+      expect(link.textContent).toBe(link.getAttribute("href"));
+    }
     expect(doc.querySelectorAll("ul li").length).toBe(3);
     // Reading order: name, headline, contact, then sections.
     expect([...doc.body.children].slice(0, 3).map((n) => n.tagName)).toEqual(["H1", "P", "P"]);

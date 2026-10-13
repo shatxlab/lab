@@ -296,6 +296,26 @@ are the other exports. Everything stored or opened goes through `cleanCv`, which
 bounds every field and list, repairs settings and ids, and only ever links
 `http(s)` addresses. CVs autosave under `lab:cv:v1`.
 
+**Other sections** (certifications, languages, awards, volunteering,
+publications, courses, or any heading you type) are custom sections of entries
+with a title, detail, date and bullets; they print after Skills, in the order you
+give them, as ordinary headings. Web links in the Word file are real hyperlinks
+(the docx writer gained `a` support: blue and underlined, an external
+relationship per distinct address, `http(s)` only) and the address always stays
+visible as text. Entries and sections reorder by dragging a handle (one Pointer
+Events path, `useSortable`; the pure `targetIndex` decides where it lands), with
+the up and down buttons kept for keyboard and screen-reader users.
+
+**Import from pasted text** (`lib/cv/import.ts`) reads an old CV or a LinkedIn
+profile copied as text into a new CV to check: contact details by pattern,
+links labelled by site, the usual section headings in English and Russian (and
+any heading in capitals as a section of its own), entries split by blank lines
+and dates, dates in several styles including "Present" and "по настоящее время",
+"role at company | place" and multi-line headings, schools and degrees told apart
+by keyword, "Label: items" skill lines, and unmarked description lines as bullets.
+Lines are capped so no input can make the matching slow. It is a guesser: it shows
+what it found, creates a separate CV, and asks you to check every field.
+
 ### Whiteboard
 
 A board is a list of elements (rectangle, ellipse, arrow, pen stroke, text) in

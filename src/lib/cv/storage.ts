@@ -124,6 +124,17 @@ export function cleanCv(raw: unknown, fallbackName = "CV"): Cv {
       const g = obj(item);
       return { id: ids(seen, g.id), label: text(g.label, LIMITS.field), items: text(g.items, LIMITS.skillItems) };
     }),
+    custom: list(input.custom, LIMITS.customSections).map((item) => {
+      const section = obj(item);
+      return {
+        id: ids(seen, section.id),
+        heading: text(section.heading, LIMITS.field),
+        entries: list(section.entries, LIMITS.customEntries).map((entry) => {
+          const e = obj(entry);
+          return { id: ids(seen, e.id), title: text(e.title, LIMITS.field), subtitle: text(e.subtitle, LIMITS.field), dates: text(e.dates, 40), bullets: bullets(e.bullets) };
+        }),
+      };
+    }),
     settings: cleanSettings(input.settings),
     updated: typeof input.updated === "number" && Number.isFinite(input.updated) ? Math.max(0, Math.floor(input.updated)) : 0,
   };

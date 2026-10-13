@@ -1,8 +1,8 @@
 /** Edits to a CV as pure functions: the form feeds them to its state setter. */
 
-import type { Cv, CvSettings, Profile } from "@/lib/cv/schema";
+import type { CustomEntry, Cv, CvSettings, Profile } from "@/lib/cv/schema";
 
-export type ListKey = "links" | "experiences" | "education" | "projects" | "skills";
+export type ListKey = "links" | "experiences" | "education" | "projects" | "skills" | "custom";
 
 const touch = (cv: Cv, patch: Partial<Cv>): Cv => ({ ...cv, ...patch, updated: Date.now() });
 
@@ -34,6 +34,52 @@ export function moveItem(cv: Cv, key: ListKey, id: string, direction: -1 | 1): C
   if (from < 0 || to < 0 || to >= list.length) return cv;
   [list[from], list[to]] = [list[to]!, list[from]!];
   return touch(cv, { [key]: list } as Partial<Cv>);
+}
+
+/** Move an item to position `to` (0-based, within the list as it will be after the move). */
+export function reorderItem(cv: Cv, key: ListKey, id: string, to: number): Cv {
+  const list = [...(cv[key] as Item[])];
+  const from = list.findIndex((item) => item.id === id);
+  const target = Math.max(0, Math.min(list.length - 1, to));
+  if (from < 0 || from === target) return cv;
+  const [moved] = list.splice(from, 1);
+  list.splice(target, 0, moved!);
+  return touch(cv, { [key]: list } as Partial<Cv>);
+}
+
+/* Entries inside a custom section. */
+
+/** The CV with one custom section's entries changed; the very same CV when they were not. */
+function mapSection(cv: Cv, sectionId: string, change: (entries: CustomEntry[]) => CustomEntry[]): Cv {
+  let changed = false;
+  const custom = cv.custom.map((section) => {
+    if (section.id !== sectionId) return section;
+    const entries = change(section.entries);
+    if (entries === section.entries) return section;
+    changed = true;
+    return { ...section, entries };
+  });
+  return changed ? touch(cv, { custom }) : cv;
+}
+
+export const addCustomEntry = (cv: Cv, sectionId: string, entry: CustomEntry, max = 30): Cv =>
+  mapSection(cv, sectionId, (entries) => (entries.length >= max ? entries : [...entries, entry]));
+
+export const updateCustomEntry = (cv: Cv, sectionId: string, id: string, patch: Partial<CustomEntry>): Cv =>
+  mapSection(cv, sectionId, (entries) => entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+
+export const removeCustomEntry = (cv: Cv, sectionId: string, id: string): Cv => mapSection(cv, sectionId, (entries) => entries.filter((entry) => entry.id !== id));
+
+export function reorderCustomEntry(cv: Cv, sectionId: string, id: string, to: number): Cv {
+  return mapSection(cv, sectionId, (entries) => {
+    const list = [...entries];
+    const from = list.findIndex((entry) => entry.id === id);
+    const target = Math.max(0, Math.min(list.length - 1, to));
+    if (from < 0 || from === target) return entries;
+    const [moved] = list.splice(from, 1);
+    list.splice(target, 0, moved!);
+    return list;
+  });
 }
 
 /** Bullets are typed one per line; empty lines are dropped. */

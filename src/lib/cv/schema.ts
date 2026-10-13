@@ -63,6 +63,22 @@ export interface SkillGroup {
   items: string;
 }
 
+/** One item of a custom section: a certificate, a language, an award, a course. Every field is optional. */
+export interface CustomEntry {
+  id: string;
+  title: string;
+  subtitle: string;
+  dates: string;
+  bullets: string[];
+}
+
+/** A section of the writer's own: its heading is whatever they typed, and it follows Skills. */
+export interface CustomSection {
+  id: string;
+  heading: string;
+  entries: CustomEntry[];
+}
+
 export interface CvSettings {
   template: TemplateId;
   paper: Paper;
@@ -84,6 +100,7 @@ export interface Cv {
   education: Education[];
   projects: Project[];
   skills: SkillGroup[];
+  custom: CustomSection[];
   settings: CvSettings;
   updated: number;
 }
@@ -100,7 +117,15 @@ export const LIMITS = {
   skillItems: 600,
   url: 300,
   cvs: 20,
+  customSections: 8,
+  customEntries: 30,
 } as const;
+
+/** Headings worth offering for a custom section, in each CV language. */
+export const CUSTOM_PRESETS: Record<CvLang, readonly string[]> = {
+  en: ["Certifications", "Languages", "Awards", "Volunteering", "Publications", "Courses"],
+  ru: ["Сертификаты", "Языки", "Награды", "Волонтёрство", "Публикации", "Курсы"],
+};
 
 export function newId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -120,6 +145,7 @@ export function createCv(name: string, lang: CvLang = "en"): Cv {
     education: [],
     projects: [],
     skills: [],
+    custom: [],
     settings: defaultSettings(lang),
     updated: Date.now(),
   };
@@ -129,6 +155,8 @@ export const newExperience = (): Experience => ({ id: newId(), role: "", company
 export const newEducation = (): Education => ({ id: newId(), school: "", degree: "", location: "", start: "", end: "", details: [] });
 export const newProject = (): Project => ({ id: newId(), name: "", url: "", bullets: [] });
 export const newSkillGroup = (): SkillGroup => ({ id: newId(), label: "", items: "" });
+export const newCustomEntry = (): CustomEntry => ({ id: newId(), title: "", subtitle: "", dates: "", bullets: [] });
+export const newCustomSection = (heading = ""): CustomSection => ({ id: newId(), heading, entries: [] });
 export const newLink = (): CvLink => ({ id: newId(), label: "", url: "" });
 
 /** A made-up CV to show what the fields are for. Everyone in it is fictional. */

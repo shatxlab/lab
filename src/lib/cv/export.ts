@@ -2,17 +2,23 @@
 
 import { htmlToDocx } from "@/lib/docx/write";
 import type { Cv } from "@/lib/cv/schema";
-import { headerOf, sectionsOf, type Block } from "@/lib/cv/sections";
+import { headerOf, isWebUrl, sectionsOf, type Block } from "@/lib/cv/sections";
 
 const esc = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** The first non-empty of a CV's own name and its owner's name, for titles and file names. */
 export const titleOf = (cv: Cv): string => cv.profile.fullName.trim() || cv.name.trim() || "CV";
 
-const entryLine = (block: Extract<Block, { kind: "entry" }>): { strong: string; rest: string } => {
+/** An address as HTML: a real link for a web address, plain text otherwise. The visible text is always the address. */
+const linkHtml = (url: string): string => (isWebUrl(url) ? `<a href="${esc(url.trim())}">${esc(url)}</a>` : esc(url));
+
+/** The parts of an entry's first line: what is bold, and what follows it (as text and as HTML with the link in it). */
+const entryLine = (block: Extract<Block, { kind: "entry" }>): { strong: string; rest: string; restHtml: string } => {
   const where = [block.subtitle, block.place].filter(Boolean).join(", ");
-  const tail = [block.url, block.dates].filter(Boolean).join(" · ");
-  return { strong: block.title || block.subtitle, rest: [block.title ? where : block.place, tail].filter(Boolean).join(" — ") };
+  const lead = block.title ? where : block.place;
+  const text = [lead, [block.url, block.dates].filter(Boolean).join(" · ")].filter(Boolean).join(" — ");
+  const html = [esc(lead), [block.url ? linkHtml(block.url) : "", esc(block.dates)].filter(Boolean).join(" · ")].filter(Boolean).join(" — ");
+  return { strong: block.title || block.subtitle, rest: text, restHtml: html };
 };
 
 /**
@@ -26,7 +32,9 @@ export function cvToHtml(cv: Cv): string {
   if (header.name) out.push(`<h1>${esc(header.name)}</h1>`);
   if (header.headline) out.push(`<p>${esc(header.headline)}</p>`);
   if (header.contact.length) out.push(`<p>${header.contact.map(esc).join(" · ")}</p>`);
-  if (header.links.length) out.push(`<p>${header.links.map((link) => esc([link.label, link.url].filter(Boolean).join(": "))).join(" · ")}</p>`);
+  if (header.links.length) {
+    out.push(`<p>${header.links.map((link) => [link.label ? esc(link.label) : "", link.url ? linkHtml(link.url) : ""].filter(Boolean).join(": ")).join(" · ")}</p>`);
+  }
 
   for (const section of sectionsOf(cv)) {
     out.push(`<h2>${esc(section.heading)}</h2>`);
@@ -34,8 +42,8 @@ export function cvToHtml(cv: Cv): string {
       if (block.kind === "paragraph") out.push(`<p>${esc(block.text)}</p>`);
       else if (block.kind === "skills") out.push(`<p>${block.label ? `<strong>${esc(block.label)}:</strong> ` : ""}${esc(block.items.join(", "))}</p>`);
       else {
-        const { strong, rest } = entryLine(block);
-        out.push(`<p><strong>${esc(strong)}</strong>${rest ? `${strong ? ", " : ""}${esc(rest)}` : ""}</p>`);
+        const { strong, restHtml } = entryLine(block);
+        out.push(`<p><strong>${esc(strong)}</strong>${restHtml ? `${strong ? ", " : ""}${restHtml}` : ""}</p>`);
         if (block.bullets.length) out.push(`<ul>${block.bullets.map((bullet) => `<li>${esc(bullet)}</li>`).join("")}</ul>`);
       }
     }

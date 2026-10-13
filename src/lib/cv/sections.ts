@@ -23,7 +23,8 @@ export type Block =
 export type SectionId = "summary" | "experience" | "education" | "projects" | "skills";
 
 export interface Section {
-  id: SectionId;
+  /** A fixed section's name, or `custom:<id>` for one the writer made. */
+  id: string;
   heading: string;
   blocks: Block[];
 }
@@ -111,6 +112,21 @@ export function sectionsOf(cv: Cv): Section[] {
     .map<Block>((group) => ({ kind: "skills", label: clean(group.label), items: skillItems(group.items) }))
     .filter((block) => block.kind === "skills" && block.items.length > 0);
   if (skills.length) sections.push({ id: "skills", heading: heading.skills, blocks: skills });
+
+  for (const custom of cv.custom) {
+    const title = clean(custom.heading);
+    const blocks = custom.entries
+      .filter((entry) => clean(entry.title) || clean(entry.subtitle) || entry.bullets.some((bullet) => clean(bullet)))
+      .map<Block>((entry) => ({
+        kind: "entry",
+        title: clean(entry.title),
+        subtitle: clean(entry.subtitle),
+        place: "",
+        dates: clean(entry.dates),
+        bullets: entry.bullets.map(clean).filter(Boolean),
+      }));
+    if (title && blocks.length) sections.push({ id: `custom:${custom.id}`, heading: title, blocks });
+  }
 
   return sections;
 }

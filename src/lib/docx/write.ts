@@ -6,7 +6,9 @@
  * inline constructs onto a minimal, valid OOXML package zipped with `fflate`:
  * headings become styled bold paragraphs, lists get literal bullet/number
  * prefixes (no `numbering.xml`), blockquotes are indented italics and `pre`
- * becomes monospace lines. Everything else degrades to its text.
+ * becomes monospace lines, and `a` elements with an http(s) address become real
+ * Word hyperlinks (blue, underlined, with an external relationship). Everything
+ * else degrades to its text.
  *
  * The module is pure: the only browser global it touches is `DOMParser`, and
  * when that is unavailable it falls back to a tag-stripping regex path so a
@@ -22,6 +24,9 @@ const REL_OFFICE_DOCUMENT =
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
 const REL_CORE_PROPERTIES =
   "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
+const REL_HYPERLINK = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink";
+const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const LINK_COLOR = "0563C1";
 const CT_DOCUMENT =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
 const CT_CORE_PROPERTIES = "application/vnd.openxmlformats-package.core-properties+xml";
@@ -56,12 +61,32 @@ interface Run {
   break?: boolean;
   /** Monospace font (used by `pre`). */
   mono?: boolean;
+  /** Where a hyperlink goes; the run is shown as a link. */
+  href?: string;
 }
 
 interface RunStyle {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  href?: string;
+}
+
+/** Web addresses a document may link to; anything else is shown as plain text. */
+const isWebUrl = (value: string): boolean => /^https?:\/\/[^\s]+$/i.test(value.trim());
+
+/** The links of the document being written, in order: each gets a relationship id. */
+let links: string[] | null = null;
+
+function relationshipFor(href: string): string {
+  const table = links ?? [];
+  let at = table.indexOf(href);
+  if (at < 0) {
+    table.push(href);
+    at = table.length - 1;
+  }
+  // These ids live in word/_rels/document.xml.rels, separate from the package's own relationships.
+  return `rId${at + 1}`;
 }
 
 function runProperties(run: Run): string {
@@ -71,7 +96,8 @@ function runProperties(run: Run): string {
   }
   if (run.bold) parts.push("<w:b/>");
   if (run.italic) parts.push("<w:i/>");
-  if (run.underline) parts.push('<w:u w:val="single"/>');
+  if (run.href) parts.push(`<w:color w:val="${LINK_COLOR}"/>`);
+  if (run.underline || run.href) parts.push('<w:u w:val="single"/>');
   return parts.length > 0 ? `<w:rPr>${parts.join("")}</w:rPr>` : "";
 }
 
@@ -82,7 +108,17 @@ function renderRun(run: Run): string {
 
 function renderParagraph(runs: readonly Run[], paragraphProperties?: string): string {
   const props = paragraphProperties ? `<w:pPr>${paragraphProperties}</w:pPr>` : "";
-  return `<w:p>${props}${runs.map(renderRun).join("")}</w:p>`;
+  // Consecutive runs of one link share a hyperlink element.
+  let body = "";
+  for (let i = 0; i < runs.length; ) {
+    const href = runs[i]!.href;
+    let end = i + 1;
+    while (href !== undefined && end < runs.length && runs[end]!.href === href) end += 1;
+    const group = runs.slice(i, end).map(renderRun).join("");
+    body += href !== undefined ? `<w:hyperlink r:id="${relationshipFor(href)}">${group}</w:hyperlink>` : group;
+    i = end;
+  }
+  return `<w:p>${props}${body}</w:p>`;
 }
 
 /** Walk an inline subtree, accumulating styled runs. */
@@ -106,7 +142,11 @@ function collectRuns(node: Node, style: RunStyle, out: Run[]): void {
   if (tag === "strong" || tag === "b") next.bold = true;
   if (tag === "em" || tag === "i") next.italic = true;
   if (tag === "u") next.underline = true;
-  // `a` and every unknown element keep their text, inheriting the current style.
+  if (tag === "a") {
+    const href = element.getAttribute("href") ?? "";
+    if (isWebUrl(href)) next.href = href.trim();
+  }
+  // Every other unknown element keeps its text, inheriting the current style.
   element.childNodes.forEach((child) => collectRuns(child, next, out));
 }
 
@@ -148,6 +188,7 @@ function normalizeRuns(runs: readonly Run[]): Run[] {
       previous.bold === run.bold &&
       previous.italic === run.italic &&
       previous.underline === run.underline &&
+      previous.href === run.href &&
       previous.mono === run.mono
     ) {
       previous.text += run.text;
@@ -306,10 +347,20 @@ function corePropertiesXml(title: string): string {
   );
 }
 
+/** word/_rels/document.xml.rels: one external relationship per distinct link. */
+function documentRelationshipsXml(targets: readonly string[]): string {
+  return (
+    XML_DECLARATION +
+    `<Relationships xmlns="${REL_NS}">` +
+    targets.map((target, i) => `<Relationship Id="rId${i + 1}" Type="${REL_HYPERLINK}" Target="${escapeXml(target)}" TargetMode="External"/>`).join("") +
+    "</Relationships>"
+  );
+}
+
 function documentXml(blocks: readonly string[]): string {
   return (
     XML_DECLARATION +
-    `<w:document xmlns:w="${W_NS}">` +
+    `<w:document xmlns:w="${W_NS}" xmlns:r="${R_NS}">` +
     `<w:body>${blocks.join("")}<w:sectPr/></w:body>` +
     "</w:document>"
   );
@@ -317,9 +368,17 @@ function documentXml(blocks: readonly string[]): string {
 
 /** Build a `.docx` from sanitized HTML body markup. */
 export function htmlToDocx(html: string, options?: { title?: string }): Uint8Array {
-  const blocks = blocksFromHtml(html);
-  if (blocks.length === 0 && options?.title) {
-    blocks.push(renderParagraph([{ text: options.title }]));
+  links = [];
+  let blocks: string[];
+  let targets: string[];
+  try {
+    blocks = blocksFromHtml(html);
+    if (blocks.length === 0 && options?.title) {
+      blocks.push(renderParagraph([{ text: options.title }]));
+    }
+    targets = links;
+  } finally {
+    links = null;
   }
 
   const hasTitle = Boolean(options?.title);
@@ -331,6 +390,7 @@ export function htmlToDocx(html: string, options?: { title?: string }): Uint8Arr
   if (options?.title) {
     files["docProps/core.xml"] = strToU8(corePropertiesXml(options.title));
   }
+  if (targets.length > 0) files["word/_rels/document.xml.rels"] = strToU8(documentRelationshipsXml(targets));
 
   return zipSync(files);
 }

@@ -179,6 +179,27 @@ peer per session. The QR scan reuses the workbench QR scanner logic.
 outputs (text, images, boards) and on flashcards decks — this is how settings,
 decks and drafts move between phone and desktop without a server.
 
+**Feasibility check (2026-10-13) — corrections to the plan above.**
+- **There is no QR scanner to reuse.** `jsqr` is a devDependency used only by
+  `tests/qr/qr-libs.test.ts`; nothing in `src/` decodes a QR or opens a camera.
+  The bridge needs a live-camera scanner: `getUserMedia` + `jsqr` (promote it to
+  a lazy-loaded runtime dep) with `BarcodeDetector` as an optional fast path
+  (absent on iOS Safari). So "zero new deps" becomes "one small lazy dep".
+- **`Permissions-Policy` blocks the camera.** `assets/_headers` sets
+  `camera=()`; it must become `camera=(self)` (microphone etc. stay off) or the
+  phone can never scan.
+- **`connect-src` is probably not an issue** — CSP `connect-src` does not govern
+  RTCPeerConnection/STUN traffic, so the "must allow `stun:`" note in the
+  prerequisites is likely unnecessary. Unverified: confirm in a real browser.
+- **QR size.** A synthetic Chrome data-channel offer (1–4 candidates, 600–1000 B
+  of SDP) compressed with `fflate` deflate + base64 comes out at 580–690 chars →
+  QR version 16–18 (85–89 modules) at ECC L: scannable but dense. Do not ship
+  raw-SDP deflate. A custom binary codec (ice-ufrag, ice-pwd, the 32-byte
+  fingerprint, candidate ip/port list) should land near 100–150 bytes, QR
+  version ~6–8. Build the codec that way; the SDP is rebuilt from a template.
+  (Estimate from a hand-made SDP, not a real capture — re-measure once the
+  codec exists.)
+
 **Implementation.** `src/components/bridge/` (PeerCard, QRPanel, TransferList)
 + `src/lib/bridge/` (signaling codec: compress SDP with `fflate` → QR; chunked
 transfer protocol; peer connection lifecycle). Zero new deps.

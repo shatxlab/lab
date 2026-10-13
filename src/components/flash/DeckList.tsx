@@ -5,6 +5,7 @@ import type { AppLang } from "@/lib/apps/lang";
 import { tf } from "@/lib/flash/i18n";
 import { MAX_DECKS, deckCounts, summarize, type FlashSettings, type FlashStore } from "@/lib/flash/model";
 import { addDeck } from "@/lib/flash/ops";
+import { ImportDeck } from "@/components/flash/ImportDeck";
 
 export interface DeckListProps {
   lang: AppLang;
@@ -100,6 +101,8 @@ export function DeckList({ lang, store, day, commit, onOpen, onStudy }: DeckList
         </div>
         {full && <p className="text-xs text-(--muted-fg)">{tf(lang, "deckLimit", { n: MAX_DECKS })}</p>}
       </form>
+
+      <ImportDeck lang={lang} store={store} commit={commit} onCreated={onOpen} />
 
       <SettingsPanel lang={lang} settings={store.settings} commit={commit} />
     </div>

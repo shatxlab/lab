@@ -8,11 +8,11 @@ import type { AppLang } from "@/lib/apps/lang";
 import { tf } from "@/lib/flash/i18n";
 import { MAX_CARDS_PER_DECK, deckCounts, type Card, type Deck, type FlashStore } from "@/lib/flash/model";
 import { addCards, removeCard, removeDeck, renameDeck, updateCard } from "@/lib/flash/ops";
-import { parseImport, toTsv } from "@/lib/flash/parse";
+import { parseImport, toJson, toTsv } from "@/lib/flash/parse";
+import { IMPORT_ACCEPT, MAX_IMPORT_BYTES } from "@/components/flash/ImportDeck";
 import { FLASH_SEND_KIND, deckToSend } from "@/lib/flash/send";
 
 const PAGE = 100;
-const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 
 const splitTags = (value: string) => value.split(/[,;\s]+/).filter(Boolean);
 
@@ -69,10 +69,9 @@ function DeckHeader({ lang, deck, store, day, commit, onBack }: Pick<DeckViewPro
   const [confirming, setConfirming] = React.useState(false);
   const counts = deckCounts(deck, store, day);
 
-  const exportDeck = () => {
-    const file = `${deck.name.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "deck"}.tsv`;
-    saveBlob(new Blob([toTsv(deck.cards)], { type: "text/tab-separated-values;charset=utf-8" }), file);
-  };
+  const fileBase = deck.name.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "deck";
+  const exportDeck = () => saveBlob(new Blob([toTsv(deck.cards)], { type: "text/tab-separated-values;charset=utf-8" }), `${fileBase}.tsv`);
+  const exportJson = () => saveBlob(new Blob([toJson(deck.cards)], { type: "application/json;charset=utf-8" }), `${fileBase}.json`);
 
   return (
     <div className="flex flex-col gap-2">
@@ -113,6 +112,9 @@ function DeckHeader({ lang, deck, store, day, commit, onBack }: Pick<DeckViewPro
         )}
         <ActionButton variant="secondary" className="h-8 px-3 text-xs" disabled={deck.cards.length === 0} onClick={exportDeck}>
           {tf(lang, "exportDeck")}
+        </ActionButton>
+        <ActionButton variant="secondary" className="h-8 px-3 text-xs" disabled={deck.cards.length === 0} onClick={exportJson}>
+          {tf(lang, "exportJson")}
         </ActionButton>
         <SendToPhone
           lang={lang}
@@ -234,7 +236,7 @@ function ImportPanel({ lang, deck, commit, setNotice }: { lang: AppLang; deck: D
           {tf(lang, "importPaste")}
           <textarea className={textareaClass} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
         </label>
-        <FilePicker lang={lang} accept=".csv,.tsv,.txt,.md,text/*" onFiles={(files) => void readFile(files)} prompt={tf(lang, "importPick")} compact />
+        <FilePicker lang={lang} accept={IMPORT_ACCEPT} onFiles={(files) => void readFile(files)} prompt={tf(lang, "importPick")} compact />
         {error && (
           <p className="text-sm text-(--warning)" role="alert">
             {error}

@@ -3,14 +3,16 @@ import * as React from "react";
 import { DeckList } from "@/components/flash/DeckList";
 import { DeckView } from "@/components/flash/DeckView";
 import { Study } from "@/components/flash/Study";
+import { HandoffDialog } from "@/components/flash/HandoffDialog";
 import { ReceiveDialog } from "@/components/tools/ReceiveDialog";
 import { ToolPage } from "@/components/tools/ui";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import type { Grade } from "@/lib/flash/fsrs";
 import { tf } from "@/lib/flash/i18n";
 import { cramQueue, emptyStore, localDay, recordReview, studyQueue, type FlashStore } from "@/lib/flash/model";
+import { takeHandoff, type FlashHandoff } from "@/lib/flash/handoff";
 import { FLASH_SEND_KIND, parseDeckSend } from "@/lib/flash/send";
-import { addDeck } from "@/lib/flash/ops";
+import { addCards, addDeck } from "@/lib/flash/ops";
 import { useIncomingSend } from "@/lib/send/use-incoming";
 import { createFlashSoundEngine, type FlashSoundEngine } from "@/lib/flash/sound";
 import { readFlashStore, writeFlashStore } from "@/lib/flash/storage";
@@ -26,6 +28,7 @@ export default function FlashApp() {
   const storeRef = React.useRef(store);
   const [hydrated, setHydrated] = React.useState(false);
   const [view, setView] = React.useState<View>({ kind: "decks" });
+  const [handoff, setHandoff] = React.useState<FlashHandoff | null>(null);
 
   const soundRef = React.useRef<FlashSoundEngine | null>(null);
   soundRef.current ??= createFlashSoundEngine(true);
@@ -36,6 +39,9 @@ export default function FlashApp() {
     storeRef.current = loaded;
     setStore(loaded);
     setHydrated(true);
+    // Text sent from the workbench's "Send to Flashcards".
+    const waiting = takeHandoff();
+    if (waiting) setHandoff(waiting);
   }, []);
 
   React.useEffect(() => sound.setEnabled(store.settings.sound), [sound, store.settings.sound]);
@@ -64,6 +70,21 @@ export default function FlashApp() {
       return result.store;
     });
     dismiss();
+    if (id) setView({ kind: "deck", id });
+  };
+
+  const confirmHandoff = (target: { deckId: string | null; name: string }, cards: { front: string; back: string; tags: string[] }[]) => {
+    let id = "";
+    commit((current) => {
+      if (target.deckId) {
+        id = target.deckId;
+        return addCards(current, target.deckId, cards).store;
+      }
+      const result = addDeck(current, target.name, cards);
+      id = result.deck?.id ?? "";
+      return result.store;
+    });
+    setHandoff(null);
     if (id) setView({ kind: "deck", id });
   };
 
@@ -119,7 +140,8 @@ export default function FlashApp() {
   return (
     <ToolPage title={tf(lang, "title")} tagline={tf(lang, "tagline")}>
       {body}
-      {hydrated && received && (
+      {hydrated && handoff && <HandoffDialog lang={lang} handoff={handoff} store={store} onConfirm={confirmHandoff} onDismiss={() => setHandoff(null)} />}
+      {hydrated && !handoff && received && (
         <ReceiveDialog
           lang={lang}
           summary={tf(lang, "receiveSummary", { name: received.name, n: received.cards.length })}

@@ -18,7 +18,7 @@
  */
 
 import * as React from "react";
-import { Download, Smartphone, X } from "lucide-react";
+import { Download, Layers, Smartphone, X } from "lucide-react";
 
 import { AssetThumb } from "@/components/workbench/AssetThumb";
 import { ConfirmSheet } from "@/components/workbench/ConfirmSheet";
@@ -42,7 +42,8 @@ import {
 import { createAssetFromBytes, createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
 import { imageMime } from "@/components/viewer/viewers/ImageView";
 import { detectAssetKind, isTextual } from "@/lib/workbench/kinds";
-import { MAX_SENDABLE_BYTES, TEXT_SEND_KIND, parseTextSend, textToSend } from "@/lib/workbench/send";
+import { MAX_SENDABLE_BYTES, TEXT_SEND_KIND, canSendToFlashcards, parseTextSend, textToSend } from "@/lib/workbench/send";
+import { writeHandoff } from "@/lib/flash/handoff";
 import { wb } from "@/lib/workbench/i18n";
 import { loadOperation } from "@/lib/workbench/operations";
 import { EMPTY_ASSETS, type OperationComponent, type OperationOutput } from "@/lib/workbench/operation";
@@ -72,6 +73,36 @@ function SendTextButton({ lang, name, getText }: { lang: AppLang; name: string; 
         </button>
       )}
     />
+  );
+}
+
+/** Hands text to Flashcards, which opens in a new tab and asks where the cards should go. */
+function SendToFlashButton({ lang, name, getText }: { lang: AppLang; name: string; getText: () => Promise<string> | string }) {
+  const [message, setMessage] = React.useState("");
+  const timer = React.useRef<number | undefined>(undefined);
+  React.useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const say = (text: string) => {
+    setMessage(text);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setMessage(""), 8000);
+  };
+  const send = async () => {
+    if (!writeHandoff({ name, text: await getText() })) return say(wb(lang, "flashFailed"));
+    if (!window.open(withBase("/flash"), "_blank")) say(wb(lang, "flashBlocked"));
+  };
+
+  return (
+    <>
+      <button type="button" aria-label={wb(lang, "sendFlash", { name })} onClick={() => void send()} className={ICON_BUTTON_CLASS}>
+        <Layers aria-hidden="true" className="size-4" />
+      </button>
+      {message && (
+        <span role="status" className="basis-full text-xs text-(--warning)">
+          {message}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -209,7 +240,7 @@ export function AssetTray({
             <li
               key={asset.id}
               className={cn(
-                "flex items-center gap-3",
+                "flex flex-wrap items-center gap-3",
                 !single && "rounded-lg border bg-(--bg) px-3 py-2",
                 !single && (selected ? "border-(--accent)" : "border-(--border)"),
               )}
@@ -227,6 +258,7 @@ export function AssetTray({
                   {details(asset)}
                 </button>
               )}
+              {canSendToFlashcards(asset.kind, asset.name, asset.size) && <SendToFlashButton lang={lang} name={asset.name} getText={() => asset.text()} />}
               {isTextual(asset.kind) && asset.size <= MAX_SENDABLE_BYTES && (
                 <SendTextButton lang={lang} name={asset.name} getText={() => asset.text()} />
               )}
@@ -422,6 +454,9 @@ export function OutputTray({ lang, outputs, onOpenAsAsset, onRemove }: OutputTra
             <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => onOpenAsAsset(entry)}>
               {wb(lang, "openAsAsset")}
             </ActionButton>
+            {canSendToFlashcards(entry.output.kind ?? detectAssetKind(entry.output.name), entry.output.name, entry.output.bytes.length) && (
+              <SendToFlashButton lang={lang} name={entry.output.name} getText={() => new TextDecoder().decode(entry.output.bytes)} />
+            )}
             {isTextual(entry.output.kind ?? detectAssetKind(entry.output.name)) && entry.output.bytes.length <= MAX_SENDABLE_BYTES && (
               <SendTextButton lang={lang} name={entry.output.name} getText={() => new TextDecoder().decode(entry.output.bytes)} />
             )}

@@ -9,7 +9,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | Route | Tool | What it does |
 |---|---|---|
 | `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Recognize text** (OCR) reads a picture or the pages of a scanned PDF, in English and Russian, on the device. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
-| `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV or TSV (`front, back, tags`); export a deck as TSV; Markdown on both sides; EN/RU. |
+| `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV, TSV or JSON; send text there from the workbench; export a deck as TSV or JSON; Markdown on both sides; EN/RU. |
 | `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes. Plan the day in hours (the quota is however many Pomodoros fit), open a pixel office with one person per Pomodoro, and work: finish the quota and everyone stays, give a Pomodoro up and someone packs a box and walks out the door. Pause, skip breaks, a full-screen focus mode, the countdown in the tab title, a history of past days (with who left) and a streak. |
 | `/board` | Whiteboard · Доска | A small whiteboard for sketching: rectangles, ellipses, arrows, text and freehand, with select/move/resize, undo and redo, pan and zoom (two fingers, wheel, Space-drag), a grid, several boards, and export to SVG, PNG or a plain-JSON board file you can open again. |
 | `/cv` | CV builder · Конструктор резюме | Fill in a form and get a clean one-column résumé that applicant-tracking systems can read: four templates (classic, modern, minimal, plain), English or Russian headings, A4 or Letter. Print to PDF with selectable text, or download Word (.docx), plain text or a CV file you can reopen; several CVs, live preview. |
@@ -252,10 +252,23 @@ Everything is stored under `lab:flash:v1`, so the settings backup covers it;
 cards per deck, 4 000 characters per side). Cards are rendered with the
 viewer's sanitising Markdown renderer, loaded on first use. Imports are
 detected, not chosen (`parse.ts`): tab-separated rows, CSV with an optional
-`front,back,tags` header (comma or semicolon), or one `term — definition` per
-line; `toTsv` writes a deck back out in a form `parseImport` reads. Logic tests
-are in `tests/flash/` (golden FSRS intervals, parsers, queues, storage) with a
-jsdom flow test of the whole island.
+`front,back,tags` header (comma or semicolon), one `term — definition` per
+line, or JSON (an array of `{ front, back, tags }` objects, with the usual
+alternative names such as question/answer or term/definition, an array of
+`[front, back]` pairs, a `{ cards: [...] }` wrapper, or a plain
+`{ "term": "definition" }` map). `toTsv` and `toJson` write a deck back out in
+forms `parseImport` reads. The deck list has an **Import a deck** panel (paste,
+or choose a `.csv`, `.tsv`, `.json` or text file; the file name becomes the deck
+name), and each deck can still take more cards the same way.
+
+**Send to Flashcards:** text, Markdown, JSON and CSV/TSV files in the workbench
+(and its outputs) get a layers icon that leaves the text in
+`lab-handoff:flash` (outside the settings backup, valid for ten minutes,
+collected once) and opens Flashcards in a new tab. There a dialog shows the
+cards found and asks whether they make a new deck, named after the file, or join
+an existing one; nothing is added until the user confirms. Logic tests are in
+`tests/flash/` (golden FSRS intervals, parsers, queues, storage, handoff) with
+jsdom flow tests of the whole island.
 
 ### CV builder
 

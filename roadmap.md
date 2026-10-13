@@ -1,116 +1,9 @@
 # Roadmap
 
-Status: everything planned has shipped (Flashcards, Focus office, Send to phone,
-Charts, the Whiteboard, the CV builder and OCR, with their follow-ups).
-**What is left is the Software Tycoon list in §8, and a few optional ideas
-noted under each tool.** **This file is the single source of TODOs.** Behaviour
-is documented in `README.md`; the entries here keep only the decisions made
-along the way and what is still open.
+The single source of TODOs. Only the Software Tycoon list is left; behaviour of
+everything else is documented in `README.md`.
 
-Owner decisions that still apply:
-
-- **New runtime deps are allowed** — keep them small and lazy-loaded. The
-  workbench's own dependency freeze stays.
-- **The terminal one-liner rule is scoped to the workbench.** Standalone tools
-  may do things a terminal can trivially do (timers, generators) when the
-  audience is a phone user on the landing page.
-- **Everything local-first stays non-negotiable.** No servers: devices share data
-  through Send to phone (a QR link), export/import files, or the settings backup.
-- **Removed for good (2026-10-13), not to be built:** the Device bridge (Send to
-  phone and file export cover the real need: PC to phone), the Photo studio,
-  dictation / speech-to-text, and the old parking lot of loose ideas.
-- **OCR languages stay English and Russian**, no more.
-
----
-
-## Shipped, and what is still open
-
-Done outside this list (2026-10-12): **Software Tycoon** was merged in from the
-standalone `software-tycoon` repo as `/tycoon` (docs in README.md, open work in §8).
-
-### Workbench
-
-Follow-ups shipped: the "Edit image" label and a skeleton loading state,
-set-membership badges in the tray, thumbnails and kind glyphs, the unsaved-changes
-`ConfirmSheet`, the beforeunload guard, shared `useSeedAssets`, outputs-tray
-thumbnails with `Download all`, diff patch/HTML-report export, **Send to
-Flashcards** and **Open in Whiteboard** actions on files, and **Recognize text**.
-Dropped by the owner: paste opening Compare, drafts surviving tab switches, and
-a separate output stage. Still optional, only if wanted:
-
-- **Session restore** — refresh wipes the tray; a tiny opt-in "restore last
-  tray" (names and bytes in memory only) would soften the hard reset.
-- **Image print** — page-like kinds print; a photo print is a plausible ask.
-
-### Send to phone (QR link)
-
-Folded into `README.md`. The cap is 2 200 characters at QR error-correction level
-**M**, because jsQR fails on every version-23 code at L while M decoded at every
-size. Shared pieces: `lib/send/`, `components/tools/SendToPhone.tsx` and
-`ReceiveDialog.tsx`. To add Send to another tool: supply a `kind`, a `getData` and
-a receive handler. The other direction needs no feature: export a file and move it
-however you like. For larger things between tabs on one device there is the
-handoff helper (`lib/apps/handoff.ts`), used by Send to Flashcards and Open in
-Whiteboard.
-
-### Flashcards (`/flash`)
-
-- **Scheduler:** FSRS-4.5 with the published default weights and no learning steps;
-  golden intervals are in `tests/flash/fsrs.test.ts`. *Again* requeues the card a
-  few cards later in the same session but schedules it once; cram never changes it.
-- **Imports:** paste, or a CSV, TSV, JSON or text file, on the deck list (a new deck)
-  or inside a deck; **Send to Flashcards** from the workbench adds the text to a new
-  or an existing deck. Decks export as TSV or JSON. Deck moves between devices use
-  Send to phone, file export, or the settings backup.
-- **Not built:** images, audio, `{{cloze}}`, deck-level tags and filters in study,
-  per-deck new-card limits. Never: cloud sync, accounts, plugins.
-
-### Focus office (`/focus`)
-
-Reworked 2026-10-13: it always opens as a full-screen office with generated lo-fi
-music and nothing to set up or save (no plan, history or streaks). Start runs the
-25 / 5 / 15 flow; giving a Pomodoro up (or the page really going away) sends one of
-six people out of the door; with nobody left you hire a new team. The music is
-synthesised in the browser: a live stream would break the local-first, offline and
-CSP rules. Nothing is open here.
-
-### Charts (workbench capability)
-
-Line, bar, grouped, stacked, histogram and scatter; a pivot ("one series for each
-value of" a text column) that is also suggested for long data; settings remembered
-per file under `lab:charts:v1`; SVG and PNG export; the validated reference palette
-for both modes. Not built: secondary axes (deliberately never), pivoting into a
-sheet, and a "Send chart to phone" action (an SVG is far over the QR cap).
-
-### Whiteboard (`/board`)
-
-Rectangle, ellipse, arrow, text and pen; select, move, resize, marquee; undo and
-redo; pan and zoom; several boards; SVG, PNG and JSON export. Added 2026-10-13:
-arrows that attach to shapes and follow them, snap to grid, bring to front and send
-to back, copy / cut / paste across boards (its own clipboard, never the system one),
-and **Open in Whiteboard** from the workbench. Never: shape libraries, images,
-collaboration.
-
-### CV builder (`/cv`)
-
-Four ATS-safe single-column templates over one schema, printing to a PDF with
-selectable text, Word, plain text and a reopenable CV file. Added 2026-10-13: custom
-sections (certifications, languages, any heading), real hyperlinks in the Word file,
-drag-to-reorder, and import from pasted text (an old CV or a LinkedIn profile, in
-English or Russian). No photo field, on purpose. Not built: importing a Word or PDF
-file directly (paste its text instead).
-
-### OCR (workbench capability)
-
-`ocr.recognize` on images and scanned PDFs, English and Russian only, with the
-engine and language data self-hosted and downloaded on request (`lib/apps/heavy-assets.ts`).
-Preprocessing, straightening of tilted pages, columns, tables rebuilt into a `.csv`
-spreadsheet, and the words the engine was unsure of boxed on the page. No CSP change
-was needed. Not done, on purpose: handwriting, and any other language.
-
----
-
-## 8. Software Tycoon follow-ups (`/tycoon`, merged 2026-10-12)
+## Software Tycoon follow-ups (`/tycoon`, merged 2026-10-12)
 
 Carried over from the standalone repo's ROADMAP.md. Nothing here is blocking:
 the game builds, its tests pass and it ships. Ordered by how much it matters.
@@ -130,7 +23,7 @@ shortcuts that use a throwaway game: `?offices=2&stage=3&money=1000000&rep=60`
 (dev server only). Art sources (`.aseprite`, large preview, CC0 licence) live in
 `art/pixeloffice/`, outside `assets/` so they are not published or precached.
 
-### 8a. Play it, then retune (most important)
+### Play it, then retune (most important)
 
 Balance so far comes only from bots; nobody has played the long journey.
 
@@ -157,7 +50,7 @@ Balance so far comes only from bots; nobody has played the long journey.
   Senior at most (65). Confirm a Lead appears in time, or every big office is
   permanently penalised.
 
-### 8b. Test and check gaps
+### Test and check gaps
 
 - **No unit tests for rivals or eras:** `sim/rivals.ts` (launches, ranking,
   buyouts, business growth), `data/eras.ts`, crowding, `saturate`,
@@ -175,7 +68,7 @@ Balance so far comes only from bots; nobody has played the long journey.
   `render-support/layout.ts`) would fix it at the cost of smaller people.
 - Not tested on iOS Safari.
 
-### 8c. Content that runs out
+### Content that runs out
 
 - **The last era starts in year 9** and nothing changes after it: add eras or
   make them cycle.
@@ -191,7 +84,7 @@ Balance so far comes only from bots; nobody has played the long journey.
   team" (5 people) assume the old single office.
 - Contracts do not scale into the late game.
 
-### 8d. From the original plan, not done
+### From the original plan, not done
 
 - Upkeep on live products beyond bugs and staleness (server bills, support load,
   churn from outages).
@@ -202,7 +95,7 @@ Balance so far comes only from bots; nobody has played the long journey.
 - A big HQ scene as a late visual reward.
 - Staff retirement (people only "move on" after six years).
 
-### 8e. Rough edges
+### Rough edges
 
 - Every rival launch posts a toast; with five rivals that may be noisy. Notify
   only for hits or your own markets.
@@ -221,34 +114,3 @@ Balance so far comes only from bots; nobody has played the long journey.
 - Installed-app layout: the game root is pinned with `position: fixed` +
   `100dvh` because the page's flex chain resolved ~56px too tall in an installed
   Android app. Keep that if the page layout changes.
-
----
-
----
-
-## Pending decisions
-
-(none)
-
----
-
-## Cross-cutting prerequisites (build once, reuse everywhere)
-
-1. **CSP / headers:** no change was needed for OCR or the lo-fi music. Screen
-   recording, if ever built, would need a `display-capture` permission in
-   `assets/_headers`.
-2. **Lazy heavy-asset pattern** — built: `src/lib/apps/heavy-assets.ts`. The
-   service worker never precaches such files (`EXCLUDE` in `scripts/pwa/integration.mjs`);
-   a tool lists its files with sizes, downloads them on request with progress into
-   its own cache and offers removal. OCR is its only consumer so far.
-3. **Settings backup coverage:** every tool persists under its `lab:<tool>:v1`
-   key (flash, board, cv and charts do; focus no longer saves anything) so
-   backup/restore carries state across devices. Handoffs and the whiteboard
-   clipboard use non-`lab:` keys on purpose: they are transient.
-4. **Registry plumbing per tool:** standalone pages follow the README's
-   "Adding a new tool" steps (island, page, TOOLS entry with `seo`, i18n,
-   tests with `axeViolations()`); a workbench capability follows the workbench
-   steps (capabilities.ts + operations/ + operations.ts). Standalone tools of the
-   study/productivity kind go in the `productivity` category.
-5. **Keep this file current** when something lands: record decisions made during
-   the build and fold the shipped behaviour into `README.md`.

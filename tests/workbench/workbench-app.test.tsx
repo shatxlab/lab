@@ -195,6 +195,62 @@ describe("WorkbenchApp — several files", () => {
   });
 });
 
+/** The set-membership badge in a tray row, or null when the row has none. */
+const badgeOf = (name: string) => fileRow(name)?.querySelector("[data-member-badge]")?.textContent ?? null;
+
+describe("WorkbenchApp — set membership badges", () => {
+  it("labels the two compared texts A and B in tray order", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(text("a.txt"), text("b.txt"));
+    await waitFor(() => expect(tab("text.diff")?.getAttribute("aria-selected")).toBe("true"));
+    expect(badgeOf("a.txt")).toBe("A");
+    expect(badgeOf("b.txt")).toBe("B");
+    view.unmount();
+  });
+
+  it("keeps A and B on the texts when an unrelated image joins", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(text("a.txt"), text("b.txt"));
+    await waitFor(() => expect(tab("text.diff")).toBeTruthy());
+    await addFiles(png("photo.png"));
+    await click(fileRow("a.txt"));
+    await waitFor(() => expect(tab("text.diff")?.getAttribute("aria-selected")).toBe("true"));
+    expect(badgeOf("a.txt")).toBe("A");
+    expect(badgeOf("b.txt")).toBe("B");
+    expect(badgeOf("photo.png")).toBeNull();
+    view.unmount();
+  });
+
+  it("numbers PDFs for Merge and gives a text no badge", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(pdf("one.pdf"), text("note.txt"), pdf("two.pdf"));
+    await click(fileRow("one.pdf"));
+    await waitFor(() => expect(tab("pdf.merge")?.getAttribute("aria-selected")).toBe("true"));
+    expect(badgeOf("one.pdf")).toBe("1");
+    expect(badgeOf("two.pdf")).toBe("2");
+    expect(badgeOf("note.txt")).toBeNull();
+    view.unmount();
+  });
+
+  it("marks every image in an Edit image batch", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(png("a.png"), png("b.png"));
+    await waitFor(() => expect(tab("image.edit")?.getAttribute("aria-selected")).toBe("true"));
+    expect(badgeOf("a.png")).toBe(wb("en", "inBatch"));
+    expect(badgeOf("b.png")).toBe(wb("en", "inBatch"));
+    view.unmount();
+  });
+
+  it("shows no badge on a pdf next to compared texts", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(text("a.txt"), text("b.txt"), pdf("doc.pdf"));
+    await click(fileRow("a.txt"));
+    await waitFor(() => expect(tab("text.diff")?.getAttribute("aria-selected")).toBe("true"));
+    expect(badgeOf("doc.pdf")).toBeNull();
+    view.unmount();
+  });
+});
+
 describe("WorkbenchApp — unsaved work", () => {
   it("does not switch away when a file is added during unsaved work", async () => {
     const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": DirtyStub }} />);

@@ -106,27 +106,61 @@ export interface AssetTrayProps {
   lang: AppLang;
   assets: readonly Asset[];
   selectedId: string | null;
+  /** Ids of the files the running set capability acts on (empty for file capabilities). */
+  setMembers?: ReadonlySet<string>;
+  /** The running capability; decides how members are badged. */
+  activeId?: CapabilityId | null;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
   onClear: () => void;
+}
+
+/** The marker in front of a file's name: A/B for Compare, 1..n for Merge, a chip for a batch. */
+function memberBadge(lang: AppLang, activeId: CapabilityId | null | undefined, position: number): string | null {
+  if (activeId === "text.diff") return position < 2 ? ["A", "B"][position]! : null;
+  if (activeId === "pdf.merge") return String(position + 1);
+  if (activeId === "image.edit") return wb(lang, "inBatch");
+  return null;
 }
 
 /**
  * The open files. A single file collapses to a one-line header; with several,
  * each row selects its file, and "Clear all" appears.
  */
-export function AssetTray({ lang, assets, selectedId, onSelect, onRemove, onClear }: AssetTrayProps) {
+export function AssetTray({
+  lang,
+  assets,
+  selectedId,
+  setMembers,
+  activeId,
+  onSelect,
+  onRemove,
+  onClear,
+}: AssetTrayProps) {
   const single = assets.length === 1;
-  const details = (asset: Asset) => (
-    <>
-      <span className="truncate font-medium" title={asset.name}>
-        {asset.name}
-      </span>
-      <span className="text-xs text-(--muted-fg)">
-        {asset.kind} · {formatBytes(asset.size)}
-      </span>
-    </>
-  );
+  // Tray order is the order Compare panes and Merge use.
+  const memberIds = setMembers && assets.filter((asset) => setMembers.has(asset.id)).map((asset) => asset.id);
+  const details = (asset: Asset) => {
+    const position = memberIds ? memberIds.indexOf(asset.id) : -1;
+    const badge = !single && position >= 0 ? memberBadge(lang, activeId, position) : null;
+    return (
+      <>
+        <span className="flex min-w-0 items-center gap-2">
+          {badge && (
+            <span data-member-badge className="shrink-0 rounded-full border border-(--accent) px-1.5 text-xs font-semibold text-(--accent)">
+              {badge}
+            </span>
+          )}
+          <span className="truncate font-medium" title={asset.name}>
+            {asset.name}
+          </span>
+        </span>
+        <span className="text-xs text-(--muted-fg)">
+          {asset.kind} · {formatBytes(asset.size)}
+        </span>
+      </>
+    );
+  };
 
   return (
     <section className={cn(panelClass, "flex flex-col gap-3", single && "py-2.5")} aria-labelledby="wb-assets">
@@ -450,6 +484,10 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
       : null
     : (current?.capability.id ?? null);
   const operationAssets = current?.assets ?? EMPTY_ASSETS;
+  const setMembers = React.useMemo<ReadonlySet<string>>(
+    () => new Set(current?.capability.set ? current.assets.map((asset) => asset.id) : []),
+    [current],
+  );
   const operationKey = `${active}:${operationAssets.map((asset) => asset.id).join("|")}`;
 
   const dirty = dirtyReport.key === operationKey && dirtyReport.dirty;
@@ -557,6 +595,8 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
             lang={lang}
             assets={assets}
             selectedId={selected?.id ?? null}
+            setMembers={setMembers}
+            activeId={active}
             onSelect={selectFile}
             onRemove={removeAsset}
             onClear={clearAssets}

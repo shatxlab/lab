@@ -4,8 +4,9 @@ import { Workspace } from "@/components/board/Workspace";
 import { ActionButton, SelectField, inputClass, ToolPage } from "@/components/tools/ui";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import { tb } from "@/lib/board/i18n";
+import { takeBoardHandoff } from "@/lib/board/handoff";
 import { MAX_BOARDS, createBoard, type Board, type BoardElement, type View } from "@/lib/board/model";
-import { emptyStore, readBoardStore, writeBoardStore, type BoardStore } from "@/lib/board/storage";
+import { emptyStore, parseBoardFile, readBoardStore, writeBoardStore, type BoardStore } from "@/lib/board/storage";
 
 export default function BoardApp() {
   const lang = useAppLang();
@@ -31,8 +32,18 @@ export default function BoardApp() {
       const first = createBoard(tb("en", "defaultName", { n: 1 }));
       loaded = { ...loaded, boards: [first], current: first.id };
     }
+    // A board sent from the workbench's "Open in Whiteboard" arrives as a new board.
+    const sent = takeBoardHandoff();
+    const arrived = sent ? parseBoardFile(sent.text) : null;
+    if (arrived && loaded.boards.length < MAX_BOARDS) {
+      const name = sent!.name.replace(/\.[^./\\]+$/, "").trim();
+      const added = { ...arrived, name: (name || arrived.name).slice(0, 60) };
+      loaded = { ...loaded, boards: [...loaded.boards, added], current: added.id };
+      setNotice(tb("en", "imported", { name: added.name }));
+    }
     storeRef.current = loaded;
     setStore(loaded);
+    if (arrived) writeBoardStore(loaded);
     setHydrated(true);
   }, []);
 
@@ -149,6 +160,8 @@ export default function BoardApp() {
             board={board}
             grid={store.grid}
             onGrid={(on) => commitStore((current) => ({ ...current, grid: on }))}
+            snap={store.snap}
+            onSnap={(on) => commitStore((current) => ({ ...current, snap: on }))}
             onSave={save(board.id)}
             onImport={addBoard}
             onNotice={setNotice}

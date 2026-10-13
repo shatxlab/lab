@@ -45,7 +45,7 @@ async function drag(x1: number, y1: number, x2: number, y2: number, init: Parame
 }
 
 /** A board whose view is the identity, so a pointer at (x, y) is at the world point (x, y). */
-const seedBoard = () => writeBoardStore({ boards: [{ ...createBoard("Board 1"), view: { x: 0, y: 0, zoom: 1 } }], current: null, grid: true });
+const seedBoard = () => writeBoardStore({ boards: [{ ...createBoard("Board 1"), view: { x: 0, y: 0, zoom: 1 } }], current: null, grid: true, snap: false });
 
 async function open({ seed = true }: { seed?: boolean } = {}) {
   if (seed && !localStorage.getItem(BOARD_STORAGE_KEY)) seedBoard();
@@ -267,6 +267,7 @@ describe("Whiteboard — text", () => {
       boards: [{ ...createBoard("B"), view: { x: 0, y: 0, zoom: 1 }, elements: [{ id: "t", type: "text", x: 40, y: 50, text: "old", size: 24, color: "ink", fill: false, width: 4 }] }],
       current: null,
       grid: true,
+      snap: false,
     });
     const view = await open();
     const el = canvas();

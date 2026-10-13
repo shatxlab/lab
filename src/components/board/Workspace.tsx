@@ -7,11 +7,15 @@
 
 import * as React from "react";
 import {
+  BringToFront,
   Circle,
-  Copy,
+  Clipboard,
+  ClipboardPaste,
+  CopyPlus,
   Download,
   Grid3x3,
   Hand,
+  Magnet,
   Maximize,
   MousePointer2,
   Minus,
@@ -19,6 +23,7 @@ import {
   Pencil,
   Plus,
   Redo2,
+  SendToBack,
   Square,
   Trash2,
   Type,
@@ -31,8 +36,12 @@ import { ActionButton } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
 import { useDark } from "@/lib/apps/use-dark";
+import { markPasted, place, readClip, writeClip } from "@/lib/board/clipboard";
+import { resolveBindings, shapeAt } from "@/lib/board/connect";
 import { boundsOf, handlesOf, topmostAt, unionOf, type Box, type Point } from "@/lib/board/geometry";
+import { reorder, snapTo, type Reorder } from "@/lib/board/ops";
 import {
+  ATTACH_REACH,
   begin,
   finish,
   marqueeBox,
@@ -48,8 +57,8 @@ import { canRedo, canUndo, commit, createHistory, redo, undo, type History } fro
 import { tb } from "@/lib/board/i18n";
 import {
   COLOR_KEYS,
+  MAX_ELEMENTS,
   WIDTHS,
-  newId,
   textSizeFor,
   type Board,
   type BoardElement,
@@ -90,6 +99,8 @@ export interface WorkspaceProps {
   board: Board;
   grid: boolean;
   onGrid: (on: boolean) => void;
+  snap: boolean;
+  onSnap: (on: boolean) => void;
   /** Called (debounced) with the board's current content. */
   onSave: (elements: BoardElement[], view: View) => void;
   onImport: (board: Board) => void;
@@ -114,7 +125,7 @@ function kindLabel(lang: AppLang, el: BoardElement): string {
   }
 }
 
-export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotice }: WorkspaceProps) {
+export function Workspace({ lang, board, grid, onGrid, snap, onSnap, onSave, onImport, onNotice }: WorkspaceProps) {
   const dark = useDark();
   const palette = paletteFor(dark);
 
@@ -127,6 +138,7 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
   const [gesture, setGesture] = React.useState<Gesture | null>(null);
   const [editing, setEditing] = React.useState<{ element: Extract<BoardElement, { type: "text" }>; isNew: boolean } | null>(null);
   const [size, setSize] = React.useState({ w: 800, h: 560 });
+  const [hasClip, setHasClip] = React.useState(false);
 
   const wrapRef = React.useRef<HTMLDivElement>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
@@ -148,7 +160,21 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
     gestureRef.current = next;
     setGesture(next);
   };
-  const commitElements = (next: BoardElement[]) => setHist((h) => commit(h, next));
+  // Every change passes through here, so arrows always agree with the shapes they are attached to.
+  const commitElements = (next: BoardElement[]) => setHist((h) => commit(h, resolveBindings(next)));
+  const snapStep = snap ? GRID : 0;
+
+  // Whether there is something to paste: it can arrive from another tab or board.
+  React.useEffect(() => {
+    const refresh = () => setHasClip(readClip() !== null);
+    refresh();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   // The canvas fills its box and follows it as it resizes.
   React.useLayoutEffect(() => {
@@ -251,13 +277,13 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
         setSelection([hit.id]);
         startEdit(hit, false);
       } else {
-        startEdit(newText(world, style) as Extract<BoardElement, { type: "text" }>, true);
+        startEdit(newText(snap ? { x: snapTo(world.x, GRID), y: snapTo(world.y, GRID) } : world, style) as Extract<BoardElement, { type: "text" }>, true);
       }
       event.preventDefault();
       return;
     }
 
-    const begun = begin({ tool, style, elements, selection, world, screen, view, reach, shift: event.shiftKey, pan: event.button === 1 || spaceHeld.current });
+    const begun = begin({ tool, style, elements, selection, world, screen, view, reach, shift: event.shiftKey, pan: event.button === 1 || spaceHeld.current, snap: snapStep });
     setSelection(begun.selection);
     setGestureBoth(begun.gesture);
   };
@@ -331,7 +357,8 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
   /* ------------------------------------------------------------- commands */
 
   const selected = elements.filter((el) => selection.includes(el.id));
-  const shown = preview(gesture, elements);
+  const shown = preview(gesture, elements, view.zoom);
+  const visible: Box = { x: view.x, y: view.y, w: size.w / view.zoom, h: size.h / view.zoom };
 
   const restyle = (patch: Partial<Style>) => {
     const next = { ...style, ...patch };
@@ -354,16 +381,40 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
 
   const duplicate = () => {
     if (selected.length === 0) return;
-    const copies = selected.map((el) => {
-      const copy = { ...el, id: newId() } as BoardElement;
-      return copy.type === "pen"
-        ? { ...copy, points: copy.points.map((v) => v + 16) }
-        : copy.type === "arrow"
-          ? { ...copy, x1: copy.x1 + 16, y1: copy.y1 + 16, x2: copy.x2 + 16, y2: copy.y2 + 16 }
-          : { ...copy, x: copy.x + 16, y: copy.y + 16 };
-    });
-    commitElements([...elements, ...copies]);
-    setSelection(copies.map((c) => c.id));
+    if (elements.length + selected.length > MAX_ELEMENTS) return onNotice(tb(lang, "boardFull", { n: MAX_ELEMENTS }));
+    const copies = place({ elements: selected, source: board.id, pastes: 0 }, board.id, visible, true);
+    commitElements([...elements, ...copies.elements]);
+    setSelection(copies.ids);
+  };
+
+  /** Copy to the whiteboard's own clipboard, which survives switching boards and reloading. */
+  const copy = () => {
+    if (selected.length === 0) return false;
+    // Order matters: shapes before the arrows that point at them, as on the board.
+    const ok = writeClip(selected, board.id);
+    if (ok) {
+      setHasClip(true);
+      onNotice(tb(lang, "copied", { n: selected.length }));
+    }
+    return ok;
+  };
+  const cut = () => {
+    if (copy()) remove();
+  };
+  const paste = () => {
+    const clip = readClip();
+    if (!clip) return;
+    if (elements.length + clip.elements.length > MAX_ELEMENTS) return onNotice(tb(lang, "boardFull", { n: MAX_ELEMENTS }));
+    const placed = place(clip, board.id, visible);
+    markPasted(clip);
+    commitElements([...elements, ...placed.elements]);
+    setSelection(placed.ids);
+    setTool("select");
+    onNotice("");
+  };
+
+  const arrange = (mode: Reorder) => {
+    if (selection.length > 0) commitElements(reorder(elements, selection, mode));
   };
 
   const nudge = (dx: number, dy: number) => {
@@ -405,6 +456,26 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
     if (mod && key === "d") {
       event.preventDefault();
       return duplicate();
+    }
+    if (mod && key === "c") {
+      event.preventDefault();
+      return void copy();
+    }
+    if (mod && key === "x") {
+      event.preventDefault();
+      return cut();
+    }
+    if (mod && key === "v") {
+      event.preventDefault();
+      return paste();
+    }
+    if (mod && (event.key === "]" || event.key === "}")) {
+      event.preventDefault();
+      return arrange(event.shiftKey ? "front" : "forward");
+    }
+    if (mod && (event.key === "[" || event.key === "{")) {
+      event.preventDefault();
+      return arrange(event.shiftKey ? "back" : "backward");
     }
     if (mod && key === "0") {
       event.preventDefault();
@@ -472,6 +543,13 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
     return { x: a.x, y: a.y, w: box.w * view.zoom, h: box.h * view.zoom };
   };
   const single = tool === "select" && selected.length === 1 && !gesture ? selected[0]! : null;
+  // While an arrow end is being placed, the shape it would attach to is outlined.
+  const attachTarget = (() => {
+    const reach = ATTACH_REACH / view.zoom;
+    if (gesture?.kind === "draw" && gesture.tool === "arrow") return shapeAt(elements, gesture.current, reach);
+    if (gesture?.kind === "resize" && gesture.original.type === "arrow") return shapeAt(elements, gesture.current, reach, [gesture.original.id]);
+    return null;
+  })();
   const gridStep = GRID * view.zoom;
   const cursor = spaceHeld.current || tool === "hand" ? "grab" : tool === "select" ? "default" : tool === "text" ? "text" : "crosshair";
 
@@ -526,7 +604,19 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
             <Redo2 aria-hidden="true" className="size-4" />
           </button>
           <button type="button" aria-label={tb(lang, "duplicate")} title={`${tb(lang, "duplicate")} (Ctrl+D)`} disabled={selected.length === 0} onClick={duplicate} className={buttonClass(false)}>
-            <Copy aria-hidden="true" className="size-4" />
+            <CopyPlus aria-hidden="true" className="size-4" />
+          </button>
+          <button type="button" aria-label={tb(lang, "copy")} title={`${tb(lang, "copy")} (Ctrl+C)`} disabled={selected.length === 0} onClick={() => void copy()} className={buttonClass(false)}>
+            <Clipboard aria-hidden="true" className="size-4" />
+          </button>
+          <button type="button" aria-label={tb(lang, "paste")} title={`${tb(lang, "paste")} (Ctrl+V)`} disabled={!hasClip} onClick={paste} className={buttonClass(false)}>
+            <ClipboardPaste aria-hidden="true" className="size-4" />
+          </button>
+          <button type="button" aria-label={tb(lang, "toFront")} title={`${tb(lang, "toFront")} (Ctrl+Shift+])`} disabled={selected.length === 0} onClick={() => arrange("front")} className={buttonClass(false)}>
+            <BringToFront aria-hidden="true" className="size-4" />
+          </button>
+          <button type="button" aria-label={tb(lang, "toBack")} title={`${tb(lang, "toBack")} (Ctrl+Shift+[)`} disabled={selected.length === 0} onClick={() => arrange("back")} className={buttonClass(false)}>
+            <SendToBack aria-hidden="true" className="size-4" />
           </button>
           <button type="button" aria-label={tb(lang, "delete")} title={`${tb(lang, "delete")} (Del)`} disabled={selected.length === 0} onClick={remove} className={buttonClass(false)}>
             <Trash2 aria-hidden="true" className="size-4" />
@@ -548,6 +638,9 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
           </button>
           <button type="button" aria-pressed={grid} aria-label={tb(lang, "grid")} title={tb(lang, "grid")} onClick={() => onGrid(!grid)} className={buttonClass(grid)}>
             <Grid3x3 aria-hidden="true" className="size-4" />
+          </button>
+          <button type="button" aria-pressed={snap} aria-label={tb(lang, "snap")} title={tb(lang, "snapHint")} onClick={() => onSnap(!snap)} className={buttonClass(snap)}>
+            <Magnet aria-hidden="true" className="size-4" />
           </button>
         </div>
 
@@ -623,6 +716,11 @@ export function Workspace({ lang, board, grid, onGrid, onSave, onImport, onNotic
               const b = screenBox(boundsOf(shown.find((s) => s.id === el.id) ?? el));
               return <rect key={el.id} x={b.x - 4} y={b.y - 4} width={b.w + 8} height={b.h + 8} strokeDasharray="5 4" rx={3} />;
             })}
+            {attachTarget &&
+              (() => {
+                const b = screenBox(boundsOf(attachTarget));
+                return <rect x={b.x - 6} y={b.y - 6} width={b.w + 12} height={b.h + 12} rx={attachTarget.type === "ellipse" ? Math.min(b.w, b.h) / 2 + 6 : 6} stroke={palette.series[2]} strokeWidth={2.5} />;
+              })()}
             {marquee && (() => {
               const b = screenBox(marquee);
               return <rect x={b.x} y={b.y} width={b.w} height={b.h} strokeDasharray="4 3" fill="var(--accent)" fillOpacity={0.08} />;

@@ -31,6 +31,9 @@ export interface ArrowShape {
   y1: number;
   x2: number;
   y2: number;
+  /** Ids of the shapes the start and end are attached to. The coordinates always follow them. */
+  from?: string;
+  to?: string;
 }
 export interface PenShape {
   type: "pen";

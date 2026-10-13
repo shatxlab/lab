@@ -173,7 +173,7 @@ describe("board store", () => {
     const board = { ...createBoard("Plan"), elements: sample, updated: 123 };
     const second = createBoard("Ideas");
     const storage = memory();
-    writeBoardStore({ boards: [board, second], current: second.id, grid: false }, storage);
+    writeBoardStore({ boards: [board, second], current: second.id, grid: false, snap: false }, storage);
     const back = readBoardStore(storage);
     expect(back.boards.map((b) => b.name)).toEqual(["Plan", "Ideas"]);
     expect(back.boards[0]!.elements).toEqual(sample);

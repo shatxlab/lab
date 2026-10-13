@@ -12,11 +12,14 @@ import {
   resizeElement,
   topmostAt,
   translate,
+  unionOf,
   type Box,
   type HandleId,
   type Point,
 } from "@/lib/board/geometry";
+import { bindEnd, detachFrom, resolveBindings } from "@/lib/board/connect";
 import { newId, textSizeFor, type BoardElement, type Style, type View } from "@/lib/board/model";
+import { snapTo } from "@/lib/board/ops";
 import { toWorld } from "@/lib/board/viewport";
 
 export type Tool = "select" | "rect" | "ellipse" | "arrow" | "text" | "pen" | "hand";
@@ -25,9 +28,9 @@ export type DrawTool = "rect" | "ellipse" | "arrow" | "pen";
 export const DRAW_TOOLS: readonly Tool[] = ["rect", "ellipse", "arrow", "pen"];
 
 export type Gesture =
-  | { kind: "draw"; tool: DrawTool; start: Point; current: Point; points: number[]; style: Style; id: string; constrain: boolean }
-  | { kind: "move"; origin: Point; current: Point; ids: string[]; originals: BoardElement[]; moved: boolean }
-  | { kind: "resize"; original: BoardElement; handle: HandleId; current: Point }
+  | { kind: "draw"; tool: DrawTool; start: Point; current: Point; points: number[]; style: Style; id: string; constrain: boolean; snap: number }
+  | { kind: "move"; origin: Point; current: Point; ids: string[]; originals: BoardElement[]; moved: boolean; snap: number; anchor: Point }
+  | { kind: "resize"; original: BoardElement; handle: HandleId; current: Point; snap: number }
   | { kind: "marquee"; start: Point; current: Point; base: string[] }
   | { kind: "pan"; startScreen: Point; startView: View };
 
@@ -45,12 +48,19 @@ export interface BeginInput {
   shift?: boolean;
   /** Space held, or the middle button: drag the canvas whatever the tool. */
   pan?: boolean;
+  /** Grid step in world units to land on; 0 or absent for free placement. */
+  snap?: number;
 }
 
 export interface Begun {
   gesture: Gesture | null;
   selection: string[];
 }
+
+/** How near an arrow end must be to a shape to attach to it, in screen pixels. */
+export const ATTACH_REACH = 10;
+
+const snapPoint = (p: Point, step: number): Point => (step > 0 ? { x: snapTo(p.x, step), y: snapTo(p.y, step) } : p);
 
 /** How far a drag must go before it counts as a move rather than a click, in screen pixels. */
 export const DRAG_THRESHOLD = 3;
@@ -59,13 +69,16 @@ const PEN_SPACING = 2;
 
 export function begin(input: BeginInput): Begun {
   const { tool, style, elements, selection, world, screen, view, reach, shift, pan } = input;
+  const snap = input.snap ?? 0;
   const worldReach = reach / view.zoom;
 
   if (pan || tool === "hand") return { gesture: { kind: "pan", startScreen: screen, startView: view }, selection: [...selection] };
 
   if (tool === "rect" || tool === "ellipse" || tool === "arrow" || tool === "pen") {
+    // A pen follows the hand; the other tools start on the grid when snapping is on.
+    const start = tool === "pen" ? world : snapPoint(world, snap);
     return {
-      gesture: { kind: "draw", tool, start: world, current: world, points: [world.x, world.y], style, id: newId(), constrain: Boolean(shift) },
+      gesture: { kind: "draw", tool, start, current: start, points: [start.x, start.y], style, id: newId(), constrain: Boolean(shift), snap },
       selection: [],
     };
   }
@@ -75,7 +88,7 @@ export function begin(input: BeginInput): Begun {
   if (selection.length === 1) {
     const only = elements.find((el) => el.id === selection[0]);
     const handle = only && handlesOf(only).find((h) => Math.hypot(h.x - world.x, h.y - world.y) <= worldReach * 1.6);
-    if (only && handle) return { gesture: { kind: "resize", original: only, handle: handle.id, current: world }, selection: [only.id] };
+    if (only && handle) return { gesture: { kind: "resize", original: only, handle: handle.id, current: world, snap }, selection: [only.id] };
   }
 
   const hit = topmostAt(elements, world, worldReach);
@@ -86,7 +99,9 @@ export function begin(input: BeginInput): Begun {
       if (!next.includes(hit.id)) return { gesture: null, selection: next };
     } else if (!next.includes(hit.id)) next = [hit.id];
     const originals = elements.filter((el) => next.includes(el.id));
-    return { gesture: { kind: "move", origin: world, current: world, ids: next, originals, moved: false }, selection: next };
+    const anchorBox = unionOf(originals.map(boundsOf));
+    const anchor = anchorBox ? { x: anchorBox.x, y: anchorBox.y } : world;
+    return { gesture: { kind: "move", origin: world, current: world, ids: next, originals, moved: false, snap, anchor }, selection: next };
   }
   const base = shift ? [...selection] : [];
   return { gesture: { kind: "marquee", start: world, current: world, base }, selection: base };
@@ -100,19 +115,56 @@ export function update(gesture: Gesture, world: Point, view: View, shift = false
         const last = { x: points[points.length - 2]!, y: points[points.length - 1]! };
         if (Math.hypot(world.x - last.x, world.y - last.y) * view.zoom >= PEN_SPACING) points = [...points, world.x, world.y];
       }
-      return { ...gesture, current: world, points, constrain: shift };
+      return { ...gesture, current: gesture.tool === "pen" ? world : snapPoint(world, gesture.snap), points, constrain: shift };
     }
     case "move": {
       const moved = gesture.moved || Math.hypot(world.x - gesture.origin.x, world.y - gesture.origin.y) * view.zoom >= DRAG_THRESHOLD;
       return { ...gesture, moved, current: world };
     }
     case "resize":
-      return { ...gesture, current: world };
+      return { ...gesture, current: snapPoint(world, gesture.snap) };
     case "marquee":
       return { ...gesture, current: world };
     default:
       return gesture;
   }
+}
+
+/** How far a move has taken its elements: free, or so that the group's top-left corner lands on the grid. */
+export function moveDelta(gesture: Extract<Gesture, { kind: "move" }>): Point {
+  const dx = gesture.current.x - gesture.origin.x;
+  const dy = gesture.current.y - gesture.origin.y;
+  if (gesture.snap <= 0) return { x: dx, y: dy };
+  return { x: snapTo(gesture.anchor.x + dx, gesture.snap) - gesture.anchor.x, y: snapTo(gesture.anchor.y + dy, gesture.snap) - gesture.anchor.y };
+}
+
+/** The elements after a move: arrows that travel without their shapes let go of them, and the rest follow their shapes. */
+function moved(gesture: Extract<Gesture, { kind: "move" }>, elements: readonly BoardElement[]): BoardElement[] {
+  const { x: dx, y: dy } = moveDelta(gesture);
+  const moving = new Set(gesture.ids);
+  const next = elements.map((el) => {
+    if (!moving.has(el.id)) return el;
+    const shifted = translate(el, dx, dy);
+    return shifted.type === "arrow" ? detachFrom(shifted, moving) : shifted;
+  });
+  return resolveBindings(next);
+}
+
+/** An arrow being drawn, attached to the shapes under its two ends. */
+function attachedDraw(made: BoardElement, elements: readonly BoardElement[], gesture: Extract<Gesture, { kind: "draw" }>, zoom: number): BoardElement[] {
+  if (made.type !== "arrow") return [...elements, made];
+  const tolerance = ATTACH_REACH / zoom;
+  const started = bindEnd(made, "start", elements, gesture.start, tolerance);
+  const ended = bindEnd(started, "end", elements, { x: made.x2, y: made.y2 }, tolerance);
+  return resolveBindings([...elements, ended]);
+}
+
+/** An arrow end being dragged, attached to the shape it is over. */
+function attachedResize(next: BoardElement, handle: HandleId, elements: readonly BoardElement[], current: Point, zoom: number): BoardElement[] {
+  const replaced = elements.map((el) => (el.id === next.id ? next : el));
+  if (next.type !== "arrow" || (handle !== "start" && handle !== "end")) return resolveBindings(replaced);
+  const bound = bindEnd(next, handle, elements, current, ATTACH_REACH / zoom);
+  return resolveBindings(elements.map((el) => (el.id === next.id ? bound : el)));
 }
 
 /** The view while panning: the board slides with the pointer. */
@@ -162,21 +214,15 @@ export function drawn(gesture: Extract<Gesture, { kind: "draw" }>): BoardElement
 }
 
 /** The board as it should be drawn while the gesture is in progress. */
-export function preview(gesture: Gesture | null, elements: readonly BoardElement[]): BoardElement[] {
+export function preview(gesture: Gesture | null, elements: readonly BoardElement[], zoom = 1): BoardElement[] {
   if (!gesture) return elements as BoardElement[];
   switch (gesture.kind) {
     case "draw":
-      return [...elements, drawn(gesture)];
-    case "move": {
-      if (!gesture.moved) return elements as BoardElement[];
-      const dx = gesture.current.x - gesture.origin.x;
-      const dy = gesture.current.y - gesture.origin.y;
-      return elements.map((el) => (gesture.ids.includes(el.id) ? translate(el, dx, dy) : el));
-    }
-    case "resize": {
-      const next = resizeElement(gesture.original, gesture.handle, gesture.current);
-      return elements.map((el) => (el.id === next.id ? next : el));
-    }
+      return attachedDraw(drawn(gesture), elements, gesture, zoom);
+    case "move":
+      return gesture.moved ? moved(gesture, elements) : (elements as BoardElement[]);
+    case "resize":
+      return attachedResize(resizeElement(gesture.original, gesture.handle, gesture.current), gesture.handle, elements, gesture.current, zoom);
     default:
       return elements as BoardElement[];
   }
@@ -202,16 +248,14 @@ export function finish(gesture: Gesture, elements: readonly BoardElement[], view
   switch (gesture.kind) {
     case "draw": {
       const made = drawn(gesture);
-      return worthKeeping(made, view.zoom) ? { elements: [...elements, made], selection: [made.id] } : { elements: elements as BoardElement[], selection: [] };
+      return worthKeeping(made, view.zoom) ? { elements: attachedDraw(made, elements, gesture, view.zoom), selection: [made.id] } : { elements: elements as BoardElement[], selection: [] };
     }
-    case "move": {
-      const next = preview(gesture, elements);
-      return { elements: gesture.moved ? next : (elements as BoardElement[]), selection: null };
-    }
+    case "move":
+      return { elements: gesture.moved ? moved(gesture, elements) : (elements as BoardElement[]), selection: null };
     case "resize": {
       const next = resizeElement(gesture.original, gesture.handle, gesture.current);
       const changed = JSON.stringify(next) !== JSON.stringify(gesture.original);
-      return { elements: changed ? elements.map((el) => (el.id === next.id ? next : el)) : (elements as BoardElement[]), selection: null };
+      return { elements: changed ? attachedResize(next, gesture.handle, elements, gesture.current, view.zoom) : (elements as BoardElement[]), selection: null };
     }
     case "marquee": {
       const box = marqueeBox(gesture);

@@ -1,3 +1,4 @@
+import { resolveBindings } from "@/lib/board/connect";
 import {
   COLOR_KEYS,
   COORD_LIMIT,
@@ -25,6 +26,8 @@ export interface BoardStore {
   boards: Board[];
   current: string | null;
   grid: boolean;
+  /** Drawing, moving and resizing land on the grid. */
+  snap: boolean;
 }
 
 export interface BoardStorage {
@@ -32,7 +35,7 @@ export interface BoardStorage {
   setItem(key: string, value: string): void;
 }
 
-export const emptyStore = (): BoardStore => ({ boards: [], current: null, grid: true });
+export const emptyStore = (): BoardStore => ({ boards: [], current: null, grid: true, snap: false });
 
 function storageOrUndefined(): BoardStorage | undefined {
   try {
@@ -68,7 +71,12 @@ export function cleanElement(raw: unknown, seen: Set<string>): BoardElement | nu
     }
     case "arrow": {
       const [x1, y1, x2, y2] = [coord(input.x1), coord(input.y1), coord(input.x2), coord(input.y2)];
-      if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) element = { type: "arrow", x1, y1, x2, y2, ...style };
+      if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
+        element = { type: "arrow", x1, y1, x2, y2, ...style };
+        // Attachments are checked against the other elements once they are all known.
+        if (typeof input.from === "string" && input.from !== "") element.from = input.from.slice(0, 40);
+        if (typeof input.to === "string" && input.to !== "") element.to = input.to.slice(0, 40);
+      }
       break;
     }
     case "pen": {
@@ -99,7 +107,8 @@ export function cleanElements(raw: unknown): BoardElement[] {
     const element = cleanElement(item, seen);
     if (element) out.push(element);
   }
-  return out;
+  // Arrows keep only attachments to shapes that exist, and sit exactly on them.
+  return resolveBindings(out);
 }
 
 function cleanView(raw: unknown): View {
@@ -127,6 +136,7 @@ export function readBoardStore(storage: BoardStorage | undefined = storageOrUnde
     const seen = new Set<string>();
     if (Array.isArray(raw.boards)) store.boards = raw.boards.slice(0, MAX_BOARDS).flatMap((board) => cleanBoard(board, seen) ?? []);
     store.grid = raw.grid !== false;
+    store.snap = raw.snap === true;
     store.current = store.boards.some((board) => board.id === raw.current) ? (raw.current as string) : (store.boards[0]?.id ?? null);
   } catch {
     // Corrupt data: start fresh.

@@ -315,6 +315,28 @@ drops anything malformed. Boards autosave (debounced, and on page hide) under
 `lab:board:v1`. Colours are the chart palette's validated hues, resolved per
 theme, so a board looks right in light and dark and exports with explicit colours.
 
+**Connectors.** An arrow can name the shape its start (`from`) and its end (`to`)
+belong to. Dropping an arrow end within 10px of a rectangle, ellipse or text
+attaches it (the shape is outlined while aiming), and the arrow's coordinates
+become the points where the line between the two shapes' centres leaves them
+(`lib/board/connect.ts`). `resolveBindings` runs on every change, so moving or
+resizing a shape drags its arrows along, deleting it leaves the arrow where it
+was, moving an arrow on its own lets go of its shapes, and the saved file and the
+SVG export need no knowledge of bindings (the coordinates are always in sync).
+**Snap to grid** (a toolbar toggle, remembered) puts the start and end of shapes
+and arrows, the corner a group lands on when moved, and a resize handle on the
+24px grid; freehand strokes stay free. **Order:** bring to front or send to back
+(Ctrl+Shift+] and [), and a step forward or back (Ctrl+] and [).
+**Copy, cut and paste** (Ctrl+C, X, V, and toolbar buttons) use the whiteboard's
+own clipboard in `lab-clipboard:board`, which survives switching boards, other
+tabs and reloads (it is outside the settings backup, and it never touches the
+system clipboard): pasted elements get fresh ids, arrows stay attached to copies
+of their shapes and let go of the rest, and a paste lands where the elements were
+(a step aside on the board they came from, centred in view if they were off
+screen). A JSON file in the workbench that is a board gets **Open in
+Whiteboard**, which hands it over (`lab-handoff:board`) to a new tab where it is
+added as a board.
+
 ### Charts
 
 `chart.make` is a workbench capability on spreadsheets (CSV/XLSX via the

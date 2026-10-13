@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createLofi, makeCrackle, makeImpulse, makeNoise, scheduleBar, createMix, FULL_GAIN } from "@/lib/focus/lofi-audio";
+import { createLofi, makeImpulse, makeNoise, scheduleBar, createMix, FULL_GAIN } from "@/lib/focus/lofi-audio";
 import { BAR, planBar } from "@/lib/focus/lofi";
 
 /** A stand-in for the audio graph that records what is built and never plays anything. */
@@ -23,6 +23,7 @@ function fakeContext(initial: "running" | "suspended" = "running", resumes = tru
       ratio: param(),
       attack: param(),
       release: param(),
+      delayTime: param(),
     };
     return target;
   };
@@ -46,6 +47,7 @@ function fakeContext(initial: "running" | "suspended" = "running", resumes = tru
     createBufferSource: () => node("source"),
     createConvolver: () => node("convolver"),
     createDynamicsCompressor: () => node("compressor"),
+    createDelay: () => node("delay"),
   };
   return ctx;
 }
@@ -56,9 +58,8 @@ afterEach(() => vi.useRealTimers());
 describe("generated buffers", () => {
   const ctx = fakeContext() as unknown as BaseAudioContext;
 
-  it("makes noise, vinyl and a room of the right sizes, filled with sound", () => {
+  it("makes noise and a room of the right sizes, filled with sound", () => {
     expect(makeNoise(ctx, 2).length).toBe(16000);
-    expect(makeCrackle(ctx, 3).length).toBe(24000);
     expect(makeImpulse(ctx, 1).length).toBe(8000);
   });
 
@@ -67,9 +68,6 @@ describe("generated buffers", () => {
     const noise = makeNoise(real, 0.1).getChannelData(0);
     expect(noise.some((v) => v !== 0)).toBe(true);
     expect(noise.reduce((m, v) => Math.max(m, Math.abs(v)), 0)).toBeLessThanOrEqual(1);
-    const crackle = makeCrackle(real, 6).getChannelData(0);
-    expect(crackle.reduce((m, v) => Math.max(m, Math.abs(v)), 0)).toBeGreaterThan(0.1); // there are pops
-    expect(crackle.filter((v) => Math.abs(v) < 0.03).length).toBeGreaterThan(crackle.length * 0.8); // and mostly quiet hiss
     const impulse = makeImpulse(real, 0.2);
     const left = impulse.getChannelData(0);
     expect(Math.abs(left[0]!)).toBeGreaterThan(Math.abs(left[left.length - 1]!));

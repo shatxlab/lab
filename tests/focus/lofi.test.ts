@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { BAR, BEAT, BPM, LEAD_NOTES, PROGRESSIONS, SWING, midiToHz, planBar, progressionFor } from "@/lib/focus/lofi";
+import { BAR, BEAT, BPM, LEAD_NOTES, PROGRESSIONS, SWING, chordAt, midiToHz, planBar, progressionFor, sectionFor } from "@/lib/focus/lofi";
 
 const SEED = 42;
 const bar = (index: number, seed = SEED) => planBar(index, seed);
 const voice = (events: ReturnType<typeof planBar>, name: string) => events.filter((e) => e.voice === name);
+const withDrums = (index: number) => ["groove", "melody"].includes(sectionFor(Math.floor(index / 4)));
 
 describe("the lo-fi score", () => {
   it("is slow and lazy", () => {
@@ -34,47 +35,75 @@ describe("the lo-fi score", () => {
     }
   });
 
-  it("always has a pulse: a kick on the downbeat, two snares, and hats", () => {
-    for (let index = 0; index < 32; index += 1) {
+  it("is shaped like a song: a quiet intro, then grooves, melodies and a drumless breath", () => {
+    expect(sectionFor(0)).toBe("intro");
+    const form = Array.from({ length: 16 }, (_, p) => sectionFor(p + 1));
+    for (const section of ["groove", "melody", "breath"]) expect(form).toContain(section);
+    expect(form.slice(0, 8)).toEqual(form.slice(8)); // and it comes round again
+    for (const index of [0, 1, 2, 3]) {
+      expect(voice(bar(index), "kick")).toHaveLength(0);
+      expect(voice(bar(index), "lead")).toHaveLength(0);
+    }
+  });
+
+  it("has a pulse wherever the drums play: a kick on the downbeat, two backbeats, and hats", () => {
+    let checked = 0;
+    for (let index = 0; index < 64; index += 1) {
       const events = bar(index);
+      if (!withDrums(index)) {
+        expect(voice(events, "snare")).toHaveLength(0);
+        expect(voice(events, "hat")).toHaveLength(0);
+        continue;
+      }
+      checked += 1;
       expect(voice(events, "kick").some((e) => e.at < 0.01)).toBe(true);
-      expect(voice(events, "snare")).toHaveLength(2);
+      const backbeats = voice(events, "snare").filter((e) => [1, 3].some((b) => Math.abs(e.at - b * BEAT) < 0.02));
+      expect(backbeats).toHaveLength(2);
       const hats = voice(events, "hat").length;
       expect(hats).toBeGreaterThanOrEqual(5);
       expect(hats).toBeLessThanOrEqual(8);
     }
+    expect(checked).toBeGreaterThan(32);
   });
 
-  it("plays the chord's own notes and its root in the bass", () => {
-    for (let index = 0; index < 16; index += 1) {
-      const chord = progressionFor(Math.floor(index / 4), SEED)[index % 4]!;
+  it("plays the chord's own notes on the keys and pad, and its root in the bass", () => {
+    for (let index = 0; index < 64; index += 1) {
+      const chord = chordAt(index, SEED);
       const events = bar(index);
       const keys = voice(events, "keys");
       expect(keys.length).toBeGreaterThanOrEqual(8);
-      for (const note of keys) expect(chord.notes).toContain(note.midi);
+      for (const note of [...keys, ...voice(events, "pad")]) expect(chord.notes).toContain(note.midi);
       const bass = voice(events, "bass");
+      if (index < 2) {
+        expect(bass).toHaveLength(0); // the bass comes in halfway through the intro
+        continue;
+      }
       expect(bass[0]!.midi).toBe(chord.bass);
-      for (const note of bass) expect([chord.bass, chord.bass + 7]).toContain(note.midi);
+      expect(bass[0]!.at).toBeLessThan(0.01);
+      // Anything else is the root, its fifth, or a semitone step into the next chord.
+      const following = chordAt(index + 1, SEED).bass;
+      for (const note of bass) expect([chord.bass, chord.bass + 7, following - 1, following + 1]).toContain(note.midi);
     }
   });
 
-  it("changes chords every bar and the loop every four", () => {
-    const first = [0, 1, 2, 3].map((i) => voice(bar(i), "bass")[0]!.midi);
+  it("holds a progression for eight bars and never repeats it straight away", () => {
+    for (let phrase = 0; phrase < 40; phrase += 2) {
+      expect(PROGRESSIONS).toContain(progressionFor(phrase, SEED));
+      expect(progressionFor(phrase + 1, SEED)).toBe(progressionFor(phrase, SEED));
+      expect(progressionFor(phrase + 2, SEED)).not.toBe(progressionFor(phrase, SEED));
+    }
+    const first = [0, 1, 2, 3].map((i) => chordAt(i, SEED).bass);
     expect(new Set(first).size).toBeGreaterThan(1);
-    // Every loop is four chords drawn from the known set.
-    for (let phrase = 0; phrase < 20; phrase += 1) expect(PROGRESSIONS).toContain(progressionFor(phrase, SEED));
-    const seen = new Set(Array.from({ length: 40 }, (_, p) => PROGRESSIONS.indexOf(progressionFor(p, SEED))));
-    expect(seen.size).toBeGreaterThan(1);
   });
 
-  it("keeps the lead on the pentatonic scale and the bass low and the keys mid", () => {
+  it("keeps the lead on the pentatonic scale, the bass low and the keys mid", () => {
     for (let index = 0; index < 64; index += 1) {
       const events = bar(index);
       for (const note of voice(events, "lead")) expect(LEAD_NOTES).toContain(note.midi);
       for (const note of voice(events, "bass")) expect(note.midi!).toBeLessThan(55);
-      for (const note of voice(events, "keys")) {
+      for (const note of [...voice(events, "keys"), ...voice(events, "pad")]) {
         expect(note.midi!).toBeGreaterThanOrEqual(50);
-        expect(note.midi!).toBeLessThan(70);
+        expect(note.midi!).toBeLessThan(72);
       }
     }
     // The lead sometimes rests and sometimes plays.
@@ -83,9 +112,18 @@ describe("the lo-fi score", () => {
     expect(withLead).toContain(false);
   });
 
+  it("repeats its melody: the motif in a phrase's first bar comes back two bars later with the same rhythm", () => {
+    for (let phrase = 1; phrase < 16; phrase += 1) {
+      if (sectionFor(phrase) !== "melody") continue;
+      const rhythm = (index: number) => voice(bar(index), "lead").map((e) => Math.round(e.at / (BEAT / 4)));
+      expect(rhythm(phrase * 4).length).toBeGreaterThan(1);
+      expect(rhythm(phrase * 4 + 2)).toEqual(rhythm(phrase * 4));
+    }
+  });
+
   it("swings the offbeat hats late", () => {
     expect(SWING).toBeGreaterThan(0);
-    expect(SWING).toBeLessThan(1 / 3 + 1e-9);
+    expect(SWING).toBeLessThan(1 / 6 + 1e-9);
     // Over many bars, the average offbeat hit sits later than straight eighths.
     let late = 0;
     let count = 0;
@@ -99,7 +137,7 @@ describe("the lo-fi score", () => {
         }
       }
     }
-    expect(late / count).toBeGreaterThan(SWING * 0.6);
+    expect(late / count).toBeGreaterThan(SWING * 2 * 0.6);
   });
 
   it("converts MIDI numbers to frequencies", () => {

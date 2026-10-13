@@ -9,7 +9,7 @@
  * click or key press starts it.
  */
 
-import { BAR, midiToHz, planBar, type NoteEvent } from "@/lib/focus/lofi";
+import { BAR, BEAT, midiToHz, planBar, type NoteEvent } from "@/lib/focus/lofi";
 import { seededRandom } from "@/lib/focus/random";
 
 export type LofiState = "idle" | "playing" | "blocked" | "unsupported";
@@ -20,31 +20,19 @@ export interface Bus {
   out: AudioNode;
   /** A reverb send: connect and scale to taste. */
   reverb: AudioNode;
+  /** A dotted-eighth echo send, darker on every repeat. */
+  echo: AudioNode;
+  /** A slow pitch drift, in cents, like a tape that does not quite hold speed: connect it to `detune`. */
+  wobble: AudioNode;
   noise: AudioBuffer;
 }
 
-/** Looped white noise for hats, snares and the crackle bed. */
+/** Looped white noise for the brushes and hats. */
 export function makeNoise(ctx: BaseAudioContext, seconds = 2, seed = 1): AudioBuffer {
   const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * seconds)), ctx.sampleRate);
   const data = buffer.getChannelData(0);
   const next = seededRandom(seed);
   for (let i = 0; i < data.length; i += 1) data[i] = next() * 2 - 1;
-  return buffer;
-}
-
-/** Vinyl: faint hiss with occasional pops, long enough that the loop is not noticed. */
-export function makeCrackle(ctx: BaseAudioContext, seconds = 6, seed = 5): AudioBuffer {
-  const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * seconds)), ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  const next = seededRandom(seed);
-  for (let i = 0; i < data.length; i += 1) data[i] = (next() * 2 - 1) * 0.02;
-  const pops = Math.floor(seconds * 9);
-  for (let p = 0; p < pops; p += 1) {
-    const at = Math.floor(next() * (data.length - 400));
-    const size = 0.25 + next() * 0.75;
-    const length = 40 + Math.floor(next() * 160);
-    for (let i = 0; i < length; i += 1) data[at + i] = (data[at + i] ?? 0) + (next() * 2 - 1) * size * Math.exp(-i / (length / 4));
-  }
   return buffer;
 }
 
@@ -60,164 +48,206 @@ export function makeImpulse(ctx: BaseAudioContext, seconds = 2.2, seed = 9): Aud
   return buffer;
 }
 
-function envelope(param: AudioParam, at: number, peak: number, attack: number, hold: number, release: number) {
+/** Rise to `peak`, settle to `sustain` of it while held, then fade out after `hold` seconds. */
+function envelope(param: AudioParam, at: number, peak: number, attack: number, hold: number, release: number, sustain = 0.45, decay = hold / 3) {
   param.setValueAtTime(0.0001, at);
   param.linearRampToValueAtTime(peak, at + attack);
-  param.setTargetAtTime(peak * 0.45, at + attack, Math.max(0.02, hold / 3));
-  param.setTargetAtTime(0.0001, at + hold, release / 3);
+  param.setTargetAtTime(peak * sustain, at + attack, Math.max(0.02, decay));
+  param.setTargetAtTime(0.0001, at + Math.max(hold, attack), release / 3);
 }
 
-/** Electric-piano-ish: a triangle with a quiet octave above, through a dark filter. */
+function send(ctx: BaseAudioContext, from: AudioNode, to: AudioNode, amount: number) {
+  const gain = ctx.createGain();
+  gain.gain.value = amount;
+  from.connect(gain).connect(to);
+}
+
+/** Electric piano: a sine whose tone is shaped by a second sine at the same pitch (FM), soft at the attack and mellow after. */
 function playKeys(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) {
   const hz = midiToHz(event.midi ?? 60);
-  const amp = ctx.createGain();
+  const v = event.velocity;
+  const carrier = ctx.createOscillator();
+  carrier.frequency.value = hz;
+  const modulator = ctx.createOscillator();
+  modulator.frequency.value = hz;
+  const index = ctx.createGain();
+  index.gain.setValueAtTime(hz * (0.25 + 0.6 * v), at);
+  index.gain.setTargetAtTime(hz * 0.08, at, 0.25);
+  modulator.connect(index).connect(carrier.frequency);
+  bus.wobble.connect(carrier.detune);
+  bus.wobble.connect(modulator.detune);
+
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = 900 + event.velocity * 1800;
-  const peak = 0.11 * event.velocity;
-  envelope(amp.gain, at, peak, 0.012, event.duration, 0.5);
-  const body = ctx.createOscillator();
-  body.type = "triangle";
-  body.frequency.value = hz;
-  const shimmer = ctx.createOscillator();
-  shimmer.type = "sine";
-  shimmer.frequency.value = hz * 2;
-  shimmer.detune.value = 6;
-  const shimmerGain = ctx.createGain();
-  shimmerGain.gain.value = 0.28;
-  body.connect(filter);
-  shimmer.connect(shimmerGain).connect(filter);
+  filter.frequency.value = 900 + v * 900;
+  const amp = ctx.createGain();
+  envelope(amp.gain, at, 0.075 * v, 0.006, event.duration, 0.35, 0.4, 0.6);
+  carrier.connect(filter);
   filter.connect(amp);
   amp.connect(bus.out);
-  const send = ctx.createGain();
-  send.gain.value = 0.55;
-  amp.connect(send).connect(bus.reverb);
-  const stop = at + event.duration + 1.2;
-  body.start(at);
-  shimmer.start(at);
-  body.stop(stop);
-  shimmer.stop(stop);
+  send(ctx, amp, bus.reverb, 0.45);
+
+  const stop = at + event.duration + 1;
+  for (const osc of [carrier, modulator]) {
+    osc.start(at);
+    osc.stop(stop);
+  }
 }
 
-/** A round sine bass with a little triangle for definition. */
+/** A warm string-machine bed: two slightly detuned saws, filtered dark, swelling in slowly. */
+function playPad(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) {
+  const hz = midiToHz(event.midi ?? 60);
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 700;
+  filter.Q.value = 0.3;
+  const amp = ctx.createGain();
+  envelope(amp.gain, at, 0.016 * event.velocity, 1.2, event.duration, 1.8, 0.85, 1);
+  filter.connect(amp);
+  amp.connect(bus.out);
+  send(ctx, amp, bus.reverb, 0.7);
+  const stop = at + event.duration + 2.5;
+  for (const cents of [-7, 7]) {
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.value = hz;
+    osc.detune.value = cents;
+    bus.wobble.connect(osc.detune);
+    osc.connect(filter);
+    osc.start(at);
+    osc.stop(stop);
+  }
+}
+
+/** A round sine bass with a little filtered triangle for definition. */
 function playBass(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) {
   const hz = midiToHz(event.midi ?? 36);
   const amp = ctx.createGain();
-  envelope(amp.gain, at, 0.2 * event.velocity, 0.02, event.duration, 0.18);
+  envelope(amp.gain, at, 0.22 * event.velocity, 0.015, event.duration, 0.15, 0.6);
   const sine = ctx.createOscillator();
   sine.frequency.value = hz;
   const edge = ctx.createOscillator();
   edge.type = "triangle";
   edge.frequency.value = hz;
   const edgeGain = ctx.createGain();
-  edgeGain.gain.value = 0.25;
+  edgeGain.gain.value = 0.3;
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = 420;
+  filter.frequency.value = 500;
   sine.connect(amp);
   edge.connect(edgeGain).connect(filter).connect(amp);
   amp.connect(bus.out);
-  const stop = at + event.duration + 0.6;
+  const stop = at + event.duration + 0.5;
   sine.start(at);
   edge.start(at);
   sine.stop(stop);
   edge.stop(stop);
 }
 
-/** Boom: a sine that drops fast in pitch. */
+/** A soft, round thump: a sine that drops in pitch, with no click on top. */
 function playKick(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) {
   const osc = ctx.createOscillator();
-  osc.frequency.setValueAtTime(130, at);
-  osc.frequency.exponentialRampToValueAtTime(42, at + 0.14);
+  osc.frequency.setValueAtTime(110, at);
+  osc.frequency.exponentialRampToValueAtTime(45, at + 0.12);
   const amp = ctx.createGain();
   amp.gain.setValueAtTime(0.0001, at);
-  amp.gain.linearRampToValueAtTime(0.5 * event.velocity, at + 0.004);
-  amp.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+  amp.gain.linearRampToValueAtTime(0.42 * event.velocity, at + 0.006);
+  amp.gain.exponentialRampToValueAtTime(0.0001, at + 0.36);
   osc.connect(amp).connect(bus.out);
   osc.start(at);
-  osc.stop(at + 0.34);
+  osc.stop(at + 0.4);
 }
 
-/** A short noise burst, band-passed: the snare and the hats differ only in the filter and length. */
-function playNoise(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number, kind: "snare" | "hat") {
+/** A burst of the shared noise through a filter, shaped to `length` seconds. */
+function noiseBurst(ctx: BaseAudioContext, bus: Bus, at: number, filter: BiquadFilterNode, peak: number, length: number) {
   const source = ctx.createBufferSource();
   source.buffer = bus.noise;
   source.loop = true;
-  const filter = ctx.createBiquadFilter();
   const amp = ctx.createGain();
-  const length = kind === "snare" ? 0.17 : 0.045;
-  if (kind === "snare") {
-    filter.type = "bandpass";
-    filter.frequency.value = 1700;
-    filter.Q.value = 0.7;
-  } else {
-    filter.type = "highpass";
-    filter.frequency.value = 7000;
-  }
-  const peak = (kind === "snare" ? 0.24 : 0.07) * event.velocity;
   amp.gain.setValueAtTime(0.0001, at);
-  amp.gain.linearRampToValueAtTime(peak, at + 0.002);
+  amp.gain.linearRampToValueAtTime(peak, at + 0.003);
   amp.gain.exponentialRampToValueAtTime(0.0001, at + length);
   source.connect(filter).connect(amp).connect(bus.out);
-  if (kind === "snare") {
-    const send = ctx.createGain();
-    send.gain.value = 0.5;
-    amp.connect(send).connect(bus.reverb);
-  }
   source.start(at, Math.random() * 1.5);
   source.stop(at + length + 0.05);
+  return amp;
 }
 
-/** A soft sine lead with slow vibrato, mostly in the reverb. */
+/** A brushed snare: a dark swish with a little woody knock under it. */
+function playSnare(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) {
+  const filter = ctx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = 1500;
+  filter.Q.value = 0.9;
+  const swish = noiseBurst(ctx, bus, at, filter, 0.09 * event.velocity, 0.2);
+  send(ctx, swish, bus.reverb, 0.6);
+  const knock = ctx.createOscillator();
+  knock.type = "triangle";
+  knock.frequency.setValueAtTime(200, at);
+  knock.frequency.exponentialRampToValueAtTime(150, at + 0.08);
+  const amp = ctx.createGain();
+  amp.gain.setValueAtTime(0.0001, at);
+  amp.gain.linearRampToValueAtTime(0.07 * event.velocity, at + 0.002);
+  amp.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
+  knock.connect(amp).connect(bus.out);
+  knock.start(at);
+  knock.stop(at + 0.12);
+}
+
+/** A quiet, short tick: kept well under the music so it never turns into hiss. */
+function playHat(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) {
+  const filter = ctx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = 5000;
+  filter.Q.value = 1.2;
+  noiseBurst(ctx, bus, at, filter, 0.016 * event.velocity, 0.03);
+}
+
+/** A soft, round lead: a pure tone with vibrato that only arrives as the note is held, echoing gently into the room. */
 function playLead(ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) {
   const hz = midiToHz(event.midi ?? 72);
-  const osc = ctx.createOscillator();
-  osc.type = "sine";
-  osc.frequency.value = hz;
+  const body = ctx.createOscillator();
+  body.frequency.value = hz;
   const lfo = ctx.createOscillator();
-  lfo.frequency.value = 4.6;
+  lfo.frequency.value = 5;
   const depth = ctx.createGain();
-  depth.gain.value = hz * 0.004;
-  lfo.connect(depth).connect(osc.frequency);
+  depth.gain.setValueAtTime(0, at);
+  depth.gain.linearRampToValueAtTime(hz * 0.003, at + 0.5);
+  lfo.connect(depth);
+  depth.connect(body.frequency);
+  bus.wobble.connect(body.detune);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 1500;
   const amp = ctx.createGain();
-  envelope(amp.gain, at, 0.09 * event.velocity, 0.05, event.duration, 0.45);
-  osc.connect(amp);
+  envelope(amp.gain, at, 0.15 * event.velocity, 0.06, event.duration, 0.4, 0.8, 0.5);
+  body.connect(filter);
+  filter.connect(amp);
   amp.connect(bus.out);
-  const send = ctx.createGain();
-  send.gain.value = 0.8;
-  amp.connect(send).connect(bus.reverb);
-  const stop = at + event.duration + 1.4;
-  osc.start(at);
-  lfo.start(at);
-  osc.stop(stop);
-  lfo.stop(stop);
+  send(ctx, amp, bus.reverb, 0.5);
+  send(ctx, amp, bus.echo, 0.2);
+
+  const stop = at + event.duration + 1;
+  for (const osc of [body, lfo]) {
+    osc.start(at);
+    osc.stop(stop);
+  }
 }
+
+const VOICES: Record<NoteEvent["voice"], (ctx: BaseAudioContext, bus: Bus, event: NoteEvent, at: number) => void> = {
+  keys: playKeys,
+  pad: playPad,
+  bass: playBass,
+  kick: playKick,
+  snare: playSnare,
+  hat: playHat,
+  lead: playLead,
+};
 
 /** Put one bar's events on the timeline, the bar starting at `start` seconds of the context's clock. */
 export function scheduleBar(ctx: BaseAudioContext, bus: Bus, events: readonly NoteEvent[], start: number) {
-  for (const event of events) {
-    const at = start + event.at;
-    switch (event.voice) {
-      case "keys":
-        playKeys(ctx, bus, event, at);
-        break;
-      case "bass":
-        playBass(ctx, bus, event, at);
-        break;
-      case "kick":
-        playKick(ctx, bus, event, at);
-        break;
-      case "snare":
-        playNoise(ctx, bus, event, at, "snare");
-        break;
-      case "hat":
-        playNoise(ctx, bus, event, at, "hat");
-        break;
-      case "lead":
-        playLead(ctx, bus, event, at);
-        break;
-    }
-  }
+  for (const event of events) VOICES[event.voice](ctx, bus, event, start + event.at);
 }
 
 export interface Mix {
@@ -226,42 +256,53 @@ export interface Mix {
   master: GainNode;
 }
 
-/** The fixed part of the signal path: tone, reverb, crackle and a gentle compressor into `master`. */
+/** The fixed part of the signal path: tone, reverb, echo, tape drift and a gentle compressor into `master`. */
 export function createMix(ctx: BaseAudioContext, destination: AudioNode, seed = 1): Mix {
   const master = ctx.createGain();
   master.gain.value = 0;
   const compressor = ctx.createDynamicsCompressor();
-  compressor.threshold.value = -20;
-  compressor.ratio.value = 3;
-  compressor.attack.value = 0.02;
-  compressor.release.value = 0.3;
+  compressor.threshold.value = -18;
+  compressor.ratio.value = 2.5;
+  compressor.attack.value = 0.03;
+  compressor.release.value = 0.25;
   // Lo-fi is warm and slightly dull: roll the top off, and the very bottom.
   const dull = ctx.createBiquadFilter();
   dull.type = "lowpass";
-  dull.frequency.value = 5200;
+  dull.frequency.value = 3600;
+  dull.Q.value = 0.5;
   const rumble = ctx.createBiquadFilter();
   rumble.type = "highpass";
-  rumble.frequency.value = 38;
+  rumble.frequency.value = 40;
   dull.connect(rumble).connect(compressor).connect(master).connect(destination);
 
   const reverb = ctx.createConvolver();
-  reverb.buffer = makeImpulse(ctx, 2.2, seed + 9);
+  reverb.buffer = makeImpulse(ctx, 2.8, seed + 9);
   const wet = ctx.createGain();
-  wet.gain.value = 0.32;
+  wet.gain.value = 0.28;
   reverb.connect(wet).connect(dull);
 
-  const crackle = ctx.createBufferSource();
-  crackle.buffer = makeCrackle(ctx, 6, seed + 5);
-  crackle.loop = true;
-  const crackleFilter = ctx.createBiquadFilter();
-  crackleFilter.type = "highpass";
-  crackleFilter.frequency.value = 1400;
-  const crackleGain = ctx.createGain();
-  crackleGain.gain.value = 0.16;
-  crackle.connect(crackleFilter).connect(crackleGain).connect(dull);
-  crackle.start();
+  const echo = ctx.createGain();
+  const delay = ctx.createDelay(2);
+  delay.delayTime.value = BEAT * 0.75;
+  const darken = ctx.createBiquadFilter();
+  darken.type = "lowpass";
+  darken.frequency.value = 1300;
+  const feedback = ctx.createGain();
+  feedback.gain.value = 0.32;
+  echo.connect(delay).connect(darken);
+  darken.connect(feedback).connect(delay);
+  send(ctx, darken, dull, 0.45);
 
-  return { bus: { out: dull, reverb, noise: makeNoise(ctx, 2, seed + 1) }, master };
+  // Two slow, unrelated sways, so the drift never settles into an obvious cycle.
+  const wobble = ctx.createGain();
+  for (const [hz, cents] of [[0.27, 6], [0.07, 4]] as const) {
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = hz;
+    send(ctx, lfo, wobble, cents);
+    lfo.start();
+  }
+
+  return { bus: { out: dull, reverb, echo, wobble, noise: makeNoise(ctx, 2, seed + 1) }, master };
 }
 
 /** Loudness reached at full volume; the master gain is this times the volume. */

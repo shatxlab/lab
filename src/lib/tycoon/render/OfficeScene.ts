@@ -6,6 +6,7 @@ import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
 import type { Atlas, FrameName } from './atlas'
 import { arrange, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
+import { pathLength, pointAlong, walkoutPath, type Point } from '../render-support/walkout'
 import { formatDateShort } from '@/lib/tycoon/format'
 
 /** Size of the room's artwork in sprite pixels. Walls and floor go on beyond it as far as the screen needs. */
@@ -81,6 +82,7 @@ class EmployeeSprite {
   private readonly width: number
   private readonly height: number
   private readonly body: Sprite
+  private box: Graphics | null = null
   private status: Status = 'ok'
 
   constructor(texture: Texture, arrangement: Arrangement, desk: number, id: number) {
@@ -127,12 +129,18 @@ class EmployeeSprite {
   /** Gets up to leave: no status marker, a cardboard box in hand, facing the way out. */
   packUp(rightwards: boolean): void {
     this.marker.visible = false
-    this.body.scale.x = rightwards ? 1 : -1
-    this.body.x = rightwards ? 0 : this.width
     const box = new Graphics()
     box.rect(0, 0, 7, 6).fill(0xa8743a).rect(0, 0, 7, 2).fill(0xc8935a).rect(3, 0, 1, 2).fill(0xe8c08a)
-    box.position.set(rightwards ? this.width - 3 : -4, Math.round(this.height * 0.45))
+    this.box = box
     this.container.addChild(box)
+    this.face(rightwards)
+  }
+
+  /** Turns to face the way they are walking; the box stays in front of them. */
+  face(rightwards: boolean): void {
+    this.body.scale.x = rightwards ? 1 : -1
+    this.body.x = rightwards ? 0 : this.width
+    this.box?.position.set(rightwards ? this.width - 3 : -4, Math.round(this.height * 0.45))
   }
 
   /** Is the scene point (x, y) on this character, give or take a pixel or two? */
@@ -165,17 +173,20 @@ export interface SceneOptions {
 /** Someone on their way out with a box. */
 interface Leaver {
   sprite: EmployeeSprite
+  /** Top-left corners from the desk to the doors; see `walkoutPath`. */
+  path: Point[]
+  length: number
+  /** Milliseconds walked so far. */
   age: number
-  fromX: number
-  fromY: number
-  toX: number
-  toY: number
+  rightwards: boolean
 }
 
 /** Where the office doors are (their middle and where a person's feet end up), in sprite pixels. */
 const DOOR_X = 127
 const DOOR_FEET = 110
-const LEAVE_MS = 2600
+/** How fast people walk out, in sprite pixels a second, and how far from the doors they start to fade. */
+const WALK_SPEED = 42
+const FADE_DISTANCE = 10
 
 interface Popup {
   view: Container
@@ -421,28 +432,48 @@ export class OfficeScene {
   leave(id: number): void {
     const sprite = this.sprites.get(id)
     if (!sprite) return
+    const desk = this.seats.deskFor(id)
     // From here the sprite is ours: the seating sync must not destroy it, nor a click select it.
     this.sprites.delete(id)
     const { width, height } = sprite.size
-    const fromX = sprite.container.x
-    const toX = Math.round(DOOR_X - width / 2)
-    sprite.packUp(toX >= fromX)
-    this.leaving.push({ sprite, age: 0, fromX, fromY: sprite.container.y, toX, toY: DOOR_FEET - height })
+    const start = { x: sprite.container.x, y: sprite.container.y }
+    const doorLeft = Math.round(DOOR_X - width / 2)
+    const path =
+      desk === undefined
+        ? [start, { x: doorLeft, y: DOOR_FEET - height }]
+        : walkoutPath({
+            arrangement: this.arrangement,
+            desk,
+            start,
+            size: { width, height },
+            window: this.window,
+            doorX: DOOR_X,
+            doorFeet: DOOR_FEET,
+          })
+    const first = pointAlong(path, 1)
+    const rightwards = first.dx >= 0
+    sprite.packUp(rightwards)
+    this.leaving.push({ sprite, path, length: pathLength(path), age: 0, rightwards })
   }
 
-  /** Walks everyone who is leaving toward the door, hopping a little, and fades them out at the end. */
+  /** Walks everyone who is leaving along their path, hopping a little, and fades them out at the doors. */
   private updateLeaving(dtMs: number): void {
     for (let i = this.leaving.length - 1; i >= 0; i--) {
       const leaver = this.leaving[i]!
       leaver.age += dtMs
-      const t = Math.min(1, leaver.age / LEAVE_MS)
-      const eased = t * t * (3 - 2 * t)
-      const hop = t < 1 ? -Math.abs(Math.sin(leaver.age / 110)) * 1.5 : 0
+      const walked = (leaver.age / 1000) * WALK_SPEED
+      const done = walked >= leaver.length
+      const at = pointAlong(leaver.path, walked)
+      if (at.dx !== 0 && at.dx > 0 !== leaver.rightwards) {
+        leaver.rightwards = at.dx > 0
+        leaver.sprite.face(leaver.rightwards)
+      }
+      const hop = done ? 0 : -Math.abs(Math.sin(leaver.age / 110)) * 1.5
       const view = leaver.sprite.container
-      view.x = Math.round(leaver.fromX + (leaver.toX - leaver.fromX) * eased)
-      view.y = Math.round(leaver.fromY + (leaver.toY - leaver.fromY) * eased + hop)
-      view.alpha = t < 0.8 ? 1 : Math.max(0, 1 - (t - 0.8) / 0.2)
-      if (t >= 1) {
+      view.x = Math.round(at.x)
+      view.y = Math.round(at.y + hop)
+      view.alpha = Math.min(1, Math.max(0, (leaver.length - walked) / FADE_DISTANCE))
+      if (done) {
         view.destroy({ children: true })
         this.leaving.splice(i, 1)
       }

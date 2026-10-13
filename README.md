@@ -270,8 +270,11 @@ leaving. `components/focus/FocusScene.tsx` mounts `OfficeScene` the way
 missing, a plain list of the team stands in). `OfficeScene` gained two optional
 hooks that leave Tycoon unchanged: `options.label` (the plate over the doors
 shows the countdown instead of the date) and `options.working`, plus
-`leave(id)`, which sends a person to the doors with a cardboard box before they
-are removed from the state.
+`leave(id)`, which sends a person out with a cardboard box before they are
+removed from the state. The route (`render-support/walkout.ts`, tested for every
+desk in both arrangements) keeps to free floor: out the chair's side, along the
+aisle or the margin, then the lane under the windows to the doors, never across
+a desk.
 
 Leaving the page mid-Pomodoro asks the browser first (`beforeunload`); if the
 page really goes (`pagehide` with `persisted === false`) the Pomodoro is given

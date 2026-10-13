@@ -24,7 +24,7 @@ describe("focus storage", () => {
 
   it("round-trips a store with a running day and history", () => {
     let store = startDay(emptyStore(7), { ...DEFAULT_PLAN, hours: 3 }, 20_000);
-    store = { ...store, sound: false, history: [{ day: 19_999, quota: 7, done: 7, missed: 0, focusedMin: 175 }] };
+    store = { ...store, sound: false, history: [{ day: 19_999, quota: 7, done: 7, missed: 0, focusedMin: 175, left: ["A B"] }] };
     store = { ...store, today: { ...store.today!, timer: start(store.today!.timer, 1_000_000) } };
     const storage = memory();
     writeFocusStore(store, storage);
@@ -56,15 +56,21 @@ describe("focus storage", () => {
         seed: 123.9,
         plan: { hours: 500, focusMin: -3 },
         sound: false,
-        history: [{ day: 1, quota: 7, done: 7, missed: 0, focusedMin: 175 }, { day: "x" }, null, { day: 2.5 }, { day: 3, done: -4, missed: "a" }],
+        history: [
+          { day: 1, quota: 7, done: 7, missed: 0, focusedMin: 175, left: ["Dana", 5, "", "x".repeat(200)] },
+          { day: "x" },
+          null,
+          { day: 2.5 },
+          { day: 3, done: -4, missed: "a", left: "not a list" },
+        ],
       }),
     );
     expect(store.seed).toBe(123);
     expect(store.plan).toMatchObject({ hours: 10, focusMin: 10 });
     expect(store.sound).toBe(false);
     expect(store.history).toEqual([
-      { day: 1, quota: 7, done: 7, missed: 0, focusedMin: 175 },
-      { day: 3, quota: 0, done: 0, missed: 0, focusedMin: 0 },
+      { day: 1, quota: 7, done: 7, missed: 0, focusedMin: 175, left: ["Dana", "x".repeat(60)] },
+      { day: 3, quota: 0, done: 0, missed: 0, focusedMin: 0, left: [] },
     ]);
   });
 

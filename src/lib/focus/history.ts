@@ -9,12 +9,14 @@ export interface DayRecord {
   done: number;
   missed: number;
   focusedMin: number;
+  /** Who walked out that day, in the order they left. */
+  left: string[];
 }
 
 export const MAX_HISTORY = 400;
 
-export function recordOf(timer: TimerState, day: number): DayRecord {
-  return { day, quota: quota(timer), done: timer.done, missed: timer.missed, focusedMin: Math.round(timer.focusedMs / 60_000) };
+export function recordOf(timer: TimerState, day: number, left: string[] = []): DayRecord {
+  return { day, quota: quota(timer), done: timer.done, missed: timer.missed, focusedMin: Math.round(timer.focusedMs / 60_000), left };
 }
 
 /** A day counts as a success when everyone kept their job. */

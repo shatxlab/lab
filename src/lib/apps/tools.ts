@@ -75,6 +75,23 @@ export const TOOLS: readonly ToolEntry[] = [
     },
   },
   {
+    id: "focus",
+    path: "/focus",
+    category: "productivity",
+    files: { en: "Pomodoro timer · a tiny office · works offline", ru: "Таймер Помодоро · маленький офис · работает офлайн" },
+    title: { en: "Focus office", ru: "Офис фокуса" },
+    description: {
+      en: "A Pomodoro timer with stakes: run a small pixel office, finish the day's quota and everyone stays, give up and someone packs their box.",
+      ru: "Таймер Помодоро со ставкой: управляйте маленьким пиксельным офисом, выполните норму дня — и все остаются, бросите — кто-то соберёт коробку.",
+    },
+    keywords: "focus pomodoro timer office productivity work deep work study pixel помодоро таймер фокус офис продуктивность работа учёба",
+    seo: {
+      title: "Pomodoro timer with a tiny office",
+      description:
+        "A Pomodoro focus timer where every Pomodoro you give up costs a pixel office worker their job. Daily plan, history and streaks — free, private and offline.",
+    },
+  },
+  {
     id: "alias",
     path: "/alias",
     category: "games",

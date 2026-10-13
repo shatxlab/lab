@@ -97,7 +97,10 @@ function cleanRecord(raw: unknown): DayRecord | null {
   const input = raw as Partial<Record<keyof DayRecord, unknown>>;
   const day = finite(input.day);
   if (day === null || !Number.isInteger(day)) return null;
-  return { day, quota: count(input.quota), done: count(input.done), missed: count(input.missed), focusedMin: count(input.focusedMin) };
+  const left = Array.isArray(input.left)
+    ? input.left.filter((name): name is string => typeof name === "string" && name !== "").map((name) => name.slice(0, 60)).slice(0, 12)
+    : [];
+  return { day, quota: count(input.quota), done: count(input.done), missed: count(input.missed), focusedMin: count(input.focusedMin), left };
 }
 
 export function readFocusStore(storage: FocusStorage | undefined = storageOrUndefined()): FocusStore {

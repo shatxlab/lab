@@ -17,7 +17,7 @@ describe("day operations", () => {
     expect(store.today!.timer.phase).toBe("ready");
     // The same seed and day open the same office; another run the same day does not.
     expect(startDay(store0(), DEFAULT_PLAN, DAY).today!.key).toBe(startDay(store0(), DEFAULT_PLAN, DAY).today!.key);
-    const second = startDay({ ...store0(), history: [{ day: DAY, quota: 7, done: 7, missed: 0, focusedMin: 175 }] }, DEFAULT_PLAN, DAY);
+    const second = startDay({ ...store0(), history: [{ day: DAY, quota: 7, done: 7, missed: 0, focusedMin: 175, left: [] }] }, DEFAULT_PLAN, DAY);
     expect(second.today!.key).not.toBe(startDay(store0(), DEFAULT_PLAN, DAY).today!.key);
   });
 
@@ -27,7 +27,10 @@ describe("day operations", () => {
     expect(store.history).toEqual([]);
     const ended = endDay(store.today!.timer);
     store = applyTimer(store, ended);
-    expect(store.history).toEqual([{ day: DAY, quota: 7, done: 0, missed: 7, focusedMin: 0 }]);
+    expect(store.history).toEqual([{ day: DAY, quota: 7, done: 0, missed: 7, focusedMin: 0, left: expect.any(Array) }]);
+    // Everyone walked out, and each is named exactly once.
+    expect(store.history[0]!.left).toHaveLength(7);
+    expect(new Set(store.history[0]!.left).size).toBeGreaterThan(1);
     expect(store.today!.recorded).toBe(true);
     // Applying a completed timer again must not duplicate it.
     expect(applyTimer(store, ended)).toBe(store);
@@ -42,7 +45,8 @@ describe("day operations", () => {
     timer = abandon(start(timer, 31 * MIN), 32 * MIN); // one missed
     timer = endDay(timer); // the other five
     store = applyTimer(store, timer);
-    expect(store.history[0]).toEqual({ day: DAY, quota: 7, done: 1, missed: 6, focusedMin: 25 });
+    expect(store.history[0]).toMatchObject({ day: DAY, quota: 7, done: 1, missed: 6, focusedMin: 25 });
+    expect(store.history[0]!.left).toHaveLength(6);
   });
 
   it("dismisses only a finished day", () => {
@@ -57,7 +61,8 @@ describe("day operations", () => {
     store = applyTimer(store, tick(start(store.today!.timer, 0), 25 * MIN));
     const next = rollover(store, DAY + 1);
     expect(next.today).toBeNull();
-    expect(next.history).toEqual([{ day: DAY, quota: 7, done: 1, missed: 6, focusedMin: 25 }]);
+    expect(next.history).toHaveLength(1);
+    expect(next.history[0]).toMatchObject({ day: DAY, quota: 7, done: 1, missed: 6, focusedMin: 25 });
   });
 
   it("leaves today alone on the same day, and drops an already-recorded day on rollover without duplicating it", () => {

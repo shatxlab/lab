@@ -10,6 +10,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 |---|---|---|
 | `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
 | `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV or TSV (`front, back, tags`); export a deck as TSV; Markdown on both sides; EN/RU. |
+| `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes. Plan the day in hours (the quota is however many Pomodoros fit), open a pixel office with one person per Pomodoro, and work: finish the quota and everyone stays, give a Pomodoro up and someone packs a box and walks out the door. Pause, skip breaks, a full-screen focus mode, the countdown in the tab title, a history of past days (with who left) and a streak. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
@@ -95,6 +96,7 @@ src/
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/wordle/ Wordle island
+  components/focus/  Focus island (setup, day panel, history; FocusScene hosts Tycoon's Pixi office)
   components/flash/  Flashcards island (deck list, deck editor/import, study session)
   components/alias/  Alias game island (setup, round, results screens)
   components/crossword/ Crossword island (picker, board, grid, clues, completion)
@@ -112,6 +114,7 @@ src/
   lib/workbench/     asset model, capability registry, operation registry, i18n
   lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
   lib/send/          "Send to phone" payload codec (size-capped, defensive) + fragment hook
+  lib/focus/         day planner, timestamp-based timer state machine, seeded office, history, storage, i18n, sound
   lib/flash/         FSRS scheduler, deck model + queues, import parsers, store ops, i18n, sound, storage
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
   lib/crossword/     Generated puzzles + word bank, grid builder, reducer, i18n, sound, storage
@@ -139,7 +142,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  convert/ qr/ image/ pdf/ wordle/ flash/ send/  logic tests per tool (flash/ also has the jsdom flow tests)
+  convert/ qr/ image/ pdf/ wordle/ flash/ focus/ send/  logic tests per tool (flash/ also has the jsdom flow tests)
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers
@@ -246,6 +249,35 @@ detected, not chosen (`parse.ts`): tab-separated rows, CSV with an optional
 line; `toTsv` writes a deck back out in a form `parseImport` reads. Logic tests
 are in `tests/flash/` (golden FSRS intervals, parsers, queues, storage) with a
 jsdom flow test of the whole island.
+
+### Focus office
+
+`lib/focus/pomodoro.ts` fills the hours with focus and break segments (a long
+break on every Nth, never ending on a break, at most twelve Pomodoros: the
+office has twelve desks); the number of focus segments is the day's quota.
+`timer.ts` is a pure state machine over `now`: *ready → focus → break → ready …
+→ complete*. It measures against `endsAt`, never in ticks, so a throttled
+background tab only delays the display, and breaks start by themselves while the
+next focus waits for the user, so being away never counts as focused time.
+Giving a Pomodoro up (or ending the day early) marks it *missed*.
+
+The office is Software Tycoon's scene, reused: `lib/focus/office.ts` builds a
+synthetic Tycoon `GameState` (one office, one person per Pomodoro) from a key
+mixed from the user's seed, the calendar day and the run count, so the same key
+always gives the same names, faces (a hash of the id), room colours and order of
+leaving. `components/focus/FocusScene.tsx` mounts `OfficeScene` the way
+`TycoonApp` does (Pixi and the `unsafe-eval` build load on demand; if WebGL is
+missing, a plain list of the team stands in). `OfficeScene` gained two optional
+hooks that leave Tycoon unchanged: `options.label` (the plate over the doors
+shows the countdown instead of the date) and `options.working`, plus
+`leave(id)`, which sends a person to the doors with a cardboard box before they
+are removed from the state.
+
+Leaving the page mid-Pomodoro asks the browser first (`beforeunload`); if the
+page really goes (`pagehide` with `persisted === false`) the Pomodoro is given
+up. Switching tabs or apps is allowed — advisory, never blocking. A day left
+open past midnight is closed on load, its unplayed Pomodoros missed, and written
+to the history (with the names of who left) under `lab:focus:v1`.
 
 ### Send to phone
 

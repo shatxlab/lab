@@ -4,12 +4,13 @@ import { metQuota, recordOf, streak, totals, type DayRecord } from "@/lib/focus/
 import { DEFAULT_PLAN, planDay } from "@/lib/focus/pomodoro";
 import { createTimer, endDay } from "@/lib/focus/timer";
 
-const day = (d: number, done: number, missed: number, focusedMin = done * 25): DayRecord => ({ day: d, quota: done + missed, done, missed, focusedMin });
+const day = (d: number, done: number, missed: number, focusedMin = done * 25): DayRecord => ({ day: d, quota: done + missed, done, missed, focusedMin, left: [] });
 
 describe("history", () => {
   it("records a finished day from its timer", () => {
     const timer = endDay(createTimer(planDay(DEFAULT_PLAN)));
-    expect(recordOf(timer, 500)).toEqual({ day: 500, quota: 7, done: 0, missed: 7, focusedMin: 0 });
+    expect(recordOf(timer, 500)).toEqual({ day: 500, quota: 7, done: 0, missed: 7, focusedMin: 0, left: [] });
+    expect(recordOf(timer, 500, ["Dana Smith"]).left).toEqual(["Dana Smith"]);
   });
 
   it("calls a day a success only when everyone stayed and something was done", () => {

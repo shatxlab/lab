@@ -5,6 +5,7 @@ import AliasGame from "@/components/alias/AliasGame";
 import CouplesGame from "@/components/couples/CouplesGame";
 import CrosswordGame from "@/components/crossword/CrosswordGame";
 import FlashApp from "@/components/flash/FlashApp";
+import FocusApp from "@/components/focus/FocusApp";
 import LangToggle from "@/components/apps/LangToggle";
 import ThemeToggle from "@/components/apps/ThemeToggle";
 import ToolsGrid from "@/components/apps/ToolsGrid";
@@ -31,6 +32,7 @@ describe.each([
     ["Crossword", () => <CrosswordGame />],
     ["Couples", () => <CouplesGame />],
     ["Flashcards", () => <FlashApp />],
+    ["Focus office", () => <FocusApp />],
   ];
 
   it.each(cases)("%s has no detectable violations", async (_name, render) => {

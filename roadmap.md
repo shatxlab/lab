@@ -29,7 +29,7 @@ scope: workbench itself stays dep-free and terminal-rule-scoped):
 |---|---|---|---|---|
 | 1 | ~~Device bridge~~ **parked 2026-10-13** | standalone `/bridge` | none | Not needed yet; spec and feasibility notes kept in §1 |
 | 2 | ~~Flashcards~~ **shipped 2026-10-13** | standalone `/flash` | none | Proved the standalone pattern; see §2 |
-| 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | Mood piece, perfect offline PWA shortcut |
+| 3 | ~~Focus office~~ **shipped 2026-10-13** | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | Installed-app shortcut added; see §3 |
 | 3b | ~~Send to phone (QR link)~~ **shipped 2026-10-13** | helper + per-tool actions | none | Replaced the bridge's main use case; see §1a |
 | 4 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target |
 | 5 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | Print-to-PDF engine keeps it cheap |
@@ -300,61 +300,24 @@ during the build, and what is still open:
 
 ---
 
-## 3. Focus office (`/focus`)
+## 3. Focus office (`/focus`) — SHIPPED 2026-10-13
 
-Pomodoro with a scene that makes the stakes visible. You run a small office;
-each 25-minute Pomodoro is your team's workday. Meet the quota you set and the
-office hums; miss it and an employee packs their box and walks out, head down —
-and stays gone in the office history. (Everyone is fictional, drawn locally;
-no real-world anything.)
+Folded into `README.md` ("Focus office"). Decisions made during the build, and
+what is still open:
 
-**Scene mechanics.**
-- You plan the day: hours per day, chunked into 25/5 (focus/short) with a long
-  break every 4th — classic Pomodoro math, lengths customizable.
-- Employees are procedurally generated from a seeded PRNG (house pattern from
-  `lib/couples/questions.ts`): seed + day → faces, desk positions, idle
-  animations (typing, coffee sip, chair spin). Completed Pomodoros keep them
-  employed; each missed one fires one — they exit with a box, that exit is
-  recorded.
-- Day end: quota met → office stays staffed (small payoff animation);
-  shortfall → the walkouts, visible in the day's record.
-- History: a scrollable log of past days (staffed vs fired, minutes focused,
-  streak), like a garden diary. The dead-tree memory of Forest, in office form.
-- **No merciful / "go home early" mode** (owner, 2026-10-13): a missed Pomodoro
-  is a walkout, full stop.
-
-**Scene: reuse Software Tycoon's** (decided 2026-10-13). The Pixi `OfficeScene`
-(lazy-loaded; art in `assets/pixeloffice/`, CC0) already draws the room, desks,
-chairs, the cat and dog, and recolours characters from a plain id
-(`appearanceFor(id)`), so *seed + day → employee ids → faces* is free. The
-scene reads everything through a `getState()` callback, so Focus feeds it a
-synthetic `GameState` (one office, N employees; `office.project` non-null while a
-Pomodoro runs makes people type; low `morale` shows the red "!" marker). Small
-additions to `OfficeScene`, to be done without changing Tycoon's behaviour:
- an optional label for the clock chip (shows the countdown instead of the game
- date), and a `leave(employeeId)` animation (the person stands up with a
- box and exits toward the door). Pixi is
- already a lazy dependency, so Focus adds no new package; the CSP
-`worker-src blob:` is already in place. Tap a person for a small reaction.
-
-**(superseded) Interactivity, cheap.** Canvas 2D, ~500 lines, zero deps, zero image assets.
-Sway/reactions on pointer move; tap a desk for a small animation. WebAudio
-ambient (keyboard murmurs, AC hum) + a completion chime, synthesized like the
-alias game's sound.
-
-**Timer honesty.** A website can't force you to stay. Leaving mid-session
-asks once ("people will lose their jobs") and then applies the consequence —
-advisory, never blocking. Full-screen focus mode with a minimal clock.
-
-**PWA.** Ideal offline tool; add `focus` to the manifest shortcuts.
-
-**Implementation.** `src/components/focus/` (Office host for the Tycoon scene,
-TimerBar, DaySetup, History) + `src/lib/focus/` (timer reducer, poms math,
-synthetic-state adapter, seeded office, sound, i18n, storage).
-
-**Tests.** Timer reducer (pause/complete/abandon), Pomodoro chunking math,
-prng determinism (same seed → same office), storage round-trip, i18n, axe on
-the setup + history screens.
+- **Scene:** Software Tycoon's Pixi `OfficeScene`, via a synthetic game state
+  and three small additions (`options.label`, `options.working`, `leave(id)`).
+  No new package.
+- **A day** is one run: one new office per day (seed + calendar day + run), one
+  person per Pomodoro, capped at twelve (the desks). Missed Pomodoros fire people
+  in a seeded order; the names are kept in the history. No merciful mode.
+- **Timer honesty:** a confirm dialog names who would leave; `beforeunload`
+  asks; a page that truly goes away gives the Pomodoro up; tab switches are free.
+- **Not built:** the ambient WebAudio office sounds (keyboard murmur, AC hum) —
+  only short cues; per-desk tap animations (a tap just names the person); a
+  garden-style calendar view of history (it is a list plus totals and a streak).
+- **Open ideas:** office growth over a streak of full days, notifications when
+  the tab is in the background, a long-press/keyboard shortcut for Start.
 
 ---
 

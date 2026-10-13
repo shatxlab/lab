@@ -1,10 +1,10 @@
 /** Store-level day operations, as pure functions the UI feeds to its commit. */
 
-import { officeKey } from "@/lib/focus/office";
+import { buildOffice, officeKey } from "@/lib/focus/office";
 import { MAX_HISTORY, recordOf } from "@/lib/focus/history";
 import { normalizePlan, planDay, type Plan } from "@/lib/focus/pomodoro";
 import type { FocusStore } from "@/lib/focus/storage";
-import { createTimer, endDay, type TimerState } from "@/lib/focus/timer";
+import { createTimer, endDay, quota, type TimerState } from "@/lib/focus/timer";
 
 /** Open a new day with the given plan (remembered for next time). */
 export function startDay(store: FocusStore, plan: Plan, day: number): FocusStore {
@@ -26,7 +26,10 @@ export function applyTimer(store: FocusStore, timer: TimerState): FocusStore {
   const today = store.today;
   if (!today) return store;
   if (timer.phase !== "complete" || today.recorded) return today.timer === timer ? store : { ...store, today: { ...today, timer } };
-  const history = [...store.history, recordOf(timer, today.day)].slice(-MAX_HISTORY);
+  // The office is rebuilt from its key, so the record can name exactly who walked out.
+  const office = buildOffice(today.key, quota(timer));
+  const left = office.fireOrder.slice(0, timer.missed).map((id) => office.roster.find((person) => person.id === id)?.name ?? "");
+  const history = [...store.history, recordOf(timer, today.day, left.filter(Boolean))].slice(-MAX_HISTORY);
   return { ...store, history, today: { ...today, timer, recorded: true } };
 }
 

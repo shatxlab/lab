@@ -80,6 +80,7 @@ class EmployeeSprite {
   private readonly phase: number
   private readonly width: number
   private readonly height: number
+  private readonly body: Sprite
   private status: Status = 'ok'
 
   constructor(texture: Texture, arrangement: Arrangement, desk: number, id: number) {
@@ -93,6 +94,7 @@ class EmployeeSprite {
 
     // Mirrored in place, so the character keeps the same box (and hit area) facing either way.
     const body = new Sprite(texture)
+    this.body = body
     const flip = facesLeft(desk)
     if (flip) {
       body.scale.x = -1
@@ -117,6 +119,22 @@ class EmployeeSprite {
     }
   }
 
+  /** The character's box in sprite pixels. */
+  get size(): { width: number; height: number } {
+    return { width: this.width, height: this.height }
+  }
+
+  /** Gets up to leave: no status marker, a cardboard box in hand, facing the way out. */
+  packUp(rightwards: boolean): void {
+    this.marker.visible = false
+    this.body.scale.x = rightwards ? 1 : -1
+    this.body.x = rightwards ? 0 : this.width
+    const box = new Graphics()
+    box.rect(0, 0, 7, 6).fill(0xa8743a).rect(0, 0, 7, 2).fill(0xc8935a).rect(3, 0, 1, 2).fill(0xe8c08a)
+    box.position.set(rightwards ? this.width - 3 : -4, Math.round(this.height * 0.45))
+    this.container.addChild(box)
+  }
+
   /** Is the scene point (x, y) on this character, give or take a pixel or two? */
   hit(x: number, y: number): boolean {
     const left = this.container.x
@@ -135,6 +153,29 @@ class EmployeeSprite {
     }
   }
 }
+
+/** Optional hooks for hosts other than the game itself (the Focus office). */
+export interface SceneOptions {
+  /** Text for the plate over the doors; defaults to the game's date. */
+  label?: () => string
+  /** Whether people are typing right now; defaults to "a project is running". */
+  working?: () => boolean
+}
+
+/** Someone on their way out with a box. */
+interface Leaver {
+  sprite: EmployeeSprite
+  age: number
+  fromX: number
+  fromY: number
+  toX: number
+  toY: number
+}
+
+/** Where the office doors are (their middle and where a person's feet end up), in sprite pixels. */
+const DOOR_X = 127
+const DOOR_FEET = 110
+const LEAVE_MS = 2600
 
 interface Popup {
   view: Container
@@ -156,6 +197,9 @@ export class OfficeScene {
   /** Which office to show; the first one if it no longer exists. */
   private readonly getOfficeId: () => number
   private readonly onSelectEmployee: ((id: number) => void) | undefined
+  private readonly options: SceneOptions
+  private readonly leaving: Leaver[] = []
+  private chipLabel: string
   private readonly world = new Container()
   /** The room as drawn, one texel per sprite pixel; resized to the window on every layout. */
   private readonly target = RenderTexture.create({
@@ -185,7 +229,6 @@ export class OfficeScene {
   private readonly dateChip = new Container()
   private readonly dateText: Text
   private readonly dateBack = new Graphics()
-  private dateDay = -1
   private dateHeight = 0
   private builtDesks = -1
   /** How the desks are laid out, chosen for the shape of the screen. */
@@ -200,7 +243,15 @@ export class OfficeScene {
   private time = 0
   private scale = 1
 
-  constructor(app: Application, atlas: Atlas, getState: () => GameState, getOfficeId: () => number, onSelectEmployee?: (id: number) => void) {
+  constructor(
+    app: Application,
+    atlas: Atlas,
+    getState: () => GameState,
+    getOfficeId: () => number,
+    onSelectEmployee?: (id: number) => void,
+    options: SceneOptions = {},
+  ) {
+    this.options = options
     this.app = app
     this.atlas = atlas
     this.getState = getState
@@ -223,8 +274,9 @@ export class OfficeScene {
     this.dog.addChild(new Sprite(atlas.dogNoTail), this.dogTail)
     this.dog.position.set(112, 0)
 
+    this.chipLabel = options.label?.() ?? formatDateShort(getState().day)
     this.dateText = new Text({
-      text: formatDateShort(getState().day),
+      text: this.chipLabel,
       style: {
         fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
         fontWeight: '700',
@@ -337,9 +389,10 @@ export class OfficeScene {
       this.lastDay = state.day
       this.spawnPopups(state)
     }
-    if (state.day !== this.dateDay) {
-      this.dateDay = state.day
-      this.dateText.text = formatDateShort(state.day)
+    const label = this.options.label?.() ?? formatDateShort(state.day)
+    if (label !== this.chipLabel) {
+      this.chipLabel = label
+      this.dateText.text = label
       this.drawDateChip()
       this.placeDateChip()
     }
@@ -349,15 +402,56 @@ export class OfficeScene {
     const wag = (this.time + 400) % 6500
     this.dogTail.rotation = wag < 800 ? Math.sin((wag / 800) * Math.PI * 3) * 0.35 : 0
 
-    const working = speed > 0 && office.project !== null && !state.gameOver
+    const working = this.options.working ? this.options.working() : speed > 0 && office.project !== null && !state.gameOver
     const people = new Map(state.employees.map((e) => [e.id, e]))
     for (const [id, sprite] of this.sprites) {
       const employee = people.get(id)
       if (employee) sprite.update(this.time, working, employee)
     }
     this.updatePopups(dtMs, speed)
+    this.updateLeaving(dtMs)
 
     this.app.renderer.render({ container: this.world, target: this.target })
+  }
+
+  /**
+   * Sends someone out the door with a box. Call it *before* removing them from the game state: once
+   * they are gone from the state their desk sprite is removed at once, and there is nothing to animate.
+   */
+  leave(id: number): void {
+    const sprite = this.sprites.get(id)
+    if (!sprite) return
+    // From here the sprite is ours: the seating sync must not destroy it, nor a click select it.
+    this.sprites.delete(id)
+    const { width, height } = sprite.size
+    const fromX = sprite.container.x
+    const toX = Math.round(DOOR_X - width / 2)
+    sprite.packUp(toX >= fromX)
+    this.leaving.push({ sprite, age: 0, fromX, fromY: sprite.container.y, toX, toY: DOOR_FEET - height })
+  }
+
+  /** Walks everyone who is leaving toward the door, hopping a little, and fades them out at the end. */
+  private updateLeaving(dtMs: number): void {
+    for (let i = this.leaving.length - 1; i >= 0; i--) {
+      const leaver = this.leaving[i]!
+      leaver.age += dtMs
+      const t = Math.min(1, leaver.age / LEAVE_MS)
+      const eased = t * t * (3 - 2 * t)
+      const hop = t < 1 ? -Math.abs(Math.sin(leaver.age / 110)) * 1.5 : 0
+      const view = leaver.sprite.container
+      view.x = Math.round(leaver.fromX + (leaver.toX - leaver.fromX) * eased)
+      view.y = Math.round(leaver.fromY + (leaver.toY - leaver.fromY) * eased + hop)
+      view.alpha = t < 0.8 ? 1 : Math.max(0, 1 - (t - 0.8) / 0.2)
+      if (t >= 1) {
+        view.destroy({ children: true })
+        this.leaving.splice(i, 1)
+      }
+    }
+  }
+
+  /** Is anyone still on their way out? Hosts wait for this before reporting the day. */
+  get leavingCount(): number {
+    return this.leaving.length
   }
 
   destroy(): void {

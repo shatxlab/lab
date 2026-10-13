@@ -4,6 +4,7 @@
  * unaffected by the clock.
  */
 
+import { localDay } from "@/lib/apps/local-day";
 import { firstReview, intervalDays, nextReview, type Grade } from "@/lib/flash/fsrs";
 
 export const MAX_DECKS = 100;
@@ -60,10 +61,7 @@ export function emptyStore(): FlashStore {
   return { decks: [], log: {}, introduced: { day: 0, byDeck: {} }, settings: { ...DEFAULT_SETTINGS } };
 }
 
-/** Local calendar day as an integer, so "tomorrow" follows the user's midnight. */
-export function localDay(date: Date = new Date()): number {
-  return Math.floor((date.getTime() - date.getTimezoneOffset() * 60_000) / 86_400_000);
-}
+export { localDay };
 
 export function newId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;

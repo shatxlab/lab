@@ -1,45 +1,40 @@
-# Roadmap — approved tools
+# Roadmap
 
-Status: **planning** — nothing in §1–§7 is implemented yet. **This file is the
-single source of TODOs**: `handoff.md`, `workbench-review.md` and
-`workbench-ux-plan.md` were deleted (2026-10-11) after the workbench was
-declared complete at scope, and their still-open items were folded into §0. A
-tool moves out of §1–§7 only when its work is merged and its entry is folded
-into `README.md`.
+Status: the standalone tools Flashcards, Focus office and Send to phone have
+shipped, along with the workbench follow-ups in §0. **Still to build: Charts,
+Whiteboard, CV builder and OCR (§4–§7).** **This file is the single source of
+TODOs.** A tool moves out of the build order only when its work is merged and its
+entry is folded into `README.md`; shipped entries stay as short notes of the
+decisions made along the way.
 
-Owner decisions 2026-10-11 (they supersede the workbench's older locked
-scope: workbench itself stays dep-free and terminal-rule-scoped):
+Owner decisions (2026-10-11) that still apply:
 
-- **New runtime deps are allowed again** — the "no new packages" rule was a
-  workbench-consolidation decision, not a permanent policy. Each tool below
-  lists its deps; keep them small and lazy-loaded. The workbench's own
-  dependency freeze stays.
+- **New runtime deps are allowed** — keep them small and lazy-loaded; each tool
+  below lists its deps. The workbench's own dependency freeze stays.
 - **The terminal one-liner rule is scoped to the workbench.** Standalone tools
   may do things a terminal can trivially do (timers, generators) when the
   audience is a phone user on the landing page.
-- **Photo studio is a parked idea**, not scheduled (see Parking lot).
-- **Everything local-first stays non-negotiable.** If two devices must
-  cooperate, the answer is the device bridge or export/import — never a server.
+- **Everything local-first stays non-negotiable.** No servers: devices share data
+  through Send to phone (a QR link), export/import files, or the settings backup.
 
 ---
 
 ## Build order
 
-| # | Tool | Page vs workbench | New deps | Why this order |
+| # | Tool | Page vs workbench | New deps | Status |
 |---|---|---|---|---|
-| 1 | ~~Device bridge~~ **parked 2026-10-13** | standalone `/bridge` | none | Not needed yet; spec and feasibility notes kept in §1 |
-| 2 | ~~Flashcards~~ **shipped 2026-10-13** | standalone `/flash` | none | Proved the standalone pattern; see §2 |
-| 3 | ~~Focus office~~ **shipped 2026-10-13** | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | Installed-app shortcut added; see §3 |
-| 3b | ~~Send to phone (QR link)~~ **shipped 2026-10-13** | helper + per-tool actions | none | Replaced the bridge's main use case; see §1a |
-| 4 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target |
-| 5 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | Print-to-PDF engine keeps it cheap |
-| 6 | Charts | workbench capability | none | Approved 2026-10-11; cheap, high delight |
-| 7 | OCR | workbench capability | tesseract.js | Last: approved 2026-10-11, see §7 |
+| 1 | Device bridge | standalone `/bridge` | none | **parked** 2026-10-13 (§1) |
+| 1a | Send to phone (QR link) | helper + per-tool actions | none | **shipped** 2026-10-13 (§1a) |
+| 2 | Flashcards | standalone `/flash` | none | **shipped** 2026-10-13 (§2) |
+| 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | **shipped** 2026-10-13 (§3) |
+| 4 | Charts | workbench capability | none | next: cheap, high delight (§4) |
+| 5 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target (§5) |
+| 6 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | print-to-PDF engine keeps it cheap (§6) |
+| 7 | OCR | workbench capability | tesseract.js | last: needs lazy heavy-asset infrastructure (§7) |
 
-Ordering note: **OCR (the only tool needing lazy heavy-asset infrastructure)**
-can start its prerequisite work (CSP, cache helper) at any point; everything
-before it is dep-free. Dictation was **cut** on 2026-10-11 — see Parking lot.
-§0 is small, dep-free carry-over work — fine to do before or alongside #1.
+Ordering note: OCR is the only tool needing lazy heavy-asset infrastructure (CSP
+`'wasm-unsafe-eval'`, a cache helper); that prerequisite work can start at any
+point. Everything else is dep-free. Dictation was cut (see the parking lot).
 
 Done outside this build order (2026-10-12): **Software Tycoon** was merged in
 from the standalone `software-tycoon` repo as `/tycoon` — the engine ported to
@@ -47,115 +42,34 @@ React under `lib/tycoon/`, the PixiJS office scene lazy-loaded, CSP gained
 `worker-src 'self' blob:` for pixi's blob: texture workers, and saves moved to
 `lab:tycoon:*` keys with a one-time migration from `software-tycoon:*`. Its
 deps: `pixi.js` (lazy) + dev-only `@types/pngjs`. Docs live in README.md
-(see "Software Tycoon"); the §1–§7 build order is unaffected. Its open
-work list is §8.
+(see "Software Tycoon"); its open work list is §8.
 
 ---
 
-## 0. Workbench UX follow-ups (carry-over from the deleted ux-plan)
+## 0. Workbench follow-ups — done except one optional item
 
-The workbench is complete at its locked scope (§2 decisions of the former
-handoff); what remains is polish, in this order. Shipped already: beforeunload
-guard, shared `useSeedAssets`, the no-"asset" i18n sweep, outputs-tray
-thumbnails + `Download all`, diff patch/HTML-report export. **Shipped 2026-10-13: 0a, 0b, 0d, 0e tier A**
-(their sections below are the spec they were built from). Dropped (owner, 2026-10-13): 0c, 0f, 0e
-tier B — the tray, `Download all` and the unsaved dialog are enough. If results
-get missed on phones, try scrolling the outputs tray into view on the first
-output before building anything bigger. Open: 0g (optional).
+Shipped 2026-10-13: **0a** the "Edit image" label and a skeleton loading state,
+**0b** set-membership badges in the tray (A/B for Compare, 1..n for Merge, an
+in-batch chip), **0d** tray thumbnails and kind glyphs, **0e tier A** the
+`ConfirmSheet` unsaved-changes dialog (keep editing is primary). Earlier:
+beforeunload guard, shared `useSeedAssets`, outputs-tray thumbnails + `Download
+all`, diff patch/HTML-report export.
 
-### 0a. Verbs and a quiet loading state
-- `src/lib/workbench/capabilities.ts`: rename `image.edit` label "Image" →
-  **"Edit image"** (ru: «Обработать изображения»; keep the hint reading
-  "add one more file to unlock Edit image"). Other labels are already verbs.
-  Update legacy image tool tests that assert the old label.
-- `OperationHost` loading (`WorkbenchApp.tsx:263`): replace the plain
-  `<p>Loading</p>` with a skeleton row (two rounded bars, subtle pulse,
-  `aria-busy="true"`, the `loading` i18n string moved to an `sr-only` span).
-  Reserve roughly a toolbar's height — no layout shift.
-
-### 0b. Set membership badges
-- `WorkbenchApp` derives `setMembers: ReadonlySet<string>` from
-  `current.assets` when `current?.capability.set`, passes it + `activeId` to
-  `AssetTray`.
-- Badges left of the name: `text.diff` → `A`/`B` in tray order (the order the
-  Compare panes use); `pdf.merge` → `1..n` (matches merge ordering);
-  `image.edit` → one `inBatch` chip. Non-members show nothing.
-- i18n: one key `inBatch` ("in batch" / «в пакетной обработке»); A/B/numbers
-  are plain text.
-- Tests (`workbench-app.test.tsx`): two texts → A/B rows; an unrelated image
-  added → still A/B on the two texts (a third *text* removes Compare entirely); mixed pdf+text on the Compare tab → pdf row no badge.
-
-### 0c. Paste lands where the intent is
-> **Dropped 2026-10-13 (owner: option B).** Pasted text keeps opening in Open:
-> Compare is offered only for exactly two files, so a lone `paste.txt` can't
-> land in it without changing that rule. The spec below is kept for reference
-> only; do not build it.
-
-- `WorkbenchApp.addText`: on an empty, clean screen pasted text opens the
-  `text.diff` starter (`if (empty && !dirtyRef.current) setActiveId("text.diff")`,
-  guarded by a check that `text.diff` is in `STARTERS`). Non-empty case is
-  already correct (exactly-2 weight 1000 beats `doc.open`).
-- Tests: empty + paste → active tab is `text.diff`, side A seeded from
-  `paste.txt`; paste while dirty → tab stays pinned.
-
-### 0d. Asset tray thumbs and kind icons
-- New `src/components/workbench/AssetThumb.tsx`, used by `AssetTray` rows
-  (outputs got thumbnails in c5354c2; assets still don't):
-  image kind → 40×40 rounded `<img>` from a Blob object URL (revoked on
-  unmount/change, `alt=""`); every other kind → a lucide glyph chip:
-  `FileText` (pdf/docx/text/md/html), `Table` (sheet), `Braces`
-  (json/yaml/toml), `BookOpen` (epub), `FileQuestion` (binary).
-- Tests: jsdom can't decode images, but the `blob:` `<img>` is assertable;
-  glyph branch asserts the icon renders.
-
-### 0e. Unsaved work: forgive, then confirm (two tiers)
-- **Tier A now** — replace `window.confirm` with a `ConfirmSheet`
-  (`src/components/workbench/ConfirmSheet.tsx`): shell keeps
-  `pending: { run } | null`; `confirmLeave()` becomes `requestLeave(run)` —
-  clean → `run()`, dirty → `setPending`. Dialog (`role="dialog"` +
-  `aria-modal`, ESC/backdrop cancel, focus on first button):
-  `unsavedTitle` ("Unsaved changes in {capability label}"), `unsavedBody`
-  ("Your edits are kept only in this browser tab."), buttons **`keepEditing`**
-  (primary) · **`discardAndContinue`** (danger). Note the inversion vs
-  `window.confirm`: keep is primary, destructive is secondary. `beforeunload`
-  stays as is. Drop the `discardChanges` key (copy moves into the new keys).
-  Tests: dirty + tab switch → sheet, no `window.confirm`; cancel keeps tab and
-  dirty; discard switches; ESC cancels; `beforeunload` still registered.
-- **Tier B later, optional** — drafts survive tab switches: key `EditSession`s
-  by `operationKey` in shell state (a `Map` passed down as `initialSession`).
-  Leaving a tab then never asks; the sheet is only needed for remove/clear.
-  Do not attempt in the same pass as tier A.
-
-### 0f. The output stage (results take the stage) — DROPPED 2026-10-13
-- New `src/components/workbench/ResultStage.tsx`, rendered under the tab
-  panel: shell state `produced: OutputEntry | null`; `handleProduce` sets it
-  (and still appends to the outputs list). Persists across file/tab switches
-  until acted on or replaced.
-- Layout: produced name as headline (`text-lg`), kind + size subline,
-  `OutputThumb`, one primary `Download`, secondary `Open`, × remove (removes
-  the tray entry too).
-- **Batch runs**: tag entries with a `runId` (increment a ref in
-  `handleProduce` when `outputs` was empty or the active capability changed).
-  Stage shows the first result + an `andMore` chip ("+{count} more"), actions:
-  `Download` (first) and `Download all` (zip via `fflate` `zipSync`, archive
-  named `<capability>-<timestamp>.zip`). "Open" opens the first.
-- Tray below shrinks to an audit list: name · size · thumb · one icon button
-  per row, plus `Download all` in its header when >1. No repeated text
-  buttons.
-- i18n: `andMore`, `result`; `openAsFile` already exists; `downloadAll`
-  already exists.
-- Tests: stage appears with name + primary Download; second produce replaces
-  it; batch → `+N more` chip and `Download all`; remove from stage clears it.
+Dropped by the owner (2026-10-13), not to be built: **0c** paste opening Compare
+(Compare needs exactly two files, so a lone paste can't land there), **0e tier B**
+(drafts surviving tab switches) and **0f** the output stage (the tray,
+`Download all` and the dialog are enough). If results get missed on phones, try
+scrolling the outputs tray into view on the first output before building
+anything bigger.
 
 ### 0g. Optional, only if wanted
 - **Session restore** — refresh wipes the tray; a tiny opt-in "restore last
   tray" (names + bytes in memory only) would soften the hard reset.
 - **Image print** — page-like kinds print; a photo print is a plausible ask
   if print exists for images.
+- **Send to Flashcards** — an action on workbench text assets that opens the
+  Flashcards import with the text (no bridge needed).
 
-Suggested commit split, each green before the next: 0a, 0b, 0c, 0d, 0e tier A,
-0f. Verify with `npx tsc --noEmit`, `npx vitest run tests/workbench`,
-`npm test`, `npm run build`.
 
 ---
 
@@ -229,51 +143,15 @@ reassemble/integrity, i18n. Two-tab e2e is manual (jsdom has no RTC).
 
 ## 1a. Send to phone (QR link) — SHIPPED 2026-10-13
 
-Folded into `README.md` ("Send to phone"). What was built, and what changed
-from the spec below: Flashcards (send/receive a deck) and the workbench (send a
-text file or text output via a small phone icon on tray rows; receive text as a
-new file, with a content preview). The cap is 2 200 characters at QR level **M**
-(not 2.5 KB at L: jsQR fails on every version-23 code at L). Shared pieces:
+Folded into `README.md` ("Send to phone"). Built for Flashcards (send or receive
+a deck) and the workbench (send a text file or text output via a phone icon on
+tray rows; receive text as a new file, with a content preview). The cap is 2 200
+characters at QR error-correction level **M** — not 2.5 KB at L, because jsQR
+fails on every version-23 code at L while M decoded at every size. Shared pieces:
 `lib/send/` (codec, `useIncomingSend`, i18n), `components/tools/SendToPhone.tsx`
-and `ReceiveDialog.tsx`. Not built: a "Send" action on other tools (add per tool
-as needed: supply a `kind`, `getData` and a receive handler). Original spec
-kept below.
-
-Owner's framing (2026-10-13): what people actually want from the bridge is to
-**get what is on the PC/laptop onto the phone**. The other direction needs no
-feature: on the phone, *export/download* the data (TSV, JSON, the settings
-backup) and move it however you like.
-
-**Flow.** A "Send to phone" action shows a QR code; the phone's *built-in camera
-app* scans it and opens a link to the same tool with the data in the URL
-**fragment** (`/flash/#send=<kind>.<payload>`; fragments never reach a server).
-The tool reads the fragment on load, shows a preview ("12 cards — Spanish
-basics"), and imports only after the user confirms; then it clears the fragment.
-No scanner in the app, no camera permission, no handshake, no new dependency
-(`qrcode` is already a runtime dep for the workbench).
-
-**Payload.** JSON → `fflate` deflate → base64url, with a short version prefix.
-Hard cap of 2 200 characters for the whole fragment, drawn at QR error-correction
-level **M** (2 331 bytes max). Level L was tried first and rejected: jsQR fails
-on every version-23 code at L (all masks), while M decoded at every size from
-version 6 to 40; M also tolerates screen glare better: over the cap the dialog says so and points to Export.
-Rough fit: a flashcard deck of ~60–100 short cards; text snippets; small
-settings. Not files, not photos, not whole backups.
-
-**Safety.** The fragment is untrusted input: decode with size limits, run it
-through the same readers/sanitisers as a file import (e.g. `parseImport`,
-`readFlashStore`'s cleaning), never import without the preview step, and ignore
-a malformed or unknown `kind` silently. The QR is on a screen and the URL can
-land in browser history, so the dialog says what is being shared.
-
-**Implementation.** `src/lib/send/` (payload codec + size cap, fragment
-read/clear) + `src/components/tools/SendToPhone.tsx` (dialog with the QR via
-`lib/qr`, the byte count, and a "Copy link" fallback). First consumers:
-Flashcards (send a deck; receive on `/flash`) and the workbench text outputs
-(send text). Each tool supplies `kind`, `encode()` and `preview/import()`.
-
-**Tests.** Codec round-trip and cap, malformed/oversized/foreign-kind fragments,
-fragment cleared after import, preview-before-import, axe, i18n.
+and `ReceiveDialog.tsx`. To add Send to another tool: supply a `kind`, a
+`getData` and a receive handler. The other direction needs no feature: export a
+file and move it however you like.
 
 ---
 
@@ -321,7 +199,29 @@ what is still open:
 
 ---
 
-## 4. Whiteboard (`/board`)
+## 4. Charts — workbench capability (approved 2026-10-11, in progress)
+
+New `chart` capability on the **sheet** kind (CSV/XLSX via the existing
+`lib/viewer/sheet.ts`), reusing the workbench's set/selection model. Maximum
+**five chart types**: line/area, bar, grouped bar, histogram, scatter —
+auto-detected from the data's shape (time-ish first column → line; few text
+rows + numbers → bar; …) with manual column pickers to override.
+
+**Rendering.** Hand-rolled SVG (~300 lines total, no chart library): axes with
+sensible ticks, legends, tooltip on hover/tap, theme-token colours (light/dark
+for free). Export **SVG** (into the Outputs tray, where it joins the asset
+loop) and **PNG** via canvas. No interactivity beyond tooltips — this is a
+"make the chart, take it away" tool, not a dashboard.
+
+**Implementation.** `src/components/workbench/operations/ChartOperations.tsx`
++ `src/lib/charts/` (shape detection, scale/tick math, SVG builder, i18n).
+
+**Tests.** Scale/tick math (golden cases), shape detection table, SVG output
+snapshot, tray round-trip, axe.
+
+---
+
+## 5. Whiteboard (`/board`)
 
 Mini-Excalidraw: the 10% of features 90% of users draw. Target size ≤ ~30 KB
 gzipped total; success = never needing a shape library.
@@ -353,7 +253,7 @@ SVG serialization, JSON round-trip, pointer reducer, axe.
 
 ---
 
-## 5. CV builder (`/cv`)
+## 6. CV builder (`/cv`)
 
 Form-driven résumé builder whose templates are **ATS-safe by construction**.
 Export paths: print-to-PDF (selectable text), real `.docx` (via the hand-rolled
@@ -388,28 +288,6 @@ DOCX pipeline), plain-text export, print stylesheet snapshot, axe.
 
 ---
 
-## 6. Charts — workbench capability (approved 2026-10-11)
-
-New `chart` capability on the **sheet** kind (CSV/XLSX via the existing
-`lib/viewer/sheet.ts`), reusing the workbench's set/selection model. Maximum
-**five chart types**: line/area, bar, grouped bar, histogram, scatter —
-auto-detected from the data's shape (time-ish first column → line; few text
-rows + numbers → bar; …) with manual column pickers to override.
-
-**Rendering.** Hand-rolled SVG (~300 lines total, no chart library): axes with
-sensible ticks, legends, tooltip on hover/tap, theme-token colours (light/dark
-for free). Export **SVG** (into the Outputs tray, where it joins the asset
-loop) and **PNG** via canvas. No interactivity beyond tooltips — this is a
-"make the chart, take it away" tool, not a dashboard.
-
-**Implementation.** `src/components/workbench/operations/ChartOperations.tsx`
-+ `src/lib/charts/` (shape detection, scale/tick math, SVG builder, i18n).
-
-**Tests.** Scale/tick math (golden cases), shape detection table, SVG output
-snapshot, tray round-trip, axe.
-
----
-
 ## 7. OCR — workbench capability
 
 New `ocr` capability on the **image** kind and on **PDF** (pages rasterized
@@ -425,7 +303,7 @@ UI states honest limits: printed text good, handwriting poor, multi-column
 approximate. Progress bar (tesseract reports natively).
 
 **Assets never precached:** WASM + language data lazy-load on first use into a
-runtime cache (same infra as dictation). CSP needs `'wasm-unsafe-eval'`.
+runtime cache (the shared lazy-asset helper below). CSP needs `'wasm-unsafe-eval'`.
 
 ---
 
@@ -543,6 +421,8 @@ Balance so far comes only from bots; nobody has played the long journey.
 
 ---
 
+---
+
 ## Pending decisions
 
 (none — all pitches are approved or parked; new ideas go straight to the
@@ -575,21 +455,21 @@ parking lot)
 ## Cross-cutting prerequisites (build once, reuse everywhere)
 
 1. **CSP updates** in `astro.config.mjs`: add `'wasm-unsafe-eval'` for script
-   (OCR, dictation, any future WASM tool). For the bridge: `connect-src` must
-   allow `stun:`; check `Permissions-Policy` in `assets/_headers` doesn't block
-   WebRTC; screen recording would need a `display-capture` permission addition.
+   (OCR and any future WASM tool). Screen recording, if ever built, would need a
+   `display-capture` permission in `assets/_headers`. (The bridge's WebRTC and
+   camera notes are in §1, which is parked.)
 2. **Lazy heavy-asset pattern** for the service worker: precache never includes
    WASM cores or language data (>1 MB rule); runtime Cache Storage with
    explicit download/progress/delete UI and honest size labeling. Shared
-   helper in `src/lib/apps/` — used by OCR, the only consumer after dictation
-   was cut.
-3. **Settings backup / bridge coverage:** every new tool persists under its
-   `lab:<tool>:v1` key (flash, focus, board, cv) so backup/restore and the
-   device bridge carry state across devices.
+   helper in `src/lib/apps/` — OCR is its only consumer.
+3. **Settings backup coverage:** every tool persists under its `lab:<tool>:v1`
+   key (flash and focus already do; board and cv will) so backup/restore carries
+   state across devices. Small data can also move with Send to phone.
 4. **Registry plumbing per tool:** standalone pages follow the README's
    "Adding a new tool" steps (island, page, TOOLS entry with `seo`, i18n,
-   tests with `axeViolations()`); the OCR capability follows the workbench
-   steps (capabilities.ts + operations/ + operations.ts).
-5. **Keep this file current** when each tool lands: strike its §1–§7 entry,
+   tests with `axeViolations()`); a workbench capability follows the workbench
+   steps (capabilities.ts + operations/ + operations.ts). Standalone tools of the
+   study/productivity kind go in the `productivity` category.
+5. **Keep this file current** when each tool lands: mark its entry shipped,
    record decisions made during the build, and fold the shipped behaviour
    into `README.md`.

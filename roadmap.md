@@ -56,7 +56,9 @@ work list is §8.
 The workbench is complete at its locked scope (§2 decisions of the former
 handoff); what remains is polish, in this order. Shipped already: beforeunload
 guard, shared `useSeedAssets`, the no-"asset" i18n sweep, outputs-tray
-thumbnails + `Download all`, diff patch/HTML-report export.
+thumbnails + `Download all`, diff patch/HTML-report export. **Shipped 2026-10-13: 0a, 0b, 0d, 0e tier A**
+(their sections below are the spec they were built from). Open: 0c (blocked,
+see its note), 0e tier B, 0f, 0g.
 
 ### 0a. Verbs and a quiet loading state
 - `src/lib/workbench/capabilities.ts`: rename `image.edit` label "Image" →
@@ -77,10 +79,17 @@ thumbnails + `Download all`, diff patch/HTML-report export.
   `image.edit` → one `inBatch` chip. Non-members show nothing.
 - i18n: one key `inBatch` ("in batch" / «в пакетной обработке»); A/B/numbers
   are plain text.
-- Tests (`workbench-app.test.tsx`): two texts → A/B rows; third text → still
-  A/B on the first two; mixed pdf+text on the Compare tab → pdf row no badge.
+- Tests (`workbench-app.test.tsx`): two texts → A/B rows; an unrelated image
+  added → still A/B on the two texts (a third *text* removes Compare entirely); mixed pdf+text on the Compare tab → pdf row no badge.
 
 ### 0c. Paste lands where the intent is
+> **Blocked 2026-10-13 — needs a decision.** Pasting on an empty screen adds a
+> single `paste.txt` asset, and `text.diff` is only offered for exactly two
+> files (`set: count === 2`), so `setActiveId("text.diff")` is ignored and the
+> shell falls back to `doc.open`. Options: offer Compare for one text (side B
+> empty; changes the "add one more file to unlock Compare" hint and its tests),
+> or drop 0c and keep paste → Open.
+
 - `WorkbenchApp.addText`: on an empty, clean screen pasted text opens the
   `text.diff` starter (`if (empty && !dirtyRef.current) setActiveId("text.diff")`,
   guarded by a check that `text.diff` is in `STARTERS`). Non-empty case is

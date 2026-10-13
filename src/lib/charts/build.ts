@@ -19,6 +19,8 @@ export interface ChartText {
   /** The value axis of a histogram. */
   frequency: string;
   noValue: string;
+  /** The row that adds a stack up, in a tooltip. */
+  total: string;
   /** "{n} points" for the accessible description. */
   points: (count: number) => string;
 }
@@ -373,15 +375,59 @@ function barPath(x: number, y: number, w: number, h: number, dir: "up" | "down" 
   }
 }
 
+interface Segment {
+  slot: number;
+  from: number;
+  to: number;
+  /** The segment at the open end of its stack: the only one with a rounded end. */
+  last: boolean;
+}
+
+/** One category's stack: positive values build up from zero, negative ones down from it. */
+export function stackSegments(values: (number | null | undefined)[], slots: number[]): { segments: Segment[]; high: number; low: number } {
+  const segments: Segment[] = [];
+  let high = 0;
+  let low = 0;
+  let lastUp = -1;
+  let lastDown = -1;
+  values.forEach((value, j) => {
+    if (value === null || value === undefined || value === 0) return;
+    if (value > 0) {
+      segments.push({ slot: slots[j]!, from: high, to: high + value, last: false });
+      high += value;
+      lastUp = segments.length - 1;
+    } else {
+      segments.push({ slot: slots[j]!, from: low, to: low + value, last: false });
+      low += value;
+      lastDown = segments.length - 1;
+    }
+  });
+  if (lastUp >= 0) segments[lastUp]!.last = true;
+  if (lastDown >= 0) segments[lastDown]!.last = true;
+  return { segments, high, low };
+}
+
 function buildBars(p: PreparedBars, c: Chrome): Scene {
   const { palette, lang } = c;
   const n = p.categories.length;
   const m = p.series.length;
   const f = frame(c, c.text.title, p.series, "rect");
   const all = p.series.flatMap((s) => s.values).filter((v): v is number => v !== null);
-  const vAxis = niceAxis(all.length ? Math.min(...all) : 0, all.length ? Math.max(...all) : 1, { includeZero: true, count: 5 });
-  const showAll = n * m <= 8;
+  const slots = p.series.map((s) => s.slot);
+  const stacks = p.categories.map((_, i) => stackSegments(p.series.map((s) => s.values[i]), slots));
+  // A stack's reach is the sum of its parts, not its biggest part.
+  const lo = p.stacked ? Math.min(0, ...stacks.map((stack) => stack.low)) : all.length ? Math.min(...all) : 0;
+  const hi = p.stacked ? Math.max(0, ...stacks.map((stack) => stack.high)) : all.length ? Math.max(...all) : 1;
+  const vAxis = niceAxis(lo, hi === lo ? lo + 1 : hi, { includeZero: true, count: 5 });
+  const lanes = p.stacked ? 1 : m;
+  const showAll = p.stacked ? n <= 8 : n * m <= 8;
   const maxValue = all.length ? Math.max(...all) : 0;
+  const hitRows = (i: number): HitRow[] => {
+    const rows = rowsOf(p.series, i, c).map((row, j) => ({ ...row, slot: p.series[j]!.slot }));
+    if (!p.stacked) return rows;
+    const total = stacks[i]!.high + stacks[i]!.low;
+    return [...rows, { label: c.text.total, value: formatValue(total, lang), slot: null }];
+  };
 
   let body = f.parts;
   const hits: Hit[] = [];
@@ -400,8 +446,8 @@ function buildBars(p: PreparedBars, c: Chrome): Scene {
     plot = { left, top: f.top, right, bottom: height - bottomBand };
     const y = (value: number): number => plot.bottom - ((value - vAxis.min) / (vAxis.max - vAxis.min)) * (plot.bottom - plot.top);
     body += valueGrid(c, vAxis, plot, y);
-    const thick = Math.max(3, Math.min(MAX_BAR, Math.floor((band * 0.8 - (m - 1) * GAP) / m)));
-    const group = m * thick + (m - 1) * GAP;
+    const thick = Math.max(3, Math.min(MAX_BAR, Math.floor((band * 0.8 - (lanes - 1) * GAP) / lanes)));
+    const group = lanes * thick + (lanes - 1) * GAP;
     const zero = y(0);
 
     p.categories.forEach((category, i) => {
@@ -410,6 +456,31 @@ function buildBars(p: PreparedBars, c: Chrome): Scene {
       body += rotate
         ? text(bandLeft + band / 2 + 4, plot.bottom + 14, labels[i]!, { fill: palette.muted, anchor: "end", rotate: -35 })
         : text(bandLeft + band / 2, plot.bottom + 18, labels[i]!, { fill: palette.muted, anchor: "middle" });
+      if (p.stacked) {
+        const stack = stacks[i]!;
+        for (const seg of stack.segments) {
+          const up = seg.to > seg.from;
+          // A 2px surface gap between segments: trim the edges that touch another one.
+          let top = Math.min(y(seg.from), y(seg.to));
+          let bottom = Math.max(y(seg.from), y(seg.to));
+          if (up) {
+            if (!seg.last) top += GAP / 2;
+            if (seg.from !== 0) bottom -= GAP / 2;
+          } else {
+            if (seg.from !== 0) top += GAP / 2;
+            if (!seg.last) bottom -= GAP / 2;
+          }
+          const h = Math.max(1, bottom - top);
+          body += seg.last
+            ? `<path d="${barPath(start, top, thick, h, up ? "up" : "down")}" fill="${fill(c, seg.slot)}"/>`
+            : `<rect x="${r(start)}" y="${r(top)}" width="${r(thick)}" height="${r(h)}" fill="${fill(c, seg.slot)}"/>`;
+        }
+        if (showAll && stack.segments.length > 0) {
+          const total = stack.high + stack.low;
+          const ty = stack.high > 0 ? y(stack.high) - 6 : y(stack.low) + 14;
+          if (ty > plot.top - 4 && ty < plot.bottom + 16) body += text(start + thick / 2, ty, formatCompact(total, lang), { size: LABEL_SIZE, fill: palette.ink, anchor: "middle" });
+        }
+      } else
       p.series.forEach((s, j) => {
         const value = s.values[i];
         if (value === null || value === undefined || value === 0) return;
@@ -421,13 +492,13 @@ function buildBars(p: PreparedBars, c: Chrome): Scene {
           if (ty > plot.top - 4 && ty < plot.bottom + 16) body += text(bx + thick / 2, ty, formatCompact(value, lang), { size: LABEL_SIZE, fill: palette.ink, anchor: "middle" });
         }
       });
-      hits.push({ x: bandLeft, y: plot.top, w: band, h: plot.bottom - plot.top, title: category || "—", rows: rowsOf(p.series, i, c).map((row, j) => ({ ...row, slot: p.series[j]!.slot })), marks: [] });
+      hits.push({ x: bandLeft, y: plot.top, w: band, h: plot.bottom - plot.top, title: category || "—", rows: hitRows(i), marks: [] });
     });
     body += axisName(c, plot, p.xName, height - 10);
   } else {
     const labelLimit = 24;
     const labels = p.categories.map((category) => clip(category, labelLimit));
-    const rowH = Math.max(m > 1 ? m * 16 + 10 : 26, 22);
+    const rowH = Math.max(lanes > 1 ? lanes * 16 + 10 : 26, 22);
     const left = Math.min(200, Math.max(...labels.map((label) => textWidth(label, TICK_SIZE)), 24) + 18);
     const right = c.width - 24;
     const plotHeight = Math.min(900, Math.max(160, n * rowH));
@@ -441,13 +512,39 @@ function buildBars(p: PreparedBars, c: Chrome): Scene {
       body += line(px, plot.top, px, plot.bottom, Math.abs(px - xs(0)) < 0.5 ? palette.axis : palette.grid);
       body += text(px, plot.bottom + 18, formatTickNumber(tick, vAxis.step, lang), { fill: palette.muted, anchor: "middle" });
     }
-    const thick = Math.max(3, Math.min(MAX_BAR, Math.floor((band * 0.8 - (m - 1) * GAP) / m)));
-    const group = m * thick + (m - 1) * GAP;
+    const thick = Math.max(3, Math.min(MAX_BAR, Math.floor((band * 0.8 - (lanes - 1) * GAP) / lanes)));
+    const group = lanes * thick + (lanes - 1) * GAP;
     const zero = xs(0);
     p.categories.forEach((category, i) => {
       const bandTop = plot.top + i * band;
       const start = bandTop + (band - group) / 2;
       body += text(plot.left - 8, bandTop + band / 2 + 4, labels[i]!, { fill: palette.muted, anchor: "end" });
+      if (p.stacked) {
+        const stack = stacks[i]!;
+        for (const seg of stack.segments) {
+          const right = seg.to > seg.from;
+          let left = Math.min(xs(seg.from), xs(seg.to));
+          let rightEdge = Math.max(xs(seg.from), xs(seg.to));
+          if (right) {
+            if (seg.from !== 0) left += GAP / 2;
+            if (!seg.last) rightEdge -= GAP / 2;
+          } else {
+            if (!seg.last) left += GAP / 2;
+            if (seg.from !== 0) rightEdge -= GAP / 2;
+          }
+          const w = Math.max(1, rightEdge - left);
+          body += seg.last
+            ? `<path d="${barPath(left, start, w, thick, right ? "right" : "left")}" fill="${fill(c, seg.slot)}"/>`
+            : `<rect x="${r(left)}" y="${r(start)}" width="${r(w)}" height="${r(thick)}" fill="${fill(c, seg.slot)}"/>`;
+        }
+        if (showAll && stack.segments.length > 0) {
+          const total = stack.high + stack.low;
+          const label = formatCompact(total, lang);
+          const end = stack.high > 0 ? xs(stack.high) : xs(stack.low);
+          const room = stack.high > 0 ? plot.right - end : end - plot.left;
+          if (room > textWidth(label, LABEL_SIZE) + 10) body += text(stack.high > 0 ? end + 6 : end - 6, start + thick / 2 + 4, label, { size: LABEL_SIZE, fill: palette.ink, anchor: stack.high > 0 ? "start" : "end" });
+        }
+      } else
       p.series.forEach((s, j) => {
         const value = s.values[i];
         if (value === null || value === undefined || value === 0) return;
@@ -460,7 +557,7 @@ function buildBars(p: PreparedBars, c: Chrome): Scene {
           if (room > textWidth(label, LABEL_SIZE) + 10) body += text(value > 0 ? end + 6 : end - 6, by + thick / 2 + 4, label, { size: LABEL_SIZE, fill: palette.ink, anchor: value > 0 ? "start" : "end" });
         }
       });
-      hits.push({ x: plot.left, y: bandTop, w: plot.right - plot.left, h: band, title: category || "—", rows: rowsOf(p.series, i, c), marks: [] });
+      hits.push({ x: plot.left, y: bandTop, w: plot.right - plot.left, h: band, title: category || "—", rows: hitRows(i), marks: [] });
     });
     body += axisName(c, plot, p.xName, height - 10);
   }

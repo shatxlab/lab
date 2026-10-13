@@ -327,6 +327,24 @@ are several series), two numbers are a scatter, one number is a histogram, label
 alone are counted — and `normalizeSpec` keeps any hand-made choice drawable.
 There are five types in all, and never more than six series (three on a scatter).
 
+**Pivot and stack.** *One series for each value of* a text column turns long
+data (`Month, Region, Sales`) into a line or bar series per region: rows that
+share a label and a group are added up, averaged or counted, a group keeps the
+colour of the place it first appears in, and with more groups than fit (six) the
+biggest are shown and the rest are named in a note. Data of that shape is split
+automatically when a second text column separates the rows of a repeated label
+into up to six groups. Bar charts with several series (or a split) can be
+**stacked**: one bar per label, positives building up from zero and negatives
+down, a 2px gap between segments, only the open end rounded, the stack's total
+printed on top and as a Total row when hovering.
+
+**Remembered per file.** What you changed (type, columns, split, stacking, title,
+header choice, and the open sheet) is saved under `lab:charts:v1`, keyed by file
+name and size and kept for the 40 most recent files, so reopening the file
+brings the chart back; the settings backup carries it. Only changes are saved
+(the suggestion is worked out afresh), looking at a file leaves no trace, and
+*Back to the suggested chart* clears it.
+
 `build.ts` draws the chart as an SVG string and describes what the pointer can
 land on; the string shown on the page is the string exported, drawn at the width
 it is shown at (so type stays readable on a phone) and at a fixed width for

@@ -5,7 +5,7 @@ import { MAX_LINE_POINTS, histogramBins, prepare, type PreparedBars, type Prepar
 import type { ChartSpec } from "@/lib/charts/spec";
 
 const table = (rows: string[][]) => tableFromRows("S", rows, { header: true });
-const spec = (over: Partial<ChartSpec>): ChartSpec => ({ type: "line", x: 0, y: [1], area: false, bins: null, aggregate: "none", horizontal: null, ...over });
+const spec = (over: Partial<ChartSpec>): ChartSpec => ({ type: "line", x: 0, y: [1], area: false, bins: null, aggregate: "none", horizontal: null, stacked: false, splitBy: null, ...over });
 
 describe("line", () => {
   it("sorts a time axis and keeps every series aligned with it", () => {

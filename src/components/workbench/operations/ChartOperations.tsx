@@ -12,6 +12,7 @@ import { ActionButton, SelectField, inputClass, labelClass, panelClass } from "@
 import { useDark } from "@/lib/apps/use-dark";
 import { buildChart, type ChartText, type Scene } from "@/lib/charts/build";
 import { tableFromRows, type Table } from "@/lib/charts/data";
+import { fileKey, readChartMemory, rememberOpenSheet, rememberSheet, type SheetMemory } from "@/lib/charts/memory";
 import { exportName, svgBytes, svgToPng } from "@/lib/charts/export";
 import { tch } from "@/lib/charts/i18n";
 import { paletteFor } from "@/lib/charts/palette";
@@ -26,6 +27,7 @@ import {
   numericColumns,
   plottableColumns,
   slotOf,
+  splitCandidates,
   suggestSpec,
   type Aggregate,
   type ChartSpec,
@@ -46,7 +48,7 @@ const TYPE_BUTTONS: { type: ChartType; key: "typeLine" | "typeBar" | "typeHistog
   { type: "scatter", key: "typeScatter", covers: ["scatter"] },
 ];
 
-function autoTitle(lang: AppLang, prepared: Prepared, spec: ChartSpec): string {
+function autoTitle(lang: AppLang, prepared: Prepared, spec: ChartSpec, table: Table): string {
   const names = (list: { name: string }[]) => (list.length > 3 ? `${list[0]!.name}, ${list[1]!.name} +${list.length - 2}` : list.map((s) => s.name).join(", "));
   switch (prepared.type) {
     case "histogram":
@@ -54,9 +56,15 @@ function autoTitle(lang: AppLang, prepared: Prepared, spec: ChartSpec): string {
     case "scatter":
       return tch(lang, "titleScatter", { y: names(prepared.series), x: prepared.xName });
     case "bar":
-      return spec.y.length === 0 ? tch(lang, "titleCount", { x: prepared.xName }) : tch(lang, "titleBy", { y: names(prepared.series), x: prepared.xName });
-    default:
-      return tch(lang, "titleBy", { y: names(prepared.series), x: prepared.xName });
+    case "line": {
+      if (spec.splitBy !== null && (prepared.type === "bar" || prepared.type === "line")) {
+        const measure = spec.y.length > 0 ? table.columns[spec.y[0]!]!.name : tch(lang, "rows");
+        return tch(lang, "titleSplit", { y: measure, x: prepared.xName, split: table.columns[spec.splitBy]!.name });
+      }
+      return prepared.type === "bar" && spec.y.length === 0
+        ? tch(lang, "titleCount", { x: prepared.xName })
+        : tch(lang, "titleBy", { y: names(prepared.series), x: prepared.xName });
+    }
   }
 }
 
@@ -65,6 +73,7 @@ function chartText(lang: AppLang, title: string): ChartText {
     title,
     frequency: tch(lang, "frequency"),
     noValue: tch(lang, "noValue"),
+    total: tch(lang, "total"),
     points: (n) => tch(lang, "points", { n }),
   };
 }
@@ -74,6 +83,7 @@ export function ChartOperation({ lang, assets, params, setParams, onProduce }: O
   const [loaded, setLoaded] = React.useState<Loaded>({ status: "loading" });
   const [sheetIndex, setSheetIndex] = React.useState(0);
   const [header, setHeader] = React.useState<boolean | null>(null);
+  const file = asset ? fileKey(asset.name, asset.size) : "";
 
   React.useEffect(() => {
     if (!asset) return;
@@ -84,7 +94,13 @@ export function ChartOperation({ lang, assets, params, setParams, onProduce }: O
     asset
       .workbook()
       .then((book) => {
-        if (!cancelled) setLoaded({ status: "ready", sheets: book.sheets });
+        if (cancelled) return;
+        // Reopening a file brings back the sheet that was open and its header choice.
+        const remembered = readChartMemory()[fileKey(asset.name, asset.size)];
+        const at = Math.max(0, book.sheets.findIndex((item) => item.name === remembered?.sheet));
+        setSheetIndex(at);
+        setHeader(remembered?.sheets[book.sheets[at]?.name ?? ""]?.header ?? null);
+        setLoaded({ status: "ready", sheets: book.sheets });
       })
       .catch(() => {
         if (!cancelled) setLoaded({ status: "error" });
@@ -108,18 +124,30 @@ export function ChartOperation({ lang, assets, params, setParams, onProduce }: O
             label={tch(lang, "sheet")}
             value={String(sheetIndex)}
             onChange={(value) => {
+              const next = loaded.sheets[Number(value)];
+              if (next) rememberOpenSheet(file, next.name);
               setSheetIndex(Number(value));
-              setHeader(null);
+              setHeader(next ? (readChartMemory()[file]?.sheets[next.name]?.header ?? null) : null);
             }}
             options={loaded.sheets.map((item, i) => ({ value: String(i), label: item.name }))}
             className="min-w-40"
           />
         )}
-        <HeaderToggle lang={lang} sheet={sheet} header={header} onChange={setHeader} />
+        <HeaderToggle
+          lang={lang}
+          sheet={sheet}
+          header={header}
+          onChange={(value) => {
+            // Columns move when the header does, so the old column choices no longer apply.
+            rememberSheet(file, sheet.name, { spec: {}, title: readChartMemory()[file]?.sheets[sheet.name]?.title ?? "", header: value });
+            setHeader(value);
+          }}
+        />
       </div>
       <Workspace
         key={`${asset.id}|${sheetIndex}|${header}`}
         lang={lang}
+        file={file}
         sourceName={asset.name}
         sheet={sheet}
         header={header}
@@ -144,6 +172,8 @@ function HeaderToggle({ lang, sheet, header, onChange }: { lang: AppLang; sheet:
 
 interface WorkspaceProps {
   lang: AppLang;
+  /** Key the settings are remembered under (file name and size). */
+  file: string;
   sourceName: string;
   sheet: SheetData;
   header: boolean | null;
@@ -152,13 +182,24 @@ interface WorkspaceProps {
   onProduce: OperationProps["onProduce"];
 }
 
-function Workspace({ lang, sourceName, sheet, header, params, setParams, onProduce }: WorkspaceProps) {
+function Workspace({ lang, file, sourceName, sheet, header, params, setParams, onProduce }: WorkspaceProps) {
   const dark = useDark();
   const uid = `ch${React.useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const table = React.useMemo(() => tableFromRows(sheet.name, sheet.rows, { header: header ?? undefined, dayFirst: lang === "ru" }), [sheet, header, lang]);
   const suggestion = React.useMemo(() => suggestSpec(table), [table]);
-  const [override, setOverride] = React.useState<Partial<ChartSpec>>({});
-  const [title, setTitle] = React.useState("");
+  // What this file's chart looked like last time, if it was made before.
+  const [saved] = React.useState<SheetMemory | undefined>(() => readChartMemory()[file]?.sheets[sheet.name]);
+  const [override, setOverride] = React.useState<Partial<ChartSpec>>(() => saved?.spec ?? {});
+  const [title, setTitle] = React.useState(() => saved?.title ?? "");
+  const touched = React.useRef(false);
+  React.useEffect(() => {
+    // Nothing is written until the user changes something, so merely looking leaves no trace.
+    if (!touched.current) {
+      touched.current = true;
+      return;
+    }
+    rememberSheet(file, sheet.name, { spec: override, title, header });
+  }, [file, sheet.name, override, title, header]);
   const [showTable, setShowTable] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
@@ -187,7 +228,7 @@ function Workspace({ lang, sourceName, sheet, header, params, setParams, onProdu
 
   const spec = React.useMemo(() => (suggestion ? normalizeSpec(table, { ...suggestion, ...override }) : null), [table, suggestion, override]);
   const prepared = React.useMemo(() => (spec ? prepare(table, spec, tch(lang, "rows")) : null), [table, spec, lang]);
-  const resolvedTitle = prepared && spec ? title.trim() || autoTitle(lang, prepared, spec) : "";
+  const resolvedTitle = prepared && spec ? title.trim() || autoTitle(lang, prepared, spec, table) : "";
 
   const build = React.useCallback(
     (dark: boolean, id: string, at?: number): Scene | null =>
@@ -205,8 +246,10 @@ function Workspace({ lang, sourceName, sheet, header, params, setParams, onProdu
   const cap = spec.type === "scatter" ? MAX_SCATTER_SERIES : MAX_SERIES;
   const palette = paletteFor(dark);
 
+  const splitting = spec.splitBy !== null;
+  const splits = spec.type === "line" || isBars ? splitCandidates(table, spec.x) : [];
   const toggleSeries = (position: number, on: boolean) => {
-    if (spec.type === "histogram") return set({ y: [position] });
+    if (spec.type === "histogram" || splitting) return set({ y: [position], ...(isBars && spec.aggregate === "count" ? { aggregate: "sum" as Aggregate } : {}) });
     const next = on ? [...spec.y, position] : spec.y.filter((p) => p !== position);
     set({ y: next.sort((a, b) => a - b), ...(isBars && next.length > 0 && spec.aggregate === "count" ? { aggregate: "sum" as Aggregate } : {}) });
   };
@@ -214,6 +257,7 @@ function Workspace({ lang, sourceName, sheet, header, params, setParams, onProdu
   const notes: string[] = [];
   if (sheet.truncated || table.truncated) notes.push(tch(lang, "truncatedRows", { n: table.rowCount.toLocaleString(lang) }));
   if (prepared.type === "bar" && prepared.omitted > 0) notes.push(tch(lang, "omittedCategories", { n: prepared.omitted, max: MAX_CATEGORIES }));
+  if ((prepared.type === "bar" || prepared.type === "line") && prepared.omittedSeries > 0) notes.push(tch(lang, "omittedSeries", { n: prepared.omittedSeries, max: MAX_SERIES }));
   if (prepared.type === "line" && prepared.thinned > 0) notes.push(tch(lang, "thinnedPoints", { n: prepared.thinned }));
 
   const exportAs = async (kind: "svg" | "png") => {
@@ -280,12 +324,13 @@ function Workspace({ lang, sourceName, sheet, header, params, setParams, onProdu
             {numeric.map((position) => {
               const checked = spec.y.includes(position);
               const slot = slotOf(table, position)!;
-              const locked = spec.type === "histogram" ? false : !checked && spec.y.length >= cap;
-              const lastOne = checked && spec.y.length === 1 && !isBars;
+              const single = spec.type === "histogram" || splitting;
+              const locked = single ? false : !checked && spec.y.length >= cap;
+              const lastOne = checked && spec.y.length === 1 && !isBars && !single;
               return (
                 <label key={position} className="flex items-center gap-2 text-sm">
                   <input
-                    type={spec.type === "histogram" ? "radio" : "checkbox"}
+                    type={spec.type === "histogram" || splitting ? "radio" : "checkbox"}
                     name="chart-y"
                     checked={checked}
                     disabled={locked || lastOne}
@@ -296,10 +341,22 @@ function Workspace({ lang, sourceName, sheet, header, params, setParams, onProdu
                 </label>
               );
             })}
-            {spec.type !== "histogram" && <p className="text-xs text-(--muted-fg)">{tch(lang, "seriesLimit", { n: cap })}</p>}
+            {spec.type !== "histogram" && !splitting && <p className="text-xs text-(--muted-fg)">{tch(lang, "seriesLimit", { n: cap })}</p>}
             {numericColumns(table).length > SLOT_COUNT && <p className="text-xs text-(--muted-fg)">{tch(lang, "tooManyColumns", { n: SLOT_COUNT })}</p>}
           </fieldset>
         </div>
+
+        {splits.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <SelectField
+              label={tch(lang, "splitBy")}
+              value={spec.splitBy === null ? "" : String(spec.splitBy)}
+              onChange={(value) => set({ splitBy: value === "" ? null : Number(value), ...(value === "" ? {} : { y: spec.y.slice(0, 1) }) })}
+              options={[{ value: "", label: tch(lang, "splitNone") }, ...splits.map((position) => ({ value: String(position), label: table.columns[position]!.name }))]}
+            />
+            <p className="text-xs text-(--muted-fg)">{tch(lang, "splitHint")}</p>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           {isBars && (
@@ -327,6 +384,15 @@ function Workspace({ lang, sourceName, sheet, header, params, setParams, onProdu
               />
             </>
           )}
+          {isBars && (spec.y.length > 1 || splitting) && (
+            <label className="flex flex-col gap-0.5 self-end pb-2 text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <input type="checkbox" checked={spec.stacked} onChange={(event) => set({ stacked: event.target.checked })} />
+                {tch(lang, "stacked")}
+              </span>
+              <span className="pl-6 text-xs font-normal text-(--muted-fg)">{tch(lang, "stackedHint")}</span>
+            </label>
+          )}
           {spec.type === "histogram" && (
             <label className={labelClass}>
               {tch(lang, "bins")}
@@ -351,6 +417,21 @@ function Workspace({ lang, sourceName, sheet, header, params, setParams, onProdu
             {tch(lang, "title")}
             <input className={inputClass} value={title} maxLength={120} placeholder={tch(lang, "titlePlaceholder")} onChange={(event) => setTitle(event.target.value)} />
           </label>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <ActionButton
+            variant="secondary"
+            className="h-8 px-3 text-xs"
+            disabled={Object.keys(override).length === 0 && title === ""}
+            onClick={() => {
+              setOverride({});
+              setTitle("");
+            }}
+          >
+            {tch(lang, "reset")}
+          </ActionButton>
+          <span className="text-xs text-(--muted-fg)">{tch(lang, "remembered")}</span>
         </div>
 
         <label className="flex flex-col gap-0.5 text-sm font-medium">

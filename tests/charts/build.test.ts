@@ -7,7 +7,7 @@ import { DARK, LIGHT } from "@/lib/charts/palette";
 import { prepare } from "@/lib/charts/prepare";
 import { normalizeSpec, suggestSpec, type ChartSpec } from "@/lib/charts/spec";
 
-const TEXT: ChartText = { title: "Sales by month", frequency: "Count", noValue: "—", points: (n) => `${n} points` };
+const TEXT: ChartText = { title: "Sales by month", frequency: "Count", noValue: "—", total: "Total", points: (n) => `${n} points` };
 
 const table = (rows: string[][]) => tableFromRows("S", rows, { header: true });
 function scene(rows: string[][], over: Partial<ChartSpec> = {}, options: Partial<Parameters<typeof buildChart>[1]> = {}): Scene {

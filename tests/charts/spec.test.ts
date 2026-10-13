@@ -13,7 +13,7 @@ import {
 } from "@/lib/charts/spec";
 
 const table = (rows: string[][]) => tableFromRows("S", rows, { header: true });
-const spec = (over: Partial<ChartSpec>): ChartSpec => ({ type: "line", x: 0, y: [1], area: false, bins: null, aggregate: "none", horizontal: null, ...over });
+const spec = (over: Partial<ChartSpec>): ChartSpec => ({ type: "line", x: 0, y: [1], area: false, bins: null, aggregate: "none", horizontal: null, stacked: false, splitBy: null, ...over });
 
 const monthly = table([
   ["Month", "Sales", "Costs", "Note"],

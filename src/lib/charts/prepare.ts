@@ -5,7 +5,7 @@
 
 import type { Column, Table } from "@/lib/charts/data";
 import { niceStep } from "@/lib/charts/scales";
-import { MAX_CATEGORIES, slotOf, type ChartSpec } from "@/lib/charts/spec";
+import { MAX_CATEGORIES, MAX_SERIES, slotOf, type ChartSpec } from "@/lib/charts/spec";
 
 export interface Series {
   /** Position of the column in the table (stable, so colours do not move). */
@@ -25,6 +25,8 @@ export interface PreparedLine {
   series: Series[];
   /** Rows dropped by thinning a very long series. */
   thinned: number;
+  /** Groups left out of a split chart because there were more than fit. */
+  omittedSeries: number;
 }
 
 export interface PreparedBars {
@@ -35,6 +37,10 @@ export interface PreparedBars {
   horizontal: boolean;
   /** Categories beyond the limit that were left out. */
   omitted: number;
+  /** Groups left out of a split chart because there were more than fit. */
+  omittedSeries: number;
+  /** Series are stacked into one bar per category (only ever true with two or more series). */
+  stacked: boolean;
 }
 
 export interface Bin {
@@ -75,6 +81,62 @@ function xValueOf(column: Column, row: number): number | null {
   return column.kind === "date" ? column.times[row]! : column.kind === "number" ? column.numbers[row]! : row;
 }
 
+/** Combine the values of some rows: a sum, a mean, or the number of rows. */
+function combine(values: number[], rows: number, aggregate: ChartSpec["aggregate"]): number | null {
+  if (aggregate === "count") return rows;
+  if (values.length === 0) return null;
+  const sum = values.reduce((total, value) => total + value, 0);
+  return aggregate === "mean" ? sum / values.length : sum;
+}
+
+/**
+ * A pivot: one series per value of the split column. `groups` are the rows that
+ * share an x position, in x order; each series gets the combined measure of the
+ * rows of its group at every x (null where it has none). With more groups than the
+ * chart can colour, the biggest are kept, in the order they first appear.
+ */
+function splitSeries(table: Table, spec: ChartSpec, groups: number[][]): { series: Series[]; omittedSeries: number } {
+  const split = table.columns[spec.splitBy!]!;
+  const names: string[] = [];
+  const indexOf = new Map<string, number>();
+  const nameOfRow: number[] = [];
+  for (let row = 0; row < table.rowCount; row += 1) {
+    const label = split.labels[row] || "—";
+    let at = indexOf.get(label);
+    if (at === undefined) {
+      at = names.length;
+      names.push(label);
+      indexOf.set(label, at);
+    }
+    nameOfRow[row] = at;
+  }
+
+  const counting = spec.y.length === 0;
+  const numbers = counting ? null : table.columns[spec.y[0]!]!.numbers;
+  const aggregate = spec.aggregate === "none" ? "sum" : spec.aggregate;
+  // cells[name][group] holds the measure's numbers (and how many rows) for that pair.
+  const cells = names.map(() => groups.map(() => ({ values: [] as number[], rows: 0 })));
+  groups.forEach((rows, g) => {
+    for (const row of rows) {
+      const cell = cells[nameOfRow[row]!]![g]!;
+      cell.rows += 1;
+      const value = numbers ? numbers[row]! : null;
+      if (value !== null) cell.values.push(value);
+    }
+  });
+  const values = cells.map((row) => row.map((cell) => (cell.rows === 0 ? null : combine(cell.values, cell.rows, counting ? "count" : aggregate))));
+
+  let kept = names.map((_, i) => i);
+  if (kept.length > MAX_SERIES) {
+    const weight = (i: number) => values[i]!.reduce<number>((total, value) => total + Math.abs(value ?? 0), 0);
+    kept = [...kept].sort((a, b) => weight(b) - weight(a)).slice(0, MAX_SERIES).sort((a, b) => a - b);
+  }
+  return {
+    series: kept.map((name, slot) => ({ column: spec.splitBy!, name: names[name]!, slot, values: values[name]! })),
+    omittedSeries: names.length - kept.length,
+  };
+}
+
 function prepareLine(table: Table, spec: ChartSpec): PreparedLine {
   const xColumn = table.columns[spec.x!]!;
   const kind = xColumn.kind === "date" ? "time" : xColumn.kind === "number" ? "number" : "category";
@@ -82,23 +144,39 @@ function prepareLine(table: Table, spec: ChartSpec): PreparedLine {
   // Time and number axes read left to right whatever order the sheet is in.
   if (kind !== "category") rows = rows.sort((a, b) => xValueOf(xColumn, a)! - xValueOf(xColumn, b)! || a - b);
 
-  let thinned = 0;
-  if (rows.length > MAX_LINE_POINTS) {
-    const every = Math.ceil(rows.length / MAX_LINE_POINTS);
-    const kept = rows.filter((_, i) => i % every === 0);
-    if (kept[kept.length - 1] !== rows[rows.length - 1]) kept.push(rows[rows.length - 1]!);
-    thinned = rows.length - kept.length;
-    rows = kept;
+  // With a split, rows sharing an x become one position; otherwise every row is its own.
+  let groups: number[][] = rows.map((row) => [row]);
+  if (spec.splitBy !== null) {
+    const byKey = new Map<string, number[]>();
+    for (const row of rows) {
+      const key = kind === "category" ? xColumn.labels[row]! : String(xValueOf(xColumn, row));
+      const group = byKey.get(key);
+      if (group) group.push(row);
+      else byKey.set(key, [row]);
+    }
+    groups = [...byKey.values()];
   }
+
+  let thinned = 0;
+  if (groups.length > MAX_LINE_POINTS) {
+    const every = Math.ceil(groups.length / MAX_LINE_POINTS);
+    const kept = groups.filter((_, i) => i % every === 0);
+    if (kept[kept.length - 1] !== groups[groups.length - 1]) kept.push(groups[groups.length - 1]!);
+    thinned = groups.length - kept.length;
+    groups = kept;
+  }
+  const first = groups.map((group) => group[0]!);
+  const split = spec.splitBy !== null ? splitSeries(table, spec, groups) : null;
 
   return {
     type: "line",
     xName: xColumn.name,
     xKind: kind,
-    xs: kind === "category" ? rows.map((_, i) => i) : rows.map((row) => xValueOf(xColumn, row)!),
-    xLabels: rows.map((row) => xColumn.labels[row]!),
-    series: spec.y.map((position) => seriesOf(table, position, rows.map((row) => table.columns[position]!.numbers[row]!))),
+    xs: kind === "category" ? first.map((_, i) => i) : first.map((row) => xValueOf(xColumn, row)!),
+    xLabels: first.map((row) => xColumn.labels[row]!),
+    series: split ? split.series : spec.y.map((position) => seriesOf(table, position, first.map((row) => table.columns[position]!.numbers[row]!))),
     thinned,
+    omittedSeries: split?.omittedSeries ?? 0,
   };
 }
 
@@ -108,8 +186,9 @@ function prepareBars(table: Table, spec: ChartSpec, rowsName: string): PreparedB
   const counting = spec.y.length === 0;
   let categories: string[] = [];
   let series: Series[];
+  let omittedSeries = 0;
 
-  if (spec.aggregate === "none" && !counting) {
+  if (spec.aggregate === "none" && !counting && spec.splitBy === null) {
     categories = Array.from({ length: table.rowCount }, (_, row) => label(row));
     series = spec.y.map((position) => seriesOf(table, position, [...table.columns[position]!.numbers]));
   } else {
@@ -123,7 +202,11 @@ function prepareBars(table: Table, spec: ChartSpec, rowsName: string): PreparedB
     }
     categories = [...index.keys()];
     const groups = [...index.values()];
-    if (counting) {
+    if (spec.splitBy !== null) {
+      const split = splitSeries(table, spec, groups);
+      series = split.series;
+      omittedSeries = split.omittedSeries;
+    } else if (counting) {
       series = [{ column: spec.x!, name: rowsName, slot: 0, values: groups.map((rows) => rows.length) }];
     } else {
       series = spec.y.map((position) => {
@@ -133,9 +216,7 @@ function prepareBars(table: Table, spec: ChartSpec, rowsName: string): PreparedB
           position,
           groups.map((rows) => {
             const present = rows.map((row) => numbers[row]!).filter((value): value is number => value !== null);
-            if (present.length === 0) return null;
-            const sum = present.reduce((total, value) => total + value, 0);
-            return spec.aggregate === "mean" ? sum / present.length : sum;
+            return combine(present, rows.length, spec.aggregate);
           }),
         );
       });
@@ -147,7 +228,7 @@ function prepareBars(table: Table, spec: ChartSpec, rowsName: string): PreparedB
   series = series.map((s) => ({ ...s, values: s.values.slice(0, MAX_CATEGORIES) }));
   const longest = Math.max(0, ...categories.map((category) => category.length));
   const horizontal = spec.horizontal ?? (categories.length > 8 || longest > 12);
-  return { type: "bar", xName: xColumn.name, categories, series, horizontal, omitted };
+  return { type: "bar", xName: xColumn.name, categories, series, horizontal, omitted, omittedSeries, stacked: spec.stacked && series.length > 1 };
 }
 
 /** Bins for a histogram: round bin widths when the count is left to the data, exact ones when it is chosen. */

@@ -3,11 +3,15 @@ import * as React from "react";
 import { DeckList } from "@/components/flash/DeckList";
 import { DeckView } from "@/components/flash/DeckView";
 import { Study } from "@/components/flash/Study";
+import { ReceiveDialog } from "@/components/tools/ReceiveDialog";
 import { ToolPage } from "@/components/tools/ui";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import type { Grade } from "@/lib/flash/fsrs";
 import { tf } from "@/lib/flash/i18n";
 import { cramQueue, emptyStore, localDay, recordReview, studyQueue, type FlashStore } from "@/lib/flash/model";
+import { FLASH_SEND_KIND, parseDeckSend } from "@/lib/flash/send";
+import { addDeck } from "@/lib/flash/ops";
+import { useIncomingSend } from "@/lib/send/use-incoming";
 import { createFlashSoundEngine, type FlashSoundEngine } from "@/lib/flash/sound";
 import { readFlashStore, writeFlashStore } from "@/lib/flash/storage";
 
@@ -43,6 +47,25 @@ export default function FlashApp() {
     setStore(next);
     writeFlashStore(next);
   }, []);
+
+  // A deck sent from another device waits behind a preview until the user imports it.
+  const { incoming, dismiss } = useIncomingSend(FLASH_SEND_KIND);
+  const received = React.useMemo(() => (incoming ? parseDeckSend(incoming.data) : null), [incoming]);
+  React.useEffect(() => {
+    if (incoming && !received) dismiss();
+  }, [incoming, received, dismiss]);
+
+  const importReceived = () => {
+    if (!received) return;
+    let id = "";
+    commit((current) => {
+      const result = addDeck(current, received.name, received.cards);
+      id = result.deck?.id ?? "";
+      return result.store;
+    });
+    dismiss();
+    if (id) setView({ kind: "deck", id });
+  };
 
   const day = localDay();
   const deck = view.kind === "decks" ? undefined : store.decks.find((item) => item.id === view.id);
@@ -96,6 +119,14 @@ export default function FlashApp() {
   return (
     <ToolPage title={tf(lang, "title")} tagline={tf(lang, "tagline")}>
       {body}
+      {hydrated && received && (
+        <ReceiveDialog
+          lang={lang}
+          summary={tf(lang, "receiveSummary", { name: received.name, n: received.cards.length })}
+          onImport={importReceived}
+          onDismiss={dismiss}
+        />
+      )}
     </ToolPage>
   );
 }

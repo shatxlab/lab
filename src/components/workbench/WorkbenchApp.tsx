@@ -18,12 +18,16 @@
  */
 
 import * as React from "react";
-import { Download, X } from "lucide-react";
+import { Download, Smartphone, X } from "lucide-react";
 
 import { AssetThumb } from "@/components/workbench/AssetThumb";
 import { ConfirmSheet } from "@/components/workbench/ConfirmSheet";
+import { ReceiveDialog } from "@/components/tools/ReceiveDialog";
+import { SendToPhone } from "@/components/tools/SendToPhone";
 import { ActionButton, FilePicker, Tabs, ToolPage, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
+import { withBase } from "@/lib/apps/paths";
+import { useIncomingSend } from "@/lib/send/use-incoming";
 import type { AppLang } from "@/lib/apps/lang";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import {
@@ -37,7 +41,8 @@ import {
 } from "@/lib/workbench/capabilities";
 import { createAssetFromBytes, createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
 import { imageMime } from "@/components/viewer/viewers/ImageView";
-import { detectAssetKind } from "@/lib/workbench/kinds";
+import { detectAssetKind, isTextual } from "@/lib/workbench/kinds";
+import { MAX_SENDABLE_BYTES, TEXT_SEND_KIND, parseTextSend, textToSend } from "@/lib/workbench/send";
 import { wb } from "@/lib/workbench/i18n";
 import { loadOperation } from "@/lib/workbench/operations";
 import { EMPTY_ASSETS, type OperationComponent, type OperationOutput } from "@/lib/workbench/operation";
@@ -52,6 +57,23 @@ function capabilityLabel(lang: AppLang, id: CapabilityId): string {
 
 const ICON_BUTTON_CLASS =
   "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-(--muted-fg) transition-colors hover:bg-(--surface) hover:text-(--fg) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent)";
+
+/** A small phone icon that opens "Send to phone" for a text source. */
+function SendTextButton({ lang, name, getText }: { lang: AppLang; name: string; getText: () => Promise<string> | string }) {
+  return (
+    <SendToPhone
+      lang={lang}
+      kind={TEXT_SEND_KIND}
+      toolPath={withBase("/tools")}
+      getData={async () => textToSend(name, await getText())}
+      trigger={(open) => (
+        <button type="button" aria-label={wb(lang, "sendNamed", { name })} onClick={open} className={ICON_BUTTON_CLASS}>
+          <Smartphone aria-hidden="true" className="size-4" />
+        </button>
+      )}
+    />
+  );
+}
 
 /* --------------------------------------------------------------- input bar */
 
@@ -204,6 +226,9 @@ export function AssetTray({
                 >
                   {details(asset)}
                 </button>
+              )}
+              {isTextual(asset.kind) && asset.size <= MAX_SENDABLE_BYTES && (
+                <SendTextButton lang={lang} name={asset.name} getText={() => asset.text()} />
               )}
               <button
                 type="button"
@@ -397,6 +422,9 @@ export function OutputTray({ lang, outputs, onOpenAsAsset, onRemove }: OutputTra
             <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => onOpenAsAsset(entry)}>
               {wb(lang, "openAsAsset")}
             </ActionButton>
+            {isTextual(entry.output.kind ?? detectAssetKind(entry.output.name)) && entry.output.bytes.length <= MAX_SENDABLE_BYTES && (
+              <SendTextButton lang={lang} name={entry.output.name} getText={() => new TextDecoder().decode(entry.output.bytes)} />
+            )}
             <button
               type="button"
               aria-label={wb(lang, "removeOutput", { name: entry.output.name })}
@@ -464,6 +492,18 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     (files: File[]) => addAssets(files.map((file) => createAssetFromFile(file))),
     [addAssets],
   );
+
+  // Text sent from another device waits behind a preview until the user imports it.
+  const { incoming, dismiss: dismissIncoming } = useIncomingSend(TEXT_SEND_KIND);
+  const received = React.useMemo(() => (incoming ? parseTextSend(incoming.data) : null), [incoming]);
+  React.useEffect(() => {
+    if (incoming && !received) dismissIncoming();
+  }, [incoming, received, dismissIncoming]);
+  const importReceived = () => {
+    if (!received) return;
+    addAssets([createAssetFromText(received.name, received.text)]);
+    dismissIncoming();
+  };
 
   const addText = React.useCallback(
     (text: string) => {
@@ -638,6 +678,16 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
       )}
 
       <OutputTray lang={lang} outputs={outputs} onOpenAsAsset={openAsAsset} onRemove={removeOutput} />
+
+      {received && (
+        <ReceiveDialog
+          lang={lang}
+          summary={wb(lang, "receiveText", { name: received.name, n: received.text.length })}
+          preview={received.text}
+          onImport={importReceived}
+          onDismiss={dismissIncoming}
+        />
+      )}
 
       {pending && (
         <ConfirmSheet

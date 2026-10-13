@@ -30,7 +30,7 @@ scope: workbench itself stays dep-free and terminal-rule-scoped):
 | 1 | ~~Device bridge~~ **parked 2026-10-13** | standalone `/bridge` | none | Not needed yet; spec and feasibility notes kept in §1 |
 | 2 | ~~Flashcards~~ **shipped 2026-10-13** | standalone `/flash` | none | Proved the standalone pattern; see §2 |
 | 3 | Focus office | standalone `/focus` | none new (reuses the Tycoon Pixi scene) | Mood piece, perfect offline PWA shortcut |
-| 3b | Send to phone (QR link) | helper + per-tool actions | none | Replaces the bridge's main use case; see §1a. Small, after Focus |
+| 3b | ~~Send to phone (QR link)~~ **shipped 2026-10-13** | helper + per-tool actions | none | Replaced the bridge's main use case; see §1a |
 | 4 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target |
 | 5 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | Print-to-PDF engine keeps it cheap |
 | 6 | Charts | workbench capability | none | Approved 2026-10-11; cheap, high delight |
@@ -227,7 +227,17 @@ reassemble/integrity, i18n. Two-tab e2e is manual (jsdom has no RTC).
 
 ---
 
-## 1a. Send to phone (QR link) — replaces the bridge's main use case
+## 1a. Send to phone (QR link) — SHIPPED 2026-10-13
+
+Folded into `README.md` ("Send to phone"). What was built, and what changed
+from the spec below: Flashcards (send/receive a deck) and the workbench (send a
+text file or text output via a small phone icon on tray rows; receive text as a
+new file, with a content preview). The cap is 2 200 characters at QR level **M**
+(not 2.5 KB at L: jsQR fails on every version-23 code at L). Shared pieces:
+`lib/send/` (codec, `useIncomingSend`, i18n), `components/tools/SendToPhone.tsx`
+and `ReceiveDialog.tsx`. Not built: a "Send" action on other tools (add per tool
+as needed: supply a `kind`, `getData` and a receive handler). Original spec
+kept below.
 
 Owner's framing (2026-10-13): what people actually want from the bridge is to
 **get what is on the PC/laptop onto the phone**. The other direction needs no
@@ -243,8 +253,10 @@ No scanner in the app, no camera permission, no handshake, no new dependency
 (`qrcode` is already a runtime dep for the workbench).
 
 **Payload.** JSON → `fflate` deflate → base64url, with a short version prefix.
-Hard cap around 2.5 KB of encoded payload (QR level L tops out near 2.9 KB, and
-dense codes scan badly): over the cap the dialog says so and points to Export.
+Hard cap of 2 200 characters for the whole fragment, drawn at QR error-correction
+level **M** (2 331 bytes max). Level L was tried first and rejected: jsQR fails
+on every version-23 code at L (all masks), while M decoded at every size from
+version 6 to 40; M also tolerates screen glare better: over the cap the dialog says so and points to Export.
 Rough fit: a flashcard deck of ~60–100 short cards; text snippets; small
 settings. Not files, not photos, not whole backups.
 

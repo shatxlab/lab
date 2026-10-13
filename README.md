@@ -111,6 +111,7 @@ src/
   lib/pdf/           page-range parsing and pdf-lib operations
   lib/workbench/     asset model, capability registry, operation registry, i18n
   lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
+  lib/send/          "Send to phone" payload codec (size-capped, defensive) + fragment hook
   lib/flash/         FSRS scheduler, deck model + queues, import parsers, store ops, i18n, sound, storage
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
   lib/crossword/     Generated puzzles + word bank, grid builder, reducer, i18n, sound, storage
@@ -138,7 +139,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  convert/ qr/ image/ pdf/ wordle/ flash/  logic tests per tool (flash/ also has the jsdom flow tests)
+  convert/ qr/ image/ pdf/ wordle/ flash/ send/  logic tests per tool (flash/ also has the jsdom flow tests)
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers
@@ -245,6 +246,23 @@ detected, not chosen (`parse.ts`): tab-separated rows, CSV with an optional
 line; `toTsv` writes a deck back out in a form `parseImport` reads. Logic tests
 are in `tests/flash/` (golden FSRS intervals, parsers, queues, storage) with a
 jsdom flow test of the whole island.
+
+### Send to phone
+
+Small data moves from a computer to a phone without a server: a **Send to
+phone** action (a deck in Flashcards; a text file or text output in the
+workbench) shows a QR code, the phone's own camera app opens the link, and the
+tool previews what arrived and imports it only on confirmation. The data lives
+in the URL fragment (`#send=1.<kind>.<payload>`: JSON → deflate → base64url),
+which browsers never send to a server. `lib/send/codec.ts` caps the fragment at
+2 200 characters and the decoded size at 256 KB (decoding is a bounded inflate,
+and every failure is `null`); anything bigger is told to use Export instead.
+The code is drawn at error-correction level **M**: jsQR fails on every
+version-23 code at L but decoded every size at M (`tests/send/scannable.test.ts`
+rasterises real codes and reads them back). `useIncomingSend(kind)` picks the
+data up on load, ignores fragments for other tools, clears unreadable ones, and
+leaves the fragment in place until the user imports or dismisses. The other
+direction needs no feature: export a file and move it however you like.
 
 ### Branding and link previews
 

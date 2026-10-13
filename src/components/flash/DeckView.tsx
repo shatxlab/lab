@@ -1,12 +1,15 @@
 import * as React from "react";
 
+import { SendToPhone } from "@/components/tools/SendToPhone";
 import { ActionButton, FilePicker, inputClass, labelClass, panelClass, textareaClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
+import { withBase } from "@/lib/apps/paths";
 import type { AppLang } from "@/lib/apps/lang";
 import { tf } from "@/lib/flash/i18n";
 import { MAX_CARDS_PER_DECK, deckCounts, type Card, type Deck, type FlashStore } from "@/lib/flash/model";
 import { addCards, removeCard, removeDeck, renameDeck, updateCard } from "@/lib/flash/ops";
 import { parseImport, toTsv } from "@/lib/flash/parse";
+import { FLASH_SEND_KIND, deckToSend } from "@/lib/flash/send";
 
 const PAGE = 100;
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
@@ -111,6 +114,14 @@ function DeckHeader({ lang, deck, store, day, commit, onBack }: Pick<DeckViewPro
         <ActionButton variant="secondary" className="h-8 px-3 text-xs" disabled={deck.cards.length === 0} onClick={exportDeck}>
           {tf(lang, "exportDeck")}
         </ActionButton>
+        <SendToPhone
+          lang={lang}
+          kind={FLASH_SEND_KIND}
+          toolPath={withBase("/flash")}
+          getData={() => deckToSend(deck)}
+          disabled={deck.cards.length === 0}
+          className="h-8 px-3 text-xs"
+        />
         {confirming ? (
           <span className="flex flex-wrap items-center gap-2 text-sm" role="alert">
             {tf(lang, "deleteAsk", { name: deck.name, n: deck.cards.length })}

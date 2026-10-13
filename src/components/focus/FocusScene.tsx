@@ -2,13 +2,13 @@ import * as React from "react";
 
 import type { AppLang } from "@/lib/apps/lang";
 import { tz } from "@/lib/focus/i18n";
-import { staffAfter, type DayOffice } from "@/lib/focus/office";
+import { staffAfter, type Office } from "@/lib/focus/office";
 import type { Employee } from "@/lib/tycoon/sim/types";
 import { cn } from "@/lib/viewer/utils";
 
 export interface FocusSceneProps {
   lang: AppLang;
-  office: DayOffice;
+  office: Office;
   /** How many people have left so far; when it grows, the next person walks out. */
   fired: number;
   /** Are people typing right now? */

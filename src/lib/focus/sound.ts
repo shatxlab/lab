@@ -1,6 +1,6 @@
 /** Synthesised cues for the Focus office; no audio files, fails silent. */
 
-export type FocusSound = "start" | "chime" | "breakEnd" | "walkout" | "dayWin" | "dayLose";
+export type FocusSound = "start" | "chime" | "breakEnd" | "walkout" | "emptyOffice";
 
 export interface FocusSoundEngine {
   play(name: FocusSound): void;
@@ -28,9 +28,7 @@ export function focusRecipe(name: FocusSound): Tone[] {
         { freq: 150, start: 0, duration: 0.18, gain: 0.1, type: "triangle" },
         { freq: 110, start: 0.22, duration: 0.3, gain: 0.1, type: "triangle" },
       ];
-    case "dayWin":
-      return [523, 659, 784, 1047].map((freq, step) => ({ freq, start: step * 0.14, duration: 0.4, gain: 0.1 }));
-    case "dayLose":
+    case "emptyOffice":
       return [392, 330, 262].map((freq, step) => ({ freq, start: step * 0.3, duration: 0.5, gain: 0.09 }));
   }
 }

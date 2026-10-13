@@ -10,7 +10,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 |---|---|---|
 | `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Recognize text** (OCR) reads a picture or the pages of a scanned PDF, in English and Russian, on the device. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
 | `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV, TSV or JSON; send text there from the workbench; export a deck as TSV or JSON; Markdown on both sides; EN/RU. |
-| `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes. Plan the day in hours (the quota is however many Pomodoros fit), open a pixel office with one person per Pomodoro, and work: finish the quota and everyone stays, give a Pomodoro up and someone packs a box and walks out the door. Pause, skip breaks, a full-screen focus mode, the countdown in the tab title, a history of past days (with who left) and a streak. |
+| `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes and lo-fi music, always open in a full-screen pixel office. Press Start and follow the 25/5/15 flow (a break after every Pomodoro, a long one after every fourth); give a Pomodoro up and one of the six people packs a box and walks out the door, and when the office is empty you hire a new team. Music is generated in the browser. Pause, skip breaks, mute, the countdown in the tab title. Nothing is saved. |
 | `/board` | Whiteboard · Доска | A small whiteboard for sketching: rectangles, ellipses, arrows, text and freehand, with select/move/resize, undo and redo, pan and zoom (two fingers, wheel, Space-drag), a grid, several boards, and export to SVG, PNG or a plain-JSON board file you can open again. |
 | `/cv` | CV builder · Конструктор резюме | Fill in a form and get a clean one-column résumé that applicant-tracking systems can read: four templates (classic, modern, minimal, plain), English or Russian headings, A4 or Letter. Print to PDF with selectable text, or download Word (.docx), plain text or a CV file you can reopen; several CVs, live preview. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
@@ -100,7 +100,7 @@ src/
   components/wordle/ Wordle island
   components/cv/     CV builder island (shell, form editor, CvDocument templates)
   components/board/  Whiteboard island (shell with boards, Workspace canvas and toolbar)
-  components/focus/  Focus island (setup, day panel, history; FocusScene hosts Tycoon's Pixi office)
+  components/focus/  Focus island (the room, flow panel; FocusScene hosts Tycoon's Pixi office)
   components/flash/  Flashcards island (deck list, deck editor/import, study session)
   components/alias/  Alias game island (setup, round, results screens)
   components/crossword/ Crossword island (picker, board, grid, clues, completion)
@@ -121,7 +121,7 @@ src/
   lib/send/          "Send to phone" payload codec (size-capped, defensive) + fragment hook
   lib/cv/            schema, section view-model, edit helpers, HTML/DOCX/text export, storage, i18n
   lib/board/         element model, geometry/hit-testing, history, viewport, gestures, SVG output, storage, i18n
-  lib/focus/         day planner, timestamp-based timer state machine, seeded office, history, storage, i18n, sound
+  lib/focus/         timestamp-based flow state machine, seeded office, lo-fi score and Web Audio player, cues, i18n
   lib/flash/         FSRS scheduler, deck model + queues, import parsers, store ops, i18n, sound, storage
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
   lib/crossword/     Generated puzzles + word bank, grid builder, reducer, i18n, sound, storage
@@ -371,35 +371,52 @@ text and multi-column layouts read poorly. To add a language, put its
 
 ### Focus office
 
-`lib/focus/pomodoro.ts` fills the hours with focus and break segments (a long
-break on every Nth, never ending on a break, at most twelve Pomodoros: the
-office has twelve desks); the number of focus segments is the day's quota.
-`timer.ts` is a pure state machine over `now`: *ready → focus → break → ready …
-→ complete*. It measures against `endsAt`, never in ticks, so a throttled
-background tab only delays the display, and breaks start by themselves while the
-next focus waits for the user, so being away never counts as focused time.
-Giving a Pomodoro up (or ending the day early) marks it *missed*.
+The page opens straight into the office, full screen, with nothing to set up and
+nothing saved (a leftover `lab:focus:v1` from the first version is deleted on
+load). Lo-fi starts, the scene appears, and **Start** begins the flow:
+25 minutes of focus, a 5 minute break, and so on, with a 15 minute break after
+every fourth Pomodoro; a break ends by itself and the next Pomodoro begins
+without a click. Giving a Pomodoro up (a confirm dialog names who would leave)
+sends one of the six people out of the door and leaves the timer waiting for
+Start; when the last one has gone the office is empty until you hire a new
+team. Leaving the page mid-Pomodoro asks the browser first (`beforeunload`); if
+the page really goes (`pagehide` with `persisted === false`) the Pomodoro is
+given up. Switching tabs is allowed.
+
+`lib/focus/flow.ts` is a pure state machine over `now`: *ready → focus → break →
+focus …*, or *empty*. It measures against `endsAt`, never in ticks, so a
+throttled background tab only delays the display, and a long absence is caught
+up segment by segment from when each should have ended. The tab title carries
+the countdown. Pause, skip break, mute and volume are the only controls.
+
+**The music** is generated in the browser, so there is no stream, download or
+licence (a third-party stream would also break the local-first, offline and CSP
+rules). `lib/focus/lofi.ts` is the score: for a bar number and a seed it returns
+the notes of a four-bar phrase, deterministically — jazzy seventh and ninth
+chords in one of four loops, a soft strum, a root-note bass, swung hats with a
+kick and snare at 74 BPM, and a sparse pentatonic lead. `lofi-audio.ts` plays it
+with oscillators and filtered noise (an electric-piano pad, sine bass, noise
+snare and hats, a decaying-noise reverb, a vinyl-crackle bed, a dark low-pass
+and a gentle compressor), scheduling three bars ahead of the audio clock so a
+throttled timer cannot cause a gap; `renderOffline` runs the same code in an
+`OfflineAudioContext` for checking. Browsers only allow audio after the user has
+touched the page, so the player tries to start at once, and if it is refused
+shows "Tap anywhere to start the music" and begins on the first tap, click or key
+press (Start counts). Muting silences the music and the short cues
+(`sound.ts`) together.
 
 The office is Software Tycoon's scene, reused: `lib/focus/office.ts` builds a
-synthetic Tycoon `GameState` (one office, one person per Pomodoro) from a key
-mixed from the user's seed, the calendar day and the run count, so the same key
-always gives the same names, faces (a hash of the id), room colours and order of
-leaving. `components/focus/FocusScene.tsx` mounts `OfficeScene` the way
+synthetic Tycoon `GameState` (one office, six people) from a random key, so a
+key always gives the same names, faces (a hash of the id), room colours and order
+of leaving. `components/focus/FocusScene.tsx` mounts `OfficeScene` the way
 `TycoonApp` does (Pixi and the `unsafe-eval` build load on demand; if WebGL is
 missing, a plain list of the team stands in). `OfficeScene` gained two optional
 hooks that leave Tycoon unchanged: `options.label` (the plate over the doors
-shows the countdown instead of the date) and `options.working`, plus
-`leave(id)`, which sends a person out with a cardboard box before they are
-removed from the state. The route (`render-support/walkout.ts`, tested for every
-desk in both arrangements) keeps to free floor: out the chair's side, along the
-aisle or the margin, then the lane under the windows to the doors, never across
-a desk.
-
-Leaving the page mid-Pomodoro asks the browser first (`beforeunload`); if the
-page really goes (`pagehide` with `persisted === false`) the Pomodoro is given
-up. Switching tabs or apps is allowed — advisory, never blocking. A day left
-open past midnight is closed on load, its unplayed Pomodoros missed, and written
-to the history (with the names of who left) under `lab:focus:v1`.
+shows the countdown) and `options.working`, plus `leave(id)`, which sends a
+person out with a cardboard box before they are removed from the state. The route
+(`render-support/walkout.ts`, tested for every desk in both arrangements) keeps
+to free floor: out the chair's side, along the aisle or the margin, then the lane
+under the windows to the doors, never across a desk.
 
 ### Send to phone
 

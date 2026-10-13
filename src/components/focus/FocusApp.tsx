@@ -1,83 +1,88 @@
 import * as React from "react";
+import { Maximize, Minimize, Volume2, VolumeX } from "lucide-react";
 
-import { DayPanel } from "@/components/focus/DayPanel";
-import { DaySetup } from "@/components/focus/DaySetup";
+import { FlowPanel } from "@/components/focus/FlowPanel";
 import { FocusScene } from "@/components/focus/FocusScene";
-import { HistoryPanel } from "@/components/focus/HistoryPanel";
 import { ToolPage } from "@/components/tools/ui";
-import { localDay } from "@/lib/apps/local-day";
+import { withBase } from "@/lib/apps/paths";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import { cueFor } from "@/lib/focus/cues";
-import { applyTimer, dismissDay, rollover, startDay } from "@/lib/focus/day";
+import { abandon, createFlow, HEADCOUNT, isRunning, pause, remainingMs, resume, segmentMinutes, skipBreak, start, tick, type FlowState } from "@/lib/focus/flow";
 import { formatClock, tz } from "@/lib/focus/i18n";
+import { createLofi, type Lofi, type LofiState } from "@/lib/focus/lofi-audio";
 import { buildOffice } from "@/lib/focus/office";
-import { quotaOf, type Plan } from "@/lib/focus/pomodoro";
 import { createFocusSoundEngine, type FocusSoundEngine } from "@/lib/focus/sound";
-import { emptyStore, readFocusStore, writeFocusStore, type FocusStore } from "@/lib/focus/storage";
-import { abandon, endDay, isRunning, pause, remainingMs, resume, skipBreak, start, tick, type TimerState } from "@/lib/focus/timer";
 import type { Employee } from "@/lib/tycoon/sim/types";
-import { cn } from "@/lib/viewer/utils";
 
 const TICK_MS = 250;
+/** Earlier versions saved days and history here; there is nothing to save any more. */
+const OLD_KEY = "lab:focus:v1";
+
+const newKey = () => (Math.random() * 0x100000000) >>> 0;
+
+const ICON_BUTTON =
+  "inline-flex h-9 items-center justify-center gap-2 rounded-md border border-(--border) bg-(--bg) px-3 text-sm font-medium text-(--fg) transition-colors hover:bg-(--surface) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)";
 
 export default function FocusApp() {
   const lang = useAppLang();
-  const [store, setStore] = React.useState<FocusStore>(() => emptyStore(0));
-  const storeRef = React.useRef(store);
-  const [hydrated, setHydrated] = React.useState(false);
+  const [flow, setFlow] = React.useState<FlowState>(createFlow);
+  const flowRef = React.useRef(flow);
+  /** The office is chosen on the client, so the server and the first paint agree. */
+  const [key, setKey] = React.useState<number | null>(null);
   const [now, setNow] = React.useState(() => Date.now());
-  const [focusMode, setFocusMode] = React.useState(false);
   const [tapped, setTapped] = React.useState<Employee | null>(null);
+  const [fullScreen, setFullScreen] = React.useState(false);
+  const [muted, setMuted] = React.useState(false);
+  const [volume, setVolume] = React.useState(0.6);
+  const [music, setMusic] = React.useState<LofiState>("idle");
 
+  const lofiRef = React.useRef<Lofi | null>(null);
   const soundRef = React.useRef<FocusSoundEngine | null>(null);
   soundRef.current ??= createFocusSoundEngine(true);
-  const sound = soundRef.current;
 
-  const commit = React.useCallback((update: (current: FocusStore) => FocusStore) => {
-    const next = update(storeRef.current);
-    if (next === storeRef.current) return;
-    storeRef.current = next;
-    setStore(next);
-    writeFocusStore(next);
+  React.useEffect(() => {
+    setKey(newKey());
+    setNow(Date.now());
+    try {
+      localStorage.removeItem(OLD_KEY);
+    } catch {
+      // Nothing to clean up if storage is unavailable.
+    }
+    const lofi = createLofi();
+    lofiRef.current = lofi;
+    const unsubscribe = lofi.subscribe(setMusic);
+    // Plays at once where the browser allows it; otherwise the first tap starts it.
+    void lofi.start();
+    return () => {
+      unsubscribe();
+      lofi.stop();
+      lofiRef.current = null;
+    };
   }, []);
 
   React.useEffect(() => {
-    // A day left open past midnight is closed (and recorded) before anything shows.
-    const stored = readFocusStore();
-    const loaded = rollover(stored, localDay());
-    // Persist what the rollover did right away, so the closed day is not lost if the tab goes next.
-    if (loaded !== stored) writeFocusStore(loaded);
-    storeRef.current = loaded;
-    setStore(loaded);
-    setNow(Date.now());
-    setHydrated(true);
+    lofiRef.current?.setMuted(muted);
+    soundRef.current?.setEnabled(!muted);
+  }, [muted]);
+  React.useEffect(() => lofiRef.current?.setVolume(volume), [volume]);
+
+  const office = React.useMemo(() => (key === null ? null : buildOffice(key, HEADCOUNT)), [key]);
+
+  /** Apply a transition, with the sound it deserves. */
+  const run = React.useCallback((change: (state: FlowState, at: number) => FlowState) => {
+    const current = flowRef.current;
+    const at = Date.now();
+    const next = change(current, at);
+    setNow(at);
+    if (next === current) return;
+    const cue = cueFor(current, next);
+    if (cue) soundRef.current?.play(cue);
+    flowRef.current = next;
+    setFlow(next);
   }, []);
 
-  React.useEffect(() => sound.setEnabled(store.sound), [sound, store.sound]);
-
-  const today = store.today;
-  const timer = today?.timer ?? null;
-  const quota = timer ? quotaOf(timer.segments) : 0;
-  const office = React.useMemo(() => (today ? buildOffice(today.key, quota) : null), [today?.key, quota]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /** Apply a timer transition, with the sound it deserves. */
-  const run = React.useCallback(
-    (change: (state: TimerState, at: number) => TimerState) => {
-      const current = storeRef.current.today;
-      if (!current) return;
-      const at = Date.now();
-      const next = change(current.timer, at);
-      setNow(at);
-      if (next === current.timer) return;
-      const cue = cueFor(current.timer, next);
-      if (cue) soundRef.current?.play(cue);
-      commit((s) => applyTimer(s, next));
-    },
-    [commit],
-  );
-
   // The clock: timestamps decide, so a throttled background tab only delays the display.
-  const running = timer ? isRunning(timer) : false;
+  const running = isRunning(flow);
   React.useEffect(() => {
     if (!running) return;
     const beat = () => run(tick);
@@ -90,7 +95,7 @@ export default function FocusApp() {
   }, [running, run]);
 
   // Closing or reloading mid-Pomodoro asks first; if the page really goes, the Pomodoro is given up.
-  const focusing = timer?.phase === "focus";
+  const focusing = flow.phase === "focus";
   React.useEffect(() => {
     if (!focusing) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -98,7 +103,7 @@ export default function FocusApp() {
       event.returnValue = "";
     };
     const leave = (event: PageTransitionEvent) => {
-      if (!event.persisted) run(abandon);
+      if (!event.persisted) run((state) => abandon(state));
     };
     window.addEventListener("beforeunload", warn);
     window.addEventListener("pagehide", leave);
@@ -117,38 +122,24 @@ export default function FocusApp() {
     };
   }, []);
   React.useEffect(() => {
-    if (timer && running) document.title = `${formatClock(remainingMs(timer, now))} · ${tz(lang, "title")}`;
+    if (running) document.title = `${formatClock(remainingMs(flow, now))} · ${tz(lang, "title")}`;
     else if (baseTitle.current) document.title = baseTitle.current;
-  }, [timer, running, now, lang]);
+  }, [flow, running, now, lang]);
 
-  // Focus mode: the day fills the screen (and the browser's full screen when allowed).
-  const toggleFocusMode = React.useCallback(() => {
-    setFocusMode((on) => {
-      const next = !on;
-      try {
-        if (next) void document.documentElement.requestFullscreen?.().catch(() => {});
-        else if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-      } catch {
-        // Full screen is a nicety; the overlay works without it.
-      }
-      return next;
-    });
-  }, []);
+  // The office always fills the page; the browser's full screen is an extra.
   React.useEffect(() => {
-    if (!focusMode) return;
-    const onChange = () => {
-      if (!document.fullscreenElement) setFocusMode(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !document.querySelector('[role="dialog"]')) setFocusMode(false);
-    };
+    const onChange = () => setFullScreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onChange);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("fullscreenchange", onChange);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [focusMode]);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggleFullScreen = () => {
+    try {
+      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+      else void document.documentElement.requestFullscreen?.().catch(() => {});
+    } catch {
+      // Full screen is a nicety.
+    }
+  };
 
   // A person you tap says hello for a few seconds.
   React.useEffect(() => {
@@ -157,78 +148,93 @@ export default function FocusApp() {
     return () => window.clearTimeout(id);
   }, [tapped]);
 
-  const openDay = (plan: Plan) => {
-    commit((s) => startDay(s, plan, localDay()));
-    setFocusMode(false);
+  const hire = () => {
+    flowRef.current = createFlow();
+    setFlow(flowRef.current);
+    setKey(newKey());
   };
 
-  // The plate over the office doors: time left (frozen while paused), or the next segment's length.
-  const active = timer?.phase === "focus" || timer?.phase === "break";
-  const chipMs = !timer ? 0 : active ? remainingMs(timer, now) : timer.phase === "ready" ? (timer.segments[timer.index]?.minutes ?? 0) * 60_000 : 0;
-  const chipLabel = timer?.phase === "complete" ? "—" : formatClock(chipMs);
+  // The plate over the office doors: time left (frozen while paused), or the length of what is next.
+  const active = flow.phase === "focus" || flow.phase === "break";
+  const chipMs = active ? remainingMs(flow, now) : flow.phase === "ready" ? segmentMinutes(flow) * 60_000 : 0;
+  const chipLabel = flow.phase === "empty" ? "—" : formatClock(chipMs);
 
-  const role = (person: Employee) =>
-    tz(lang, person.role === "designer" ? "roleDesigner" : person.role === "tester" ? "roleTester" : "roleDeveloper");
+  const role = (person: Employee) => tz(lang, person.role === "designer" ? "roleDesigner" : person.role === "tester" ? "roleTester" : "roleDeveloper");
 
-  let body: React.ReactNode = null;
-  if (hydrated) {
-    if (!today || !timer || !office) {
-      body = (
-        <>
-          <DaySetup
-            lang={lang}
-            plan={store.plan}
-            sound={store.sound}
-            onOpen={openDay}
-            onSound={(on) => commit((s) => ({ ...s, sound: on }))}
-          />
-          <HistoryPanel lang={lang} history={store.history} today={localDay()} />
-        </>
-      );
-    } else {
-      body = (
-        <>
-          <div className={cn(focusMode ? "fixed inset-0 z-60 flex flex-col gap-3 overflow-auto bg-(--bg) p-4" : "flex flex-col gap-4")}>
-            <FocusScene
-              lang={lang}
-              office={office}
-              fired={timer.missed}
-              working={timer.phase === "focus" && !timer.paused}
-              label={chipLabel}
-              onSelect={setTapped}
-              className={focusMode ? "min-h-48 flex-1" : "h-[46dvh] max-h-[32rem] min-h-64"}
-            />
-            <p className="min-h-5 text-center text-sm text-(--muted-fg)" role="status">
-              {tapped ? tz(lang, "tapped", { name: tapped.name, role: role(tapped) }) : ""}
-            </p>
-            <DayPanel
-              lang={lang}
-              timer={timer}
-              office={office}
-              now={now}
-              focusMode={focusMode}
-              onStart={() => run(start)}
-              onPause={() => run(pause)}
-              onResume={() => run(resume)}
-              onSkipBreak={() => run(skipBreak)}
-              onGiveUp={() => run(abandon)}
-              onEndDay={() => run((state) => endDay(state))}
-              onNewDay={() => {
-                setFocusMode(false);
-                commit(dismissDay);
-              }}
-              onToggleFocusMode={toggleFocusMode}
-            />
-          </div>
-          {!focusMode && <HistoryPanel lang={lang} history={store.history} today={localDay()} />}
-        </>
-      );
-    }
+  if (!office) {
+    return (
+      <ToolPage title={tz(lang, "title")} tagline={tz(lang, "tagline")}>
+        <p className="text-sm text-(--muted-fg)">{tz(lang, "loading")}</p>
+      </ToolPage>
+    );
   }
 
   return (
-    <ToolPage title={tz(lang, "title")} tagline={tz(lang, "tagline")}>
-      {body}
-    </ToolPage>
+    <div className="fixed inset-0 z-60 flex flex-col gap-3 overflow-auto bg-(--bg) p-4" data-testid="focus-room">
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="mr-auto text-lg font-bold">{tz(lang, "title")}</h1>
+        <div className="flex items-center gap-2">
+          <button type="button" className={ICON_BUTTON} aria-label={tz(lang, muted ? "unmute" : "mute")} onClick={() => setMuted((m) => !m)}>
+            {muted ? <VolumeX aria-hidden="true" className="size-4" /> : <Volume2 aria-hidden="true" className="size-4" />}
+          </button>
+          <label className="flex items-center gap-2 text-xs text-(--muted-fg)">
+            <span className="sr-only sm:not-sr-only">{tz(lang, "music")}</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              aria-label={tz(lang, "volume")}
+              className="w-24 accent-(--accent)"
+              onChange={(event) => setVolume(Number(event.target.value))}
+            />
+          </label>
+        </div>
+        <button type="button" className={ICON_BUTTON} onClick={toggleFullScreen}>
+          {fullScreen ? <Minimize aria-hidden="true" className="size-4" /> : <Maximize aria-hidden="true" className="size-4" />}
+          <span className="hidden sm:inline">{tz(lang, fullScreen ? "exitFullScreen" : "fullScreen")}</span>
+        </button>
+        <a href={withBase("/")} className={ICON_BUTTON}>
+          {tz(lang, "leave")}
+        </a>
+      </div>
+
+      {music === "blocked" && (
+        <p className="text-center text-xs text-(--muted-fg)" role="status">
+          {tz(lang, "musicBlocked")}
+        </p>
+      )}
+
+      <FocusScene
+        lang={lang}
+        office={office}
+        fired={flow.missed}
+        working={flow.phase === "focus" && !flow.paused}
+        label={chipLabel}
+        onSelect={setTapped}
+        className="min-h-48 flex-1"
+      />
+      <p className="min-h-5 text-center text-sm text-(--muted-fg)" role="status">
+        {tapped ? tz(lang, "tapped", { name: tapped.name, role: role(tapped) }) : ""}
+      </p>
+      <FlowPanel
+        lang={lang}
+        flow={flow}
+        office={office}
+        now={now}
+        onStart={() => {
+          // A click is the gesture the browser wants before it lets music play.
+          void lofiRef.current?.start();
+          run(start);
+        }}
+        onPause={() => run(pause)}
+        onResume={() => run(resume)}
+        onSkipBreak={() => run(skipBreak)}
+        onGiveUp={() => run((state) => abandon(state))}
+        onHire={hire}
+      />
+      <p className="text-center text-xs text-(--muted-fg)">{tz(lang, "musicNote")}</p>
+    </div>
   );
 }

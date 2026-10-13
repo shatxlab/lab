@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { OFFICE_ID, buildOffice, officeKey, staffAfter } from "@/lib/focus/office";
+import { OFFICE_ID, buildOffice, staffAfter } from "@/lib/focus/office";
 import { appearanceFor } from "@/lib/tycoon/render-support/characters";
-
-describe("officeKey", () => {
-  it("is deterministic and differs by seed, day and run", () => {
-    expect(officeKey(7, 20_000, 0)).toBe(officeKey(7, 20_000, 0));
-    const keys = new Set([officeKey(7, 20_000, 0), officeKey(8, 20_000, 0), officeKey(7, 20_001, 0), officeKey(7, 20_000, 1)]);
-    expect(keys.size).toBe(4);
-  });
-});
 
 describe("buildOffice", () => {
   it("makes the same people from the same key", () => {
@@ -20,15 +12,15 @@ describe("buildOffice", () => {
     expect(a.state.offices[0]!.theme).toBe(b.state.offices[0]!.theme);
   });
 
-  it("makes different people on different days", () => {
-    const a = buildOffice(officeKey(1, 100), 6);
-    const b = buildOffice(officeKey(1, 101), 6);
+  it("makes different people from different keys", () => {
+    const a = buildOffice(123_456_789, 6);
+    const b = buildOffice(3_987_654_321, 6);
     expect(a.roster.map((p) => p.name)).not.toEqual(b.roster.map((p) => p.name));
     const faces = (office: ReturnType<typeof buildOffice>) => office.roster.map((p) => JSON.stringify(appearanceFor(p.id)));
     expect(faces(a)).not.toEqual(faces(b));
   });
 
-  it("seats one person per Pomodoro, all in the one office, with unique ids", () => {
+  it("seats everyone in the one office, with unique ids", () => {
     const office = buildOffice(99, 9);
     expect(office.roster).toHaveLength(9);
     expect(office.state.employees).toHaveLength(9);

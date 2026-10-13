@@ -250,7 +250,7 @@ export function ActionButton({
   variant = "primary",
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" }) {
+}: React.ComponentProps<"button"> & { variant?: "primary" | "secondary" }) {
   return (
     <button
       type="button"

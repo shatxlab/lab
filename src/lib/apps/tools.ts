@@ -7,7 +7,7 @@ import { withBase } from "@/lib/apps/paths";
  * The landing grid, the command palette and (later) the PWA manifest
  * shortcuts all read this list, so adding a tool means adding one entry here.
  */
-export type ToolCategory = "files" | "games";
+export type ToolCategory = "files" | "productivity" | "games";
 
 export type Localized = Record<AppLang, string>;
 
@@ -27,10 +27,11 @@ export interface ToolEntry {
   seo: { title: string; description: string };
 }
 
-export const CATEGORY_ORDER: readonly ToolCategory[] = ["files", "games"];
+export const CATEGORY_ORDER: readonly ToolCategory[] = ["files", "productivity", "games"];
 
 export const CATEGORY_TITLES: Record<ToolCategory, Localized> = {
   files: { en: "Files", ru: "Файлы" },
+  productivity: { en: "Study & focus", ru: "Учёба и фокус" },
   games: { en: "Games", ru: "Игры" },
 };
 
@@ -54,6 +55,23 @@ export const TOOLS: readonly ToolEntry[] = [
       title: "PDF, Word, Excel, EPUB & image tools",
       description:
         "View PDF, Word, Excel and images, read EPUBs, merge, split and sign PDFs, convert data and make QR codes — free, private, in your browser.",
+    },
+  },
+  {
+    id: "flash",
+    path: "/flash",
+    category: "productivity",
+    files: { en: "Decks · spaced repetition · CSV import", ru: "Колоды · интервальные повторения · импорт CSV" },
+    title: { en: "Flashcards", ru: "Карточки" },
+    description: {
+      en: "Study decks with spaced repetition: a few minutes a day, import from CSV or a pasted list, Markdown on both sides.",
+      ru: "Колоды с интервальными повторениями: несколько минут в день, импорт из CSV или списка, Markdown с обеих сторон.",
+    },
+    keywords: "flashcards cards deck study spaced repetition anki fsrs memorize vocabulary csv карточки колода учить повторение запоминание слова словарь",
+    seo: {
+      title: "Flashcards with spaced repetition",
+      description:
+        "Study flashcard decks with spaced repetition in your browser — import from CSV or a pasted list, Markdown cards, EN/RU. Free, private and offline.",
     },
   },
   {

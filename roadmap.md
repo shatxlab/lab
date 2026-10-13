@@ -28,7 +28,7 @@ scope: workbench itself stays dep-free and terminal-rule-scoped):
 | # | Tool | Page vs workbench | New deps | Why this order |
 |---|---|---|---|---|
 | 1 | ~~Device bridge~~ **parked 2026-10-13** | standalone `/bridge` | none | Not needed yet; spec and feasibility notes kept in §1 |
-| 2 | Flashcards | standalone `/flash` | none | Small, daily-use, proves the standalone pattern |
+| 2 | ~~Flashcards~~ **shipped 2026-10-13** | standalone `/flash` | none | Proved the standalone pattern; see §2 |
 | 3 | Focus office | standalone `/focus` | none | Mood piece, perfect offline PWA shortcut |
 | 4 | Whiteboard | standalone `/board` | none | SVG architecture, ~25 KB target |
 | 5 | CV builder | standalone `/cv` | none (reuses `lib/docx`) | Print-to-PDF engine keeps it cheap |
@@ -223,33 +223,26 @@ reassemble/integrity, i18n. Two-tab e2e is manual (jsdom has no RTC).
 
 ---
 
-## 2. Flashcards (`/flash`)
+## 2. Flashcards (`/flash`) — SHIPPED 2026-10-13
 
-A *"50 cards on the bus"* study app — one deck in hand, five minutes, done.
-Not an Anki clone. Mobile-first, EN/RU, sounds follow the `lib/wordle/sound`
-pattern.
+Folded into `README.md` ("Flashcards" and the tool table). Decisions made
+during the build, and what is still open:
 
-**Storage.** `lab:flash:v1` — decks, cards, schedule, stats. Covered by the
-settings backup automatically; moveable between devices via the bridge.
-
-**Import paths.**
-- CSV/TSV via the workbench (add a "Send to Flashcards" action on text assets;
-  map `front,back,tags` columns);
-- pasted text, one `term — definition` per line;
-- manual editor; Markdown on both sides (reuses `marked`).
-
-**Scheduling.** FSRS-lite, ~40 lines: per-card stability/difficulty, four
-grades (again/hard/good/easy), next-due intervals. Plus a no-schedule **cram**
-mode. Stats kept minimal: due today, streak, learned count.
-
-**Explicitly v2/never.** v2 maybe: images, audio, `{{cloze}}`. Never: cloud
-sync, accounts, plugins.
-
-**Implementation.** `src/components/flash/` (deck list, study, editor, stats)
-+ `src/lib/flash/` (fsrs.ts, deck model, import parsers, i18n, storage).
-
-**Tests.** FSRS math (golden intervals), import parsers (CSV variants, line
-format), storage round-trip, reducer, axe.
+- **Scheduler:** FSRS-4.5 with the published default weights and no learning
+  steps (not a hand-rolled "lite"); golden intervals are in
+  `tests/flash/fsrs.test.ts`. *Again* requeues the card a few cards later in
+  the same session but schedules it once; cram never changes the schedule.
+- **"Learned"** on the stats row means graded at least once.
+- **New category:** the tool lives under a new `productivity` category
+  ("Study & focus" / «Учёба и фокус») in `lib/apps/tools.ts`, meant to also
+  hold Focus, Whiteboard and CV.
+- **Imports** are in-page only (paste, or a `.csv/.tsv/.txt` file). Not built:
+  the workbench "Send to Flashcards" action on text assets — worth adding as a
+  small workbench follow-up, no bridge needed. Deck moves between devices use
+  TSV export/import or the settings backup (the bridge is parked).
+- **Still v2/never:** images, audio, `{{cloze}}`; never cloud sync, accounts,
+  plugins. Also open: deck-level tags/filters in study, per-deck new-card limits.
+- `ActionButton` now accepts `ref` (typed as `ComponentProps<"button">`).
 
 ---
 

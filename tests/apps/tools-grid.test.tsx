@@ -37,7 +37,7 @@ describe("ToolsGrid", () => {
 
   it("groups the tools by category and lists every registered tool", () => {
     const html = renderToStaticMarkup(<ToolsGrid />);
-    for (const heading of ["Files", "Games"]) expect(html).toContain(heading);
+    for (const heading of ["Files", "Study &amp; focus", "Games"]) expect(html).toContain(heading);
     for (const tool of TOOLS) expect(html).toContain(`href="${toolHref(tool)}"`);
   });
 });

@@ -9,6 +9,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | Route | Tool | What it does |
 |---|---|---|
 | `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
+| `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV or TSV (`front, back, tags`); export a deck as TSV; Markdown on both sides; EN/RU. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
@@ -94,6 +95,7 @@ src/
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/wordle/ Wordle island
+  components/flash/  Flashcards island (deck list, deck editor/import, study session)
   components/alias/  Alias game island (setup, round, results screens)
   components/crossword/ Crossword island (picker, board, grid, clues, completion)
   components/couples/ Couples game island (menu, setup, play, summary)
@@ -109,6 +111,7 @@ src/
   lib/pdf/           page-range parsing and pdf-lib operations
   lib/workbench/     asset model, capability registry, operation registry, i18n
   lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
+  lib/flash/         FSRS scheduler, deck model + queues, import parsers, store ops, i18n, sound, storage
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
   lib/crossword/     Generated puzzles + word bank, grid builder, reducer, i18n, sound, storage
   lib/couples/       Seed vocabulary + prompt builder, deck, i18n, sound, storage
@@ -135,7 +138,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  convert/ qr/ image/ pdf/ wordle/  logic tests per tool
+  convert/ qr/ image/ pdf/ wordle/ flash/  logic tests per tool (flash/ also has the jsdom flow tests)
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers
@@ -221,6 +224,27 @@ against the sim as a headless balance check, and
 `node scripts/tycoon/e2e.mjs` (after `npm run build`) drives real Chrome
 through the game's scenarios; its PWA scenario from the standalone app is not
 ported because the lab's own service worker covers it.
+
+### Flashcards
+
+`lib/flash/fsrs.ts` is the FSRS-4.5 memory model with its published default
+weights and no learning steps: each card carries a stability and a difficulty,
+and every review updates both. `lib/flash/model.ts` is the day-based deck
+model (`localDay()` gives the local calendar day, so "tomorrow" follows the
+user's midnight), the study queue (overdue cards first, then the daily
+new-card allowance), cram, streaks and `recordReview`. A card answered
+*Again* returns a few cards later in the same session but is scheduled only
+once; cram never touches the schedule.
+
+Everything is stored under `lab:flash:v1`, so the settings backup covers it;
+`storage.ts` re-validates the whole shape on read (limits: 100 decks, 5 000
+cards per deck, 4 000 characters per side). Cards are rendered with the
+viewer's sanitising Markdown renderer, loaded on first use. Imports are
+detected, not chosen (`parse.ts`): tab-separated rows, CSV with an optional
+`front,back,tags` header (comma or semicolon), or one `term — definition` per
+line; `toTsv` writes a deck back out in a form `parseImport` reads. Logic tests
+are in `tests/flash/` (golden FSRS intervals, parsers, queues, storage) with a
+jsdom flow test of the whole island.
 
 ### Branding and link previews
 

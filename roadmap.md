@@ -308,9 +308,8 @@ no real-world anything.)
   shortfall → the walkouts, visible in the day's record.
 - History: a scrollable log of past days (staffed vs fired, minutes focused,
   streak), like a garden diary. The dead-tree memory of Forest, in office form.
-- Optional **merciful mode** toggle: missed Pomodoros send people *home early*
-  instead of firing them, for users who find the firing theme harsh. Default:
-  as designed above.
+- **No merciful / "go home early" mode** (owner, 2026-10-13): a missed Pomodoro
+  is a walkout, full stop.
 
 **Scene: reuse Software Tycoon's** (decided 2026-10-13). The Pixi `OfficeScene`
 (lazy-loaded; art in `assets/pixeloffice/`, CC0) already draws the room, desks,
@@ -321,8 +320,8 @@ synthetic `GameState` (one office, N employees; `office.project` non-null while 
 Pomodoro runs makes people type; low `morale` shows the red "!" marker). Small
 additions to `OfficeScene`, to be done without changing Tycoon's behaviour:
  an optional label for the clock chip (shows the countdown instead of the game
- date), and a `leave(employeeId, mode)` animation (the person stands up with a
- box and exits toward the door; `mode: 'home'` for merciful mode). Pixi is
+ date), and a `leave(employeeId)` animation (the person stands up with a
+ box and exits toward the door). Pixi is
  already a lazy dependency, so Focus adds no new package; the CSP
 `worker-src blob:` is already in place. Tap a person for a small reaction.
 

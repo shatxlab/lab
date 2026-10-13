@@ -34,12 +34,14 @@ export const tz = createTranslator({
     musicNote: "Generated here as you listen: no stream, no download.",
 
     giveUpTitle: "Give up this Pomodoro?",
-    giveUpBody: "{name} will pack a box and leave.",
+    giveUpBody: "{name} will be fired! They'll leave with their box.",
     keepFocusing: "Keep focusing",
     giveUpYes: "Give up",
 
     emptyTitle: "The office is empty",
-    emptyBody: "Everyone has left. You finished {n} Pomodoros, {min} minutes of focus.",
+    emptyBody: "Everyone has been fired. You finished {n} Pomodoros, {min} minutes of focus.",
+    firedAlert: "{name} just got fired! Keep up the work or {next} is gonna be next!",
+    firedAlertLast: "{name} just got fired! Keep up the work!",
     hire: "Hire a new team",
     roleDesigner: "Designer",
     roleDeveloper: "Developer",
@@ -78,12 +80,14 @@ export const tz = createTranslator({
     musicNote: "Создаётся здесь, пока вы слушаете: без потока и без загрузки.",
 
     giveUpTitle: "Бросить этот помодоро?",
-    giveUpBody: "{name} соберёт вещи в коробку и уйдёт.",
+    giveUpBody: "{name} будет уволен! Вещи — в коробку, и на выход.",
     keepFocusing: "Продолжить работу",
     giveUpYes: "Бросить",
 
     emptyTitle: "Офис опустел",
-    emptyBody: "Все ушли. Вы сделали помодоро: {n}, минут фокуса: {min}.",
+    emptyBody: "Всех уволили. Вы сделали помодоро: {n}, минут фокуса: {min}.",
+    firedAlert: "Уволили: {name}! Держите темп, иначе следующим будет {next}!",
+    firedAlertLast: "Уволили: {name}! Держите темп!",
     hire: "Нанять новую команду",
     roleDesigner: "Дизайнер",
     roleDeveloper: "Разработчик",

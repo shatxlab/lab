@@ -251,7 +251,7 @@ describe("FocusApp — failing the flow", () => {
   it("names who would leave, and keeps everyone if the user keeps focusing", async () => {
     const view = await open();
     const dialog = await giveUp();
-    expect(dialog.textContent).toMatch(/will pack a box and leave/);
+    expect(dialog.textContent).toMatch(/will be fired!/);
     const names = [...document.querySelectorAll("[data-person]")].map((n) => (n as HTMLElement).dataset.person!);
     expect(names.some((name) => dialog.textContent!.includes(name))).toBe(true);
     await click(button(tz("en", "keepFocusing")));
@@ -265,6 +265,8 @@ describe("FocusApp — failing the flow", () => {
     await giveUp();
     await click(button(tz("en", "giveUpYes")));
     expect(fired()).toBe(1);
+    const alert = document.querySelector('[role="alert"]');
+    expect(alert?.textContent).toMatch(/just got fired! Keep up the work or .+ is gonna be next!/);
     expect(text()).toContain(tz("en", "phaseReady"));
     expect(timerText()).toBe("25:00");
     expect(button(tz("en", "start"))).toBeTruthy();

@@ -148,6 +148,27 @@ export default function FocusApp() {
     return () => window.clearTimeout(id);
   }, [tapped]);
 
+  // Someone was just fired: say so across the top, and name who is next.
+  const [firedAlert, setFiredAlert] = React.useState<string | null>(null);
+  const firedBefore = React.useRef(0);
+  React.useEffect(() => {
+    const fired = flow.missed;
+    if (fired <= firedBefore.current) {
+      firedBefore.current = fired;
+      return;
+    }
+    firedBefore.current = fired;
+    const name = (id: number | undefined) => office?.roster.find((person) => person.id === id)?.name ?? "";
+    const gone = name(office?.fireOrder[fired - 1]);
+    const next = fired < HEADCOUNT ? name(office?.fireOrder[fired]) : "";
+    setFiredAlert(next ? tz(lang, "firedAlert", { name: gone, next }) : tz(lang, "firedAlertLast", { name: gone }));
+  }, [flow.missed, office, lang]);
+  React.useEffect(() => {
+    if (!firedAlert) return;
+    const id = window.setTimeout(() => setFiredAlert(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [firedAlert]);
+
   const hire = () => {
     flowRef.current = createFlow();
     setFlow(flowRef.current);
@@ -171,6 +192,11 @@ export default function FocusApp() {
 
   return (
     <div className="fixed inset-0 z-60 flex flex-col gap-3 overflow-auto bg-(--bg) p-4" data-testid="focus-room">
+      {firedAlert && (
+        <div role="alert" className="pointer-events-none fixed inset-x-0 top-4 z-70 flex justify-center px-4">
+          <p className="rounded-md border border-(--warning) bg-(--surface) px-4 py-2 text-center text-sm font-semibold text-(--warning) shadow-lg">{firedAlert}</p>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-auto text-lg font-bold">{tz(lang, "title")}</h1>
         <div className="flex items-center gap-2">

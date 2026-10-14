@@ -31,6 +31,20 @@ function openEdges(frame: Pixels, left: number): string[] {
   return open
 }
 
+/**
+ * `openEdges` of a posed frame. The one place a seated person is left open is the front of their leg, the side
+ * that faces the desk: it has no outline there, because the desk has its own edge beside it.
+ */
+function openEdgesPosed(frame: Pixels, character: number, pose: Pose): string[] {
+  if (pose === 'carry') return openEdges(frame, POSE_PAD.left)
+  const leg = posePatches(character, 'sit')[1]!
+  const front = leg.x + Math.max(...leg.rows.map((row) => row.length)) - 1
+  return openEdges(frame, POSE_PAD.left).filter((at) => {
+    const [x, y] = at.split(',').map(Number)
+    return !(x === front && y >= leg.y && y < leg.y + leg.rows.length)
+  })
+}
+
 const cases = Array.from({ length: CHARACTER_COUNT }, (_, character) => POSE_NAMES.map((pose) => ({ character, pose }))).flat()
 
 describe('posePatches', () => {
@@ -39,9 +53,9 @@ describe('posePatches', () => {
     for (const patch of posePatches(character, pose)) {
       expect(patch.x).toBeGreaterThanOrEqual(-POSE_PAD.left)
       expect(patch.y).toBeGreaterThanOrEqual(0)
-      expect(patch.y + patch.rows.length).toBeLessThanOrEqual(height)
+      expect(patch.y + patch.rows.length).toBeLessThanOrEqual(height + POSE_PAD.bottom)
       for (const row of patch.rows) {
-        expect(row).toMatch(/^[. a-mSD]+$/)
+        expect(row).toMatch(/^[. a-pSD]+$/)
         expect(patch.x + row.length).toBeLessThanOrEqual(width + POSE_PAD.right)
       }
     }
@@ -50,7 +64,7 @@ describe('posePatches', () => {
   it.each(cases)('character $character keeps a closed outline when they $pose', ({ character, pose }) => {
     // The pack outlines its people all round; an arm with a gap in its outline looks torn at this size.
     const frame = poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0))
-    expect(openEdges(frame, POSE_PAD.left)).toEqual([])
+    expect(openEdgesPosed(frame, character, pose)).toEqual([])
   })
 
   it('changes the picture for every pose, and the two typing frames differ', () => {
@@ -68,10 +82,32 @@ describe('posePatches', () => {
     if (!eyes) return
     const open = poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0))
     const shut = poseFrame(standing(character), [...posePatches(character, pose), eyes], shirtColors(character, 0))
-    expect(openEdges(shut, POSE_PAD.left)).toEqual([])
+    expect(openEdgesPosed(shut, character, pose)).toEqual([])
     expect([...shut.data].join()).not.toBe([...open.data].join())
     // a blink only ever paints over the face: nothing that was clear becomes coloured
     for (let i = 3; i < shut.data.length; i += 4) if (open.data[i] === 0) expect(shut.data[i]).toBe(0)
+  })
+
+  it.each(cases.filter(({ pose }) => pose !== 'carry'))('character $character sits with one leg forward, not on two feet, when they $pose', ({ character, pose }) => {
+    // The pack's people end in two feet side by side, which at a desk looks like standing on the chair: seated
+    // they cross the floor with a single leg running forward, so the bottom row is one run of pixels.
+    const frame = poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0))
+    const row = (y: number) => Array.from({ length: frame.width }, (_, x) => pixel(frame, x, y)[3] > 0)
+    const last = [...Array(frame.height).keys()].reverse().find((y) => row(y).some(Boolean))!
+    const runs = row(last).filter((on, x, all) => on && !all[x - 1]).length
+    expect(runs).toBe(1)
+    const feet = standing(character)
+    const standingRuns = Array.from({ length: feet.width }, (_, x) => pixel(feet, x, feet.height - 1)[3] > 0).filter((on, x, all) => on && !all[x - 1]).length
+    expect(standingRuns).toBe(2)
+  })
+
+  it.each(Array.from({ length: CHARACTER_COUNT }, (_, character) => ({ character })))('character $character carries a box in front of them and keeps both feet', ({ character }) => {
+    const frame = poseFrame(standing(character), posePatches(character, 'carry'), shirtColors(character, 0))
+    const cardboard = [0xa8, 0x74, 0x3a]
+    const boxes = Array.from({ length: frame.width * frame.height }, (_, i) => [...frame.data.subarray(i * 4, i * 4 + 3)]).filter((p) => p.join() === cardboard.join())
+    expect(boxes.length).toBeGreaterThan(2)
+    const feet = Array.from({ length: frame.width }, (_, x) => pixel(frame, x, standing(character).height - 1)[3] > 0).filter((on, x, all) => on && !all[x - 1]).length
+    expect(feet).toBe(2)
   })
 
   it('outlines the standing frames all round too, which is what the poses are held to', () => {
@@ -86,7 +122,7 @@ describe('poseFrame', () => {
   it('pads the canvas on both sides and keeps the sprite in the middle', () => {
     const frame = poseFrame(base, [], shirt)
     expect(frame.width).toBe(POSE_PAD.left + 3 + POSE_PAD.right)
-    expect(frame.height).toBe(2)
+    expect(frame.height).toBe(2 + POSE_PAD.bottom)
     expect(pixel(frame, POSE_PAD.left + 1, 1)).toEqual([13, 14, 15, 255])
     expect(pixel(frame, 0, 0)).toEqual([0, 0, 0, 0])
     expect(pixel(frame, POSE_PAD.left + 3, 0)).toEqual([0, 0, 0, 0])

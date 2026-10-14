@@ -1,20 +1,29 @@
 /**
  * Poses for the five character sprites. The pack gives each person one frame, standing with their arms down;
- * every other pose is that frame with patches of pixels drawn over it: first the arms that hang at their sides
- * are taken off the torso, then the arms are drawn where the pose has them. Everything else (face, hair, legs)
- * stays as the pack drew it, and a person who is not doing anything is drawn from the plain frame.
+ * every other pose is that frame with patches of pixels drawn over it: first the legs come off, because a
+ * person at a desk is hidden from the hips down by their chair and desk and is drawn sitting on it, then the
+ * arms that hang at their sides are taken off the torso, then the arms are drawn where the pose has them.
+ * Everything else (face, hair) stays as the pack drew it. Only someone standing, as when they walk out with
+ * their box, is drawn from the plain frame, legs and all, or carrying the box in both hands.
  *
  * The patches are generated from each sprite's pixels (shoulders, chin, mouth), so all five characters do a
  * pose the same way.
  */
 import type { Rgb } from './characters'
 
-export type Pose = 'typeA' | 'typeB' | 'think' | 'sip' | 'stretch'
+/** `sit` is sitting at the desk with nothing to do: the arms hang as the pack drew them, the legs are gone. */
+export type Pose = 'sit' | 'typeA' | 'typeB' | 'think' | 'sip' | 'stretch' | 'carry'
 
-export const POSE_NAMES: readonly Pose[] = ['typeA', 'typeB', 'think', 'sip', 'stretch']
+export const POSE_NAMES: readonly Pose[] = ['sit', 'typeA', 'typeB', 'think', 'sip', 'stretch', 'carry']
 
-/** Clear columns added on each side of a pose's frame, so arms can reach past the sprite's edges. */
-export const POSE_PAD = { left: 3, right: 5 } as const
+/** The poses at a desk that move the arms. */
+type Move = Exclude<Pose, 'sit' | 'carry'>
+
+/**
+ * Clear rows and columns added around a pose's frame: on each side, so arms can reach past the sprite's edges, and
+ * below, so a seated leg can run further down than the pack's standing feet.
+ */
+export const POSE_PAD = { left: 3, right: 5, bottom: 2 } as const
 
 export interface Patch {
   /** Where the patch's top-left pixel goes, in the sprite's own coordinates (x can be negative, into the padding). */
@@ -42,6 +51,9 @@ export const SPRITE_COLORS: Readonly<Record<string, Rgb>> = {
   k: [0x38, 0xb7, 0x64], // green
   l: [0x41, 0xa6, 0xf6], // sky
   m: [0x25, 0x71, 0x79], // teal
+  n: [0xa8, 0x74, 0x3a], // cardboard
+  o: [0xc8, 0x93, 0x5a], // a box's lid
+  p: [0xe8, 0xc0, 0x8a], // tape
 }
 
 /**
@@ -64,8 +76,67 @@ const TORSOS: readonly Readonly<Record<'near' | 'far', Patch>>[] = [
   { near: { x: 12, y: 14, rows: ['D', 'D', 'D', 'D'] }, far: { x: 5, y: 13, rows: ['.DS', 'DSS', 'DSS', 'DSS', '.DS'] } },
 ]
 
+/**
+ * A leg seen from the side: a thigh running forward from the hips, a shin `shin` rows long, then a boot in the colour of their standing shoes, below the
+ * hem at row `hem` (the thigh's top edge is outlined over the hem). The sole ends two rows below the pack's feet. It ends 7 columns from `x`, its
+ * last column against the desk's edge, so it reads as running in under the desk. That front, the side that faces the
+ * desk, has no outline: the desk has its own edge there, and the two would make a heavy double line.
+ */
+function legs(x: number, hem: number, pants: string, boots: string, shin: 1 | 2): Patch {
+  const rows = ['.....aa', 'aPPPPPP', '.aaaaPP', ...Array<string>(shin - 1).fill('....aPP'), '....aBB', '....aBB', '....aaa']
+  return { x, y: hem, rows: rows.map((row) => row.replaceAll('P', pants).replaceAll('B', boots)) }
+}
+
+/**
+ * Each character without legs, for sitting: the legs are cleared and the hem of the shirt (or skirt) is closed
+ * with the outline, so the body ends in a flat edge where the chair and desk would hide the rest. The chair
+ * shows below it, so they sit on it rather than hover over it.
+ */
+const SEATED: readonly (readonly Patch[])[] = [
+  // 0: the shirt already ends in an outline row
+  [{ x: 2, y: 19, rows: Array<string>(4).fill(' '.repeat(11)) }, legs(5, 18, 'h', 'b', 2)],
+  // 1: the outline closes the shirt where the legs start
+  [{ x: 2, y: 19, rows: ['.aaaaaaaa.', ...Array<string>(4).fill(' '.repeat(10))] }, legs(6, 19, 'b', 'c', 2)],
+  // 2: the same, under a shorter shirt
+  [{ x: 1, y: 16, rows: ['.aaaaaaaaa', ...Array<string>(4).fill(' '.repeat(10))] }, legs(4, 16, 'h', 'c', 2)],
+  // 3: the skirt's hem is the outline
+  [{ x: 4, y: 20, rows: Array<string>(3).fill(' '.repeat(10)) }, legs(6, 19, 'e', 'c', 1)],
+  // 4: drawn like 3
+  [{ x: 4, y: 20, rows: Array<string>(3).fill(' '.repeat(10)) }, legs(6, 19, 'e', 'c', 1)],
+]
+
+/** The cardboard box a person carries out when they leave, a pixel of outline all round, with the tape on its lid. */
+const BOX: readonly string[] = ['aaaaaaa', 'aoooooa', 'annnnna', 'annnnna', 'annnnna', 'aaaaaaa']
+
+/**
+ * Where each character holds the box, facing right: the top-left pixel of the box in the sprite's own coordinates,
+ * and the letter of their skin. The box is held at its two ends, between the hands: the near arm comes down from
+ * the shoulder to a hand on the end by the body, in front of the box; the far hand grips the other end from
+ * behind it, so only its fingers show past the box's edge.
+ */
+const CARRY: readonly (readonly [x: number, y: number, skin: string])[] = [
+  [9, 14, 'e'],
+  [9, 15, 'j'],
+  [8, 12, 'j'],
+  [11, 14, 'j'],
+  [11, 14, 'j'],
+]
+
+/** The arm patches of someone carrying a box: the far hand, which goes behind the box, the box, and the near arm over it. */
+function carry(character: number): readonly Patch[] {
+  const [x, y, skin] = CARRY[character]!
+  const torso = TORSOS[character]!
+  return [
+    torso.near,
+    torso.far,
+    { x: x + 7, y: y + 1, rows: ['aaa', `${skin}${skin}a`, `${skin}${skin}a`, 'aaa'] },
+    { x, y, rows: BOX },
+    { x: x - 1, y: y - 1, rows: ['.DSa', '.DSa', `a${skin}${skin}a`, `a${skin}${skin}a`, '.aa.'] },
+  ]
+}
+
 /** Which arms each pose moves: the near one (on the keyboard's side) or both. */
-const MOVES: Readonly<Record<Pose, readonly ('near' | 'far')[]>> = {
+const MOVES: Readonly<Record<Move, readonly ('near' | 'far')[]>> = {
   typeA: ['near', 'far'],
   typeB: ['near', 'far'],
   think: ['near'],
@@ -83,7 +154,7 @@ const MOVES: Readonly<Record<Pose, readonly ('near' | 'far')[]>> = {
  * - Sip: a white mug at the mouth, held by the near hand.
  * - Stretch: both arms up and out, hands beside the head.
  */
-const POSES: readonly Readonly<Record<Pose, Patch>>[] = [
+const POSES: readonly Readonly<Record<Move, Patch>>[] = [
   // 0: dark-haired boy in a striped grey shirt
   {
     typeA: { x: 7, y: 13, rows: ['...Da', 'aSSaDa.aa', '.aSS.Daeea', '..aSSaaaea', '...aSSeea', '....aaeea', '......aa'] },
@@ -144,7 +215,10 @@ export const blinkPatch = (character: number): Patch | undefined => BLINKS[chara
 /** The patches that draw `character` in `pose`, in order. */
 export function posePatches(character: number, pose: Pose): readonly Patch[] {
   const torso = TORSOS[character]!
-  return [...MOVES[pose].map((side) => torso[side]), POSES[character]![pose]]
+  if (pose === 'carry') return carry(character)
+  const seated = SEATED[character]!
+  if (pose === 'sit') return seated
+  return [...seated, ...MOVES[pose].map((side) => torso[side]), POSES[character]![pose]]
 }
 
 export interface Pixels {
@@ -163,7 +237,8 @@ export function poseFrame(
   shirt: { main: Rgb; dark: Rgb },
 ): { data: Uint8ClampedArray<ArrayBuffer>; width: number; height: number } {
   const width = POSE_PAD.left + base.width + POSE_PAD.right
-  const data = new Uint8ClampedArray(width * base.height * 4)
+  const height = base.height + POSE_PAD.bottom
+  const data = new Uint8ClampedArray(width * height * 4)
   for (let y = 0; y < base.height; y++) {
     data.set(base.data.subarray(y * base.width * 4, (y + 1) * base.width * 4), (y * width + POSE_PAD.left) * 4)
   }
@@ -180,5 +255,5 @@ export function poseFrame(
       }
     })
   }
-  return { data, width, height: base.height }
+  return { data, width, height }
 }

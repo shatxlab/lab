@@ -70,7 +70,7 @@ export interface Atlas {
   frame(name: FrameName): Texture
   /**
    * The picture for the person with this id: one of five sprites, with their own hair and shirt colours.
-   * A pose draws them mid-action instead of standing, and `blink` with their eyes shut; either is drawn on a
+   * Without a pose they stand, legs and all; a pose sits them at a desk or draws them mid-action, and `blink` with their eyes shut; either is drawn on a
    * frame padded on both sides (see `POSE_PAD`).
    */
   character(id: number, pose?: Pose, blink?: boolean): Texture

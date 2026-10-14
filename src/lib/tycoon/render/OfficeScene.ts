@@ -3,7 +3,6 @@ import { MORALE_UNHAPPY } from '@/lib/tycoon/sim/balance'
 import { getOffice, officeSpec, staffOf } from '@/lib/tycoon/sim/offices'
 import { DISCIPLINES, type Discipline, type Employee, type GameState, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
-import { appearanceFor, CARRY_X } from '../render-support/characters'
 import type { Atlas, FrameName } from './atlas'
 import { arrange, chairX, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
@@ -83,9 +82,6 @@ function bugGraphic(): Graphics {
   return g
 }
 
-/** Width of the cardboard box someone carries out when they leave. */
-const BOX_WIDTH = 7
-
 /**
  * What a desk needs to stand on its own in the garage, which has no partitions, drawn from the desk's top-left
  * corner: an edge down the side the pack leaves open (in an office it meets the pole between two desks), the
@@ -114,7 +110,6 @@ class EmployeeSprite {
   private readonly width: number
   private readonly height: number
   private readonly body: Sprite
-  private box: Graphics | null = null
   private status: Status = 'ok'
   private pose: Pose | undefined
   private blinking = false
@@ -124,8 +119,6 @@ class EmployeeSprite {
     private readonly look: (pose?: Pose, blink?: boolean) => Texture,
     arrangement: Arrangement,
     desk: number,
-    /** Where they hold a box, facing right (see `CARRY_X`). */
-    private readonly carryX: number,
   ) {
     const texture = look()
     const seated = seat(arrangement, desk)
@@ -143,7 +136,7 @@ class EmployeeSprite {
     this.body = body
     const flip = facesLeft(desk)
     this.facingLeft = flip
-    this.place()
+    this.setPose('sit')
 
     this.marker.x = flip ? 1 : texture.width - 3
     this.marker.y = -9
@@ -151,7 +144,7 @@ class EmployeeSprite {
     this.container.addChild(body, this.marker)
   }
 
-  /** Draws them standing, or mid-action in `pose`, eyes open or shut; the box and the way they face are unchanged. */
+  /** Draws them standing, or in `pose` (sitting, mid-action at the desk, carrying their box), eyes open or shut; the way they face is unchanged. */
   setPose(pose?: Pose, blink = false): void {
     if (pose === this.pose && blink === this.blinking) return
     this.pose = pose
@@ -181,22 +174,17 @@ class EmployeeSprite {
     return { width: this.width, height: this.height }
   }
 
-  /** Gets up to leave: no status marker, a cardboard box in hand, facing the way out. */
+  /** Gets up to leave: no status marker, legs and a cardboard box held in both hands, facing the way out. */
   packUp(rightwards: boolean): void {
-    this.setPose(undefined)
+    this.setPose('carry')
     this.marker.visible = false
-    const box = new Graphics()
-    box.rect(0, 0, BOX_WIDTH, 6).fill(0xa8743a).rect(0, 0, BOX_WIDTH, 2).fill(0xc8935a).rect(3, 0, 1, 2).fill(0xe8c08a)
-    this.box = box
-    this.container.addChild(box)
     this.face(rightwards)
   }
 
-  /** Turns to face the way they are walking; the box stays in front of them. */
+  /** Turns to face the way they are walking; the box, held in their hands, turns with them. */
   face(rightwards: boolean): void {
     this.facingLeft = !rightwards
     this.place()
-    this.box?.position.set(rightwards ? this.carryX : this.width - BOX_WIDTH - this.carryX, Math.round(this.height * 0.45))
   }
 
   /** Is the scene point (x, y) on this character, give or take a pixel or two? */
@@ -553,7 +541,7 @@ export class OfficeScene {
       // Each person types, pauses to think, sips or stretches in their own rhythm; while the game is paused
       // everyone sits still. Their screen only moves while they are actually typing.
       const moment = speed > 0 ? momentAt(id, this.time, working && employee.training === null) : { pose: undefined, typing: false }
-      sprite.setPose(moment.pose, speed > 0 && blinkingAt(id, this.time))
+      sprite.setPose(moment.pose ?? 'sit', speed > 0 && blinkingAt(id, this.time))
       const desk = this.seats.deskFor(id)
       if (desk !== undefined) modes.set(desk, moment.typing ? 'typing' : 'idle')
     }
@@ -864,8 +852,7 @@ export class OfficeScene {
     for (const id of ids) {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
-      const carryX = CARRY_X[appearanceFor(id).character]!
-      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(id, pose, blink), this.arrangement, desk, carryX)
+      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(id, pose, blink), this.arrangement, desk)
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }

@@ -57,13 +57,6 @@ export const CHARACTER_FRAMES = [
 
 export const CHARACTER_COUNT = CHARACTER_FRAMES.length
 
-/**
- * Where each character holds the box they carry out when they leave, facing right: the column of its left
- * edge, just inside the front of their chest. Read off the sprite rather than its frame, which on 1 is
- * widened by hair, so the box would float in front of them.
- */
-export const CARRY_X: readonly number[] = [12, 12, 10, 14, 14]
-
 type Slot = 'dark' | 'main' | 'light'
 
 interface Rule {

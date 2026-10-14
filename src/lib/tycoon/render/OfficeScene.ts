@@ -8,6 +8,7 @@ import { arrange, chairX, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLay
 import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
 import { blinkingAt, momentAt } from '../render-support/activity'
+import { KEEPSAKE_TOP, keepsakeFor, keepsakeX } from '../render-support/keepsakes'
 import { POSE_PAD, type Pose } from '../render-support/poses'
 import { pathLength, pointAlong, walkoutPath, type Point } from '../render-support/walkout'
 import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationFor, type WorkstationSpec } from '../render-support/workstations'
@@ -30,7 +31,6 @@ const BUG_RED = 0xff5a6a
 const INK = 0x14141f
 
 const CHAIRS: readonly FrameName[] = ['chairWhite', 'chairBlue', 'chairGreen', 'chairOrange', 'chairRed', 'chairGray']
-const FLAGS: readonly FrameName[] = ['flagUs', 'flagIndia', 'flagUk']
 /** Each office theme gets its own sofa, so the rooms differ in more than the floor. */
 const THEME_SOFAS: readonly FrameName[] = ['sofaOrange', 'sofaBlue', 'sofaGreen', 'sofaGray']
 
@@ -317,6 +317,8 @@ export class OfficeScene {
   /** Walls, floor and decor: the garage, or an office in its theme, as wide as the screen shows. */
   private readonly background = new Container()
   private readonly officeBack = new Container()
+  /** What people have pinned to the partitions behind them. */
+  private readonly wall = new Container()
   private readonly chairs = new Container()
   private readonly people = new Container()
   private readonly desks = new Container()
@@ -341,6 +343,8 @@ export class OfficeScene {
   /** Desks somebody has left since the room was shown; they are cleared out rather than left as if on holiday. */
   private vacated = new Set<number>()
   private furnishedFor = ''
+  /** Who the keepsakes on the wall were last pinned up for, and at which desks; null when they must go up again. */
+  private hungFor: string | null = null
   /** The computers on the desks as last furnished, by desk. */
   private stations = new Map<number, Workstation>()
   /** How the desks are laid out, chosen for the shape of the screen. */
@@ -401,7 +405,7 @@ export class OfficeScene {
     this.popups.addChild(this.dateChip)
 
     // People sit beside their desks, so they're drawn over them, hands reaching onto the keyboard.
-    this.world.addChild(this.background, this.officeBack, this.chairs, this.desks, this.people, this.cat, this.dog)
+    this.world.addChild(this.background, this.officeBack, this.wall, this.chairs, this.desks, this.people, this.cat, this.dog)
 
     // The office is drawn into a texture, so its sprites can't take clicks themselves:
     // hit-test the shown image instead.
@@ -692,7 +696,7 @@ export class OfficeScene {
 
     const decor: readonly [FrameName, number, number, boolean?][] = [
       ['tableLong', 15, 103],
-      ['printer', 20, 96],
+      ['picture', 20, 96],
       ['mug', 46, 97],
       ['whiteboard', 64, 64],
       ['binBlue', 76, 98],
@@ -750,11 +754,12 @@ export class OfficeScene {
       this.officeBack.addChild(placed(atlas.frame('partition'), px, py))
       if (desks > 2 * p + 1) {
         this.officeBack.addChild(placed(atlas.frame('deskPole'), px + 37, py + 3))
-        this.officeBack.addChild(placed(atlas.frame(FLAGS[p >> 1]), px + 63, py + 5))
       }
     }
 
     this.builtDesks = desks
+    for (const child of this.wall.removeChildren()) child.destroy()
+    this.hungFor = null
     this.furnishDesks(desks)
     this.setBottom(roomBottom(this.arrangement, desks))
     // People stay at their desks: only the furniture around them was rebuilt.
@@ -844,6 +849,27 @@ export class OfficeScene {
       for (const desk of before) if (!this.occupied.has(desk)) this.vacated.add(desk)
       for (const desk of this.occupied) this.vacated.delete(desk)
       if (this.occupancyKey() !== this.furnishedFor) this.furnishDesks(this.builtDesks)
+    }
+
+    // A garage has no partitions to pin anything to.
+    const pinned = this.shown?.kind === 'office' ? ids : []
+    const hung = pinned.map((id) => `${id}@${this.seats.deskFor(id) ?? ''}`).join(',')
+    if (hung !== this.hungFor) {
+      this.hungFor = hung
+      this.hangKeepsakes(pinned)
+    }
+  }
+
+  /** Pins up each seated person's keepsake, if they have one, on the partition behind their desk. */
+  private hangKeepsakes(ids: readonly number[]): void {
+    for (const child of this.wall.removeChildren()) child.destroy()
+    for (const id of ids) {
+      const desk = this.seats.deskFor(id)
+      const keepsake = keepsakeFor(id)
+      if (desk === undefined || !keepsake) continue
+      const [px, py] = partitionAt(this.arrangement, desk >> 1)
+      const texture = this.atlas.frame(keepsake)
+      this.wall.addChild(placed(texture, px + keepsakeX((desk & 1) === 1, texture.width), py + KEEPSAKE_TOP))
     }
   }
 

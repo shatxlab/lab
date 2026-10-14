@@ -9,18 +9,26 @@ describe('workstation art', () => {
     expect(art).toHaveLength(height)
     for (const row of art) {
       expect(row).toHaveLength(width)
-      expect(row).toMatch(/^[.odkgswle]+$/)
+      expect(row).toMatch(/^[.odkgscwl]+$/)
     }
   })
 
-  it.each(KINDS)('the %s has its screen and keys where the animation draws them', (kind) => {
-    const { art, screen, keys, width, height } = WORKSTATIONS[kind]
-    for (let y = screen.y; y < screen.y + screen.h; y++) expect(art[y]!.slice(screen.x, screen.x + screen.w)).toBe('k'.repeat(screen.w))
-    expect(screen.x + screen.w).toBeLessThanOrEqual(width)
-    expect(keys.x + keys.w).toBeLessThanOrEqual(width)
-    expect(keys.y + keys.h).toBeLessThanOrEqual(height)
-    // the screen is seen as an odd number of pixel rows, with a line on every other row
-    expect(screen.h % 2).toBe(1)
+  it.each(KINDS)('the %s shows a thin sliver of glass, a row at a time from the top', (kind) => {
+    const { art, screen, width } = WORKSTATIONS[kind]
+    expect(screen.length).toBeGreaterThanOrEqual(5)
+    screen.forEach((row, i) => {
+      expect(row.w).toBeGreaterThanOrEqual(1)
+      expect(row.w).toBeLessThanOrEqual(2)
+      expect(row.x + row.w).toBeLessThanOrEqual(width)
+      expect(art[row.y]!.slice(row.x, row.x + row.w)).toBe('k'.repeat(row.w))
+      if (i > 0) expect(row.y).toBe(screen[i - 1]!.y + 1)
+    })
+  })
+
+  it.each(KINDS)('the %s has keys on it for the animation to light', (kind) => {
+    const { art, keys } = WORKSTATIONS[kind]
+    expect(keys.length).toBeGreaterThanOrEqual(2)
+    for (const [x, y] of keys) expect(art[y]![x]).toBe('c')
   })
 
   it.each(KINDS)('paints the %s opaque where there is art and clear elsewhere', (kind) => {
@@ -92,6 +100,15 @@ describe('typingScreen', () => {
     expect(scrolled).toBeGreaterThan(5)
   })
 
+  it('fits the lines on a sliver of glass two pixels wide', () => {
+    for (let step = 0; step < 300; step++) {
+      for (const line of typingScreen(step, 4, 2).lines) {
+        expect(line.length).toBeGreaterThanOrEqual(0)
+        expect(line.indent + line.length).toBeLessThanOrEqual(2)
+      }
+    }
+  })
+
   it('comes round again, and works for the small laptop screen', () => {
     expect(typingScreen(3, 3, 9)).toEqual(typingScreen(3, 3, 9))
     expect(typingScreen(-5, 3, 9).lines).toHaveLength(3)
@@ -101,17 +118,15 @@ describe('typingScreen', () => {
 })
 
 describe('pressedKeys', () => {
-  it('presses keys inside the key area, and not always the same ones', () => {
-    const seen = new Set<string>()
+  it('presses keys that exist, and not always the same ones', () => {
+    const seen = new Set<number>()
     for (let step = 0; step < 100; step++) {
-      for (const [x, y] of pressedKeys(step, 9, 2)) {
-        expect(x).toBeGreaterThanOrEqual(0)
-        expect(x).toBeLessThan(9)
-        expect(y).toBeGreaterThanOrEqual(0)
-        expect(y).toBeLessThan(2)
-        seen.add(`${x},${y}`)
+      for (const key of pressedKeys(step, 4)) {
+        expect(key).toBeGreaterThanOrEqual(0)
+        expect(key).toBeLessThan(4)
+        seen.add(key)
       }
     }
-    expect(seen.size).toBeGreaterThan(10)
+    expect(seen.size).toBe(4)
   })
 })

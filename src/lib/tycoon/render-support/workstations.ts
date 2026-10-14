@@ -6,20 +6,20 @@
 
 export type WorkstationKind = 'pc' | 'laptop'
 
-interface Rect {
+/** One row of lit glass: `w` pixels from (`x`, `y`). */
+export interface Segment {
   x: number
   y: number
   w: number
-  h: number
 }
 
 export interface WorkstationSpec {
   /** One string per row, one letter per pixel (see `PALETTE`); `.` is clear. */
   art: readonly string[]
-  /** The glass, where the code goes. */
-  screen: Rect
-  /** The key area, where pressed keys flash. */
-  keys: Rect
+  /** The glass that shows, a row at a time from the top, found from the `k` pixels of the art. */
+  screen: readonly Segment[]
+  /** Where the keys are (the `c` pixels), so a few can light up. */
+  keys: readonly (readonly [x: number, y: number])[]
   /** Pixels between the edge of the desk nearest the person and the computer. */
   gap: number
   width: number
@@ -29,68 +29,67 @@ export interface WorkstationSpec {
 const PALETTE: Readonly<Record<string, number>> = {
   o: 0x1a1c2c, // outline
   d: 0x333c57,
-  k: 0x333c57, // a screen that is off
+  k: 0x333c57, // glass that is off
   g: 0x566c86,
   s: 0x94b0c2,
+  c: 0xd4dde6, // a key
   w: 0xf4f4f4,
   l: 0x41a6f6, // blue light
-  e: 0xa7f070, // green light
 }
 
-const spec = (art: readonly string[], screen: Rect, keys: Rect, gap: number): WorkstationSpec => ({
-  art,
-  screen,
-  keys,
-  gap,
-  width: art[0]!.length,
-  height: art.length,
-})
+function spec(art: readonly string[], gap: number): WorkstationSpec {
+  const screen: Segment[] = []
+  const keys: [number, number][] = []
+  art.forEach((row, y) => {
+    const run = /k+/.exec(row)
+    if (run) screen.push({ x: run.index, y, w: run[0].length })
+    for (let x = 0; x < row.length; x++) if (row[x] === 'c') keys.push([x, y])
+  })
+  return { art, screen, keys, gap, width: art[0]!.length, height: art.length }
+}
 
+// Both are seen from the side, the person at the near (left) end, so the glass is only a thin sliver:
+// a flat monitor on a stand with a keyboard in front of it, a mouse and a slim tower; a laptop with its
+// lid standing at the hinge.
 export const WORKSTATIONS: Readonly<Record<WorkstationKind, WorkstationSpec>> = {
-  // Seen from the side, with the screen turned towards the person at the near (left) end: the keyboard in front
-  // of it, the monitor's thickness behind the glass, and a slim tower at the far end.
   pc: spec(
     [
-      '....oooooogo....',
-      '....okkkkodo....',
-      '....okkkkodo....',
-      '....okkkkodo.ooo',
-      '....okkkkodo.odo',
-      '....okkkkodo.olo',
-      '....okkkkodo.odo',
-      '....okkkkodo.ogo',
-      '....ossseodo.odo',
-      '....oooooodo.odo',
-      'oooo..oso....odo',
-      'ogso..oso....odo',
-      'osgo.ossso...odo',
-      'oooo..oooo...ooo',
+      '.......oooo.....',
+      '......okkdo.....',
+      '......okkdo.....',
+      '......okkdo..ooo',
+      '......okkdo..odo',
+      '......okkdo..olo',
+      '......okkdo..odo',
+      '......okkdo..ogo',
+      '......okkdo..odo',
+      '......okkdo..odo',
+      '.......oooo..odo',
+      '........odo..odo',
+      'ooooo...odo..odo',
+      'ocsco..ossso.ooo',
+      'ooooo..ooooo....',
       '................',
       '.ooo............',
       '.oso............',
-      '.ooo............',
     ],
-    { x: 5, y: 1, w: 4, h: 7 },
-    { x: 1, y: 11, w: 2, h: 2 },
     1,
   ),
-  // An open laptop in aluminium: the lid stands at the far end with its screen turned towards the person.
   laptop: spec(
     [
-      '....oooooog',
-      '....okkkkod',
-      '....okkkkod',
-      '....okkkkod',
-      '....okkkkod',
-      '....okkkkod',
-      '....ooooood',
-      'ooooooooooo',
-      'ogsgsgsgsgo',
-      'osgsgsgsgso',
+      '........ooo',
+      '.......okko',
+      '.......okko',
+      '.......okko',
+      '.......okko',
+      '.......okko',
+      '.......okko',
+      '.......okko',
+      '.......okko',
+      'ocscscsoooo',
+      'ossssssssso',
       'ooooooooooo',
     ],
-    { x: 5, y: 1, w: 4, h: 5 },
-    { x: 1, y: 8, w: 5, h: 2 },
     3,
   ),
 }
@@ -143,8 +142,8 @@ export interface ScreenLine {
 /** Line `n` of the code (it wraps), as wide as `cols` allows. */
 function lineAt(n: number, cols: number): ScreenLine {
   const h = hash(((n % LINE_COUNT) + LINE_COUNT) % LINE_COUNT)
-  const indent = (h % 3) % (cols - 3)
-  return { indent, length: 2 + ((h >>> 4) % (cols - indent - 1)), color: LINE_COLORS[(h >>> 9) % LINE_COLORS.length]! }
+  const indent = (h % 3) % Math.max(cols - 3, 1)
+  return { indent, length: 1 + ((h >>> 4) % (cols - indent)), color: LINE_COLORS[(h >>> 9) % LINE_COLORS.length]! }
 }
 
 /**
@@ -170,10 +169,7 @@ export function typingScreen(step: number, rows: number, cols: number): { lines:
   return { lines, cursor: { row: rows - 1, col: lines[rows - 1]!.indent + typed } }
 }
 
-/** Two keys that are down at this step, as positions within the key area. */
-export function pressedKeys(step: number, width: number, height: number): [x: number, y: number][] {
-  return [0, 1].map((i) => {
-    const h = hash(step * 2 + i)
-    return [h % width, (h >>> 8) % height] as [number, number]
-  })
+/** Two of `count` keys that are down at this step, by number. */
+export function pressedKeys(step: number, count: number): number[] {
+  return [0, 1].map((i) => hash(step * 2 + i) % count)
 }

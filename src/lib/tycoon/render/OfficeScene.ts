@@ -201,14 +201,19 @@ class Workstation {
     const g = this.glow.clear()
     if (mode === 'off') return
     const { screen, keys } = this.spec
-    g.rect(screen.x, screen.y, screen.w, screen.h).fill(SCREEN_ON)
-    const { lines, cursor } = typingScreen(step, Math.ceil(screen.h / 2), screen.w)
-    lines.forEach((line, row) => {
-      if (line.length > 0) g.rect(screen.x + line.indent, screen.y + row * 2, line.length, 1).fill(line.color)
+    for (const { x, y, w } of screen) g.rect(x, y, w, 1).fill(SCREEN_ON)
+    // The glass is a sliver, so the code is a line on every other row of it.
+    const cols = Math.max(...screen.map((row) => row.w))
+    const { lines, cursor } = typingScreen(step, Math.ceil(screen.length / 2), cols)
+    lines.forEach((line, i) => {
+      const row = screen[i * 2]!
+      const length = Math.min(line.length, row.w)
+      g.rect(row.x + Math.min(line.indent, row.w - length), row.y, length, 1).fill(line.color)
     })
     if (mode !== 'typing') return
-    g.rect(screen.x + Math.min(cursor.col, screen.w - 1), screen.y + cursor.row * 2, 1, 1).fill(CURSOR)
-    for (const [x, y] of pressedKeys(step, keys.w, keys.h)) g.rect(keys.x + x, keys.y + y, 1, 1).fill(KEY_DOWN)
+    const row = screen[cursor.row * 2]!
+    g.rect(row.x + Math.min(cursor.col, row.w - 1), row.y, 1, 1).fill(CURSOR)
+    for (const key of pressedKeys(step, keys.length)) g.rect(keys[key]![0], keys[key]![1], 1, 1).fill(KEY_DOWN)
   }
 }
 

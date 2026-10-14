@@ -324,6 +324,8 @@ export interface Lofi {
   stop(): void;
   setVolume(volume: number): void;
   setMuted(muted: boolean): void;
+  /** Fade the music out and hold it (the clock stops too) until resumed, so it picks up where it left off. */
+  setPaused(paused: boolean): void;
   subscribe(listener: (state: LofiState) => void): () => void;
 }
 
@@ -331,6 +333,8 @@ export interface Lofi {
 const LOOKAHEAD_BARS = 3;
 const PUMP_MS = 700;
 const FADE_IN_S = 3;
+/** How long the music takes to die away when paused, before the audio clock is stopped. */
+const HUSH_MS = 1200;
 
 type ContextFactory = () => AudioContext | null;
 const defaultFactory: ContextFactory = () => {
@@ -347,6 +351,8 @@ export function createLofi(options: { seed?: number; volume?: number; muted?: bo
   const makeContext = options.makeContext ?? defaultFactory;
   let volume = options.volume ?? 0.6;
   let muted = options.muted ?? false;
+  let paused = false;
+  let hushTimer: number | undefined;
   let state: LofiState = "idle";
   let ctx: AudioContext | null = null;
   let mix: Mix | null = null;
@@ -361,7 +367,7 @@ export function createLofi(options: { seed?: number; volume?: number; muted?: bo
     state = next;
     for (const listener of listeners) listener(next);
   };
-  const level = () => (muted ? 0 : volume * FULL_GAIN);
+  const level = () => (muted || paused ? 0 : volume * FULL_GAIN);
 
   const pump = () => {
     if (!ctx || !mix || ctx.state !== "running") return;
@@ -423,6 +429,7 @@ export function createLofi(options: { seed?: number; volume?: number; muted?: bo
     stop() {
       gestureOff?.();
       window.clearInterval(timer);
+      window.clearTimeout(hushTimer);
       timer = undefined;
       const closing = ctx;
       ctx = null;
@@ -437,6 +444,18 @@ export function createLofi(options: { seed?: number; volume?: number; muted?: bo
     setMuted(next) {
       muted = next;
       if (ctx && mix) mix.master.gain.setTargetAtTime(level(), ctx.currentTime, 0.08);
+    },
+    setPaused(next) {
+      paused = next;
+      window.clearTimeout(hushTimer);
+      if (!ctx || !mix) return;
+      if (next) {
+        mix.master.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+        hushTimer = window.setTimeout(() => void ctx?.suspend().catch(() => {}), HUSH_MS);
+      } else {
+        const playing = ctx;
+        void playing.resume().then(() => mix && playing === ctx && mix.master.gain.setTargetAtTime(level(), playing.currentTime, 0.4), () => {});
+      }
     },
     subscribe(listener) {
       listeners.add(listener);

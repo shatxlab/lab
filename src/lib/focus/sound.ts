@@ -20,9 +20,11 @@ export function focusRecipe(name: FocusSound): Tone[] {
     case "start":
       return [440, 587].map((freq, step) => ({ freq, start: step * 0.1, duration: 0.14, gain: 0.07 }));
     case "chime":
-      return [523, 659, 784].map((freq, step) => ({ freq, start: step * 0.16, duration: 0.5, gain: 0.09 }));
+      // A bell that rings twice, so a break cannot start unnoticed.
+      return [0, 0.9].flatMap((offset) => [523, 659, 784, 1047].map((freq, step) => ({ freq, start: offset + step * 0.14, duration: 0.7, gain: 0.2 })));
     case "breakEnd":
-      return [392, 330].map((freq, step) => ({ freq, start: step * 0.2, duration: 0.35, gain: 0.08 }));
+      // Back to work: a firm falling-and-rising call, as loud as the bell.
+      return [0, 0.5].flatMap((offset) => [784, 587, 784].map((freq, step) => ({ freq, start: offset + step * 0.12, duration: 0.3, gain: 0.18, type: "triangle" as const })));
     case "walkout":
       return [
         { freq: 150, start: 0, duration: 0.18, gain: 0.1, type: "triangle" },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FLOW, HEADCOUNT, abandon, createFlow, cycleDots, cycleResults, isRunning, pause, remainingMs, resume, segmentMinutes, skipBreak, start, tick } from "@/lib/focus/flow";
+import { FLOW, HEADCOUNT, abandon, createFlow, cycleDots, cycleResults, isRunning, remainingMs, segmentMinutes, skipBreak, start, tick } from "@/lib/focus/flow";
 
 const MIN = 60_000;
 const T0 = 1_000_000;
@@ -32,7 +32,7 @@ describe("the flow", () => {
     expect(isRunning(ready)).toBe(false);
     expect(segmentMinutes(ready)).toBe(25);
     const running = start(ready, T0);
-    expect(running).toMatchObject({ phase: "focus", paused: false, endsAt: T0 + 25 * MIN });
+    expect(running).toMatchObject({ phase: "focus", endsAt: T0 + 25 * MIN });
     expect(remainingMs(running, T0 + 5 * MIN)).toBe(20 * MIN);
     expect(start(running, T0 + 1)).toBe(running);
   });
@@ -74,19 +74,6 @@ describe("the flow", () => {
     expect(day.done).toBeGreaterThan(10);
     expect(["focus", "break"]).toContain(day.phase);
     expect(day.endsAt!).toBeGreaterThan(T0 + 24 * 60 * MIN - 1);
-  });
-
-  it("pauses and resumes without losing a second", () => {
-    const running = start(createFlow(), T0);
-    const paused = pause(running, T0 + 10 * MIN);
-    expect(paused).toMatchObject({ paused: true, endsAt: null, leftMs: 15 * MIN });
-    expect(isRunning(paused)).toBe(false);
-    expect(tick(paused, T0 + 99 * MIN)).toBe(paused);
-    expect(remainingMs(paused, T0 + 99 * MIN)).toBe(15 * MIN);
-    const back = resume(paused, T0 + 50 * MIN);
-    expect(back).toMatchObject({ paused: false, endsAt: T0 + 65 * MIN, leftMs: null });
-    expect(pause(createFlow(), T0)).toEqual(createFlow());
-    expect(resume(running, T0)).toBe(running);
   });
 
   it("skips a break straight into the next Pomodoro", () => {

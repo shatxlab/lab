@@ -31,13 +31,17 @@ describe("cueFor", () => {
     }
     expect(cueFor(before, state)).toBe("emptyOffice");
   });
-
-  it("is silent for pausing", () => {
-    expect(cueFor(running, { ...running, paused: true })).toBeNull();
-  });
 });
 
 describe("focusRecipe", () => {
+  it("rings the break bell louder and longer than the start cue, so it cannot be missed", () => {
+    const span = (name: FocusSound) => Math.max(...focusRecipe(name).map((tone) => tone.start + tone.duration));
+    const loudest = (name: FocusSound) => Math.max(...focusRecipe(name).map((tone) => tone.gain));
+    expect(loudest("chime")).toBeGreaterThanOrEqual(2 * loudest("start"));
+    expect(span("chime")).toBeGreaterThan(2);
+    expect(loudest("breakEnd")).toBeGreaterThanOrEqual(2 * loudest("start"));
+  });
+
   it("has notes for every sound, all audible and within the hearing range", () => {
     const names: FocusSound[] = ["start", "chime", "breakEnd", "walkout", "emptyOffice"];
     for (const name of names) {

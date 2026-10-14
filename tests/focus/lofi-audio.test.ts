@@ -37,6 +37,9 @@ function fakeContext(initial: "running" | "suspended" = "running", resumes = tru
       if (resumes) ctx.state = "running";
       else await new Promise(() => {});
     }),
+    suspend: vi.fn(async () => {
+      ctx.state = "suspended";
+    }),
     close: vi.fn(async () => {
       ctx.state = "closed";
     }),
@@ -162,6 +165,34 @@ describe("createLofi", () => {
     lofi.setMuted(false);
     lofi.setVolume(-1);
     expect(gains).toBeTypeOf("function");
+    lofi.stop();
+  });
+
+  it("fades out and stops the clock while paused, then picks up again", async () => {
+    const ctx = fakeContext("running");
+    const lofi = createLofi({ makeContext: () => ctx as unknown as AudioContext });
+    await lofi.start();
+    lofi.setPaused(true);
+    expect(ctx.suspend).not.toHaveBeenCalled(); // not before the fade has had time to finish
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(ctx.suspend).toHaveBeenCalledTimes(1);
+    expect(ctx.state).toBe("suspended");
+    ctx.resume.mockClear();
+    lofi.setPaused(false);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(ctx.resume).toHaveBeenCalledTimes(1);
+    expect(ctx.state).toBe("running");
+    lofi.stop();
+  });
+
+  it("does not suspend if resumed before the fade is over", async () => {
+    const ctx = fakeContext("running");
+    const lofi = createLofi({ makeContext: () => ctx as unknown as AudioContext });
+    await lofi.start();
+    lofi.setPaused(true);
+    lofi.setPaused(false);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(ctx.suspend).not.toHaveBeenCalled();
     lofi.stop();
   });
 

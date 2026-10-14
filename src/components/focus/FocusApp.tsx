@@ -7,7 +7,7 @@ import { ToolPage } from "@/components/tools/ui";
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import { cueFor } from "@/lib/focus/cues";
-import { abandon, createFlow, HEADCOUNT, isRunning, pause, remainingMs, resume, segmentMinutes, skipBreak, start, tick, type FlowState } from "@/lib/focus/flow";
+import { abandon, createFlow, FLOW, HEADCOUNT, isRunning, remainingMs, segmentMinutes, skipBreak, start, tick, type FlowState } from "@/lib/focus/flow";
 import { formatClock, tz } from "@/lib/focus/i18n";
 import { createLofi, type Lofi, type LofiState } from "@/lib/focus/lofi-audio";
 import { buildOffice } from "@/lib/focus/office";
@@ -65,6 +65,9 @@ export default function FocusApp() {
     soundRef.current?.setEnabled(!muted);
   }, [muted]);
   React.useEffect(() => lofiRef.current?.setVolume(volume), [volume]);
+  // Breaks are quiet: the music fades out when one starts and comes back with the next Pomodoro.
+  const onBreak = flow.phase === "break";
+  React.useEffect(() => lofiRef.current?.setPaused(onBreak), [onBreak]);
 
   const office = React.useMemo(() => (key === null ? null : buildOffice(key, HEADCOUNT)), [key]);
 
@@ -169,13 +172,31 @@ export default function FocusApp() {
     return () => window.clearTimeout(id);
   }, [firedAlert]);
 
+  // A Pomodoro finished or a break ended: say so across the top, as well as the bell.
+  const [phaseAlert, setPhaseAlert] = React.useState<string | null>(null);
+  const phaseBefore = React.useRef(flow.phase);
+  React.useEffect(() => {
+    const before = phaseBefore.current;
+    phaseBefore.current = flow.phase;
+    if (flow.phase === "break" && before === "focus") {
+      setPhaseAlert(tz(lang, "breakAlert", { n: flow.long ? FLOW.longMin : FLOW.shortMin }));
+    } else if (flow.phase === "focus" && before === "break") {
+      setPhaseAlert(tz(lang, "breakOverAlert"));
+    }
+  }, [flow.phase, flow.long, lang]);
+  React.useEffect(() => {
+    if (!phaseAlert) return;
+    const id = window.setTimeout(() => setPhaseAlert(null), 8000);
+    return () => window.clearTimeout(id);
+  }, [phaseAlert]);
+
   const hire = () => {
     flowRef.current = createFlow();
     setFlow(flowRef.current);
     setKey(newKey());
   };
 
-  // The plate over the office doors: time left (frozen while paused), or the length of what is next.
+  // The plate over the office doors: time left or the length of what is next.
   const active = flow.phase === "focus" || flow.phase === "break";
   const chipMs = active ? remainingMs(flow, now) : flow.phase === "ready" ? segmentMinutes(flow) * 60_000 : 0;
   const chipLabel = flow.phase === "empty" ? "—" : formatClock(chipMs);
@@ -195,6 +216,11 @@ export default function FocusApp() {
       {firedAlert && (
         <div role="alert" className="pointer-events-none fixed inset-x-0 top-4 z-70 flex justify-center px-4">
           <p className="rounded-md border border-(--warning) bg-(--surface) px-4 py-2 text-center text-sm font-semibold text-(--warning) shadow-lg">{firedAlert}</p>
+        </div>
+      )}
+      {phaseAlert && !firedAlert && (
+        <div role="alert" className="pointer-events-none fixed inset-x-0 top-4 z-70 flex justify-center px-4">
+          <p className="rounded-md border border-(--accent) bg-(--surface) px-4 py-2 text-center text-sm font-semibold text-(--accent) shadow-lg">{phaseAlert}</p>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
@@ -236,7 +262,7 @@ export default function FocusApp() {
         lang={lang}
         office={office}
         fired={flow.missed}
-        working={flow.phase === "focus" && !flow.paused}
+        working={flow.phase === "focus"}
         label={chipLabel}
         onSelect={setTapped}
         className="min-h-48 flex-1"
@@ -254,13 +280,10 @@ export default function FocusApp() {
           void lofiRef.current?.start();
           run(start);
         }}
-        onPause={() => run(pause)}
-        onResume={() => run(resume)}
         onSkipBreak={() => run(skipBreak)}
         onGiveUp={() => run((state) => abandon(state))}
         onHire={hire}
       />
-      <p className="text-center text-xs text-(--muted-fg)">{tz(lang, "musicNote")}</p>
     </div>
   );
 }

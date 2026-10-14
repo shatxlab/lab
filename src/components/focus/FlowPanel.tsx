@@ -14,8 +14,6 @@ export interface FlowPanelProps {
   office: Office;
   now: number;
   onStart: () => void;
-  onPause: () => void;
-  onResume: () => void;
   onSkipBreak: () => void;
   onGiveUp: () => void;
   onHire: () => void;
@@ -76,7 +74,7 @@ export function FlowPanel(props: FlowPanelProps) {
     <section className={cn(panelClass, "flex flex-col items-center gap-3")} aria-label={phaseLabel}>
       <div className="flex flex-col items-center gap-1">
         <p className="text-xs font-medium uppercase tracking-wide text-(--muted-fg)">{phaseLabel}</p>
-        <p role="timer" aria-label={tz(lang, "timer")} className={cn("font-mono text-6xl font-bold tabular-nums sm:text-7xl", flow.paused && "opacity-60")}>
+        <p role="timer" aria-label={tz(lang, "timer")} className="font-mono text-6xl font-bold tabular-nums sm:text-7xl">
           {formatClock(clockMs)}
         </p>
         {flow.phase === "ready" && <p className="text-center text-xs text-(--muted-fg)">{tz(lang, "flowNote")}</p>}
@@ -87,12 +85,6 @@ export function FlowPanel(props: FlowPanelProps) {
 
       <div className="flex flex-wrap justify-center gap-2">
         {flow.phase === "ready" && <ActionButton onClick={props.onStart}>{tz(lang, "start")}</ActionButton>}
-        {running && !flow.paused && (
-          <ActionButton variant={flow.phase === "break" ? "primary" : "secondary"} onClick={props.onPause}>
-            {tz(lang, "pause")}
-          </ActionButton>
-        )}
-        {running && flow.paused && <ActionButton onClick={props.onResume}>{tz(lang, "resume")}</ActionButton>}
         {flow.phase === "break" && (
           <ActionButton variant="secondary" onClick={props.onSkipBreak}>
             {tz(lang, "skipBreak")}

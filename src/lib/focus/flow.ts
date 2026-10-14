@@ -18,11 +18,8 @@ export type Phase = "ready" | "focus" | "break" | "empty";
 
 export interface FlowState {
   phase: Phase;
-  paused: boolean;
   /** When the running segment ends (null unless it is running). */
   endsAt: number | null;
-  /** Time left while paused. */
-  leftMs: number | null;
   /** Pomodoros finished. */
   done: number;
   /** Pomodoros given up, which is how many people have left. */
@@ -38,9 +35,7 @@ const MINUTE = 60_000;
 
 export const createFlow = (): FlowState => ({
   phase: "ready",
-  paused: false,
   endsAt: null,
-  leftMs: null,
   done: 0,
   missed: 0,
   focusedMs: 0,
@@ -48,7 +43,7 @@ export const createFlow = (): FlowState => ({
   long: false,
 });
 
-export const isRunning = (state: FlowState): boolean => (state.phase === "focus" || state.phase === "break") && !state.paused;
+export const isRunning = (state: FlowState): boolean => state.phase === "focus" || state.phase === "break";
 
 /** How long the segment now in play (or next up) lasts. */
 export function segmentMinutes(state: FlowState): number {
@@ -59,40 +54,25 @@ export function segmentMinutes(state: FlowState): number {
 /** Milliseconds left in the running segment (0 when nothing is running). */
 export function remainingMs(state: FlowState, now: number): number {
   if (state.phase !== "focus" && state.phase !== "break") return 0;
-  if (state.paused) return state.leftMs ?? 0;
   return Math.max(0, (state.endsAt ?? now) - now);
 }
 
 const beginFocus = (state: FlowState, now: number): FlowState => ({
   ...state,
   phase: "focus",
-  paused: false,
   endsAt: now + FLOW.focusMin * MINUTE,
-  leftMs: null,
   long: false,
 });
 
 const beginBreak = (state: FlowState, now: number, long: boolean): FlowState => ({
   ...state,
   phase: "break",
-  paused: false,
   long,
   endsAt: now + (long ? FLOW.longMin : FLOW.shortMin) * MINUTE,
-  leftMs: null,
 });
 
 export function start(state: FlowState, now: number): FlowState {
   return state.phase === "ready" ? beginFocus(state, now) : state;
-}
-
-export function pause(state: FlowState, now: number): FlowState {
-  if (!isRunning(state)) return state;
-  return { ...state, paused: true, leftMs: remainingMs(state, now), endsAt: null };
-}
-
-export function resume(state: FlowState, now: number): FlowState {
-  if (!state.paused || (state.phase !== "focus" && state.phase !== "break")) return state;
-  return { ...state, paused: false, endsAt: now + (state.leftMs ?? 0), leftMs: null };
 }
 
 /**
@@ -136,9 +116,7 @@ export function abandon(state: FlowState): FlowState {
     missed,
     results: [...state.results, "missed"],
     phase: missed >= HEADCOUNT ? "empty" : "ready",
-    paused: false,
     endsAt: null,
-    leftMs: null,
   };
 }
 

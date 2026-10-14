@@ -27,6 +27,7 @@ const lofi = vi.hoisted(() => ({
   stop: vi.fn(),
   setVolume: vi.fn(),
   setMuted: vi.fn(),
+  setPaused: vi.fn(),
   blockOnStart: false,
 }));
 vi.mock("@/lib/focus/lofi-audio", () => ({
@@ -43,6 +44,7 @@ vi.mock("@/lib/focus/lofi-audio", () => ({
     stop: lofi.stop,
     setVolume: lofi.setVolume,
     setMuted: lofi.setMuted,
+    setPaused: lofi.setPaused,
     subscribe: (l: (s: string) => void) => {
       lofi.listeners.add(l);
       return () => lofi.listeners.delete(l);
@@ -106,6 +108,7 @@ beforeEach(() => {
   lofi.start.mockClear();
   lofi.stop.mockClear();
   lofi.setMuted.mockClear();
+  lofi.setPaused.mockClear();
   lofi.setVolume.mockClear();
 });
 afterEach(() => {
@@ -211,20 +214,38 @@ describe("FocusApp — the flow", () => {
     view.unmount();
   });
 
-  it("pauses and resumes, and skips a break", async () => {
+  it("has no pause: a running Pomodoro can only be finished or given up", async () => {
     const view = await open();
     await click(button(tz("en", "start")));
+    expect(button("Pause")).toBeUndefined();
+    expect(button("Resume")).toBeUndefined();
+    view.unmount();
+  });
+
+  it("goes quiet and rings an alert when a break starts, and brings the music back after it", async () => {
+    const view = await open();
+    expect(lofi.setPaused).toHaveBeenLastCalledWith(false);
+    await click(button(tz("en", "start")));
+    await advance(25 * MIN);
+    expect(text()).toContain(tz("en", "phaseBreak"));
+    expect(lofi.setPaused).toHaveBeenLastCalledWith(true);
+    expect(document.querySelector('[role="alert"]')?.textContent).toBe(tz("en", "breakAlert", { n: 5 }));
     await advance(5 * MIN);
-    await click(button(tz("en", "pause")));
-    await advance(60 * MIN);
-    expect(timerText()).toBe("20:00");
-    expect(scene()!.dataset.working).toBe("false");
-    await click(button(tz("en", "resume")));
-    await advance(20 * MIN);
+    expect(text()).toContain(tz("en", "phaseFocus"));
+    expect(lofi.setPaused).toHaveBeenLastCalledWith(false);
+    expect(document.querySelector('[role="alert"]')?.textContent).toBe(tz("en", "breakOverAlert"));
+    view.unmount();
+  });
+
+  it("skips a break", async () => {
+    const view = await open();
+    await click(button(tz("en", "start")));
+    await advance(25 * MIN);
     expect(text()).toContain(tz("en", "phaseBreak"));
     await click(button(tz("en", "skipBreak")));
     expect(text()).toContain(tz("en", "phaseFocus"));
     expect(timerText()).toBe("25:00");
+    expect(lofi.setPaused).toHaveBeenLastCalledWith(false);
     view.unmount();
   });
 

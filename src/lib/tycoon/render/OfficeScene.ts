@@ -174,6 +174,11 @@ export interface SceneOptions {
    * Off by default: the game draws every free desk as a ready workstation.
    */
   vacancies?: boolean
+  /**
+   * Pins how the desks are laid out instead of choosing by the shape of the area. The Focus office uses
+   * this on a phone: the area changes shape as the controls under it do, and the desks must not jump.
+   */
+  arrangement?: () => Arrangement | null
 }
 
 /** Someone on their way out with a box. */
@@ -349,7 +354,7 @@ export class OfficeScene {
 
   private applyLayout(): void {
     // A phone held upright gets the desks in one deep column; anything wider keeps rows of four.
-    const { arrangement } = arrange(this.areaW, this.areaH, Math.max(this.builtDesks, 1))
+    const arrangement = this.options.arrangement?.() ?? arrange(this.areaW, this.areaH, Math.max(this.builtDesks, 1)).arrangement
     if (arrangement !== this.arrangement) {
       this.arrangement = arrangement
       // Everyone keeps their desk, which has moved: their sprites are drawn again where it is now.

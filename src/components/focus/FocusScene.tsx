@@ -90,7 +90,14 @@ export function FocusScene({ lang, office, fired, working, label, onSelect, clas
             const person = office.roster.find((candidate) => candidate.id === id);
             if (person) live.current.onSelect(person);
           },
-          { label: () => live.current.label, working: () => live.current.working, vacancies: true },
+          {
+            label: () => live.current.label,
+            working: () => live.current.working,
+            vacancies: true,
+            // A phone held upright always gets the one deep column: two columns leave no aisle to walk out
+            // by, and the scene area changes shape with the controls under it, so its own aspect can't decide.
+            arrangement: () => (window.innerHeight > window.innerWidth ? "tall" : null),
+          },
         );
         app.stage.addChild(scene.view, scene.popups);
         sceneRef.current = scene;

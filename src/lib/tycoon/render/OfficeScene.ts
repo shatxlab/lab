@@ -3,6 +3,7 @@ import { MORALE_UNHAPPY } from '@/lib/tycoon/sim/balance'
 import { getOffice, officeSpec, staffOf } from '@/lib/tycoon/sim/offices'
 import { DISCIPLINES, type Discipline, type Employee, type GameState, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
+import { appearanceFor, CARRY_X } from '../render-support/characters'
 import type { Atlas, FrameName } from './atlas'
 import { arrange, chairX, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
@@ -80,6 +81,9 @@ function bugGraphic(): Graphics {
   return g
 }
 
+/** Width of the cardboard box someone carries out when they leave. */
+const BOX_WIDTH = 7
+
 /** What the little marker above someone's head says: nothing, "unhappy", or "in training". */
 type Status = 'ok' | 'unhappy' | 'training'
 
@@ -101,6 +105,8 @@ class EmployeeSprite {
     private readonly look: (pose?: Pose, blink?: boolean) => Texture,
     arrangement: Arrangement,
     desk: number,
+    /** Where they hold a box, facing right (see `CARRY_X`). */
+    private readonly carryX: number,
   ) {
     const texture = look()
     const seated = seat(arrangement, desk)
@@ -161,7 +167,7 @@ class EmployeeSprite {
     this.setPose(undefined)
     this.marker.visible = false
     const box = new Graphics()
-    box.rect(0, 0, 7, 6).fill(0xa8743a).rect(0, 0, 7, 2).fill(0xc8935a).rect(3, 0, 1, 2).fill(0xe8c08a)
+    box.rect(0, 0, BOX_WIDTH, 6).fill(0xa8743a).rect(0, 0, BOX_WIDTH, 2).fill(0xc8935a).rect(3, 0, 1, 2).fill(0xe8c08a)
     this.box = box
     this.container.addChild(box)
     this.face(rightwards)
@@ -171,7 +177,7 @@ class EmployeeSprite {
   face(rightwards: boolean): void {
     this.facingLeft = !rightwards
     this.place()
-    this.box?.position.set(rightwards ? this.width - 3 : -4, Math.round(this.height * 0.45))
+    this.box?.position.set(rightwards ? this.carryX : this.width - BOX_WIDTH - this.carryX, Math.round(this.height * 0.45))
   }
 
   /** Is the scene point (x, y) on this character, give or take a pixel or two? */
@@ -838,7 +844,8 @@ export class OfficeScene {
     for (const id of ids) {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
-      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(id, pose, blink), this.arrangement, desk)
+      const carryX = CARRY_X[appearanceFor(id).character]!
+      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(id, pose, blink), this.arrangement, desk, carryX)
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }

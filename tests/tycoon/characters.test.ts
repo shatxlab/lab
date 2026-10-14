@@ -3,6 +3,7 @@ import { PNG } from 'pngjs'
 import { describe, expect, it } from 'vitest'
 import {
   appearanceFor,
+  CARRY_X,
   CHARACTER_COUNT,
   CHARACTER_FRAMES,
   HAIR_RAMPS,
@@ -161,6 +162,21 @@ describe('recolor, against the real sprites', () => {
       expect(hairs.size).toBeGreaterThanOrEqual(HAIR_RAMPS.length) // the sprite's own hair may equal one ramp
       const shirts = new Set(Array.from({ length: SHIRT_RAMPS.length + 1 }, (_, s) => Array.from(recolored(c, 0, s)).join(',')))
       expect(shirts.size).toBeGreaterThanOrEqual(SHIRT_RAMPS.length)
+    }
+  })
+})
+
+describe('CARRY_X', () => {
+  it('holds the box against the front of every character, not in the air before them', () => {
+    for (let c = 0; c < CHARACTER_COUNT; c++) {
+      const { pixels, width, height } = frameOf(c)
+      // The rows the box covers, as OfficeScene draws it: 6 high, from 45% of the way down.
+      const top = Math.round(height * 0.45)
+      let front = -1
+      for (let y = top; y < top + 6; y++) for (let x = 0; x < width; x++) if (pixels[(y * width + x) * 4 + 3]! > 0) front = Math.max(front, x)
+      // It overlaps the body by two or three columns.
+      expect(front - CARRY_X[c]! + 1).toBeGreaterThanOrEqual(2)
+      expect(front - CARRY_X[c]! + 1).toBeLessThanOrEqual(3)
     }
   })
 })

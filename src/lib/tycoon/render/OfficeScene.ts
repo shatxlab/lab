@@ -27,6 +27,8 @@ const POPUP_MS = 1100
 const TYPING_STEP_MS = 110
 /** The width of the desk top, which is where a computer sits against its edge. */
 const DESK_WIDTH = 17
+/** How far the desk top runs from the partition toward the viewer. */
+const DESK_DEPTH = 19
 /** Bug-fixing popups are red, with a little bug beside the number. */
 const BUG_RED = 0xff5a6a
 const INK = 0x14141f
@@ -83,6 +85,23 @@ function bugGraphic(): Graphics {
 
 /** Width of the cardboard box someone carries out when they leave. */
 const BOX_WIDTH = 7
+
+/**
+ * What a desk needs to stand on its own in the garage, which has no partitions, drawn from the desk's top-left
+ * corner: an edge down the side the pack leaves open (in an office it meets the pole between two desks), the
+ * front of the desk and two legs. The pack only draws desks running up to the next partition, so a bare desk
+ * top on the concrete looks sunk into the floor.
+ */
+function freestandingDesk(right: boolean): Graphics {
+  const g = new Graphics()
+  const front = DESK_DEPTH
+  g.rect(right ? 0 : DESK_WIDTH - 1, 1, 1, front - 1)
+  g.rect(0, front, DESK_WIDTH, 1).rect(0, front + 1, 1, 1).rect(DESK_WIDTH - 1, front + 1, 1, 1).rect(0, front + 2, DESK_WIDTH, 1)
+  g.rect(0, front + 3, 2, 2).rect(DESK_WIDTH - 2, front + 3, 2, 2)
+  g.fill(DARK)
+  g.rect(1, front + 1, DESK_WIDTH - 2, 1).fill(WOOD)
+  return g
+}
 
 /** What the little marker above someone's head says: nothing, "unhappy", or "in training". */
 type Status = 'ok' | 'unhappy' | 'training'
@@ -790,6 +809,7 @@ export class OfficeScene {
 
       const deskX = px + (right ? 40 : 19)
       this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
+      if (this.shown?.kind === 'garage') this.desks.addChild(freestandingDesk(right)).position.set(deskX, py + 11)
       if (!vacancy || hasComputer(vacancy)) {
         const kind = workstationFor(i)
         const { gap, width, top } = WORKSTATIONS[kind]

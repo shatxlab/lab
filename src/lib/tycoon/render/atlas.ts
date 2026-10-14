@@ -73,7 +73,7 @@ export interface Atlas {
    * frame padded on both sides (see `POSE_PAD`).
    */
   character(id: number, pose?: Pose, blink?: boolean): Texture
-  /** What is on a desk: a laptop, or a PC with its monitor, keyboard and mouse. */
+  /** What is on a desk: a laptop, or a PC with its monitor and keyboard. */
   workstation(kind: WorkstationKind): Texture
   /** The dog with its tail cut off, so the tail can be drawn (and wiggled) on its own. */
   dogNoTail: Texture

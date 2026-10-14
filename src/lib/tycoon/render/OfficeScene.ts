@@ -4,9 +4,11 @@ import { getOffice, officeSpec, staffOf } from '@/lib/tycoon/sim/offices'
 import { DISCIPLINES, type Discipline, type Employee, type GameState, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
 import type { Atlas, FrameName } from './atlas'
-import { arrange, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, type Arrangement, type SceneLayout } from '../render-support/layout'
+import { arrange, chairX, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
+import { blinkingAt, momentAt } from '../render-support/activity'
+import { POSE_PAD, type Pose } from '../render-support/poses'
 import { pathLength, pointAlong, walkoutPath, type Point } from '../render-support/walkout'
 import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationFor, type WorkstationSpec } from '../render-support/workstations'
 import { formatDateShort } from '@/lib/tycoon/format'
@@ -23,8 +25,6 @@ const POPUP_MS = 1100
 const TYPING_STEP_MS = 110
 /** The width of the desk top, which is where a computer sits against its edge. */
 const DESK_WIDTH = 17
-/** The bottom of a computer is this far below the top of its partition. */
-const DESK_BASELINE = 25
 /** Bug-fixing popups are red, with a little bug beside the number. */
 const BUG_RED = 0xff5a6a
 const INK = 0x14141f
@@ -57,10 +57,13 @@ function placed(texture: Texture, x: number, y: number, flip = false): Sprite {
   return sprite
 }
 
-/** Where a workstation's occupant sits in an arrangement: horizontal centre and top of the head. */
+/** The row of a seated person's feet, counted from the top of their seat (see `seat`). */
+const FEET_ROW = 22
+
+/** Where a workstation's occupant sits in an arrangement: horizontal centre, and the top of a 23-row person's head. */
 function seat(arrangement: Arrangement, index: number): { x: number; y: number } {
   const [px, py] = partitionAt(arrangement, index >> 1)
-  return { x: px + (index & 1 ? 59.5 : 14.5), y: py + 5 }
+  return { x: px + seatX((index & 1) === 1), y: py + 5 }
 }
 
 /** The sprites face right; whoever sits on the right of a partition has their computer to the left. */
@@ -90,10 +93,21 @@ class EmployeeSprite {
   private readonly body: Sprite
   private box: Graphics | null = null
   private status: Status = 'ok'
+  private pose: Pose | undefined
+  private blinking = false
+  private facingLeft: boolean
 
-  constructor(texture: Texture, arrangement: Arrangement, desk: number) {
-    const { x, y } = seat(arrangement, desk)
-    this.container.x = Math.round(x - texture.width / 2)
+  constructor(
+    private readonly look: (pose?: Pose, blink?: boolean) => Texture,
+    arrangement: Arrangement,
+    desk: number,
+  ) {
+    const texture = look()
+    const seated = seat(arrangement, desk)
+    // The pack's people are 21 to 24 rows tall, mostly in the size of their heads: seat them all by their feet,
+    // so everyone sits at the same height and reaches the keyboard the same way.
+    const y = seated.y + FEET_ROW - (texture.height - 1)
+    this.container.x = Math.round(seated.x - texture.width / 2)
     this.container.y = y
     this.baseY = y
     this.width = texture.width
@@ -103,15 +117,29 @@ class EmployeeSprite {
     const body = new Sprite(texture)
     this.body = body
     const flip = facesLeft(desk)
-    if (flip) {
-      body.scale.x = -1
-      body.x = texture.width
-    }
+    this.facingLeft = flip
+    this.place()
 
     this.marker.x = flip ? 1 : texture.width - 3
     this.marker.y = -9
     this.marker.visible = false
     this.container.addChild(body, this.marker)
+  }
+
+  /** Draws them standing, or mid-action in `pose`, eyes open or shut; the box and the way they face are unchanged. */
+  setPose(pose?: Pose, blink = false): void {
+    if (pose === this.pose && blink === this.blinking) return
+    this.pose = pose
+    this.blinking = blink
+    this.body.texture = this.look(pose, blink)
+    this.place()
+  }
+
+  /** Lines the picture up with their box, mirrored when they face left; a pose's frame is padded on both sides. */
+  private place(): void {
+    const left = this.body.texture.width === this.width ? 0 : POSE_PAD.left
+    this.body.scale.x = this.facingLeft ? -1 : 1
+    this.body.x = this.facingLeft ? this.width + left : -left
   }
 
   update(employee: Employee): void {
@@ -130,6 +158,7 @@ class EmployeeSprite {
 
   /** Gets up to leave: no status marker, a cardboard box in hand, facing the way out. */
   packUp(rightwards: boolean): void {
+    this.setPose(undefined)
     this.marker.visible = false
     const box = new Graphics()
     box.rect(0, 0, 7, 6).fill(0xa8743a).rect(0, 0, 7, 2).fill(0xc8935a).rect(3, 0, 1, 2).fill(0xe8c08a)
@@ -140,8 +169,8 @@ class EmployeeSprite {
 
   /** Turns to face the way they are walking; the box stays in front of them. */
   face(rightwards: boolean): void {
-    this.body.scale.x = rightwards ? 1 : -1
-    this.body.x = rightwards ? 0 : this.width
+    this.facingLeft = !rightwards
+    this.place()
     this.box?.position.set(rightwards ? this.width - 3 : -4, Math.round(this.height * 0.45))
   }
 
@@ -492,8 +521,12 @@ export class OfficeScene {
       const employee = people.get(id)
       if (!employee) continue
       sprite.update(employee)
+      // Each person types, pauses to think, sips or stretches in their own rhythm; while the game is paused
+      // everyone sits still. Their screen only moves while they are actually typing.
+      const moment = speed > 0 ? momentAt(id, this.time, working && employee.training === null) : { pose: undefined, typing: false }
+      sprite.setPose(moment.pose, speed > 0 && blinkingAt(id, this.time))
       const desk = this.seats.deskFor(id)
-      if (desk !== undefined) modes.set(desk, working && employee.training === null ? 'typing' : 'idle')
+      if (desk !== undefined) modes.set(desk, moment.typing ? 'typing' : 'idle')
     }
     for (const [desk, station] of this.stations) station.update(modes.get(desk) ?? 'off', this.time)
     this.updatePopups(dtMs, speed)
@@ -742,16 +775,16 @@ export class OfficeScene {
       const vacancy = this.options.vacancies && !this.occupied.has(i) ? vacancyFor(i, this.vacated.has(i)) : null
       const chair = atlas.frame(CHAIRS[i % CHAIRS.length])
       const tuck = vacancy && chairTucked(vacancy) ? (right ? -CHAIR_TUCK : CHAIR_TUCK) : 0
-      this.chairs.addChild(placed(chair, px + (right ? 56 : 7) + tuck, py + 7, right))
+      this.chairs.addChild(placed(chair, px + chairX(right, chair.width) + tuck, py + 7, right))
 
       const deskX = px + (right ? 40 : 19)
       this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
       if (!vacancy || hasComputer(vacancy)) {
         const kind = workstationFor(i)
-        const { gap, width, height } = WORKSTATIONS[kind]
+        const { gap, width, top } = WORKSTATIONS[kind]
         // Against the edge of the desk nearest the person, whichever side that is.
         const x = deskX + (right ? DESK_WIDTH - gap - width : gap)
-        const station = new Workstation(WORKSTATIONS[kind], atlas.workstation(kind), x, py + DESK_BASELINE - height, right, i)
+        const station = new Workstation(WORKSTATIONS[kind], atlas.workstation(kind), x, py + top, right, i)
         this.stations.set(i, station)
         this.desks.addChild(station.container)
       }
@@ -800,7 +833,7 @@ export class OfficeScene {
     for (const id of ids) {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
-      const sprite = new EmployeeSprite(this.atlas.character(id), this.arrangement, desk)
+      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(id, pose, blink), this.arrangement, desk)
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }

@@ -114,6 +114,14 @@ export function appearanceFor(id: number): Appearance {
   }
 }
 
+/** The colours a person's shirt is drawn in: the sprite's own, or the ramp they wear (shirt 0 is the sprite's own). */
+export function shirtColors(character: number, shirtIndex: number): { main: Rgb; dark: Rgb } {
+  const ramp = shirtIndex > 0 ? SHIRT_RAMPS[shirtIndex - 1] : undefined
+  if (ramp) return { main: ramp.main, dark: ramp.dark }
+  const own = (slot: Slot): Rgb => RULES[character]!.find((rule) => rule.part === 'shirt' && rule.slot === slot)!.from
+  return { main: own('main'), dark: own('dark') }
+}
+
 /**
  * Recolours one character's pixels in place. `pixels` is that character's frame alone, RGBA, row by row.
  * Hair and shirt 0 leave the sprite as drawn.

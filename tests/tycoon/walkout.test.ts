@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { partitionAt, type Arrangement } from '@/lib/tycoon/render-support/layout'
+import { partitionAt, seatX, type Arrangement } from '@/lib/tycoon/render-support/layout'
 import { PARTITION_WIDTH, ROW_HEIGHT, WALL_LANE_FEET, pathLength, pointAlong, walkoutPath, type Point } from '@/lib/tycoon/render-support/walkout'
 
 const DOOR_X = 127
@@ -11,7 +11,7 @@ const DESKS = 12
 /** Where OfficeScene seats someone: the middle of their workstation, head at the top of the row. */
 function seatStart(arrangement: Arrangement, desk: number): Point {
   const [px, py] = partitionAt(arrangement, desk >> 1)
-  const centre = px + (desk & 1 ? 59.5 : 14.5)
+  const centre = px + seatX((desk & 1) === 1)
   return { x: Math.round(centre - SIZE.width / 2), y: py + 5 }
 }
 

@@ -22,6 +22,8 @@ export interface WorkstationSpec {
   keys: readonly (readonly [x: number, y: number])[]
   /** Pixels between the edge of the desk nearest the person and the computer. */
   gap: number
+  /** Rows from the top of the desk's partition to the top of the picture: the keys sit under a typing person's hands. */
+  top: number
   width: number
   height: number
 }
@@ -37,7 +39,7 @@ const PALETTE: Readonly<Record<string, number>> = {
   l: 0x41a6f6, // blue light
 }
 
-function spec(art: readonly string[], gap: number): WorkstationSpec {
+function spec(art: readonly string[], gap: number, top: number): WorkstationSpec {
   const screen: Segment[] = []
   const keys: [number, number][] = []
   art.forEach((row, y) => {
@@ -45,11 +47,12 @@ function spec(art: readonly string[], gap: number): WorkstationSpec {
     if (run) screen.push({ x: run.index, y, w: run[0].length })
     for (let x = 0; x < row.length; x++) if (row[x] === 'c') keys.push([x, y])
   })
-  return { art, screen, keys, gap, width: art[0]!.length, height: art.length }
+  return { art, screen, keys, gap, top, width: art[0]!.length, height: art.length }
 }
 
 // Both are seen from the side, the person at the near (left) end, so the glass is only a thin sliver:
-// a flat monitor on a stand with a keyboard in front of it, a mouse and a slim tower; a laptop with its
+// a flat monitor on a stand with a keyboard in front of it (under the typing hands, its far end showing past
+// them), a mouse and a slim tower; a laptop with its
 // lid standing at the hinge.
 export const WORKSTATIONS: Readonly<Record<WorkstationKind, WorkstationSpec>> = {
   pc: spec(
@@ -66,14 +69,19 @@ export const WORKSTATIONS: Readonly<Record<WorkstationKind, WorkstationSpec>> = 
       '......okkdo..odo',
       '.......oooo..odo',
       '........odo..odo',
-      'ooooo...odo..odo',
-      'ocsco..ossso.ooo',
-      'ooooo..ooooo....',
+      '........odo..odo',
+      '.......ossso.ooo',
+      '.......ooooo....',
+      'ooooooo.........',
+      'ocscsco.........',
+      'ooooooo.........',
       '................',
       '.ooo............',
       '.oso............',
+      '.ooo............',
     ],
     1,
+    7,
   ),
   laptop: spec(
     [
@@ -90,7 +98,8 @@ export const WORKSTATIONS: Readonly<Record<WorkstationKind, WorkstationSpec>> = 
       'ossssssssso',
       'ooooooooooo',
     ],
-    3,
+    0,
+    13,
   ),
 }
 

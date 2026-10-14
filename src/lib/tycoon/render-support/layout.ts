@@ -37,6 +37,23 @@ export function roomBottom(arrangement: Arrangement, desks: number): number {
   return partitionAt('tall', Math.max(Math.ceil(desks / 2), 1) - 1)[1] + TALL_MARGIN
 }
 
+/**
+ * Inside a partition the right-hand workstation is the left-hand one mirrored: a pixel at column x from the
+ * partition's left edge has its twin at `MIRROR - 1 - x` (the desks run 19 to 35 and 40 to 56), and a point x
+ * (a centre, say) at `MIRROR - x`.
+ */
+export const MIRROR = 76
+
+/** The left-hand chair's column and the middle of the person sitting at the left-hand desk, from the partition's left edge. */
+export const LEFT_CHAIR_X = 7
+export const LEFT_SEAT_X = 14.5
+
+/** The middle of the person at a workstation, across from its partition's left edge. */
+export const seatX = (right: boolean): number => (right ? MIRROR - LEFT_SEAT_X : LEFT_SEAT_X)
+
+/** The column of a workstation's chair, `width` wide (the right-hand one is drawn mirrored), from the partition's left edge. */
+export const chairX = (right: boolean, width: number): number => (right ? MIRROR - LEFT_CHAIR_X - width : LEFT_CHAIR_X)
+
 /** The room starts at the top of its wall: the artwork above that row was sky, and is never shown. */
 export const ROOM_TOP = 48
 

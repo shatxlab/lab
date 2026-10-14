@@ -1,7 +1,8 @@
 import { Assets, Rectangle, Texture } from 'pixi.js'
 import { withBase } from '@/lib/apps/paths'
 import { OFFICE_THEMES, shiftHueRgb } from '@/lib/tycoon/theme'
-import { appearanceFor, CHARACTER_FRAMES, recolor } from '../render-support/characters'
+import { appearanceFor, CHARACTER_FRAMES, recolor, shirtColors } from '../render-support/characters'
+import { blinkPatch, poseFrame, posePatches, type Pose } from '../render-support/poses'
 import { workstationPixels, type WorkstationKind } from '../render-support/workstations'
 
 type Frame = readonly [x: number, y: number, w: number, h: number]
@@ -66,8 +67,12 @@ const WALL_STRIP: Frame = [172, 48, 1, 64]
 
 export interface Atlas {
   frame(name: FrameName): Texture
-  /** The picture for the person with this id: one of five sprites, with their own hair and shirt colours. */
-  character(id: number): Texture
+  /**
+   * The picture for the person with this id: one of five sprites, with their own hair and shirt colours.
+   * A pose draws them mid-action instead of standing, and `blink` with their eyes shut; either is drawn on a
+   * frame padded on both sides (see `POSE_PAD`).
+   */
+  character(id: number, pose?: Pose, blink?: boolean): Texture
   /** What is on a desk: a laptop, or a PC with its monitor, keyboard and mouse. */
   workstation(kind: WorkstationKind): Texture
   /** The dog with its tail cut off, so the tail can be drawn (and wiggled) on its own. */
@@ -132,12 +137,14 @@ export async function loadAtlas(): Promise<Atlas> {
   }
 
   const people = new Map<string, Texture>()
-  const person = (id: number): Texture => {
+  const person = (id: number, pose?: Pose, blink = false): Texture => {
     const { character, hair, shirt } = appearanceFor(id)
     const base = frame(`char${character}` as FrameName)
-    if (!pixels || (hair === 0 && shirt === 0)) return base
+    const eyes = blink ? blinkPatch(character) : undefined
+    const patches = [...(pose ? posePatches(character, pose) : []), ...(eyes ? [eyes] : [])]
+    if (!pixels || (hair === 0 && shirt === 0 && patches.length === 0)) return base
 
-    const key = `${character}/${hair}/${shirt}`
+    const key = `${character}/${hair}/${shirt}/${pose ?? ''}/${eyes ? 'shut' : ''}`
     let texture = people.get(key)
     if (!texture) {
       const [x0, y0, width, height] = CHARACTER_FRAMES[character]
@@ -146,11 +153,13 @@ export async function loadAtlas(): Promise<Atlas> {
         const from = ((y0 + y) * pixels.width + x0) * 4
         cut.set(pixels.data.subarray(from, from + width * 4), y * width * 4)
       }
+      // Recoloured first, so the pose's own pixels (sleeves in the shirt's colours, a white mug) are left alone.
       recolor(cut, width, character, hair, shirt)
+      const drawn = patches.length > 0 ? poseFrame({ data: cut, width, height }, patches, shirtColors(character, shirt)) : { data: cut, width, height }
       const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      canvas.getContext('2d')!.putImageData(new ImageData(cut, width, height), 0, 0)
+      canvas.width = drawn.width
+      canvas.height = drawn.height
+      canvas.getContext('2d')!.putImageData(new ImageData(drawn.data as Uint8ClampedArray<ArrayBuffer>, drawn.width, drawn.height), 0, 0)
       texture = Texture.from(canvas)
       texture.source.scaleMode = 'nearest'
       people.set(key, texture)

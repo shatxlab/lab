@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrange, MIN_VISIBLE_WIDTH, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, SCENE_WIDTH, sceneLayout } from '@/lib/tycoon/render-support/layout'
+import { arrange, chairX, MIN_VISIBLE_WIDTH, MIN_WIDTH, MIRROR, partitionAt, ROOM_TOP, roomBottom, SCENE_WIDTH, sceneLayout, seatX } from '@/lib/tycoon/render-support/layout'
 
 const BOTTOMS = [170, 200, 224] // the room's last row for one, two and three rows of desks
 
@@ -103,6 +103,27 @@ describe('desk arrangements', () => {
   it('stay wide on a desktop window or a landscape tablet', () => {
     for (const [w, h] of [[1100, 568], [1440, 700], [1024, 600], [768, 650]]) {
       for (const desks of [4, 8, 12]) expect(arrange(w, h, desks).arrangement, `${w}x${h}/${desks}`).toBe('wide')
+    }
+  })
+})
+
+describe('the two workstations of a partition', () => {
+  // The desks as OfficeScene draws them: left one at 19, right one at 40, both 17 wide.
+  const DESK_WIDTH = 17
+  const mirrored = (x: number, width: number) => MIRROR - x - width
+
+  it('mirror each other: the right-hand desk is the left-hand one reflected', () => {
+    expect(mirrored(19, DESK_WIDTH)).toBe(40)
+  })
+
+  it('put the chair and the person the same distance from the desk on both sides', () => {
+    const CHAIR = 11
+    expect(chairX(true, CHAIR)).toBe(mirrored(chairX(false, CHAIR), CHAIR))
+    for (const width of [13, 15, 17, 19]) {
+      const left = Math.round(seatX(false) - width / 2)
+      const right = Math.round(seatX(true) - width / 2)
+      // the gap from the person's near edge to their desk is the same either side
+      expect(19 - (left + width)).toBe(right - (40 + DESK_WIDTH))
     }
   })
 })

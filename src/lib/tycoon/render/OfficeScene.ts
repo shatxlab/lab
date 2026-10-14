@@ -8,6 +8,7 @@ import { arrange, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, typ
 import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
 import { pathLength, pointAlong, walkoutPath, type Point } from '../render-support/walkout'
+import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationFor, type WorkstationSpec } from '../render-support/workstations'
 import { formatDateShort } from '@/lib/tycoon/format'
 
 /** Size of the room's artwork in sprite pixels. Walls and floor go on beyond it as far as the screen needs. */
@@ -18,7 +19,12 @@ const WALL_TOP = ROOM_TOP
 const FLOOR_TOP = 112
 const MAX_POPUPS = 24
 const POPUP_MS = 1100
-const BOB_MS = 250
+/** How long one keystroke takes on a desk's screen. */
+const TYPING_STEP_MS = 110
+/** The width of the desk top, which is where a computer sits against its edge. */
+const DESK_WIDTH = 17
+/** The bottom of a computer is this far below the top of its partition. */
+const DESK_BASELINE = 25
 /** Bug-fixing popups are red, with a little bug beside the number. */
 const BUG_RED = 0xff5a6a
 const INK = 0x14141f
@@ -79,19 +85,17 @@ class EmployeeSprite {
   readonly container = new Container()
   private readonly marker = new Graphics()
   private readonly baseY: number
-  private readonly phase: number
   private readonly width: number
   private readonly height: number
   private readonly body: Sprite
   private box: Graphics | null = null
   private status: Status = 'ok'
 
-  constructor(texture: Texture, arrangement: Arrangement, desk: number, id: number) {
+  constructor(texture: Texture, arrangement: Arrangement, desk: number) {
     const { x, y } = seat(arrangement, desk)
     this.container.x = Math.round(x - texture.width / 2)
     this.container.y = y
     this.baseY = y
-    this.phase = id * 97
     this.width = texture.width
     this.height = texture.height
 
@@ -110,11 +114,8 @@ class EmployeeSprite {
     this.container.addChild(body, this.marker)
   }
 
-  update(timeMs: number, working: boolean, employee: Employee): void {
+  update(employee: Employee): void {
     const training = employee.training !== null
-    const up = working && !training && Math.floor((timeMs + this.phase) / BOB_MS) % 2 === 0
-    this.container.y = this.baseY + (up ? -1 : 0)
-
     const status: Status = training ? 'training' : employee.morale < MORALE_UNHAPPY ? 'unhappy' : 'ok'
     if (status !== this.status) {
       this.status = status
@@ -160,6 +161,54 @@ class EmployeeSprite {
       // a little blue book
       this.marker.rect(-1, -1, 7, 6).fill(0x14141f).rect(0, 0, 5, 4).fill(0x6ec6ff).rect(0, 1, 5, 1).fill(0xf4f4f4)
     }
+  }
+}
+
+/** Whether a desk's screen is dark (nobody there), lit but still, or showing someone typing. */
+type DeskMode = 'off' | 'idle' | 'typing'
+
+/** A laptop or PC on a desk. Its screen and keys are drawn over the picture, so typing is seen on the desk and the person stays put. */
+class Workstation {
+  readonly container = new Container()
+  private readonly glow = new Graphics()
+  private drawn = ''
+
+  constructor(
+    private readonly spec: WorkstationSpec,
+    texture: Texture,
+    x: number,
+    y: number,
+    flip: boolean,
+    private readonly desk: number,
+  ) {
+    this.container.addChild(new Sprite(texture), this.glow)
+    if (flip) {
+      this.container.scale.x = -1
+      this.container.x = x + texture.width
+    } else {
+      this.container.x = x
+    }
+    this.container.y = y
+  }
+
+  update(mode: DeskMode, timeMs: number): void {
+    // Desks type out of step with each other; a desk that is not typing holds one still frame.
+    const step = mode === 'typing' ? Math.floor((timeMs + this.desk * 173) / TYPING_STEP_MS) : 20 + this.desk * 11
+    const frame = mode === 'off' ? 'off' : `${mode}:${step}`
+    if (frame === this.drawn) return
+    this.drawn = frame
+
+    const g = this.glow.clear()
+    if (mode === 'off') return
+    const { screen, keys } = this.spec
+    g.rect(screen.x, screen.y, screen.w, screen.h).fill(SCREEN_ON)
+    const { lines, cursor } = typingScreen(step, Math.ceil(screen.h / 2), screen.w)
+    lines.forEach((line, row) => {
+      if (line.length > 0) g.rect(screen.x + line.indent, screen.y + row * 2, line.length, 1).fill(line.color)
+    })
+    if (mode !== 'typing') return
+    g.rect(screen.x + Math.min(cursor.col, screen.w - 1), screen.y + cursor.row * 2, 1, 1).fill(CURSOR)
+    for (const [x, y] of pressedKeys(step, keys.w, keys.h)) g.rect(keys.x + x, keys.y + y, 1, 1).fill(KEY_DOWN)
   }
 }
 
@@ -258,6 +307,8 @@ export class OfficeScene {
   /** Desks somebody has left since the room was shown; they are cleared out rather than left as if on holiday. */
   private vacated = new Set<number>()
   private furnishedFor = ''
+  /** The computers on the desks as last furnished, by desk. */
+  private stations = new Map<number, Workstation>()
   /** How the desks are laid out, chosen for the shape of the screen. */
   private arrangement: Arrangement = 'wide'
   private areaW = SCENE_W
@@ -431,10 +482,15 @@ export class OfficeScene {
 
     const working = this.options.working ? this.options.working() : speed > 0 && office.project !== null && !state.gameOver
     const people = new Map(state.employees.map((e) => [e.id, e]))
+    const modes = new Map<number, DeskMode>()
     for (const [id, sprite] of this.sprites) {
       const employee = people.get(id)
-      if (employee) sprite.update(this.time, working, employee)
+      if (!employee) continue
+      sprite.update(employee)
+      const desk = this.seats.deskFor(id)
+      if (desk !== undefined) modes.set(desk, working && employee.training === null ? 'typing' : 'idle')
     }
+    for (const [desk, station] of this.stations) station.update(modes.get(desk) ?? 'off', this.time)
     this.updatePopups(dtMs, speed)
     this.updateLeaving(dtMs)
 
@@ -670,8 +726,9 @@ export class OfficeScene {
   private furnishDesks(desks: number): void {
     const { atlas } = this
     for (const layer of [this.chairs, this.desks]) {
-      for (const child of layer.removeChildren()) child.destroy()
+      for (const child of layer.removeChildren()) child.destroy({ children: true })
     }
+    this.stations = new Map()
     this.furnishedFor = this.occupancyKey()
 
     for (let i = 0; i < desks; i++) {
@@ -684,7 +741,15 @@ export class OfficeScene {
 
       const deskX = px + (right ? 40 : 19)
       this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
-      if (!vacancy || hasComputer(vacancy)) this.desks.addChild(placed(atlas.frame('computer'), px + (right ? 41 : 20), py + 6, right))
+      if (!vacancy || hasComputer(vacancy)) {
+        const kind = workstationFor(i)
+        const { gap, width, height } = WORKSTATIONS[kind]
+        // Against the edge of the desk nearest the person, whichever side that is.
+        const x = deskX + (right ? DESK_WIDTH - gap - width : gap)
+        const station = new Workstation(WORKSTATIONS[kind], atlas.workstation(kind), x, py + DESK_BASELINE - height, right, i)
+        this.stations.set(i, station)
+        this.desks.addChild(station.container)
+      }
       if (vacancy) this.dressVacantDesk(vacancy, deskX, py, right)
     }
   }
@@ -730,7 +795,7 @@ export class OfficeScene {
     for (const id of ids) {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
-      const sprite = new EmployeeSprite(this.atlas.character(id), this.arrangement, desk, id)
+      const sprite = new EmployeeSprite(this.atlas.character(id), this.arrangement, desk)
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }

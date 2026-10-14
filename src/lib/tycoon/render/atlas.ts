@@ -2,6 +2,7 @@ import { Assets, Rectangle, Texture } from 'pixi.js'
 import { withBase } from '@/lib/apps/paths'
 import { OFFICE_THEMES, shiftHueRgb } from '@/lib/tycoon/theme'
 import { appearanceFor, CHARACTER_FRAMES, recolor } from '../render-support/characters'
+import { workstationPixels, type WorkstationKind } from '../render-support/workstations'
 
 type Frame = readonly [x: number, y: number, w: number, h: number]
 
@@ -20,8 +21,6 @@ const SHEET_FRAMES = {
   deskLeft: [188, 63, 17, 19],
   deskPole: [207, 63, 4, 27],
   deskRight: [213, 63, 17, 19],
-  /** CRT monitor with keyboard, as one sprite. */
-  computer: [233, 106, 15, 19],
   floorTile: [3, 68, 73, 24],
   windowPlain: [59, 96, 26, 21],
   windowNote: [88, 96, 26, 21],
@@ -69,6 +68,8 @@ export interface Atlas {
   frame(name: FrameName): Texture
   /** The picture for the person with this id: one of five sprites, with their own hair and shirt colours. */
   character(id: number): Texture
+  /** What is on a desk: a laptop, or a PC with its monitor, keyboard and mouse. */
+  workstation(kind: WorkstationKind): Texture
   /** The dog with its tail cut off, so the tail can be drawn (and wiggled) on its own. */
   dogNoTail: Texture
   /** The dog's tail alone, cropped from the sheet; its pivot sits at the base against the body. */
@@ -201,6 +202,8 @@ export async function loadAtlas(): Promise<Atlas> {
     return texture
   }
 
+  const workstations: Partial<Record<WorkstationKind, Texture>> = {}
+
   const floors = new Map<number, Texture>()
   const floorTile = (theme: number): Texture => {
     const index = theme % OFFICE_THEMES.length
@@ -226,6 +229,7 @@ export async function loadAtlas(): Promise<Atlas> {
     frame,
     floorTile,
     character: person,
+    workstation: (kind) => (workstations[kind] ??= toTexture(workstationPixels(kind))),
     dogNoTail,
     dogTail: slice(sheet, DOG_TAIL),
     wallStrip: slice(scene, WALL_STRIP),

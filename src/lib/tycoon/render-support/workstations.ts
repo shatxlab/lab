@@ -53,7 +53,8 @@ function spec(art: readonly string[], gap: number, top: number): WorkstationSpec
 // Both are seen from the side, the person at the near (left) end, so the glass is only a thin sliver:
 // a flat monitor, a pixel of glass and its back, held up by a stand a pixel behind it that joins its back with a
 // short arm, with a keyboard in front of it (under the typing hands, its far end showing past them) and a slim
-// tower; a laptop with its lid, a pixel of glass and its back, standing at the hinge.
+// tower, wired to the stand's foot by a cable sagging across the desk; a laptop with its lid, a pixel of glass and
+// its back, standing at the hinge.
 export const WORKSTATIONS: Readonly<Record<WorkstationKind, WorkstationSpec>> = {
   pc: spec(
     [
@@ -71,10 +72,10 @@ export const WORKSTATIONS: Readonly<Record<WorkstationKind, WorkstationSpec>> = 
       '..........go.odo',
       '..........go.odo',
       '.......ossso.ooo',
-      '.......ooooo....',
-      'ooooooo.........',
-      'ocscsco.........',
-      'ooooooo.........',
+      '.......ooooo..o.',
+      'ooooooo....o..o.',
+      'ocscsco....o..o.',
+      'ooooooo.....oo..',
     ],
     1,
     7,

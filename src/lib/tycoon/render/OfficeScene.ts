@@ -9,7 +9,7 @@ import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
 import { blinkingAt, momentAt } from '../render-support/activity'
 import { KEEPSAKE_TOP, keepsakeFor, keepsakeX } from '../render-support/keepsakes'
-import { POSE_PAD, type Pose } from '../render-support/poses'
+import { POSE_PAD, WALK_CYCLE, type Pose } from '../render-support/poses'
 import { pathLength, pointAlong, walkoutPath, type Point } from '../render-support/walkout'
 import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationFor, type WorkstationSpec } from '../render-support/workstations'
 import { formatDateShort } from '@/lib/tycoon/format'
@@ -297,8 +297,12 @@ interface Leaver {
 /** Where the office doors are (their middle and where a person's feet end up), in sprite pixels. */
 const DOOR_X = 127
 const DOOR_FEET = 110
-/** How fast people walk out, in sprite pixels a second, and how far from the doors they start to fade. */
+/**
+ * How fast people walk out, in sprite pixels a second, how far they go on each frame of their stride (so their
+ * feet keep time with the floor going by), and how far from the doors they start to fade.
+ */
 const WALK_SPEED = 42
+const STRIDE_FRAME = 4
 const FADE_DISTANCE = 10
 
 interface Popup {
@@ -589,7 +593,7 @@ export class OfficeScene {
     this.leaving.push({ sprite, path, length: pathLength(path), age: 0, rightwards })
   }
 
-  /** Walks everyone who is leaving along their path, hopping a little, and fades them out at the doors. */
+  /** Walks everyone who is leaving along their path, stepping foot after foot, and fades them out at the doors. */
   private updateLeaving(dtMs: number): void {
     for (let i = this.leaving.length - 1; i >= 0; i--) {
       const leaver = this.leaving[i]!
@@ -601,10 +605,11 @@ export class OfficeScene {
         leaver.rightwards = at.dx > 0
         leaver.sprite.face(leaver.rightwards)
       }
-      const hop = done ? 0 : -Math.abs(Math.sin(leaver.age / 110)) * 1.5
+      // Only the legs move: lifting the whole body with each step read as hopping.
+      leaver.sprite.setPose(done ? 'carry' : WALK_CYCLE[Math.floor(walked / STRIDE_FRAME) % WALK_CYCLE.length])
       const view = leaver.sprite.container
       view.x = Math.round(at.x)
-      view.y = Math.round(at.y + hop)
+      view.y = Math.round(at.y)
       view.alpha = Math.min(1, Math.max(0, (leaver.length - walked) / FADE_DISTANCE))
       if (done) {
         view.destroy({ children: true })

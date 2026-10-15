@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { PNG } from 'pngjs'
 import { describe, expect, it } from 'vitest'
 import { CHARACTER_COUNT, CHARACTER_FRAMES, OUTLINE_RGB, SHIRT_RAMPS, shirtColors } from '@/lib/tycoon/render-support/characters'
-import { blinkPatch, POSE_NAMES, POSE_PAD, poseFrame, posePatches, type Pixels, type Pose } from '@/lib/tycoon/render-support/poses'
+import { blinkPatch, POSE_NAMES, POSE_PAD, STANDING_POSES, WALK_CYCLE, poseFrame, posePatches, type Pixels, type Pose } from '@/lib/tycoon/render-support/poses'
 
 const sheet = PNG.sync.read(readFileSync('assets/pixeloffice/PixelOfficeAssets.png'))
 
@@ -36,7 +36,7 @@ function openEdges(frame: Pixels, left: number): string[] {
  * that faces the desk: it has no outline there, because the desk has its own edge beside it.
  */
 function openEdgesPosed(frame: Pixels, character: number, pose: Pose): string[] {
-  if (pose === 'carry') return openEdges(frame, POSE_PAD.left)
+  if (STANDING_POSES.includes(pose)) return openEdges(frame, POSE_PAD.left)
   const leg = posePatches(character, 'sit')[1]!
   const front = leg.x + Math.max(...leg.rows.map((row) => row.length)) - 1
   return openEdges(frame, POSE_PAD.left).filter((at) => {
@@ -88,7 +88,7 @@ describe('posePatches', () => {
     for (let i = 3; i < shut.data.length; i += 4) if (open.data[i] === 0) expect(shut.data[i]).toBe(0)
   })
 
-  it.each(cases.filter(({ pose }) => pose !== 'carry'))('character $character sits with one leg forward, not on two feet, when they $pose', ({ character, pose }) => {
+  it.each(cases.filter(({ pose }) => !STANDING_POSES.includes(pose)))('character $character sits with one leg forward, not on two feet, when they $pose', ({ character, pose }) => {
     // The pack's people end in two feet side by side, which at a desk looks like standing on the chair: seated
     // they cross the floor with a single leg running forward, so the bottom row is one run of pixels.
     const frame = poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0))
@@ -108,6 +108,26 @@ describe('posePatches', () => {
     expect(boxes.length).toBeGreaterThan(2)
     const feet = Array.from({ length: frame.width }, (_, x) => pixel(frame, x, standing(character).height - 1)[3] > 0).filter((on, x, all) => on && !all[x - 1]).length
     expect(feet).toBe(2)
+  })
+
+  it.each(Array.from({ length: CHARACTER_COUNT }, (_, character) => ({ character })))('character $character steps with the legs only: the body and the box stay put', ({ character }) => {
+    const [, , , height] = CHARACTER_FRAMES[character]!
+    const frames = (['carry', 'walkA', 'walkB', 'walkC'] as const).map((pose) => poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0)))
+    const legsFrom = Math.min(...posePatches(character, 'walkA').slice(0, 1).map((patch) => patch.y))
+    // every row above the legs is identical in all four, so nothing above the knee moves
+    for (const frame of frames) expect([...frame.data.subarray(0, legsFrom * frame.width * 4)]).toEqual([...frames[0]!.data.subarray(0, legsFrom * frame.width * 4)])
+    // and the three stride frames differ from each other and from standing
+    const drawn = frames.map((frame) => [...frame.data].join())
+    expect(new Set(drawn).size).toBe(4)
+    // a lifted foot leaves the floor row empty on its side; the planted one keeps it: never fewer than one foot down
+    const floorRuns = (frame: Pixels) => Array.from({ length: frame.width }, (_, x) => pixel(frame, x, height - 1)[3] > 0).filter((on, x, all) => on && !all[x - 1]).length
+    expect(floorRuns(frames[1]!)).toBe(2)
+    expect(floorRuns(frames[2]!)).toBe(1)
+    expect(floorRuns(frames[3]!)).toBe(1)
+  })
+
+  it('walks a stride of two steps, one with each foot', () => {
+    expect(WALK_CYCLE).toEqual(['walkA', 'walkB', 'walkA', 'walkC'])
   })
 
   it('outlines the standing frames all round too, which is what the poses are held to', () => {

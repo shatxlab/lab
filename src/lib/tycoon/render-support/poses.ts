@@ -11,13 +11,21 @@
  */
 import type { Rgb } from './characters'
 
-/** `sit` is sitting at the desk with nothing to do: the arms hang as the pack drew them, the legs are gone. */
-export type Pose = 'sit' | 'typeA' | 'typeB' | 'think' | 'sip' | 'stretch' | 'carry'
+/**
+ * `sit` is sitting at the desk with nothing to do: the arms hang as the pack drew them, the legs are gone.
+ * `carry` is standing with the box; `walkA`, `walkB` and `walkC` are the same with the legs mid-stride (see `WALK_CYCLE`).
+ */
+export type Pose = 'sit' | 'typeA' | 'typeB' | 'think' | 'sip' | 'stretch' | 'carry' | 'walkA' | 'walkB' | 'walkC'
 
-export const POSE_NAMES: readonly Pose[] = ['sit', 'typeA', 'typeB', 'think', 'sip', 'stretch', 'carry']
+export const POSE_NAMES: readonly Pose[] = ['sit', 'typeA', 'typeB', 'think', 'sip', 'stretch', 'carry', 'walkA', 'walkB', 'walkC']
+
+type Walk = 'walkA' | 'walkB' | 'walkC'
+
+/** The poses on their feet with the box, not at a desk. */
+export const STANDING_POSES: readonly Pose[] = ['carry', 'walkA', 'walkB', 'walkC']
 
 /** The poses at a desk that move the arms. */
-type Move = Exclude<Pose, 'sit' | 'carry'>
+type Move = Exclude<Pose, 'sit' | 'carry' | Walk>
 
 /**
  * Clear rows and columns added around a pose's frame: on each side, so arms can reach past the sprite's edges, and
@@ -145,6 +153,48 @@ function carry(character: number): readonly Patch[] {
   ]
 }
 
+/**
+ * The legs of someone walking, for each character: the rows below the hem, redrawn from the pack's standing legs.
+ * `walkA` is a stride with the lower legs and boots splayed a pixel apart; in `walkB` and `walkC` the left or the
+ * right foot is lifted a row off the floor, the shin short so the boot is up by the knee. Cycled A, B, A, C they
+ * step one foot after the other. The body does not move: only the legs carry the walk, so nobody hops.
+ */
+const WALK: readonly Readonly<Record<Walk, Patch>>[] = [
+  // 0: dark-haired boy in a striped grey shirt
+  {
+    walkA: { x: -1, y: 19, rows: ['    aha  aha  ', '   aea    aea ', '  abba    abba', '  aaaa    aaaa'] },
+    walkB: { x: -1, y: 19, rows: ['    aha  aha  ', '   abba  aea  ', '   aaaa  abba ', '         aaaa '] },
+    walkC: { x: -1, y: 19, rows: ['    aha  aha  ', '    aea  abba ', '   abba  aaaa ', '   aaaa       '] },
+  },
+  // 1: red-haired girl in a white shirt
+  {
+    walkA: { x: -1, y: 20, rows: ['    aba  aba  ', '   aba    aba ', '  acca    acca', '  aaaa    aaaa'] },
+    walkB: { x: -1, y: 20, rows: ['    aba  aba  ', '   acca  aba  ', '   aaaa  acca ', '         aaaa '] },
+    walkC: { x: -1, y: 20, rows: ['    aba  aba  ', '    aba  acca ', '   acca  aaaa ', '   aaaa       '] },
+  },
+  // 2: grey-haired man with glasses in a white shirt
+  {
+    walkA: { x: -1, y: 17, rows: ['   aha  aha  ', '  aha    aha ', ' acca    acca', ' aaaa    aaaa'] },
+    walkB: { x: -1, y: 17, rows: ['   aha  aha  ', '  acca  aha  ', '  aaaa  acca ', '        aaaa '] },
+    walkC: { x: -1, y: 17, rows: ['   aha  aha  ', '   aha  acca ', '  acca  aaaa ', '  aaaa       '] },
+  },
+  // 3: red-haired girl in a blue shirt
+  {
+    walkA: { x: -1, y: 20, rows: ['     aea    aea ', '    acca    acca', '    aaaa    aaaa'] },
+    walkB: { x: -1, y: 20, rows: ['     acca  aea  ', '     aaaa  acca ', '           aaaa '] },
+    walkC: { x: -1, y: 20, rows: ['      aea  acca ', '     acca  aaaa ', '     aaaa       '] },
+  },
+  // 4: dark-haired girl in a maroon top
+  {
+    walkA: { x: -1, y: 20, rows: ['     aea    aea ', '    acca    acca', '    aaaa    aaaa'] },
+    walkB: { x: -1, y: 20, rows: ['     acca  aea  ', '     aaaa  acca ', '           aaaa '] },
+    walkC: { x: -1, y: 20, rows: ['      aea  acca ', '     acca  aaaa ', '     aaaa       '] },
+  },
+]
+
+/** The frames of one full stride, in order; two steps, one with each foot. */
+export const WALK_CYCLE: readonly Walk[] = ['walkA', 'walkB', 'walkA', 'walkC']
+
 /** Which arms each pose moves: the near one (on the keyboard's side) or both. */
 const MOVES: Readonly<Record<Move, readonly ('near' | 'far')[]>> = {
   typeA: ['near', 'far'],
@@ -226,6 +276,8 @@ export const blinkPatch = (character: number): Patch | undefined => BLINKS[chara
 export function posePatches(character: number, pose: Pose): readonly Patch[] {
   const torso = TORSOS[character]!
   if (pose === 'carry') return carry(character)
+  // The legs first: the box is held in front of the hem and may cover the top row of them.
+  if (pose === 'walkA' || pose === 'walkB' || pose === 'walkC') return [WALK[character]![pose], ...carry(character)]
   const seated = SEATED[character]!
   if (pose === 'sit') return seated
   return [...seated, ...MOVES[pose].map((side) => torso[side]), POSES[character]![pose]]

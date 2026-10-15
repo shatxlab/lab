@@ -59,6 +59,12 @@ function placed(texture: Texture, x: number, y: number, flip = false): Sprite {
   return sprite
 }
 
+/**
+ * Rows from the top of a partition to the top of a chair. The pack's chairs are drawn for a person standing beside
+ * them; with the seat this low, the sitter's thighs rest on it rather than hanging past its front edge.
+ */
+const CHAIR_TOP = 9
+
 /** The row of a seated person's feet, counted from the top of their seat (see `seat`). */
 const FEET_ROW = 22
 
@@ -793,7 +799,7 @@ export class OfficeScene {
       const vacancy = this.options.vacancies && !this.occupied.has(i) ? vacancyFor(i, this.vacated.has(i)) : null
       const chair = atlas.frame(CHAIRS[i % CHAIRS.length])
       const tuck = vacancy && chairTucked(vacancy) ? (right ? -CHAIR_TUCK : CHAIR_TUCK) : 0
-      this.chairs.addChild(placed(chair, px + chairX(right, chair.width) + tuck, py + 7, right))
+      this.chairs.addChild(placed(chair, px + chairX(right, chair.width) + tuck, py + CHAIR_TOP, right))
 
       const deskX = px + (right ? 40 : 19)
       this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))

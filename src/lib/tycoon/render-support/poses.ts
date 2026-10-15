@@ -78,12 +78,22 @@ const TORSOS: readonly Readonly<Record<'near' | 'far', Patch>>[] = [
 
 /**
  * A leg seen from the side: a thigh running forward from the hips, a shin `shin` rows long, then a boot in the colour of their standing shoes, below the
- * hem at row `hem` (the thigh's top edge is outlined over the hem). The sole ends two rows below the pack's feet. It ends 7 columns from `x`, its
+ * hem at row `hem` (the thigh's top edge is outlined over the hem). The sole ends two rows below the pack's feet. It ends `7 + reach` columns from `x`, its
  * last column against the desk's edge, so it reads as running in under the desk. That front, the side that faces the
  * desk, has no outline: the desk has its own edge there, and the two would make a heavy double line.
  */
-function legs(x: number, hem: number, pants: string, boots: string, shin: 1 | 2): Patch {
-  const rows = ['.....aa', 'aPPPPPP', '.aaaaPP', ...Array<string>(shin - 1).fill('....aPP'), '....aBB', '....aBB', '....aaa']
+function legs(x: number, hem: number, pants: string, boots: string, shin: 1 | 2, reach = 0): Patch {
+  // `reach` lengthens the thigh, moving the knee, shin and boot that many columns forward.
+  const more = (letter: string) => letter.repeat(reach)
+  const rows = [
+    `.....aa${more('a')}`,
+    `aPPPPPP${more('P')}`,
+    `.aaaa${more('a')}PP`,
+    ...Array<string>(shin - 1).fill(`....${more('.')}aPP`),
+    `....${more('.')}aBB`,
+    `....${more('.')}aBB`,
+    `....${more('.')}aaa`,
+  ]
   return { x, y: hem, rows: rows.map((row) => row.replaceAll('P', pants).replaceAll('B', boots)) }
 }
 
@@ -95,8 +105,8 @@ function legs(x: number, hem: number, pants: string, boots: string, shin: 1 | 2)
 const SEATED: readonly (readonly Patch[])[] = [
   // 0: the shirt already ends in an outline row
   [{ x: 2, y: 19, rows: Array<string>(4).fill(' '.repeat(11)) }, legs(5, 18, 'h', 'b', 2)],
-  // 1: the outline closes the shirt where the legs start
-  [{ x: 2, y: 19, rows: ['.aaaaaaaa.', ...Array<string>(4).fill(' '.repeat(10))] }, legs(6, 19, 'b', 'c', 2)],
+  // 1: the outline closes the shirt where the legs start; she is the widest sprite, so her knee is a column short of the others'
+  [{ x: 2, y: 19, rows: ['.aaaaaaaa.', ...Array<string>(4).fill(' '.repeat(10))] }, legs(6, 19, 'b', 'c', 2, 1)],
   // 2: the same, under a shorter shirt
   [{ x: 1, y: 16, rows: ['.aaaaaaaaa', ...Array<string>(4).fill(' '.repeat(10))] }, legs(4, 16, 'h', 'c', 2)],
   // 3: the skirt's hem is the outline

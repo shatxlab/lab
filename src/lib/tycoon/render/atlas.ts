@@ -10,14 +10,18 @@ type Frame = readonly [x: number, y: number, w: number, h: number]
 // The art pack lives in `assets/pixeloffice/`; root-relative paths need the deployment base prefix.
 const BASE = withBase('/pixeloffice/')
 
-/** Sprite rectangles in PixelOfficeAssets.png (CC0 pack by 2dPig). */
+/**
+ * Sprite rectangles in PixelOfficeAssets.png (CC0 pack by 2dPig). The chairs are cropped to 20 of their 22 rows,
+ * which shortens the legs: they are seated lower than the pack draws them, and the full legs would run into the
+ * partition in the next row.
+ */
 const SHEET_FRAMES = {
-  chairRed: [6, 41, 11, 22],
-  chairOrange: [19, 41, 11, 22],
-  chairGreen: [32, 41, 11, 22],
-  chairBlue: [45, 41, 11, 22],
-  chairWhite: [58, 41, 11, 22],
-  chairGray: [71, 41, 11, 22],
+  chairRed: [6, 41, 11, 20],
+  chairOrange: [19, 41, 11, 20],
+  chairGreen: [32, 41, 11, 20],
+  chairBlue: [45, 41, 11, 20],
+  chairWhite: [58, 41, 11, 20],
+  chairGray: [71, 41, 11, 20],
   partition: [171, 44, 79, 17],
   deskLeft: [188, 63, 17, 19],
   deskPole: [207, 63, 4, 27],

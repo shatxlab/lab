@@ -8,8 +8,8 @@ import { axeViolations as axeRun, click, mount } from "../helpers/dom";
 
 // jsdom has no WebGL: the scene is replaced by a stand-in that records what it was told.
 vi.mock("@/components/focus/FocusScene", () => ({
-  FocusScene: (props: { office: { roster: { id: number; name: string }[] }; fired: number; label: string; working: boolean; onSelect: (p: unknown) => void }) => (
-    <div role="group" aria-label="office" data-testid="scene" data-fired={props.fired} data-label={props.label} data-working={String(props.working)}>
+  FocusScene: (props: { office: { roster: { id: number; name: string }[] }; fired: number; label: string; working: boolean; onBreak: boolean; onSelect: (p: unknown) => void }) => (
+    <div role="group" aria-label="office" data-testid="scene" data-fired={props.fired} data-label={props.label} data-working={String(props.working)} data-on-break={String(props.onBreak)}>
       {props.office.roster.map((person) => (
         <button key={person.id} type="button" data-person={person.name} onClick={() => props.onSelect(person)}>
           {person.name}
@@ -184,6 +184,7 @@ describe("FocusApp — the flow", () => {
     const view = await open();
     await click(button(tz("en", "start")));
     expect(scene()!.dataset.working).toBe("true");
+    expect(scene()!.dataset.onBreak).toBe("false");
     expect(timerText()).toBe("25:00");
     await advance(10 * MIN);
     expect(timerText()).toBe("15:00");
@@ -193,12 +194,15 @@ describe("FocusApp — the flow", () => {
     expect(text()).toContain(tz("en", "phaseBreak"));
     expect(timerText()).toBe("5:00");
     expect(scene()!.dataset.working).toBe("false");
+    // The office is told it is a break, so people can go for coffee.
+    expect(scene()!.dataset.onBreak).toBe("true");
     expect(text()).toContain(tz("en", "doneCount", { n: 1 }));
     expect(button(tz("en", "skipBreak"))).toBeTruthy();
     await advance(5 * MIN);
     // Back to work without a click.
     expect(text()).toContain(tz("en", "phaseFocus"));
     expect(timerText()).toBe("25:00");
+    expect(scene()!.dataset.onBreak).toBe("false");
     expect(fired()).toBe(0);
     view.unmount();
   });

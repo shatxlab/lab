@@ -10,7 +10,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 |---|---|---|
 | `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Recognize text** (OCR) reads a picture or the pages of a scanned PDF, in English and Russian, on the device. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
 | `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV, TSV or JSON; send text there from the workbench; export a deck as TSV or JSON; Markdown on both sides; EN/RU. |
-| `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes and lo-fi music, always open in a full-screen pixel office. Press Start and follow the 25/5/15 flow (a break after every Pomodoro, a long one after every fourth); give a Pomodoro up and one of the six people packs a box and walks out the door, and when the office is empty you hire a new team. Music is generated in the browser. Pause, skip breaks, mute, the countdown in the tab title. Nothing is saved. |
+| `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes and lo-fi music, always open in a full-screen pixel office. Press Start and follow the 25/5/15 flow (a break after every Pomodoro, a long one after every fourth); during a break people go for coffee, water, a sit on the sofa, a book or a snack; give a Pomodoro up and one of the six people packs a box and walks out the door, and when the office is empty you hire a new team. Music is generated in the browser. Pause, skip breaks, mute, the countdown in the tab title. Nothing is saved. |
 | `/board` | Whiteboard · Доска | A small whiteboard for sketching: rectangles, ellipses, arrows, text and freehand, with select/move/resize, undo and redo, pan and zoom (two fingers, wheel, Space-drag), a grid, several boards, and export to SVG, PNG or a plain-JSON board file you can open again. |
 | `/cv` | CV builder · Конструктор резюме | Fill in a form and get a clean one-column résumé that applicant-tracking systems can read: four templates (classic, modern, minimal, plain), English or Russian headings, A4 or Letter. Print to PDF with selectable text, or download Word (.docx), plain text or a CV file you can reopen; several CVs, live preview. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
@@ -495,6 +495,21 @@ person out with a cardboard box before they are removed from the state. The rout
 (`render-support/walkout.ts`, tested for every desk in both arrangements) keeps
 to free floor: out the chair's side, along the aisle or the margin, then the lane
 under the windows to the doors, never across a desk.
+
+**Breaks.** While the flow is in a break, `options.breaks` is true and people get
+up in their own time (`render-support/breaks.ts`: everything is seeded from the
+person's id, the number of the break and the round, so a break always plays out
+the same way). Each goes out to a free spot, does the thing and walks back, then
+sits a while and goes again: coffee at the machine, a drink at either water
+cooler, a seat on the sofa, a book from the bookshelf (drawn for the occasion in
+`render-support/bookshelf.ts`; the pack has none) or a snack from the vending
+machine or the snack cabinet. They take a different errand from the last one, two
+people never stand on top of each other, and spots in the cropped-off margins of
+a narrow screen are not used. They walk by the same free floor as a leaver
+(`routePath`), and when the break ends (or is skipped) whoever is out turns back
+at once. Someone who gives up a Pomodoro while still out carries on to the doors
+from where they are (`pathToDoors`). Tycoon does not pass the option, so its
+office has no outings and no bookshelf.
 
 ### Send to phone
 

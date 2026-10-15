@@ -13,6 +13,8 @@ export interface FocusSceneProps {
   fired: number;
   /** Are people typing right now? */
   working: boolean;
+  /** Is it a break? People get up and go to the coffee machine, the cooler, the sofa, the bookshelf or the vending machine. */
+  onBreak: boolean;
   /** The text on the plate over the doors. */
   label: string;
   onSelect: (person: Employee) => void;
@@ -26,14 +28,14 @@ type SceneHandle = { leave: (id: number) => void };
  * so it never enters the island's first chunk. If it cannot start (no WebGL),
  * a plain list of the team stands in and the timer carries on regardless.
  */
-export function FocusScene({ lang, office, fired, working, label, onSelect, className }: FocusSceneProps) {
+export function FocusScene({ lang, office, fired, working, onBreak, label, onSelect, className }: FocusSceneProps) {
   const hostRef = React.useRef<HTMLDivElement>(null);
   const sceneRef = React.useRef<SceneHandle | null>(null);
   const [failed, setFailed] = React.useState(false);
 
   // Read through a ref so the long-lived scene always sees the latest values.
-  const live = React.useRef({ working, label, onSelect });
-  live.current = { working, label, onSelect };
+  const live = React.useRef({ working, onBreak, label, onSelect });
+  live.current = { working, onBreak, label, onSelect };
   const shownFired = React.useRef(fired);
   const firedNow = React.useRef(fired);
   firedNow.current = fired;
@@ -93,10 +95,11 @@ export function FocusScene({ lang, office, fired, working, label, onSelect, clas
           {
             label: () => live.current.label,
             working: () => live.current.working,
+            breaks: () => live.current.onBreak,
             vacancies: true,
-            // A phone held upright always gets the one deep column: two columns leave no aisle to walk out
-            // by, and the scene area changes shape with the controls under it, so its own aspect can't decide.
-            arrangement: () => (window.innerHeight > window.innerWidth ? "tall" : null),
+            // Two columns of desks on a computer; on a touch screen (a phone, held either way up) the one deep
+            // column, since two leave no aisle to walk out by.
+            arrangement: () => (window.matchMedia("(hover: none) and (pointer: coarse)").matches ? "tall" : "wide"),
           },
         );
         app.stage.addChild(scene.view, scene.popups);

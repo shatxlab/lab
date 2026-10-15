@@ -32,7 +32,7 @@ export const INTERLUDE_MS: Readonly<Record<Interlude, readonly [number, number]>
 const BREAKS_WORKING = 60
 const BREAKS_IDLE = 25
 
-const hash = (a: number, b: number): number => {
+export const hash = (a: number, b: number): number => {
   let h = Math.imul(a + 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x7f4a7c15, 0xc2b2ae35)
   h ^= h >>> 15
   h = Math.imul(h, 0x2c1b3c6d)

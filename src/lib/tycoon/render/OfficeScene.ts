@@ -4,13 +4,15 @@ import { getOffice, officeSpec, staffOf } from '@/lib/tycoon/sim/offices'
 import { DISCIPLINES, type Discipline, type Employee, type GameState, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
 import type { Atlas, FrameName } from './atlas'
-import { arrange, chairX, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
+import { chairX, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
 import { blinkingAt, momentAt } from '../render-support/activity'
 import { KEEPSAKE_TOP, keepsakeFor, keepsakeX } from '../render-support/keepsakes'
-import { POSE_PAD, WALK_CYCLE, type Pose } from '../render-support/poses'
-import { pathLength, pointAlong, walkoutPath, type Point } from '../render-support/walkout'
+import { POSE_PAD, STEP_CYCLE, WALK_CYCLE, type Pose } from '../render-support/poses'
+import { pathLength, pathToDoors, pointAlong, routePath, walkoutPath, type Point } from '../render-support/walkout'
+import { chooseErrand, chooseSpot, nextOutAt, poseAtSpot, SPOTS, spotFree, stayFor, type Errand, type Spot, type Stay } from '../render-support/breaks'
+import { BOOKSHELF_HEIGHT, bookshelfRects } from '../render-support/bookshelf'
 import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationFor, type WorkstationSpec } from '../render-support/workstations'
 import { formatDateShort } from '@/lib/tycoon/format'
 
@@ -112,7 +114,6 @@ class EmployeeSprite {
   /** Holds the character and its status marker; this is what goes on the stage. */
   readonly container = new Container()
   private readonly marker = new Graphics()
-  private readonly baseY: number
   private readonly width: number
   private readonly height: number
   private readonly body: Sprite
@@ -120,6 +121,8 @@ class EmployeeSprite {
   private pose: Pose | undefined
   private blinking = false
   private facingLeft: boolean
+  /** The way they face at their desk, which they take up again after an outing. */
+  private readonly seatedLeft: boolean
 
   constructor(
     private readonly look: (pose?: Pose, blink?: boolean) => Texture,
@@ -133,7 +136,6 @@ class EmployeeSprite {
     const y = seated.y + FEET_ROW - (texture.height - 1)
     this.container.x = Math.round(seated.x - texture.width / 2)
     this.container.y = y
-    this.baseY = y
     this.width = texture.width
     this.height = texture.height
 
@@ -142,6 +144,7 @@ class EmployeeSprite {
     this.body = body
     const flip = facesLeft(desk)
     this.facingLeft = flip
+    this.seatedLeft = flip
     this.setPose('sit')
 
     this.marker.x = flip ? 1 : texture.width - 3
@@ -198,10 +201,15 @@ class EmployeeSprite {
     this.place()
   }
 
+  /** Turns back to face the desk they sit at. */
+  faceDesk(): void {
+    this.face(!this.seatedLeft)
+  }
+
   /** Is the scene point (x, y) on this character, give or take a pixel or two? */
   hit(x: number, y: number): boolean {
-    const left = this.container.x
-    return x >= left - 2 && x <= left + this.width + 2 && y >= this.baseY - 9 && y <= this.baseY + this.height + 2
+    const { x: left, y: top } = this.container
+    return x >= left - 2 && x <= left + this.width + 2 && y >= top - 9 && y <= top + this.height + 2
   }
 
   private drawMarker(): void {
@@ -282,10 +290,16 @@ export interface SceneOptions {
    */
   vacancies?: boolean
   /**
-   * Pins how the desks are laid out instead of choosing by the shape of the area. The Focus office uses
-   * this on a phone: the area changes shape as the controls under it do, and the desks must not jump.
+   * How the desks are laid out: in rows of four (`wide`, the default) or in one deep column (`tall`). Never chosen by
+   * the shape of the area, which changes with the controls around it, so the desks do not jump. The Focus office asks
+   * for the column on a touch screen.
    */
-  arrangement?: () => Arrangement | null
+  arrangement?: () => Arrangement
+  /**
+   * Whether it is break time. While it is, people get up and go to the coffee machine, the water cooler, the sofa, the
+   * bookshelf (drawn for the occasion) or the vending machine, and go back when it is over. Off by default, so the game's office has no such outings.
+   */
+  breaks?: () => boolean
 }
 
 /** Someone on their way out with a box. */
@@ -298,6 +312,33 @@ interface Leaver {
   age: number
   rightwards: boolean
 }
+
+/** Someone on a break outing: walking out to a spot, there for a while, then back to their desk. */
+interface Trip {
+  errand: Errand
+  spot: Spot
+  /** Top-left corners from the desk to the spot (see `routePath`), and the same walked the other way. */
+  path: Point[]
+  back: Point[]
+  length: number
+  phase: 'out' | 'stay' | 'back'
+  /** How far along `path` they are, in sprite pixels. */
+  walked: number
+  /** Milliseconds at the spot so far, and what they do there. */
+  stayed: number
+  stay: Stay
+}
+
+/** When someone next goes out in this break, which round it is, and what they did last (so they do something else). */
+interface Outing {
+  round: number
+  at: number
+  last?: Errand
+}
+
+/** Where the bookshelf stands: its left edge, and the row below its feet (the same as the sofa's). */
+const BOOKSHELF_X = 163
+const BOOKSHELF_BOTTOM = 120
 
 /** Where the office doors are (their middle and where a person's feet end up), in sprite pixels. */
 const DOOR_X = 127
@@ -332,6 +373,11 @@ export class OfficeScene {
   private readonly onSelectEmployee: ((id: number) => void) | undefined
   private readonly options: SceneOptions
   private readonly leaving: Leaver[] = []
+  private readonly trips = new Map<number, Trip>()
+  private readonly outings = new Map<number, Outing>()
+  /** Which break this is (they are numbered from 1, and seed the choices), and whether one was on at the last update. */
+  private breakNo = 0
+  private onBreak = false
   private chipLabel: string
   private readonly world = new Container()
   /** The room as drawn, one texel per sprite pixel; resized to the window on every layout. */
@@ -470,13 +516,12 @@ export class OfficeScene {
   }
 
   private applyLayout(): void {
-    // A phone held upright gets the desks in one deep column; anything wider keeps rows of four.
-    const arrangement = this.options.arrangement?.() ?? arrange(this.areaW, this.areaH, Math.max(this.builtDesks, 1)).arrangement
+    // Rows of four unless the host asks for the one deep column.
+    const arrangement = this.options.arrangement?.() ?? 'wide'
     if (arrangement !== this.arrangement) {
       this.arrangement = arrangement
       // Everyone keeps their desk, which has moved: their sprites are drawn again where it is now.
-      for (const sprite of this.sprites.values()) sprite.container.destroy({ children: true })
-      this.sprites.clear()
+      this.clearSprites()
       if (this.builtDesks >= 0 && this.shown) {
         this.buildOffice(this.builtDesks, this.shown.kind) // lays the room out again, in the new arrangement
         return
@@ -556,11 +601,13 @@ export class OfficeScene {
       // Each person types, pauses to think, sips or stretches in their own rhythm; while the game is paused
       // everyone sits still. Their screen only moves while they are actually typing.
       const moment = speed > 0 ? momentAt(id, this.time, working && employee.training === null) : { pose: undefined, typing: false }
-      sprite.setPose(moment.pose ?? 'sit', speed > 0 && blinkingAt(id, this.time))
+      // Someone out on a break is posed by their outing (below), not by what they would be doing at their desk.
+      if (!this.trips.has(id)) sprite.setPose(moment.pose ?? 'sit', speed > 0 && blinkingAt(id, this.time))
       const desk = this.seats.deskFor(id)
       if (desk !== undefined) modes.set(desk, moment.typing ? 'typing' : 'idle')
     }
     for (const [desk, station] of this.stations) station.update(modes.get(desk) ?? 'off', this.time)
+    if (this.options.breaks) this.updateBreaks(dtMs, this.options.breaks())
     this.updatePopups(dtMs, speed)
     this.updateLeaving(dtMs)
 
@@ -580,8 +627,13 @@ export class OfficeScene {
     const { width, height } = sprite.size
     const start = { x: sprite.container.x, y: sprite.container.y }
     const doorLeft = Math.round(DOOR_X - width / 2)
-    const path =
-      desk === undefined
+    // Out on a break, they carry on from where they are rather than starting from their desk.
+    const trip = this.trips.get(id)
+    this.trips.delete(id)
+    this.outings.delete(id)
+    const path = trip
+      ? pathToDoors(trip.path, trip.walked, { start, size: { width, height }, doorX: DOOR_X, doorFeet: DOOR_FEET })
+      : desk === undefined
         ? [start, { x: doorLeft, y: DOOR_FEET - height }]
         : walkoutPath({
             arrangement: this.arrangement,
@@ -625,6 +677,123 @@ export class OfficeScene {
     }
   }
 
+  /** Is the spot in the part of the room on screen, for someone `width` wide? Nobody walks to the vending machine in a cropped-off margin. */
+  private inView(spot: Spot, width: number): boolean {
+    const left = Math.round(spot.x - width / 2)
+    return left >= this.window.left + 1 && left + width <= this.window.left + this.window.width - 1
+  }
+
+  /**
+   * Breaks: while one is on, everyone at their desk gets up in their own time, goes to a spot nobody else is at (the
+   * coffee machine, a cooler, the sofa, the bookshelf, a place to buy a snack), does what is done there and comes back,
+   * round after round; when the break is over, whoever is out turns back at once.
+   */
+  private updateBreaks(dtMs: number, onBreak: boolean): void {
+    if (onBreak !== this.onBreak) {
+      this.onBreak = onBreak
+      if (onBreak) this.breakNo += 1
+      this.outings.clear()
+    }
+
+    for (const [id, trip] of this.trips) {
+      const sprite = this.sprites.get(id)
+      if (sprite) this.advanceTrip(id, sprite, trip, dtMs, onBreak)
+      else this.trips.delete(id) // they left, or were seated again somewhere else
+    }
+    if (!onBreak) return
+
+    for (const [id, sprite] of this.sprites) {
+      if (this.trips.has(id)) continue
+      let outing = this.outings.get(id)
+      if (!outing) {
+        outing = { round: 0, at: nextOutAt(id, this.breakNo, 0, this.time) }
+        this.outings.set(id, outing)
+      }
+      // Nothing free to go to (everything is taken, or off screen): try again shortly.
+      if (this.time >= outing.at && !this.startTrip(id, sprite, outing)) outing.at = this.time + 3000
+    }
+  }
+
+  /** Sends someone from their desk to a free spot, if there is one in view. */
+  private startTrip(id: number, sprite: EmployeeSprite, outing: Outing): boolean {
+    const desk = this.seats.deskFor(id)
+    if (desk === undefined) return false
+    const { width, height } = sprite.size
+    const taken = [...this.trips.values()].map((trip) => trip.spot)
+    const free = SPOTS.filter((spot) => spotFree(spot, taken) && this.inView(spot, width))
+    const errand = chooseErrand(id, this.breakNo, outing.round, [...new Set(free.map((spot) => spot.errand))], outing.last)
+    if (errand === undefined) return false
+    const spot = chooseSpot(id, this.breakNo, outing.round, free.filter((candidate) => candidate.errand === errand))
+    if (!spot) return false
+
+    const start = { x: sprite.container.x, y: sprite.container.y }
+    const path = routePath(
+      { arrangement: this.arrangement, desk, start, size: { width, height }, window: this.window, doorX: DOOR_X, doorFeet: DOOR_FEET },
+      { x: Math.round(spot.x - width / 2), y: spot.feet - height },
+    )
+    this.trips.set(id, {
+      errand,
+      spot,
+      path,
+      back: [...path].reverse(),
+      length: pathLength(path),
+      phase: 'out',
+      walked: 0,
+      stayed: 0,
+      stay: stayFor(id, this.breakNo, outing.round, errand),
+    })
+    return true
+  }
+
+  /** Moves one person along their outing by `dtMs` and draws them: striding, or at the spot doing what is done there. */
+  private advanceTrip(id: number, sprite: EmployeeSprite, trip: Trip, dtMs: number, onBreak: boolean): void {
+    const step = (dtMs / 1000) * WALK_SPEED
+    if (trip.phase === 'out') {
+      trip.walked = Math.min(trip.length, trip.walked + step)
+      if (!onBreak) trip.phase = 'back'
+      else if (trip.walked >= trip.length) trip.phase = 'stay'
+    } else if (trip.phase === 'stay') {
+      trip.stayed += dtMs
+      if (!onBreak || trip.stayed >= trip.stay.total) trip.phase = 'back'
+    } else {
+      trip.walked = Math.max(0, trip.walked - step)
+    }
+
+    const view = sprite.container
+    const blink = blinkingAt(id, this.time)
+    if (trip.phase === 'back' && trip.walked <= 0) {
+      // Home: back in the chair, as they were.
+      this.trips.delete(id)
+      const outing = this.outings.get(id)
+      if (outing && onBreak) {
+        outing.round += 1
+        outing.last = trip.errand
+        outing.at = nextOutAt(id, this.breakNo, outing.round, this.time)
+      }
+      view.x = trip.path[0]!.x
+      view.y = trip.path[0]!.y
+      sprite.faceDesk()
+      sprite.setPose('sit', blink)
+      return
+    }
+
+    if (trip.phase === 'stay') {
+      const end = trip.path[trip.path.length - 1]!
+      view.x = end.x
+      view.y = end.y
+      sprite.face(trip.spot.rightwards)
+      sprite.setPose(poseAtSpot(trip.stay, trip.stayed), blink)
+      return
+    }
+    const out = trip.phase === 'out'
+    const travelled = out ? trip.walked : trip.length - trip.walked
+    const at = pointAlong(out ? trip.path : trip.back, travelled)
+    if (at.dx !== 0) sprite.face(at.dx > 0)
+    sprite.setPose(STEP_CYCLE[Math.floor(travelled / STRIDE_FRAME) % STEP_CYCLE.length], blink)
+    view.x = Math.round(at.x)
+    view.y = Math.round(at.y)
+  }
+
   /** Is anyone still on their way out? Hosts wait for this before reporting the day. */
   get leavingCount(): number {
     return this.leaving.length
@@ -641,8 +810,7 @@ export class OfficeScene {
 
   /** Switches the room to another office (or redecorates this one): new walls and floor, and its own people at their desks. */
   private showOffice(office: Office): void {
-    for (const sprite of this.sprites.values()) sprite.container.destroy({ children: true })
-    this.sprites.clear()
+    this.clearSprites()
     this.shown = { id: office.id, kind: office.kind, theme: office.theme }
     this.rebuildBackground()
 
@@ -655,6 +823,14 @@ export class OfficeScene {
     this.builtDesks = -1
     this.occupied = new Set()
     this.vacated = new Set()
+  }
+
+  /** Takes everyone off the stage (they are drawn again at their desks); outings in progress are forgotten. */
+  private clearSprites(): void {
+    for (const sprite of this.sprites.values()) sprite.container.destroy({ children: true })
+    this.sprites.clear()
+    this.trips.clear()
+    this.outings.clear()
   }
 
   /** Draws the shown room's walls, floor and decor again, across the window as it is now. */
@@ -772,6 +948,13 @@ export class OfficeScene {
       ['snackCabinet', 231, 89],
     ]
     for (const [name, x, y, flip] of decor) bg.addChild(placed(atlas.frame(name), x, y, flip))
+    // The bookshelf stands between the plant and the sofa; only a host with breaks has anyone to read from it.
+    if (this.options.breaks) {
+      const shelf = new Graphics()
+      for (const { x, y, w, h, color } of bookshelfRects()) shelf.rect(x, y, w, h).fill(color)
+      shelf.position.set(BOOKSHELF_X, BOOKSHELF_BOTTOM - BOOKSHELF_HEIGHT)
+      bg.addChild(shelf)
+    }
     return bg
   }
 

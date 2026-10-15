@@ -39,7 +39,16 @@ export interface WalkoutInput {
 
 /** The top-left corners the walker passes through, from their desk to the doors. */
 export function walkoutPath(input: WalkoutInput): Point[] {
-  const { arrangement, desk, start, size, window, doorX, doorFeet } = input
+  const { size, doorX, doorFeet } = input
+  return routePath(input, { x: Math.round(doorX - size.width / 2), y: doorFeet - size.height })
+}
+
+/**
+ * The top-left corners someone passes through from their desk to `end` (a spot at the wall lane, or in the doorway):
+ * out by the lane, up it to the wall lane and along that to `end`'s column, then up or down to it.
+ */
+export function routePath(input: WalkoutInput, end: Point): Point[] {
+  const { arrangement, desk, start, size, window, doorX } = input
   const partition = desk >> 1
   const right = (desk & 1) === 1
   const [px] = partitionAt(arrangement, partition)
@@ -66,10 +75,35 @@ export function walkoutPath(input: WalkoutInput): Point[] {
     { x: start.x, y: start.y },
     { x: lane, y: start.y },
     { x: lane, y: wallY },
-    { x: doorLeft, y: wallY },
-    { x: doorLeft, y: doorFeet - size.height },
+    { x: end.x, y: wallY },
+    { x: end.x, y: end.y },
   ]
   // Drop corners that change nothing (a seat already in the aisle, a lane already at the doors).
+  return points.filter((point, i) => i === 0 || point.x !== points[i - 1]!.x || point.y !== points[i - 1]!.y)
+}
+
+/**
+ * Where someone already walking `path` (see `routePath`), `distance` along it, goes to leave by the doors instead: on to
+ * the wall lane if they are not there yet, along it, to the doors. `start` is where they are now.
+ */
+export function pathToDoors(path: readonly Point[], distance: number, input: { start: Point; size: { width: number; height: number }; doorX: number; doorFeet: number }): Point[] {
+  const { start, size, doorX, doorFeet } = input
+  const wallY = WALL_LANE_FEET - size.height
+  const doorLeft = Math.round(doorX - size.width / 2)
+  const points: Point[] = [start]
+  if (start.y > wallY) {
+    // Still below the wall lane: carry on the way they were going, forward along the path, until they reach it.
+    let left = Math.max(0, distance)
+    for (let i = 1; i < path.length && points[points.length - 1]!.y > wallY; i++) {
+      const leg = Math.abs(path[i]!.x - path[i - 1]!.x) + Math.abs(path[i]!.y - path[i - 1]!.y)
+      if (left < leg || i === path.length - 1) points.push(path[i]!)
+      left -= leg
+    }
+  }
+  // A seat above the wall lane (the sofa's) is left straight down to it.
+  const last = points[points.length - 1]!
+  if (last.y !== wallY) points.push({ x: last.x, y: wallY })
+  points.push({ x: doorLeft, y: wallY }, { x: doorLeft, y: doorFeet - size.height })
   return points.filter((point, i) => i === 0 || point.x !== points[i - 1]!.x || point.y !== points[i - 1]!.y)
 }
 

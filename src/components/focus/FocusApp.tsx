@@ -263,6 +263,7 @@ export default function FocusApp() {
         office={office}
         fired={flow.missed}
         working={flow.phase === "focus"}
+        onBreak={onBreak}
         label={chipLabel}
         onSelect={setTapped}
         className="min-h-48 flex-1"
@@ -284,6 +285,16 @@ export default function FocusApp() {
         onGiveUp={() => run((state) => abandon(state))}
         onHire={hire}
       />
+      {/* Debugging only: `import.meta.env.DEV` is false in a build, so this never ships. Ends the Pomodoro now, as if its time were up. Fixed in the corner so it takes no room from the scene. */}
+      {import.meta.env.DEV && flow.phase === "focus" && (
+        <button
+          type="button"
+          className="fixed bottom-2 left-2 z-50 rounded-md border border-dashed border-(--border) bg-(--surface) px-3 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
+          onClick={() => run((state, at) => tick({ ...state, endsAt: at }, at))}
+        >
+          Dev: finish Pomodoro
+        </button>
+      )}
     </div>
   );
 }

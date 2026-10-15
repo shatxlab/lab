@@ -13,7 +13,6 @@ export const MIN_VISIBLE_WIDTH = 200
  * room is narrow and deep and can be shown bigger.
  */
 export type Arrangement = 'wide' | 'tall'
-export const ARRANGEMENTS: readonly Arrangement[] = ['wide', 'tall']
 
 /** The narrowest part of the artwork each arrangement can be cropped to: its desks and the people at them. */
 export const MIN_WIDTH: Record<Arrangement, number> = { wide: MIN_VISIBLE_WIDTH, tall: 100 }
@@ -80,22 +79,4 @@ export function sceneLayout(areaWidth: number, areaHeight: number, bottom: numbe
   const width = Math.max(1, Math.ceil(areaWidth / scale))
   const height = Math.max(1, Math.ceil(areaHeight / scale))
   return { scale, left: Math.round((SCENE_WIDTH - width) / 2), top: ROOM_TOP, width, height }
-}
-
-/**
- * The arrangement and layout that show the room biggest without leaving floor to spare: the zoom counts
- * for less the more of the area would be bare floor below the desks. Only a portrait area, such as a
- * phone held upright, gets the desks in one deep column; anything wider keeps rows of four.
- */
-export function arrange(areaWidth: number, areaHeight: number, desks: number): { arrangement: Arrangement; bottom: number; layout: SceneLayout } {
-  let best: { arrangement: Arrangement; bottom: number; layout: SceneLayout; score: number } | null = null
-  for (const arrangement of ARRANGEMENTS) {
-    if (arrangement === 'tall' && areaHeight <= areaWidth) continue
-    const bottom = roomBottom(arrangement, desks)
-    const layout = sceneLayout(areaWidth, areaHeight, bottom, MIN_WIDTH[arrangement])
-    const filled = Math.min(1, ((bottom - ROOM_TOP) * layout.scale) / Math.max(areaHeight, 1))
-    const score = layout.scale * filled
-    if (!best || score > best.score + 1e-9) best = { arrangement, bottom, layout, score }
-  }
-  return best!
 }

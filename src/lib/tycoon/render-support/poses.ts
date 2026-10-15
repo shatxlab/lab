@@ -4,7 +4,8 @@
  * person at a desk is hidden from the hips down by their chair and desk and is drawn sitting on it, then the
  * arms that hang at their sides are taken off the torso, then the arms are drawn where the pose has them.
  * Everything else (face, hair) stays as the pack drew it. Only someone standing, as when they walk out with
- * their box, is drawn from the plain frame, legs and all, or carrying the box in both hands.
+ * their box, is drawn from the plain frame, legs and all, or carrying the box in both hands. The same goes for
+ * someone out on a break: striding empty-handed, drinking, eating a snack, or holding an open book.
  *
  * The patches are generated from each sprite's pixels (shoulders, chin, mouth), so all five characters do a
  * pose the same way.
@@ -15,17 +16,57 @@ import type { Rgb } from './characters'
  * `sit` is sitting at the desk with nothing to do: the arms hang as the pack drew them, the legs are gone.
  * `carry` is standing with the box; `walkA` to `walkD` are the same with the legs mid-stride (see `WALK_CYCLE`).
  */
-export type Pose = 'sit' | 'typeA' | 'typeB' | 'think' | 'sip' | 'stretch' | 'carry' | 'walkA' | 'walkB' | 'walkC' | 'walkD'
+export type Pose =
+  | 'sit'
+  | 'typeA'
+  | 'typeB'
+  | 'think'
+  | 'sip'
+  | 'stretch'
+  | 'carry'
+  | 'walkA'
+  | 'walkB'
+  | 'walkC'
+  | 'walkD'
+  | 'stepA'
+  | 'stepB'
+  | 'stepC'
+  | 'stepD'
+  | 'drink'
+  | 'eat'
+  | 'read'
 
-export const POSE_NAMES: readonly Pose[] = ['sit', 'typeA', 'typeB', 'think', 'sip', 'stretch', 'carry', 'walkA', 'walkB', 'walkC', 'walkD']
+export const POSE_NAMES: readonly Pose[] = [
+  'sit',
+  'typeA',
+  'typeB',
+  'think',
+  'sip',
+  'stretch',
+  'carry',
+  'walkA',
+  'walkB',
+  'walkC',
+  'walkD',
+  'stepA',
+  'stepB',
+  'stepC',
+  'stepD',
+  'drink',
+  'eat',
+  'read',
+]
 
 type Walk = 'walkA' | 'walkB' | 'walkC' | 'walkD'
 
-/** The poses on their feet with the box, not at a desk. */
-export const STANDING_POSES: readonly Pose[] = ['carry', 'walkA', 'walkB', 'walkC', 'walkD']
+/** The same strides empty-handed, for someone walking to the coffee machine rather than out of the door with a box. */
+type Step = 'stepA' | 'stepB' | 'stepC' | 'stepD'
+
+/** The poses on their feet (with the box, empty-handed, or with something in hand), not at a desk. */
+export const STANDING_POSES: readonly Pose[] = ['carry', 'walkA', 'walkB', 'walkC', 'walkD', 'stepA', 'stepB', 'stepC', 'stepD', 'drink', 'eat', 'read']
 
 /** The poses at a desk that move the arms. */
-type Move = Exclude<Pose, 'sit' | 'carry' | Walk>
+type Move = Exclude<Pose, 'sit' | 'carry' | 'drink' | 'eat' | 'read' | Walk | Step>
 
 /**
  * Clear rows and columns added around a pose's frame: on each side, so arms can reach past the sprite's edges, and
@@ -140,15 +181,18 @@ const CARRY: readonly (readonly [x: number, y: number, skin: string])[] = [
   [11, 14, 'j'],
 ]
 
-/** The arm patches of someone carrying a box: the far hand, which goes behind the box, the box, and the near arm over it. */
-function carry(character: number): readonly Patch[] {
+/** An open book held at its two ends, as the box is: blue cover below, two pages and the fold. */
+const BOOK: readonly string[] = ['aaaaaaa', 'aggcgga', 'aggcgga', 'aggcgga', 'ahhhhha', 'aaaaaaa']
+
+/** The arm patches of someone holding the box (or the book) in both hands: the far hand, which goes behind it, the thing itself, and the near arm over it. */
+function carry(character: number, held: readonly string[] = BOX): readonly Patch[] {
   const [x, y, skin] = CARRY[character]!
   const torso = TORSOS[character]!
   return [
     torso.near,
     torso.far,
     { x: x + 7, y: y + 1, rows: ['aaa', `${skin}${skin}a`, `${skin}${skin}a`, 'aaa'] },
-    { x, y, rows: BOX },
+    { x, y, rows: held },
     { x: x - 1, y: y - 1, rows: ['.DSa', '.DSa', `a${skin}${skin}a`, `a${skin}${skin}a`, '.aa.'] },
   ]
 }
@@ -278,11 +322,29 @@ const BLINKS: readonly (Patch | undefined)[] = [
 export const blinkPatch = (character: number): Patch | undefined => BLINKS[character]
 
 const isWalk = (pose: Pose): pose is Walk => pose.startsWith('walk')
+const isStep = (pose: Pose): pose is Step => pose.startsWith('step')
+
+/**
+ * In `stepC` the right foot swings forward under the hem's far end. Carrying the box, the hand covers the spot where the
+ * leg overhangs; empty-handed it shows, so the hem's outline runs one pixel further to meet the leg.
+ */
+const STEP_C_HEM: readonly (readonly Patch[])[] = [[{ x: 11, y: 18, rows: ['a'] }], [{ x: 11, y: 19, rows: ['a'] }], [{ x: 10, y: 16, rows: ['a'] }], [], []]
+
+/** The frames of one empty-handed stride, in the same order as `WALK_CYCLE`. */
+export const STEP_CYCLE: readonly Step[] = ['stepA', 'stepB', 'stepD', 'stepC']
+
+/** What someone holds to their mouth standing up: a snack in place of the mug (sky and blue where the mug is white and steel). */
+const snack = (patch: Patch): Patch => ({ ...patch, rows: patch.rows.map((row) => row.replaceAll('g', 'l').replaceAll('f', 'h')) })
 
 /** The patches that draw `character` in `pose`, in order. */
 export function posePatches(character: number, pose: Pose): readonly Patch[] {
   const torso = TORSOS[character]!
   if (pose === 'carry') return carry(character)
+  // On their feet in the pack's own legs, so only what the arms do (and the legs, striding) is drawn over the sprite.
+  if (pose === 'read') return carry(character, BOOK)
+  if (pose === 'drink') return [torso.near, POSES[character]!.sip]
+  if (pose === 'eat') return [torso.near, snack(POSES[character]!.sip)]
+  if (isStep(pose)) return [WALK[character]![`walk${pose.slice(4)}` as Walk], ...(pose === 'stepC' ? STEP_C_HEM[character]! : [])]
   // The legs first: the box is held in front of the hem and may cover the top row of them.
   if (isWalk(pose)) return [WALK[character]![pose], ...carry(character)]
   const seated = SEATED[character]!

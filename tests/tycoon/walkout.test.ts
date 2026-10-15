@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { partitionAt, seatX, type Arrangement } from '@/lib/tycoon/render-support/layout'
-import { PARTITION_WIDTH, ROW_HEIGHT, WALL_LANE_FEET, pathLength, pointAlong, walkoutPath, type Point } from '@/lib/tycoon/render-support/walkout'
+import { PARTITION_WIDTH, ROW_HEIGHT, WALL_LANE_FEET, pathLength, pathToDoors, pointAlong, routePath, walkoutPath, type Point } from '@/lib/tycoon/render-support/walkout'
 
 const DOOR_X = 127
 const DOOR_FEET = 110
@@ -119,5 +119,52 @@ describe('pathLength and pointAlong', () => {
   it('clamps to the ends', () => {
     expect(pointAlong(path, -5)).toMatchObject({ x: 0, y: 0 })
     expect(pointAlong(path, 999)).toMatchObject({ x: 4, y: 20 })
+  })
+})
+
+describe.each(['wide', 'tall'] as const)('routePath and pathToDoors (%s arrangement)', (arrangement) => {
+  const wallY = WALL_LANE_FEET - SIZE.height
+  const input = (desk: number) => ({ arrangement, desk, start: seatStart(arrangement, desk), size: SIZE, window: WIDE_WINDOW, doorX: DOOR_X, doorFeet: DOOR_FEET })
+  const axisAligned = (path: Point[]) => path.every((point, i) => i === 0 || point.x === path[i - 1]!.x || point.y === path[i - 1]!.y)
+
+  it.each(Array.from({ length: DESKS }, (_, desk) => [desk]))('desk %i: goes to a spot on the wall lane and to a seat above it, straight along the axes, past no desk', (desk) => {
+    for (const end of [{ x: 40, y: wallY }, { x: 190, y: 95 }]) {
+      const path = routePath(input(desk), end)
+      expect(path[0]).toEqual(seatStart(arrangement, desk))
+      expect(path[path.length - 1]).toEqual(end)
+      expect(axisAligned(path)).toBe(true)
+      // Once clear of the desk (the first leg starts inside their own partition).
+      const firstLeg = Math.abs(path[1]!.x - path[0]!.x) + Math.abs(path[1]!.y - path[0]!.y)
+      for (let d = firstLeg + 1; d <= pathLength(path); d += 1) {
+        const at = pointAlong(path, d)
+        for (const rect of partitions(arrangement)) expect(overlaps(at, rect)).toBe(false)
+      }
+    }
+  })
+
+  it('walkoutPath is the route to the doorway', () => {
+    for (let desk = 0; desk < DESKS; desk++) {
+      expect(walkoutPath(input(desk))).toEqual(routePath(input(desk), { x: Math.round(DOOR_X - SIZE.width / 2), y: DOOR_FEET - SIZE.height }))
+    }
+  })
+
+  it.each(Array.from({ length: DESKS }, (_, desk) => [desk]))('desk %i: someone out on an errand carries on to the doors from wherever they are', (desk) => {
+    const path = routePath(input(desk), { x: 40, y: wallY })
+    const length = pathLength(path)
+    for (let d = 0; d <= length; d += 3) {
+      const here = pointAlong(path, d)
+      const start = { x: Math.round(here.x), y: Math.round(here.y) }
+      const out = pathToDoors(path, d, { start, size: SIZE, doorX: DOOR_X, doorFeet: DOOR_FEET })
+      expect(out[0]).toEqual(start)
+      expect(out[out.length - 1]).toEqual({ x: Math.round(DOOR_X - SIZE.width / 2), y: DOOR_FEET - SIZE.height })
+      expect(axisAligned(out)).toBe(true)
+    }
+  })
+
+  it('leaves a seat above the wall lane (the sofa) straight down to it first', () => {
+    const start = { x: 188, y: 95 }
+    const out = pathToDoors([start], 0, { start, size: SIZE, doorX: DOOR_X, doorFeet: DOOR_FEET })
+    expect(out[1]).toEqual({ x: 188, y: wallY })
+    expect(axisAligned(out)).toBe(true)
   })
 })

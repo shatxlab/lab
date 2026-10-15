@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrange, chairX, MIN_VISIBLE_WIDTH, MIN_WIDTH, MIRROR, partitionAt, ROOM_TOP, roomBottom, SCENE_WIDTH, sceneLayout, seatX } from '@/lib/tycoon/render-support/layout'
+import { chairX, MIN_VISIBLE_WIDTH, MIN_WIDTH, MIRROR, partitionAt, ROOM_TOP, roomBottom, SCENE_WIDTH, sceneLayout, seatX } from '@/lib/tycoon/render-support/layout'
 
 const BOTTOMS = [170, 200, 224] // the room's last row for one, two and three rows of desks
 
@@ -87,23 +87,6 @@ describe('desk arrangements', () => {
     }
     expect(roomBottom('tall', 4)).toBeGreaterThan(partitionAt('tall', 1)[1] + 30)
     expect(roomBottom('tall', 12)).toBeGreaterThan(roomBottom('tall', 4))
-  })
-
-  it('go tall on a phone held upright, so the room fills it and the people are bigger', () => {
-    for (const desks of [4, 8, 12]) {
-      const tall = arrange(412, 640, desks)
-      expect(tall.arrangement, `${desks}`).toBe('tall')
-      expect((tall.bottom - ROOM_TOP) * tall.layout.scale).toBeGreaterThanOrEqual(640 - 1) // no bare floor below
-      expect(tall.layout.scale).toBeGreaterThan(sceneLayout(412, 640, roomBottom('wide', desks)).scale * 0.95)
-      expect(tall.layout.width).toBeGreaterThanOrEqual(MIN_WIDTH.tall)
-    }
-    expect(arrange(412, 640, 4).layout.scale).toBeGreaterThan(sceneLayout(412, 640, 170).scale * 1.5)
-  })
-
-  it('stay wide on a desktop window or a landscape tablet', () => {
-    for (const [w, h] of [[1100, 568], [1440, 700], [1024, 600], [768, 650]]) {
-      for (const desks of [4, 8, 12]) expect(arrange(w, h, desks).arrangement, `${w}x${h}/${desks}`).toBe('wide')
-    }
   })
 })
 

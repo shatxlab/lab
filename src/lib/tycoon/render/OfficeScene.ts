@@ -175,6 +175,11 @@ class EmployeeSprite {
     }
   }
 
+  /** Which way they are turned: the sitting character faces their desk, a leaver the way they are walking. */
+  get facesLeft(): boolean {
+    return this.facingLeft
+  }
+
   /** The character's box in sprite pixels. */
   get size(): { width: number; height: number } {
     return { width: this.width, height: this.height }
@@ -587,8 +592,10 @@ export class OfficeScene {
             doorX: DOOR_X,
             doorFeet: DOOR_FEET,
           })
-    const first = pointAlong(path, 1)
-    const rightwards = first.dx >= 0
+    // They face the way their first sideways step goes, and keep it while walking up or down the aisle; with no
+    // sideways step at all they keep the way they were sitting.
+    const sideways = path.map((point, i) => (i === 0 ? 0 : Math.sign(point.x - path[i - 1]!.x))).find((dx) => dx !== 0)
+    const rightwards = sideways === undefined ? !sprite.facesLeft : sideways > 0
     sprite.packUp(rightwards)
     this.leaving.push({ sprite, path, length: pathLength(path), age: 0, rightwards })
   }
@@ -606,7 +613,7 @@ export class OfficeScene {
         leaver.sprite.face(leaver.rightwards)
       }
       // Only the legs move: lifting the whole body with each step read as hopping.
-      leaver.sprite.setPose(done ? 'carry' : WALK_CYCLE[Math.floor(walked / STRIDE_FRAME) % WALK_CYCLE.length])
+      leaver.sprite.setPose(WALK_CYCLE[Math.floor(walked / STRIDE_FRAME) % WALK_CYCLE.length])
       const view = leaver.sprite.container
       view.x = Math.round(at.x)
       view.y = Math.round(at.y)

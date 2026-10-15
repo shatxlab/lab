@@ -112,22 +112,23 @@ describe('posePatches', () => {
 
   it.each(Array.from({ length: CHARACTER_COUNT }, (_, character) => ({ character })))('character $character steps with the legs only: the body and the box stay put', ({ character }) => {
     const [, , , height] = CHARACTER_FRAMES[character]!
-    const frames = (['carry', 'walkA', 'walkB', 'walkC'] as const).map((pose) => poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0)))
+    const frames = (['carry', 'walkA', 'walkB', 'walkC', 'walkD'] as const).map((pose) => poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0)))
     const legsFrom = Math.min(...posePatches(character, 'walkA').slice(0, 1).map((patch) => patch.y))
     // every row above the legs is identical in all four, so nothing above the knee moves
     for (const frame of frames) expect([...frame.data.subarray(0, legsFrom * frame.width * 4)]).toEqual([...frames[0]!.data.subarray(0, legsFrom * frame.width * 4)])
-    // and the three stride frames differ from each other and from standing
+    // and the four stride frames differ from each other and from standing
     const drawn = frames.map((frame) => [...frame.data].join())
-    expect(new Set(drawn).size).toBe(4)
+    expect(new Set(drawn).size).toBe(5)
     // a lifted foot leaves the floor row empty on its side; the planted one keeps it: never fewer than one foot down
     const floorRuns = (frame: Pixels) => Array.from({ length: frame.width }, (_, x) => pixel(frame, x, height - 1)[3] > 0).filter((on, x, all) => on && !all[x - 1]).length
     expect(floorRuns(frames[1]!)).toBe(2)
     expect(floorRuns(frames[2]!)).toBe(1)
     expect(floorRuns(frames[3]!)).toBe(1)
+    expect(floorRuns(frames[4]!)).toBe(2)
   })
 
-  it('walks a stride of two steps, one with each foot', () => {
-    expect(WALK_CYCLE).toEqual(['walkA', 'walkB', 'walkA', 'walkC'])
+  it('walks a stride in which each foot trails, lifts and plants in turn', () => {
+    expect(WALK_CYCLE).toEqual(['walkA', 'walkB', 'walkD', 'walkC'])
   })
 
   it('outlines the standing frames all round too, which is what the poses are held to', () => {

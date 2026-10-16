@@ -147,7 +147,8 @@ and *cause and effect* (why a product worked, rivals and eras that matter).
   retune"). A garage that is less frightening in the first two months.
 - **Late-game content.** More product types and research, server bills and
   outages with physical servers in the office, an HQ scene, staff retirement.
-- **Lo-fi sound** from the Focus app, and sounds for hits, eras and buyouts.
+- **Lo-fi sound** from the Focus app. (A hit, an era and a deal now have their
+  own sounds; they are short synthesised notes and untested by ear on a phone.)
 
 ## Play it, then retune (most important)
 
@@ -172,12 +173,13 @@ Balance so far comes mostly from bots, plus the one human run above.
 - **Rivals** earn from "other business" outside the shared markets, growing
   yearly up to a cap (without it the player passed them all by year 4). Works,
   but abstract, and they do not react to what you do.
-- **Wages** grow 12% per era (`ERA_WAGE_GROWTH`); bug-fix sprints leave designers
-  idle (split design 10 / engineering 55 / QA 35). Both were judgement calls.
-  The wage rise is invisible to players.
+- **Wages** grow 12% per era (`ERA_WAGE_GROWTH`); a fixing pair uses only
+  engineering and QA (60 / 40). Both were judgement calls. The wage rise is now
+  stated in the Team and Era dialogs, but is not retuned.
 - **Leads:** an office of more than 4 people works 10% slower without a Lead; a
   Lead needs 80 skill in their discipline; hires start at Senior at most (65).
-  A Lead appeared in the human run. The slowdown is not explained in the UI.
+  A Lead appeared in the human run. The Team dialog now states the slowdown (and
+  the 5% a Lead adds).
 
 ## Test and check gaps
 
@@ -231,9 +233,6 @@ Balance so far comes mostly from bots, plus the one human run above.
 
 ## Rough edges
 
-- Research era-gating reads "Not until the ai wave" (lowercased era name).
-- Only two sounds serve all the new events (`ship`, `milestone`); none for a
-  hit, an era or buying a rival.
 - Stats charts show money and income only; no users, ranking history or
   per-product charts, and the player did not find them meaningful.
 - `ProductsTab` sends updates and fixes to the office currently shown; a

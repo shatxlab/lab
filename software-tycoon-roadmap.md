@@ -6,14 +6,19 @@ blocking: the game builds, its tests pass and it ships.
 
 **Where things stand.** The studio has a real arc: garage (4 desks) → office →
 more offices; client contracts; users and bugs on every product; breakout hits;
-six journey stages; five rival studios and an industry ranking; eras that shift
-demand and expectations; careers from Junior to Lead. Saves are version 3
-(`STATE_VERSION` in `src/lib/tycoon/sim/state.ts`); bump it and say so in the
-commit whenever the save shape changes.
+six journey stages; ten rival studios (and a newcomer at each new era) and an
+industry ranking; eras that shift demand and expectations; careers from Junior to
+Lead; bug fixing by a developer and tester pair; retiring and selling products.
+Saves are version 4 (`STATE_VERSION` in `src/lib/tycoon/sim/state.ts`); bump it
+and say so in the commit whenever the save shape changes. Version 3 saves are
+upgraded on load (`upgradeFromV3`).
 
-Tools: `node scripts/tycoon/simulate.ts [years] [seeds] [policy]` (bot players;
-with a policy name it also prints the year each stage was reached), `node
-scripts/tycoon/e2e.mjs` after `npm run build` (real Chrome; needs
+Tools: `scripts/tycoon/simulate.ts [years] [seeds] [policy]` (bot players; with a
+policy name it also prints the year each stage was reached). It cannot run as
+`node scripts/tycoon/simulate.ts` because the sources import `@/...`; bundle it
+first: `npx esbuild scripts/tycoon/simulate.ts --bundle --platform=node
+--format=esm --alias:@=./src --outfile=/tmp/sim.mjs && node /tmp/sim.mjs 14 8`.
+Also `node scripts/tycoon/e2e.mjs` after `npm run build` (real Chrome; needs
 `puppeteer-core`, which is not in `package.json`; `CHROME_PATH`, `E2E_SHOTS=dir`,
 `--only <scenario>`), and dev URL shortcuts that use a throwaway game:
 `?offices=2&stage=3&money=1000000&rep=60` (dev server only). Art sources
@@ -81,51 +86,50 @@ replay; the feedback below is the data.
 - The popup number is the sum of design, engineering and QA points, tinted by the
   largest. QA does grow in the background while the number is blue. Left as is.
 
-### Plan: pair bug fixing, bug model, sunset, more rivals
+### Built: pair bug fixing, bug model, sunset, more rivals (2026-10-16)
 
-Decided on 2026-10-16; nothing built yet.
+Save version 4. A bot check (14 years, 8 seeds) left the stage years about where
+they were: *Tech giant* by the best bot around year 7.7 (7.8 before). No human has
+played it yet; the numbers below are first guesses.
 
 **Pair bug fixing**
-- A fix is done by one developer and one tester (by `Employee.role`), chosen by
-  the player, from any office (a mixed pair is fine). The rest of each office keeps
-  its project. The pair keeps gaining skill while fixing. A studio with no tester
-  cannot fix: the point is to make hiring the other disciplines matter (today
-  everyone contributes to all three disciplines by skill, so twelve developers
-  work).
-- One pair per product; several products can be fixed at once with several pairs.
-  Stopping a fix returns the pair to their office's project; progress stays.
-- New research **Incident management**, Quality branch, requires
-  `test_automation`, about $30k and 40 days (`cloud_infra` is $22k / 40 days). It
-  sets a standing on-call pair of a developer and a tester. They start a fix on
-  their own, only when a product's bugs are high enough to need it, and are free
-  for the office project otherwise. They still cost two people.
-- Touches: `Office.project` holds one project and `startFix` fills it, so the fix
-  needs its own place in the state (a list of fixes with the two employee ids) and
-  `officeWorkDay` must skip people on a fix. Save shape changes, so bump
-  `STATE_VERSION` and migrate.
+- A fix is a developer plus a tester (by `Employee.role`), from any office. The
+  developer adds engineering and the tester QA; design counts for nothing
+  (`FIX_SPLIT`). The rest of each office keeps its project. The pair gains skill
+  while fixing. A studio with no tester cannot fix. State: `GameState.fixes`;
+  `workersOf` leaves fixers out of their office's work.
+- One pair per product, any number of products at once. Stopping keeps progress.
+- **Incident management** (Quality branch, needs Test automation, $30k, 40 days)
+  lets the player put a developer and a tester on call (`GameState.onCall`). Each
+  day the pair starts a fix on the buggiest product above `AUTO_FIX_DENSITY`
+  (10 bugs per unit of size), and works on its office's project otherwise. If one
+  of them leaves, the arrangement ends with a notice.
+- UI: *Fix bugs…* on a product opens a developer and tester picker with an
+  estimate in days; running jobs show in a strip above the project panel; the
+  on-call picker is at the top of the Products tab once researched.
 
-**Bug model (do with the pair work)**
-- Today an update ships all its bugs at once (`shipUpdate` adds `releaseBugs`),
-  and discovery grows with usage (`bugsFoundPerDay`), so a big product can jump
-  by 50–70 in a day. Neither depends on how good the product already is.
-- Wanted: bugs follow the product's quality and the quality of its updates (QA
-  coverage of the release), arrive over time as users find them, and an
-  established good product stays calm.
+**Bug model**
+- An update's new bugs are hidden (`Product.pendingBugs`) and surface over about
+  20 days (`BUG_SURFACE_RATE`), so a release no longer adds dozens in a day.
+- Those bugs and the ones users find day to day scale with how bug-prone the
+  product is: `bugProneness(quality)` = (100 − quality) / 40, between 0.25 and
+  1.5, so a polished product stays calm. Launch bugs are unchanged.
 
 **Sunset**
-- Under a user threshold X the product is *retired*: removed, free, no penalty.
-  At or above X it is *sold* to a rival: the player gets a price (a multiple of the
-  product's monthly revenue, more for a hit or a well-kept product), the rival
-  gains the product, and there is a morale and reputation cost. Blocked while an
-  update is being built; allowed while it is being fixed (the fix stops).
-- Sold and retired products are listed in the run summary / stats.
-- Open: the value of X, the price multiple, the size of the morale and reputation
-  cost.
+- Under `SALE_MIN_USERS` (100,000) a product is *retired*: removed, free. At or
+  above it, a rival buys it: price = 12 months of its income now (×1.25 for a hit,
+  less while buggy), the product joins that rival with its users, everyone's
+  morale −5 and reputation −3 (−6 for a hit). Blocked while an update is being
+  built; a fix on it is cancelled. With no rival left the sale still pays.
+- Past products are listed in Studio → Stats; the Journey still names a sold
+  signature hit. The morale hit goes to the whole team, because the game does not
+  record who built a product.
 
-**More rivals**
-- Only five exist (`data/rivals.ts`). More are wanted so the market feels alive
-  and so a sale has a buyer. Open: how many, and whether new ones appear over
-  time.
+**Rivals**
+- Ten studios at the start (five new ones in `data/rivals.ts`), and a newcomer
+  appears at each new era (`NEWCOMERS`). Version 3 saves get the five new studios
+  with one product each. Rival launches now toast only for a hit or a product
+  type you also make.
 
 ### Directions, not yet ranked or scheduled
 
@@ -227,8 +231,6 @@ Balance so far comes mostly from bots, plus the one human run above.
 
 ## Rough edges
 
-- Every rival launch posts a toast; with five rivals that may be noisy. Notify
-  only for hits or your own markets.
 - Research era-gating reads "Not until the ai wave" (lowercased era name).
 - Only two sounds serve all the new events (`ship`, `milestone`); none for a
   hit, an era or buying a rival.

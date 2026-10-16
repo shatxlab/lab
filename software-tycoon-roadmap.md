@@ -86,6 +86,21 @@ replay; the feedback below is the data.
 - The popup number is the sum of design, engineering and QA points, tinted by the
   largest. QA does grow in the background while the number is blue. Left as is.
 
+### Built: garage rework (second session)
+Second-session feedback: contracts only covered the burn, nothing felt doable,
+hardware events fired three times in 15 minutes, "merge quickly" had no cost.
+- **Founders.** The two starting people can't be fired, poached, quit or retire;
+  they draw half of market pay (`FOUNDER_PAY_SHARE`), which still rises with eras.
+  Shown in the Team dialog. Saves are v5; old saves' day-0 hires become founders.
+- **Contracts.** Half the pay up front (`CONTRACT_DEPOSIT`); a rolling board (a
+  job every 7–13 days, max 4, expires after 35 days); pay per point 12.
+- **Events.** Rarer, no repeats within a window, hardware only once in a real
+  office, "merge quickly" adds bugs.
+- **Rivals.** Only the original five at the start; the other five move in later.
+- **Garage goals.** Ship 3 products (was 2).
+- **Not done:** odd jobs (small always-available gigs), a bot that stays in the
+  garage to tune its length, and a phone check of the new UI. Needs a play session.
+
 ### Built: pair bug fixing, bug model, sunset, more rivals (2026-10-16)
 
 Save version 4. A bot check (14 years, 8 seeds) left the stage years about where
@@ -126,7 +141,7 @@ played it yet; the numbers below are first guesses.
   record who built a product.
 
 **Rivals**
-- Ten studios at the start (five new ones in `data/rivals.ts`), and a newcomer
+- Ten studios in all (five new ones in `data/rivals.ts`; since the garage rework only the original five start, the rest move in over years 2–6), and a newcomer
   appears at each new era (`NEWCOMERS`). Version 3 saves get the five new studios
   with one product each. Rival launches now toast only for a hit or a product
   type you also make.

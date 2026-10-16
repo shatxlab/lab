@@ -73,6 +73,11 @@ export const ERAS: readonly Era[] = [
   },
 ]
 
+/** The era's name in mid-sentence: "the AI wave", not "The AI wave" and not "the ai wave". */
+export function eraPhrase(era: Era): string {
+  return era.name.replace(/^The /, 'the ')
+}
+
 const DAYS_PER_YEAR = 12 * DAYS_PER_MONTH
 
 /** The index into ERAS of the era `day` falls in. */

@@ -316,4 +316,17 @@ describe('the store asks for sounds at the right moments', () => {
     for (let i = 0; i < 6; i++) store.tick(250)
     expect(sfx.played).toEqual(['milestone', 'research'])
   })
+
+  it('has its own sounds for a hit, a new era, a stage and a deal', () => {
+    const sfx = recorder()
+    const state = makeState([makeEmployee(1)])
+    const store = createStore(state, 1, { sfx })
+    state.events.push({ type: 'notice', text: 'You bought Somebody.', sound: 'deal' })
+    state.events.push({ type: 'breakout', productId: 1 })
+    state.events.push({ type: 'era', era: 2 })
+    state.events.push({ type: 'stage', stage: 1 })
+    for (let i = 0; i < 6; i++) store.tick(250)
+    expect(sfx.played).toEqual(['deal', 'hit', 'era', 'milestone'])
+    for (const name of ['hit', 'era', 'deal'] as const) expect(SOUNDS[name].length).toBeGreaterThan(0)
+  })
 })

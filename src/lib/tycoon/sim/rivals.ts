@@ -271,7 +271,7 @@ export function acquire(state: GameState, rivalId: number): Result {
   state.rivals = state.rivals.filter((r) => r.id !== rival.id)
   state.acquiredIncome += rival.business
   state.reputation = Math.min(REPUTATION_MAX, state.reputation + ACQUISITION_REPUTATION)
-  state.events.push({ type: 'notice', text: `You bought ${rival.name}. Its products are yours now.`, sound: 'milestone' })
+  state.events.push({ type: 'notice', text: `You bought ${rival.name}. Its products are yours now.`, sound: 'deal' })
   return OK
 }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { eraPhrase, ERAS } from '@/lib/tycoon/data/eras'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { BRANCHES, getResearch, RESEARCH, unlocksOf } from '@/lib/tycoon/data/research'
@@ -53,6 +54,10 @@ describe('research data', () => {
     }
   })
 
+  it('names an era in a sentence the way the player knows it', () => {
+    expect(ERAS.map(eraPhrase)).toEqual(['the web years', 'the app boom', 'the cloud years', 'the AI wave', 'the platform age'])
+  })
+
   it('gates content only on research that exists', () => {
     for (const item of [...FEATURES, ...PRODUCT_TYPES]) {
       if (item.requiresResearch) expect(getResearch(item.requiresResearch), item.id).toBeDefined()
@@ -85,7 +90,7 @@ describe('starting and finishing research', () => {
   it('refuses unknown, unaffordable, locked, busy, and repeated research without changing anything', () => {
     const state = richState()
     expect(startResearch(state, 'nope').ok).toBe(false)
-    expect(startResearch(state, 'ml_foundations')).toEqual({ ok: false, reason: 'Not until the ai wave' })
+    expect(startResearch(state, 'ml_foundations')).toEqual({ ok: false, reason: 'Not until the AI wave' })
     state.day = dayOfEra(3)
     expect(startResearch(state, 'ml_foundations')).toEqual({ ok: false, reason: 'Needs CI pipeline' })
 
@@ -227,7 +232,7 @@ describe('locked content', () => {
   it('explains why a product type or feature is locked', () => {
     const state = makeState()
     const ai = PRODUCT_TYPES.find((t) => t.id === 'ai_product')!
-    expect(productTypeLock(state, ai)).toBe('Not until the ai wave')
+    expect(productTypeLock(state, ai)).toBe('Not until the AI wave')
     state.day = dayOfEra(3)
     expect(productTypeLock(state, ai)).toBe('Reputation 70 · Research: Machine learning')
     state.reputation = 80

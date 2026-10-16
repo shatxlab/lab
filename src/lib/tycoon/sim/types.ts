@@ -244,7 +244,7 @@ export interface PendingEvent {
 }
 
 /** Sounds the simulation may ask for; the UI maps them onto its own. */
-export type NoticeSound = 'milestone' | 'research' | 'ship'
+export type NoticeSound = 'milestone' | 'research' | 'ship' | 'deal'
 
 export type SimEvent =
   | { type: 'projectReady'; officeId: number }

@@ -1,6 +1,17 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { CANDIDATE_REFRESH_DAYS, MORALE_UNHAPPY, MOVE_OUT_COST, OFFICE_KINDS, OUTING_MORALE } from '@/lib/tycoon/sim/balance'
+import {
+  CANDIDATE_REFRESH_DAYS,
+  ERA_WAGE_GROWTH,
+  LEAD_FREE_TEAM,
+  LEAD_SPEED,
+  MORALE_UNHAPPY,
+  MOVE_OUT_COST,
+  NO_LEAD_SPEED,
+  OFFICE_KINDS,
+  OUTING_MORALE,
+} from '@/lib/tycoon/sim/balance'
+import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { needsLead, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
@@ -35,6 +46,10 @@ export function MoraleBar({ morale, training = false }: { morale: number; traini
     </div>
   )
 }
+
+/** What a missing Lead costs, and what one gives, as whole percentages. */
+const SLOWER = Math.round((1 - NO_LEAD_SPEED) * 100)
+const FASTER = Math.round((LEAD_SPEED - 1) * 100)
 
 function Skills({ employee }: { employee: Employee }) {
   return (
@@ -117,7 +132,7 @@ export function TeamDialog() {
                   {staffOf(state, office).length}/{officeSpec(office).desks} desks · rent {formatMoney(officeSpec(office).rent)}/mo
                 </span>
               </span>
-              {needsLead(state, office) && <small className="warn">needs a Lead</small>}
+              {needsLead(state, office) && <small className="warn">needs a Lead · {SLOWER}% slower without one</small>}
               {office.id !== selected.id && <button onClick={() => store.selectOffice(office.id)}>Show</button>}
             </div>
           ))}
@@ -147,11 +162,17 @@ export function TeamDialog() {
       <section className="section">
         <div className="section-head">
           <h3>Your team</h3>
-          <span className="muted">Salaries follow skills and update monthly.</span>
+          <span className="muted">
+            Salaries follow skills and update monthly. Market wages also rise {Math.round(ERA_WAGE_GROWTH * 100)}% with every era
+            {eraIndexAt(state.day) > 0 && ` (+${Math.round(ERA_WAGE_GROWTH * eraIndexAt(state.day) * 100)}% so far)`}.
+          </span>
         </div>
         {state.employees.length === 0 && <p className="muted">Nobody works here. Hire someone to start a project.</p>}
         {!many && needsLead(state, state.offices[0]) && (
-          <p className="warn">A team this size needs a Lead to coordinate it, and works more slowly without one. Promote a Senior when they are ready.</p>
+          <p className="warn">
+            An office of more than {LEAD_FREE_TEAM} people needs a Lead to coordinate it: without one it works {SLOWER}% slower, with one {FASTER}% faster.
+            Promote a Senior when they are ready.
+          </p>
         )}
         {state.employees.length > 0 && (
           <div className="outing">

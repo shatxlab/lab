@@ -1,5 +1,5 @@
 import { getResearch } from '@/lib/tycoon/data/research'
-import { eraIndexAt, ERAS } from '@/lib/tycoon/data/eras'
+import { eraIndexAt, eraPhrase, ERAS } from '@/lib/tycoon/data/eras'
 import { getStage } from '@/lib/tycoon/data/stages'
 import { PROJECT_SIZES } from './balance'
 import type { Feature, GameState, Office, ProductType, ProjectSize } from './types'
@@ -15,7 +15,7 @@ function researchName(id: string): string {
 /** Why a product type can't be started yet, or null when it can. */
 export function productTypeLock(state: GameState, type: ProductType): string | null {
   const reasons: string[] = []
-  if (type.era > eraIndexAt(state.day)) return `Not until ${ERAS[type.era].name.toLowerCase()}`
+  if (type.era > eraIndexAt(state.day)) return `Not until ${eraPhrase(ERAS[type.era])}`
   if (type.unlockReputation > state.reputation) reasons.push(`Reputation ${type.unlockReputation}`)
   if (type.requiresResearch && !isResearched(state, type.requiresResearch)) {
     reasons.push(`Research: ${researchName(type.requiresResearch)}`)

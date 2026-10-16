@@ -200,7 +200,9 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
         if (event.type === 'breakout') dialogs.push({ kind: 'breakout', productId: event.productId })
         if (event.type === 'stage') dialogs.push({ kind: 'stage', stage: event.stage })
         if (event.type === 'era') dialogs.push({ kind: 'era', era: event.era })
-        if (event.type === 'breakout' || event.type === 'stage' || event.type === 'era') sfx.play('milestone')
+        if (event.type === 'breakout') sfx.play('hit')
+        if (event.type === 'era') sfx.play('era')
+        if (event.type === 'stage') sfx.play('milestone')
       }
       const ready = events.filter((e) => e.type === 'projectReady')
       for (const event of ready) dialogs.push({ kind: 'ready', officeId: event.officeId })

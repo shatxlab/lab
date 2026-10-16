@@ -3,7 +3,7 @@ import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { ERAS } from '@/lib/tycoon/data/eras'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getStage } from '@/lib/tycoon/data/stages'
-import { HIT_REACH } from '@/lib/tycoon/sim/balance'
+import { ERA_WAGE_GROWTH, HIT_REACH } from '@/lib/tycoon/sim/balance'
 import { officeName } from '@/lib/tycoon/sim/offices'
 import { missingFeatures } from '@/lib/tycoon/sim/products'
 import { projectQuality } from '@/lib/tycoon/sim/project'
@@ -225,6 +225,9 @@ export function EraDialog({ era }: { era: number }) {
   return (
     <Modal title={`A new era: ${next.name}`} onClose={() => store.closeDialog()}>
       <p>{next.blurb}</p>
+      <p className="muted">
+        Market wages rise {Math.round(ERA_WAGE_GROWTH * 100)}% with the era, so new hires and monthly raises cost more from now on.
+      </p>
       {behind.length > 0 && (
         <div className="unlock">
           These products now lack what users expect, and will lose some of them until an update adds it:

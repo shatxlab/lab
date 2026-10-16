@@ -1,4 +1,4 @@
-import { eraIndexAt, ERAS } from '@/lib/tycoon/data/eras'
+import { eraIndexAt, eraPhrase, ERAS } from '@/lib/tycoon/data/eras'
 import { getResearch, unlocksOf, type ResearchNode } from '@/lib/tycoon/data/research'
 import { isResearched } from './unlocks'
 import { fail, OK, type GameState, type Result } from './types'
@@ -8,7 +8,7 @@ export function researchBlocker(state: GameState, node: ResearchNode): string | 
   if (isResearched(state, node.id)) return 'Done'
   if (state.research.active?.id === node.id) return 'In progress'
   if (state.research.active) return 'Busy with other research'
-  if (node.era !== undefined && node.era > eraIndexAt(state.day)) return `Not until ${ERAS[node.era].name.toLowerCase()}`
+  if (node.era !== undefined && node.era > eraIndexAt(state.day)) return `Not until ${eraPhrase(ERAS[node.era])}`
   const missing = node.requires.find((id) => !isResearched(state, id))
   if (missing) return `Needs ${getResearch(missing)?.name ?? missing}`
   if (state.money < node.cost) return 'Not enough money'

@@ -1,7 +1,7 @@
 import { signal, type Signal } from './signals'
 import type { KeyValueStorage } from '@/lib/tycoon/save'
 
-export type Sfx = 'click' | 'hire' | 'upgrade' | 'ready' | 'ship' | 'event' | 'milestone' | 'research' | 'bad'
+export type Sfx = 'click' | 'hire' | 'upgrade' | 'ready' | 'ship' | 'event' | 'milestone' | 'research' | 'bad' | 'hit' | 'era' | 'deal'
 
 interface Note {
   /** Pitch in Hz. */
@@ -56,6 +56,26 @@ export const SOUNDS: Record<Sfx, readonly Note[]> = {
   bad: [
     { freq: 196, at: 0, dur: 0.25, type: 'sawtooth', gain: 0.6 },
     { freq: 147, at: 0.22, dur: 0.45, type: 'sawtooth', gain: 0.6 },
+  ],
+  // A breakout hit: a quick run up and a long bright chord on top.
+  hit: [
+    { freq: 392, at: 0, dur: 0.08, type: 'triangle' },
+    { freq: 523, at: 0.07, dur: 0.08, type: 'triangle' },
+    { freq: 659, at: 0.14, dur: 0.08, type: 'triangle' },
+    { freq: 784, at: 0.21, dur: 0.08, type: 'triangle' },
+    { freq: 1047, at: 0.28, dur: 0.5, type: 'triangle' },
+    { freq: 1319, at: 0.28, dur: 0.5, type: 'sine', gain: 0.6 },
+    { freq: 1568, at: 0.28, dur: 0.5, type: 'sine', gain: 0.45 },
+  ],
+  // A new era: two slow, low notes, like a change of weather.
+  era: [
+    { freq: 262, at: 0, dur: 0.35, type: 'sine' },
+    { freq: 392, at: 0.3, dur: 0.6, type: 'sine' },
+  ],
+  // Money changing hands: a bright two-note chime.
+  deal: [
+    { freq: 1175, at: 0, dur: 0.08, type: 'square', gain: 0.4 },
+    { freq: 1568, at: 0.08, dur: 0.3, type: 'square', gain: 0.4 },
   ],
 }
 

@@ -89,7 +89,7 @@ export function sunsetProduct(state: GameState, productId: number): Result {
   state.events.push({
     type: 'notice',
     text: `${product.name} was sold${buyer ? ` to ${buyer.name}` : ''}: ${formatMoney(price)} in the bank, and the team is a little sad to see it go.`,
-    sound: 'ship',
+    sound: 'deal',
   })
   return OK
 }

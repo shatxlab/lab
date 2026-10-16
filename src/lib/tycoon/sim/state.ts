@@ -7,8 +7,8 @@ import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { STAGES } from '@/lib/tycoon/data/stages'
 import { LEVELS, OFFICE_KINDS, START_MONEY } from './balance'
 import { refreshContracts } from './contracts'
-import { createRivals, introduceRivals } from './rivals'
-import { generateEmployee, refreshCandidates, ROLES } from './hiring'
+import { createRivals, rivalsArrive } from './rivals'
+import { generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
 import { sampleNow } from './history'
 import { initialMarket } from './market'
 import { DISCIPLINES, PROJECT_SIZE_IDS, STATS, type GameState } from './types'
@@ -16,9 +16,10 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, STATS, type GameState } from './types'
 /**
  * Version 2 replaced fading income with users and bugs, version 3 brought offices, version 4 moved bug
  * fixing to a developer and tester pair, hid an update's new bugs for a while and added selling products.
- * Version 3 saves are upgraded on load (see `upgradeFromV3`); older ones can't be carried over.
+ * Version 5 made the two people who start the studio founders: they never leave and draw half pay.
+ * Version 3 and 4 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`); older ones can't be carried over.
  */
-export const STATE_VERSION = 4
+export const STATE_VERSION = 5
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
@@ -63,7 +64,10 @@ export function createInitialState(seed: number): GameState {
   }
   const garage = { id: state.nextId++, kind: 'garage' as const, theme: 0, project: null }
   state.offices.push(garage)
-  for (const role of ['developer', 'designer'] as const) state.employees.push({ ...generateEmployee(state, role), officeId: garage.id })
+  for (const role of ['developer', 'designer'] as const) {
+    const person = { ...generateEmployee(state, role), officeId: garage.id, founder: true }
+    state.employees.push({ ...person, salary: salaryOf(person, state.day) })
+  }
   refreshCandidates(state)
   refreshContracts(state)
   createRivals(state)
@@ -125,6 +129,7 @@ function validEmployee(v: unknown): boolean {
     isNum(v.levelDay) &&
     isNum(v.hiredDay) &&
     (v.readySince === null || isNum(v.readySince)) &&
+    (v.founder === undefined || typeof v.founder === 'boolean') &&
     (v.keptDay === undefined || isNum(v.keptDay)) &&
     (v.training === null ||
       (isObj(v.training) && (DISCIPLINES as readonly string[]).includes(v.training.discipline as string) && isNum(v.training.finishDay)))
@@ -173,7 +178,12 @@ function validProject(v: unknown): boolean {
     isNum(v.hype) &&
     typeof v.alphaOffered === 'boolean' &&
     isNum(v.bugRisk) &&
-    (v.contract === null || (isObj(v.contract) && typeof v.contract.client === 'string' && isNum(v.contract.pay) && isNum(v.contract.dueDay)))
+    (v.contract === null ||
+      (isObj(v.contract) &&
+        typeof v.contract.client === 'string' &&
+        isNum(v.contract.pay) &&
+        isNum(v.contract.dueDay) &&
+        (v.contract.deposit === undefined || isNum(v.contract.deposit))))
   )
 }
 
@@ -219,7 +229,8 @@ function validOffer(v: unknown): boolean {
     typeof v.title === 'string' &&
     isSkills(v.target) &&
     isNum(v.pay) &&
-    isNum(v.days)
+    isNum(v.days) &&
+    (v.expiresDay === undefined || isNum(v.expiresDay))
   )
 }
 
@@ -287,6 +298,7 @@ function validState(v: unknown): v is GameState {
     (v.signatureId === null || isNum(v.signatureId)) &&
     isNum(v.debtDays) &&
     isNum(v.lastEventDay) &&
+    (v.recentEvents === undefined || (Array.isArray(v.recentEvents) && v.recentEvents.every((id) => typeof id === 'string'))) &&
     isNum(v.investorDeals) &&
     isNum(v.lastOutingDay) &&
     Array.isArray(v.milestones) &&
@@ -329,6 +341,7 @@ function validState(v: unknown): v is GameState {
     Array.isArray(v.contracts) &&
     v.contracts.every(validOffer) &&
     isNum(v.contractsDone) &&
+    (v.nextOfferDay === undefined || isNum(v.nextOfferDay)) &&
     Array.isArray(v.rivals) &&
     v.rivals.every(validRival) &&
     Array.isArray(v.rivalProducts) &&
@@ -355,12 +368,26 @@ function upgradeFromV3(raw: unknown): unknown {
   }
   return {
     ...raw,
-    version: STATE_VERSION,
+    version: 4,
     offices: Array.isArray(raw.offices) ? raw.offices.map(withoutFixes).map(stripBugFields) : raw.offices,
     products: Array.isArray(raw.products) ? raw.products.map((p) => (isObj(p) ? { pendingBugs: 0, ...p } : p)) : raw.products,
     fixes: [],
     onCall: null,
     retired: [],
+  }
+}
+
+/** Version 4 to 5 only changes who the first two employees are, which needs the sim's salary rules: see `markFounders`. */
+function upgradeFromV4(raw: unknown): unknown {
+  return isObj(raw) && raw.version === 4 ? { ...raw, version: STATE_VERSION } : raw
+}
+
+/** The people hired on day 0 in a save from before founders existed become the founders. */
+function markFounders(state: GameState): void {
+  if (state.employees.some((e) => e.founder)) return
+  for (const person of state.employees.filter((e) => e.hiredDay <= 0).slice(0, 2)) {
+    person.founder = true
+    person.salary = salaryOf(person, state.day)
   }
 }
 
@@ -392,12 +419,12 @@ function dropRemovedContent(raw: unknown): unknown {
 export function deserialize(json: string): GameState | null {
   try {
     const raw: unknown = JSON.parse(json)
-    const upgraded = isObj(raw) && raw.version === 3
-    const parsed = dropRemovedContent(upgradeFromV3(raw))
+    const from = isObj(raw) && typeof raw.version === 'number' ? raw.version : 0
+    const parsed = dropRemovedContent(upgradeFromV4(upgradeFromV3(raw)))
     if (!validState(parsed)) return null
     const state: GameState = { ...parsed, dayWork: [], events: [] }
-    // The market grew since version 3: new studios move in.
-    if (upgraded) introduceRivals(state)
+    if (from === 3) rivalsArrive(state, true) // the market grew since version 3: the studios due by now move in
+    if (from >= 3 && from < STATE_VERSION) markFounders(state)
     return state
   } catch {
     return null

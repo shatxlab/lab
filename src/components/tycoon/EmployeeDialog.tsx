@@ -53,6 +53,11 @@ export function EmployeeDialog({ id }: { id: number }) {
       <p className="muted">
         {title(person)} · {formatMoney(person.salary)}/mo · with you {formatAge(state.day - person.hiredDay)}
       </p>
+      {person.founder && (
+        <p>
+          <strong>★ Founder.</strong> <span className="muted">They started this studio with you: they never leave, cannot be fired or poached, and draw half the market rate, in every era.</span>
+        </p>
+      )}
 
       <section className="section">
         <div className="section-head">
@@ -131,9 +136,11 @@ export function EmployeeDialog({ id }: { id: number }) {
       {message && <p className="bad">{message}</p>}
       <div className="actions">
         <button onClick={() => store.openDialog({ kind: 'team' })}>Back to team</button>
-        <button className={confirmFire ? 'danger' : ''} onClick={fire} onBlur={() => setConfirmFire(false)}>
-          {confirmFire ? 'Confirm' : 'Fire'}
-        </button>
+        {!person.founder && (
+          <button className={confirmFire ? 'danger' : ''} onClick={fire} onBlur={() => setConfirmFire(false)}>
+            {confirmFire ? 'Confirm' : 'Fire'}
+          </button>
+        )}
       </div>
     </Modal>
   )

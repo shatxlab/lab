@@ -3,6 +3,7 @@ import {
   EVENT_CHANCE_PER_DAY,
   EVENT_COOLDOWN_DAYS,
   EVENT_MIN_DAY,
+  EVENT_REPEAT_GAP,
   INVESTOR_LIFELINE_DEBT_DAYS,
   ALPHA_PROGRESS,
 } from './balance'
@@ -16,6 +17,7 @@ function offer(state: GameState, id: string, data?: Record<string, number>): voi
   if (!event) return
   state.pendingEvent = { id, data: data ?? event.prepare?.(state) ?? {} }
   state.lastEventDay = state.day
+  state.recentEvents = [...(state.recentEvents ?? []), id].slice(-EVENT_REPEAT_GAP)
   state.events.push({ type: 'randomEvent' })
 }
 
@@ -41,7 +43,10 @@ export function rollRandomEvent(state: GameState): void {
   if (state.day < EVENT_MIN_DAY || state.day - state.lastEventDay < EVENT_COOLDOWN_DAYS) return
   if (rand(state) >= EVENT_CHANCE_PER_DAY) return
 
-  const eligible = RANDOM_EVENTS.filter((e) => e.when(state))
+  // Skip what came up lately, unless that leaves nothing at all.
+  const possible = RANDOM_EVENTS.filter((e) => e.when(state))
+  const fresh = possible.filter((e) => !state.recentEvents?.includes(e.id))
+  const eligible = fresh.length > 0 ? fresh : possible
   if (eligible.length === 0) return
   let pointer = rand(state) * eligible.reduce((sum, e) => sum + e.weight, 0)
   const chosen = eligible.find((e) => (pointer -= e.weight) < 0) ?? eligible[eligible.length - 1]

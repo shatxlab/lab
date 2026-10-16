@@ -1,5 +1,5 @@
 import { CANDIDATE_REFRESH_DAYS, DAYS_PER_MONTH } from './balance'
-import { refreshContracts } from './contracts'
+import { contractsDay } from './contracts'
 import { checkBankruptcy, costsDay, revenueDay } from './economy'
 import { rollRandomEvent } from './events'
 import { recordHistory } from './history'
@@ -41,11 +41,11 @@ export function advanceDay(state: GameState): void {
   trainingDay(state)
   moraleDay(state)
   careerDay(state)
+  contractsDay(state)
   pruneModifiers(state)
   if (state.day % DAYS_PER_MONTH === 0) {
     for (const employee of state.employees) employee.salary = salaryOf(employee, state.day)
     updateMarket(state)
-    refreshContracts(state)
     recordHistory(state)
   }
   if (state.day % CANDIDATE_REFRESH_DAYS === 0) refreshCandidates(state)

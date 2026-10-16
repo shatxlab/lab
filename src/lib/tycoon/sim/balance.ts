@@ -161,9 +161,12 @@ export const MARKET_HOT = 1.2
 export const MARKET_COLD = 0.85
 
 // Random events
-export const EVENT_MIN_DAY = 25
-export const EVENT_COOLDOWN_DAYS = 15
-export const EVENT_CHANCE_PER_DAY = 0.05
+// Events are an interruption, so there are few: after the warm-up and the cooldown, one turns up about every 80 days.
+export const EVENT_MIN_DAY = 60
+export const EVENT_COOLDOWN_DAYS = 45
+export const EVENT_CHANCE_PER_DAY = 0.03
+/** An event is not offered again until this many others have come up. */
+export const EVENT_REPEAT_GAP = 4
 /** The (one-time) investor lifeline appears this many days into a debt spell. */
 export const INVESTOR_LIFELINE_DEBT_DAYS = 3
 /** The investor wires this many months of the studio's running costs. */
@@ -325,9 +328,24 @@ export const MOVE_ON_YEARS = 6
 export const MOVE_ON_CHANCE = 0.0008
 
 // Client contracts
+/** How many jobs are on the board when a game starts. */
 export const CONTRACT_OFFERS = 3
+/** The board holds at most this many jobs; a new one turns up every few days while there is room. */
+export const CONTRACT_BOARD = 4
+export const CONTRACT_NEW_MIN_DAYS = 7
+export const CONTRACT_NEW_MAX_DAYS = 13
+/** A job stays on the board this long before the client goes elsewhere. */
+export const CONTRACT_LIFETIME_DAYS = 35
+/** Share of the pay the client advances when you take the job; refunded if you walk away. */
+export const CONTRACT_DEPOSIT = 0.5
+/** A job is sized so that the team's slowest discipline needs this share of the days it is due in. */
+export const CONTRACT_LOAD = 0.8
+/** The least a discipline is counted at when sizing a job, so a team without one still gets offers. */
+export const CONTRACT_MIN_RATE = 0.5
+/** Jobs that fit the team at least this well (compared with the best-fitting job) can be offered. */
+export const CONTRACT_FIT = 0.6
 /** What a client pays per point of work, before reputation... */
-export const CONTRACT_PAY_PER_POINT = 15
+export const CONTRACT_PAY_PER_POINT = 12
 /** ...which adds this share per point of reputation. */
 export const CONTRACT_REPUTATION_PAY = 0.01
 /** A job is sized to take a team this many days... */
@@ -375,3 +393,7 @@ export const SALE_HIT_BONUS = 1.25
 export const SALE_MORALE_PENALTY = 5
 export const SALE_REPUTATION_PENALTY = 3
 export const SALE_HIT_REPUTATION_PENALTY = 6
+
+// Founders
+/** The two people who start the studio draw this share of the market rate for their skills, in every era. */
+export const FOUNDER_PAY_SHARE = 0.5

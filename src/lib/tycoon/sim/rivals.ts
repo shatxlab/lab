@@ -121,13 +121,18 @@ function addRival(state: GameState, seed: RivalSeed, products: number): Rival {
 
 /** The competition at the start: established studios with products already out, and a newcomer or two. */
 export function createRivals(state: GameState): void {
-  for (const seed of RIVALS) addRival(state, seed, seed.products)
+  for (const seed of RIVALS) if (seed.arrivesYear === undefined) addRival(state, seed, seed.products)
 }
 
-/** For a save from before there were ten studios: the ones it lacks move in, each with a single product. */
-export function introduceRivals(state: GameState): void {
+const DAYS_PER_YEAR = 12 * DAYS_PER_MONTH
+
+/** Studios whose year has come move into the market, each with a single product; none is added twice. Also catches up old saves. */
+export function rivalsArrive(state: GameState, quiet = false): void {
   for (const seed of RIVALS) {
-    if (!state.rivals.some((r) => r.name === seed.name)) addRival(state, seed, Math.min(seed.products, 1))
+    if (seed.arrivesYear === undefined || state.day < (seed.arrivesYear - 1) * DAYS_PER_YEAR) continue
+    if (state.rivals.some((r) => r.name === seed.name)) continue
+    const rival = addRival(state, seed, Math.min(seed.products, 1))
+    if (!quiet) state.events.push({ type: 'notice', text: `${rival.name} has moved into the market.` })
   }
 }
 
@@ -171,6 +176,7 @@ export function rivalsDay(state: GameState): void {
   }
 
   if (state.day % DAYS_PER_MONTH !== 0) return
+  rivalsArrive(state)
   for (const rival of state.rivals) {
     rival.skill = Math.min(RIVAL_SKILL_MAX, rival.skill + RIVAL_SKILL_GROWTH / 12)
     rival.business = Math.min(rival.businessCap, rival.business * (1 + rival.growth) ** (1 / 12))

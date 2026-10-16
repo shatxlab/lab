@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { STAGES } from '@/lib/tycoon/data/stages'
 import {
   CONTRACT_ABANDON_REPUTATION,
+  CONTRACT_BOARD,
+  CONTRACT_DEPOSIT,
   CONTRACT_LATE_PAY,
+  CONTRACT_NEW_MAX_DAYS,
   CONTRACT_OFFERS,
   HIT_MAX_CHANCE,
   HIT_REACH,
@@ -10,7 +13,8 @@ import {
   MOVE_OUT_COST,
   OFFICE_KINDS,
 } from '@/lib/tycoon/sim/balance'
-import { abandonContract, acceptContract, payPerPoint, refreshContracts } from '@/lib/tycoon/sim/contracts'
+import { abandonContract, acceptContract, contractsDay, payPerPoint, refreshContracts } from '@/lib/tycoon/sim/contracts'
+import { estimateDays } from '@/lib/tycoon/sim/work'
 import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { hire } from '@/lib/tycoon/sim/hiring'
 import { deskCount, moveOut, moveOutBlocker, newOfficeCost, openOffice, openOfficeBlocker, staffOf, transfer } from '@/lib/tycoon/sim/offices'
@@ -136,7 +140,7 @@ describe('the garage and offices', () => {
 })
 
 describe('client contracts', () => {
-  it('are on offer from the start and every month, sized to the studio', () => {
+  it('are on offer from the start, sized to the studio', () => {
     const state = makeState([makeEmployee(1, { design: 40, engineering: 40, qa: 40 })])
     refreshContracts(state)
     expect(state.contracts).toHaveLength(CONTRACT_OFFERS)
@@ -149,8 +153,58 @@ describe('client contracts', () => {
     for (const offer of state.contracts) expect(offer.days).toBeGreaterThan(0)
 
     const before = state.contracts.map((c) => c.id)
-    for (let i = 0; i < 30; i++) advanceDay(state)
+    for (let i = 0; i < 40; i++) advanceDay(state)
     expect(state.contracts.map((c) => c.id)).not.toEqual(before)
+  })
+
+  it('are sized by the slowest discipline, so every offer can be finished in time', () => {
+    const lopsided = makeState([makeEmployee(1, { design: 5, engineering: 70, qa: 10 }), makeEmployee(2, { design: 5, engineering: 60, qa: 10 })])
+    for (let round = 0; round < 12; round++) {
+      refreshContracts(lopsided)
+      for (const offer of lopsided.contracts) expect(estimateDays(lopsided, offer.target), `${offer.title}`).toBeLessThanOrEqual(offer.days)
+    }
+  })
+
+  it('suit the team: an engineering-only team is not offered a brand refresh', () => {
+    const state = makeState([makeEmployee(1, { design: 0, engineering: 80, qa: 20 })])
+    const titles = new Set<string>()
+    for (let round = 0; round < 40; round++) {
+      refreshContracts(state)
+      for (const offer of state.contracts) titles.add(offer.title)
+    }
+    expect(titles.has('a brand refresh')).toBe(false)
+    expect(titles.size).toBeGreaterThan(1)
+  })
+
+  it('come to the board one at a time, up to a limit, and go elsewhere after a while', () => {
+    const state = makeState([makeEmployee(1, { design: 40, engineering: 40, qa: 40 })])
+    state.contracts = []
+    state.nextOfferDay = 0
+    const sizes: number[] = []
+    for (let i = 0; i < 120; i++) {
+      state.day += 1
+      contractsDay(state)
+      sizes.push(state.contracts.length)
+    }
+    expect(Math.max(...sizes)).toBe(CONTRACT_BOARD)
+    expect(sizes.findIndex((n) => n > 0)).toBeLessThanOrEqual(CONTRACT_NEW_MAX_DAYS)
+    // Never more than one new job a day, and a gap of at least a week between them.
+    for (let i = 1; i < sizes.length; i++) expect(sizes[i] - sizes[i - 1]).toBeLessThanOrEqual(1)
+
+    const old = state.contracts[0]
+    state.day = old.expiresDay! + 1
+    state.nextOfferDay = state.day + 100
+    contractsDay(state)
+    expect(state.contracts.some((c) => c.id === old.id)).toBe(false)
+  })
+
+  it('an older save with jobs that never expire still loads and works', () => {
+    const state = makeState([makeEmployee(1)])
+    delete state.contracts[0].expiresDay
+    delete state.nextOfferDay
+    const restored = deserialize(serialize(state))!
+    contractsDay(restored)
+    expect(restored.contracts.some((c) => c.id === state.contracts[0].id)).toBe(true)
   })
 
   it('pay more per point to a studio with a name', () => {
@@ -163,17 +217,20 @@ describe('client contracts', () => {
   it('pay on delivery, on time in full, and count toward the journey', () => {
     const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
     const offer = state.contracts[0]
+    const before = state.money
     expect(acceptContract(state, offer.id).ok).toBe(true)
+    expect(state.money).toBe(before + Math.round(offer.pay * CONTRACT_DEPOSIT)) // the deposit
     expect(state.contracts.some((c) => c.id === offer.id)).toBe(false)
     const project = state.offices[0].project!
-    expect(project).toMatchObject({ kind: 'contract', contract: { client: offer.client, pay: offer.pay, dueDay: state.day + offer.days } })
+    expect(project).toMatchObject({ kind: 'contract', contract: { client: offer.client, pay: offer.pay, dueDay: state.day + offer.days, deposit: Math.round(offer.pay * CONTRACT_DEPOSIT) } })
     expect(shipProject(state)).toEqual({ ok: false, reason: 'Client work has nothing to ship' })
 
     const money = state.money
     finish(state)
     workDay(state)
     expect(state.offices[0].project).toBeNull()
-    expect(state.money).toBe(money + offer.pay)
+    // Half came when the job was taken; the rest comes now.
+    expect(state.money).toBe(money + offer.pay - Math.round(offer.pay * CONTRACT_DEPOSIT))
     expect(state.contractsDone).toBe(1)
     expect(drainEvents(state).some((e) => e.type === 'notice' && e.text.startsWith(`Delivered to ${offer.client}`))).toBe(true)
   })
@@ -188,14 +245,18 @@ describe('client contracts', () => {
     const money = state.money
     finish(state)
     workDay(state)
-    expect(state.money).toBe(money + Math.round(offer.pay * CONTRACT_LATE_PAY))
+    // The late total is half the price, and the client has already advanced that much.
+    expect(state.money).toBe(money + Math.max(0, Math.round(offer.pay * CONTRACT_LATE_PAY) - Math.round(offer.pay * CONTRACT_DEPOSIT)))
   })
 
-  it('cost reputation and pay nothing when dropped', () => {
+  it('cost reputation and give the deposit back when dropped', () => {
     const state = makeState([makeEmployee(1)])
     state.reputation = 10
+    const money = state.money
     acceptContract(state, state.contracts[0].id)
+    expect(state.money).toBeGreaterThan(money)
     expect(abandonContract(state).ok).toBe(true)
+    expect(state.money).toBe(money)
     expect(state.offices[0].project).toBeNull()
     expect(state.reputation).toBe(10 - CONTRACT_ABANDON_REPUTATION)
     expect(abandonContract(state).ok).toBe(false)
@@ -287,10 +348,12 @@ describe('the journey', () => {
   it('moves on when every goal of the stage is met, once, and says so', () => {
     const state = makeState([makeEmployee(1)])
     expect(stageComplete(state)).toBe(false)
-    state.shippedCount = 2
-    state.products.push(makeProduct({ users: 3000 }))
-    expect(stageComplete(state)).toBe(false) // no client job yet
-    state.contractsDone = 1
+    state.shippedCount = 3
+    state.products.push(makeProduct({ users: 5000 }))
+    expect(stageComplete(state)).toBe(false) // no client jobs yet
+    state.contractsDone = 2
+    expect(stageComplete(state)).toBe(false)
+    state.contractsDone = 3
     expect(stageComplete(state)).toBe(true)
     checkStage(state)
     expect(state.stage).toBe(1)
@@ -311,9 +374,9 @@ describe('the journey', () => {
 
   it('shows a stage dialog through the store', () => {
     const state = makeState([makeEmployee(1)])
-    state.shippedCount = 2
-    state.contractsDone = 1
-    state.products.push(makeProduct({ users: 3000 }))
+    state.shippedCount = 3
+    state.contractsDone = 3
+    state.products.push(makeProduct({ users: 5000 }))
     const store = createStore(state, 1)
     for (let i = 0; i < 10 && store.dialog.value === null; i++) store.tick(2000)
     expect(store.dialog.value).toEqual({ kind: 'stage', stage: 1 })

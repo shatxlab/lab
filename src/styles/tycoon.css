@@ -1070,6 +1070,12 @@
 
 /* ---- staff: traits, morale, training ---- */
 
+.tycoon-root .founder {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .tycoon-root .trait {
   color: var(--accent);
   font-size: 12px;

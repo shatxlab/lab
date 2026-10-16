@@ -15,9 +15,14 @@ export interface RivalSeed {
   business: number
   /** ...and how much it grows a year. */
   growth: number
+  /** The year it moves into the market; left out for the studios that are there from the start. */
+  arrivesYear?: number
 }
 
-/** The competition: from an established giant down to a newcomer about as small as you. */
+/**
+ * The competition: from an established giant down to a newcomer about as small as you. The ones with an
+ * `arrivesYear` are not there at the start (they would crowd the garage's first products); they move in later.
+ */
 export const RIVALS: readonly RivalSeed[] = [
   { name: 'Bluebird Labs', skill: 74, reputation: 65, focus: ['web_app', 'saas_platform', 'cloud_platform'], products: 4, size: 'large', business: 1200, growth: 0.32 },
   { name: 'Pixelforge', skill: 71, reputation: 55, focus: ['game', 'mobile_app'], products: 4, size: 'large', business: 800, growth: 0.3 },
@@ -25,11 +30,11 @@ export const RIVALS: readonly RivalSeed[] = [
   { name: 'Hexagon Apps', skill: 61, reputation: 30, focus: ['mobile_app', 'web_app', 'game'], products: 2, size: 'medium', business: 300, growth: 0.35 },
   // A newcomer that rides the AI wave when it comes.
   { name: 'Quanta', skill: 58, reputation: 12, focus: ['ai_product', 'dev_tool', 'web_app'], products: 1, size: 'small', business: 150, growth: 0.55 },
-  { name: 'Ironclad Systems', skill: 69, reputation: 50, focus: ['cloud_platform', 'saas_platform', 'dev_tool'], products: 3, size: 'large', business: 700, growth: 0.3 },
-  { name: 'Tidewater Digital', skill: 67, reputation: 40, focus: ['web_app', 'saas_platform', 'mobile_app'], products: 3, size: 'medium', business: 500, growth: 0.32 },
-  { name: 'Lumen Interactive', skill: 64, reputation: 35, focus: ['game', 'mobile_app', 'web_app'], products: 2, size: 'medium', business: 350, growth: 0.33 },
-  { name: 'Sparkwise', skill: 62, reputation: 25, focus: ['web_app', 'mobile_app', 'dev_tool'], products: 2, size: 'medium', business: 250, growth: 0.38 },
-  { name: 'Basement Games', skill: 55, reputation: 8, focus: ['game', 'mobile_app'], products: 1, size: 'small', business: 100, growth: 0.5 },
+  { name: 'Ironclad Systems', skill: 69, reputation: 50, focus: ['cloud_platform', 'saas_platform', 'dev_tool'], products: 3, size: 'large', business: 700, growth: 0.3, arrivesYear: 6 },
+  { name: 'Tidewater Digital', skill: 67, reputation: 40, focus: ['web_app', 'saas_platform', 'mobile_app'], products: 3, size: 'medium', business: 500, growth: 0.32, arrivesYear: 2 },
+  { name: 'Lumen Interactive', skill: 64, reputation: 35, focus: ['game', 'mobile_app', 'web_app'], products: 2, size: 'medium', business: 350, growth: 0.33, arrivesYear: 5 },
+  { name: 'Sparkwise', skill: 62, reputation: 25, focus: ['web_app', 'mobile_app', 'dev_tool'], products: 2, size: 'medium', business: 250, growth: 0.38, arrivesYear: 4 },
+  { name: 'Basement Games', skill: 55, reputation: 8, focus: ['game', 'mobile_app'], products: 1, size: 'small', business: 100, growth: 0.5, arrivesYear: 3 },
 ]
 
 /** Small studios that start up as an era begins, keyed by the era's index into ERAS; the market keeps getting new faces. */

@@ -1,6 +1,6 @@
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { OVERSHOOT_CAP, PROJECT_SIZES } from '@/lib/tycoon/sim/balance'
-import { contractPay } from '@/lib/tycoon/sim/contracts'
+import { contractBalance } from '@/lib/tycoon/sim/contracts'
 import { projectQuality } from '@/lib/tycoon/sim/project'
 import { isReady } from '@/lib/tycoon/sim/scoring'
 import { DISCIPLINES, type Discipline, type GameState, type Office, type Project } from '@/lib/tycoon/sim/types'
@@ -55,7 +55,7 @@ function ContractPanel({ office, project }: { office: Office; project: Project }
           <strong>💼 {project.name}</strong>
           <span className={left < 0 ? 'bad' : 'muted'}>
             {' '}
-            · pays {formatMoney(contractPay(state, terms))} on delivery ·{' '}
+            · {formatMoney(contractBalance(state, terms))} more on delivery ·{' '}
             {left >= 0 ? `due in ${left} day${left === 1 ? '' : 's'}` : `${-left} day${left === -1 ? '' : 's'} late`}
           </span>
         </div>

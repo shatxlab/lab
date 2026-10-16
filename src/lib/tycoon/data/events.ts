@@ -44,10 +44,13 @@ export interface RandomEvent {
   choices(ctx: EventContext): EventChoice[]
 }
 
+/** Merging patches unread ships this many times the bugs. */
+const OSS_QUICK_BUG_RISK = 1.3
+
 const roundTo = (n: number, step: number) => Math.max(step, Math.round(n / step) * step)
 const burnPerDay = (s: GameState) => monthlyBurn(s) / DAYS_PER_MONTH
 const newestProduct = (s: GameState) => s.products[s.products.length - 1]
-const poachable = (s: GameState) => s.employees.filter((e) => e.keptDay === undefined || s.day - e.keptDay > POACH_IMMUNITY_DAYS)
+const poachable = (s: GameState) => s.employees.filter((e) => !e.founder && (e.keptDay === undefined || s.day - e.keptDay > POACH_IMMUNITY_DAYS))
 const nameOf = (s: GameState, id: number | undefined) => s.employees.find((e) => e.id === id)?.name ?? 'Someone'
 const investorAmount = (s: GameState) => roundTo(monthlyBurn(s) * INVESTOR_MONTHS_OF_BURN, 500)
 const addReputation = (s: GameState, amount: number) => {
@@ -338,10 +341,12 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
     choices: ({ state, data }) => [
       choice(state, {
         label: 'Merge them quickly',
-        note: '+8% progress on every bar',
+        note: '+8% progress on every bar, 30% more bugs at release',
         apply: () => {
           addProgress(eventProject(state, data), 0.08)
-          return 'The patches landed. Progress jumped.'
+          const project = eventProject(state, data)
+          if (project) project.bugRisk *= OSS_QUICK_BUG_RISK
+          return 'The patches landed. Progress jumped, though nobody read them closely.'
         },
       }),
       choice(state, {
@@ -531,7 +536,8 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
     id: 'hardware',
     title: 'Equipment trouble',
     weight: 1.5,
-    when: (s) => s.employees.length >= 2,
+    // The garage has a couple of laptops, not an office full of them.
+    when: (s) => s.employees.length >= 4 && s.offices.some((o) => o.kind === 'office'),
     text: () => 'Half the office laptops are dying, and the air conditioning has given up too.',
     choices: ({ state }) => [
       choice(state, {

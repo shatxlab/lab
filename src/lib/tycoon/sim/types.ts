@@ -28,6 +28,8 @@ export interface Employee {
   hiredDay: number
   /** The day they became ready for their next promotion, or null if they aren't. */
   readySince: number | null
+  /** One of the two people who started the studio: they never leave and draw less than market pay. */
+  founder?: boolean
   /** The day a counter-offer last kept them; a rival leaves them alone for a while after. */
   keptDay?: number
 }
@@ -103,6 +105,8 @@ export interface ContractTerms {
   client: string
   pay: number
   dueDay: number
+  /** What the client advanced when the job was taken; it comes off the final payment. Absent in older saves. */
+  deposit?: number
 }
 
 /** A job a client is offering: build this for that much, in about that long. */
@@ -115,6 +119,8 @@ export interface ContractOffer {
   pay: number
   /** Days from accepting to the deadline. */
   days: number
+  /** The last day it is on the board; absent in older saves, where it does not run out. */
+  expiresDay?: number
 }
 
 export interface ProductUpdate {
@@ -325,8 +331,10 @@ export interface GameState {
   products: Product[]
   /** Hire pool, regenerated every CANDIDATE_REFRESH_DAYS. */
   candidates: Employee[]
-  /** Client work on offer, regenerated monthly. */
+  /** Client work on offer: new jobs turn up every few days and old ones expire. */
   contracts: ContractOffer[]
+  /** The day the next job may join the board; absent in older saves. */
+  nextOfferDay?: number
   /** Contracts delivered, ever. */
   contractsDone: number
   rivals: Rival[]
@@ -358,6 +366,8 @@ export interface GameState {
   research: ResearchState
   /** Day the last random event was offered or resolved, for the cooldown. */
   lastEventDay: number
+  /** Ids of the latest random events, newest last, so the same one does not come round again at once. Absent in older saves. */
+  recentEvents?: string[]
   /** Investor deals taken so far. The investor is a one-time last chance, not a recurring bailout. */
   investorDeals: number
   /** Day of the last team outing, for its cooldown. */

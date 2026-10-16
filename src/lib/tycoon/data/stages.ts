@@ -45,9 +45,9 @@ export const STAGES: readonly Stage[] = [
     blurb: 'A couple of people in a garage, making small things and trying to cover the rent.',
     unlocks: [],
     goals: [
-      { id: 'ship_2', label: 'Ship 2 products', check: (s) => s.shippedCount >= 2, progress: (s) => upTo(s.shippedCount, 2) },
-      { id: 'users_3k', label: 'Have 3,000 users on one product', check: (s) => mostUsers(s) >= 3000, progress: (s) => upTo(mostUsers(s), 3000) },
-      { id: 'client_job', label: 'Deliver a job for a client', check: (s) => s.contractsDone >= 1, progress: (s) => upTo(s.contractsDone, 1) },
+      { id: 'ship_3', label: 'Ship 3 products', check: (s) => s.shippedCount >= 3, progress: (s) => upTo(s.shippedCount, 3) },
+      { id: 'users_5k', label: 'Have 5,000 users on one product', check: (s) => mostUsers(s) >= 5000, progress: (s) => upTo(mostUsers(s), 5000) },
+      { id: 'client_jobs', label: 'Deliver 3 jobs for clients', check: (s) => s.contractsDone >= 3, progress: (s) => upTo(s.contractsDone, 3) },
     ],
   },
   {

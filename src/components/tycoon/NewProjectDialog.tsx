@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
-import { DAYS_PER_MONTH, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
+import { CONTRACT_DEPOSIT, DAYS_PER_MONTH, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
 import { eraAt, expectedFeatures } from '@/lib/tycoon/data/eras'
 import { contractBlocker } from '@/lib/tycoon/sim/contracts'
 import { monthlyBurn } from '@/lib/tycoon/sim/economy'
@@ -38,7 +38,7 @@ function ClientWork({ office }: { office: Office }) {
   return (
     <>
       <p className="muted">
-        Steady money, no users: a client pays when the job is done, half if it is late. New jobs come in every month.
+        Steady money, no users: the client advances half when you take the job and pays the rest when it is done (the second half is lost if you are late). New jobs turn up every week or two and go elsewhere after a few weeks.
       </p>
       {state.contracts.length === 0 && <p className="muted">No one is offering work right now.</p>}
       <div className="contracts">
@@ -62,10 +62,12 @@ function ClientWork({ office }: { office: Office }) {
                 </div>
                 <small className={tight ? 'bad' : 'muted'}>
                   Due in {offer.days} days · about {formatDays(days)} with this team
+                  {offer.expiresDay !== undefined && ` · on offer for ${Math.max(0, offer.expiresDay - state.day)} more days`}
                 </small>
               </div>
               <button className="primary" disabled={blocker !== null} title={blocker ?? undefined} onClick={() => take(offer)}>
                 Take it · {formatMoney(offer.pay)}
+                <small> · {formatMoney(Math.round(offer.pay * CONTRACT_DEPOSIT))} now</small>
               </button>
             </div>
           )

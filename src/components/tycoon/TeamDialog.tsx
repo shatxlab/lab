@@ -3,6 +3,7 @@ import { useState } from 'react'
 import {
   CANDIDATE_REFRESH_DAYS,
   ERA_WAGE_GROWTH,
+  FOUNDER_PAY_SHARE,
   LEAD_FREE_TEAM,
   LEAD_SPEED,
   MORALE_UNHAPPY,
@@ -15,7 +16,7 @@ import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { needsLead, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
-import { hireCost, hiringOffice, salaryFor } from '@/lib/tycoon/sim/hiring'
+import { hireCost, hiringOffice, payShare, salaryFor } from '@/lib/tycoon/sim/hiring'
 import {
   deskCount,
   freeDesks,
@@ -47,6 +48,8 @@ export function MoraleBar({ morale, training = false }: { morale: number; traini
   )
 }
 
+const FOUNDER_NOTE = 'One of the two who started the studio. They never leave, cannot be fired or poached, and draw half the market rate, in every era.'
+
 /** What a missing Lead costs, and what one gives, as whole percentages. */
 const SLOWER = Math.round((1 - NO_LEAD_SPEED) * 100)
 const FASTER = Math.round((LEAD_SPEED - 1) * 100)
@@ -68,9 +71,17 @@ function Person({ employee, action, showMorale }: { employee: Employee; action: 
   return (
     <div className={`person ${showMorale ? '' : 'plain'}`}>
       <div className="person-name">
-        <strong>{employee.name}</strong>
+        <strong>
+          {employee.name}
+          {employee.founder && (
+            <span className="founder" title={FOUNDER_NOTE}>
+              {' '}
+              ★ Founder
+            </span>
+          )}
+        </strong>
         <span className="muted">
-          {title(employee)} · {formatMoney(employee.salary)}/mo
+          {title(employee)} · {formatMoney(employee.salary)}/mo{employee.founder && ` (${Math.round(FOUNDER_PAY_SHARE * 100)}% of market)`}
         </span>
         <small className="trait" title={trait.description}>
           {trait.name}
@@ -194,7 +205,7 @@ export function TeamDialog() {
                 {promotionBlocker(state, employee) === null && (
                   <button
                     className="primary"
-                    title={`Raise to ${formatMoney(salaryFor(employee.skills, employee.trait, employee.level + 1, state.day))}/mo`}
+                    title={`Raise to ${formatMoney(salaryFor(employee.skills, employee.trait, employee.level + 1, state.day, payShare(employee)))}/mo`}
                     onClick={() => report(store.promoteEmployee(employee.id))}
                   >
                     Promote
@@ -214,13 +225,15 @@ export function TeamDialog() {
                   </select>
                 )}
                 <button onClick={() => store.openDialog({ kind: 'employee', id: employee.id })}>Details</button>
-                <button
-                  className={confirmFire === employee.id ? 'danger' : ''}
-                  onClick={() => fire(employee.id)}
-                  onBlur={() => setConfirmFire(null)}
-                >
-                  {confirmFire === employee.id ? 'Confirm' : 'Fire'}
-                </button>
+                {!employee.founder && (
+                  <button
+                    className={confirmFire === employee.id ? 'danger' : ''}
+                    onClick={() => fire(employee.id)}
+                    onBlur={() => setConfirmFire(null)}
+                  >
+                    {confirmFire === employee.id ? 'Confirm' : 'Fire'}
+                  </button>
+                )}
               </>
             }
           />

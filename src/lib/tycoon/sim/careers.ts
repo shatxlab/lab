@@ -100,7 +100,7 @@ export function careerDay(state: GameState): void {
       employee.readySince = null
     }
     const years = (state.day - employee.hiredDay) / (12 * DAYS_PER_MONTH)
-    if (years >= MOVE_ON_YEARS && rand(state) < MOVE_ON_CHANCE) leaving.push(employee)
+    if (!employee.founder && years >= MOVE_ON_YEARS && rand(state) < MOVE_ON_CHANCE) leaving.push(employee)
   }
   for (const employee of leaving) {
     state.employees = state.employees.filter((e) => e.id !== employee.id)

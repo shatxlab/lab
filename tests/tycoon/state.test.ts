@@ -112,7 +112,7 @@ describe('upgrading a version 3 save', () => {
     expect(upgraded.retired).toEqual([])
     expect(upgraded.products.every((p) => p.pendingBugs === 0)).toBe(true)
     expect(upgraded.products.find((p) => p.id === 77)!.bugs).toBe(9) // the bugs stay
-    expect(upgraded.rivals).toHaveLength(10)
+    expect(upgraded.rivals.length).toBeGreaterThanOrEqual(5) // the rest move in as their years come
   })
 
   it('keeps an ordinary project, without the sprint fields', () => {

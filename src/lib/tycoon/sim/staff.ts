@@ -110,7 +110,7 @@ export function moraleDay(state: GameState): void {
     if (before >= MORALE_UNHAPPY && employee.morale < MORALE_UNHAPPY) {
       state.events.push({ type: 'notice', text: `${employee.name} is unhappy. A team outing or a good release would help.` })
     }
-    if (employee.morale < MORALE_QUIT && rand(state) < QUIT_CHANCE_PER_DAY) leaving.push(employee)
+    if (!employee.founder && employee.morale < MORALE_QUIT && rand(state) < QUIT_CHANCE_PER_DAY) leaving.push(employee)
   }
 
   for (const employee of leaving) {

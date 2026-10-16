@@ -3,6 +3,7 @@ import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import {
   CANDIDATE_COUNT,
   ERA_WAGE_GROWTH,
+  FOUNDER_PAY_SHARE,
   HIRE_MAX_LEVEL,
   LEVELS,
   PRIMARY_SKILL_MIN,
@@ -40,15 +41,20 @@ export const ROLE_DISCIPLINE: Record<Role, Discipline> = {
 }
 
 /** Market rate for a skill set, trait and level (Mid by default) on `day`; employees are re-rated monthly. */
-export function salaryFor(skills: Skills, traitId = '', level = 1, day = 0): number {
+export function salaryFor(skills: Skills, traitId = '', level = 1, day = 0, share = 1): number {
   const total = DISCIPLINES.reduce((sum, d) => sum + skills[d], 0)
   const market = (SALARY_BASE + SALARY_PER_SKILL_POINT * total) * (1 + ERA_WAGE_GROWTH * eraIndexAt(day))
-  return Math.round((market * (getTrait(traitId).salary ?? 1) * LEVELS[level].salary) / 50) * 50
+  return Math.round((market * (getTrait(traitId).salary ?? 1) * LEVELS[level].salary * share) / 50) * 50
 }
 
-/** What this person is worth on `day`. */
+/** The share of the market rate this person draws: founders take less, and it moves with the market. */
+export function payShare(employee: Pick<Employee, 'founder'>): number {
+  return employee.founder ? FOUNDER_PAY_SHARE : 1
+}
+
+/** What this person is paid on `day`. */
 export function salaryOf(employee: Employee, day: number): number {
-  return salaryFor(employee.skills, employee.trait, employee.level, day)
+  return salaryFor(employee.skills, employee.trait, employee.level, day, payShare(employee))
 }
 
 /** Creates a new person (not yet in any list) and consumes an id. */
@@ -127,6 +133,7 @@ export function hire(state: GameState, candidateId: number, officeId?: number): 
 export function fire(state: GameState, employeeId: number): Result {
   const index = state.employees.findIndex((e) => e.id === employeeId)
   if (index < 0) return fail('Employee not found')
+  if (state.employees[index].founder) return fail('Founders stay: it is their studio too')
   state.employees.splice(index, 1)
   return OK
 }

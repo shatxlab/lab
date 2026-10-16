@@ -74,7 +74,7 @@ function officeWorkDay(state: GameState, office: Office): void {
         employee.skills[d] + applied[d] * gain * (1 - employee.skills[d] / 100),
       )
     }
-    state.dayWork.push({ employeeId: employee.id, points: applied, fixing: project.kind === 'fix', bugs: 0 })
+    state.dayWork.push({ employeeId: employee.id, points: applied, fixing: project.kind === 'fix' })
   }
 
   if (project.kind === 'fix') {

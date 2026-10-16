@@ -181,16 +181,6 @@ describe('bug-fixing sprints', () => {
     expect(events.some((e) => e.type === 'projectReady')).toBe(false)
   })
 
-  it('give each day\'s squashed bugs to the people who did the most work', () => {
-    const state = buggyStudio(40)
-    startFix(state, 50)
-    state.dayWork = []
-    for (let i = 0; i < 3; i++) workDay(state)
-    const credited = state.dayWork.reduce((sum, w) => sum + w.bugs, 0)
-    expect(state.dayWork.every((w) => w.fixing)).toBe(true)
-    expect(credited).toBe(state.bugsFixed)
-  })
-
   it('can stop early and keep what was fixed; there is nothing to ship', () => {
     const state = buggyStudio(30)
     startFix(state, 50)

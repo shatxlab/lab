@@ -296,6 +296,8 @@ export const LEVELS: readonly LevelSpec[] = [
   { name: 'Lead', salary: 1.4, speed: 1.1, skill: 80, days: 300 },
 ]
 export const LEAD_LEVEL = 3
+/** Days after a paid counter-offer during which a rival does not try to poach the same person again. */
+export const POACH_IMMUNITY_DAYS = 540
 /** The highest level a new hire can start at. */
 export const HIRE_MAX_LEVEL = 2
 /** People wait this long for a promotion they have earned before they start to resent it... */

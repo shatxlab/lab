@@ -1088,6 +1088,25 @@
   white-space: nowrap;
 }
 
+/* A row with several buttons (Promote, office, Details, Fire) would be wider than a phone: let the
+   buttons wrap and give them the row under the name. */
+@media (max-width: 520px) {
+  .tycoon-root .person-action {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .tycoon-root .person-action:has(> :nth-child(2)) {
+    grid-row: auto;
+    grid-column: 1 / -1;
+  }
+
+  .tycoon-root .person-action button {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 520px) {
   .tycoon-root .person,
 .tycoon-root .person.plain {

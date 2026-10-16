@@ -1,6 +1,6 @@
 import { formatMoney as $ } from '@/lib/tycoon/format'
 import { getProductType } from './productTypes'
-import { DAYS_PER_MONTH, HIRE_MAX_LEVEL, INVESTOR_MONTHS_OF_BURN, OVERSHOOT_CAP, PROJECT_SIZES, REPUTATION_MAX } from '@/lib/tycoon/sim/balance'
+import { DAYS_PER_MONTH, HIRE_MAX_LEVEL, INVESTOR_MONTHS_OF_BURN, OVERSHOOT_CAP, POACH_IMMUNITY_DAYS, PROJECT_SIZES, REPUTATION_MAX } from '@/lib/tycoon/sim/balance'
 import { dailyIncome, monthlyBurn, monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { levelForSkill, primarySkill } from '@/lib/tycoon/sim/careers'
 import { fire, generateEmployee, hireCost, hiringOffice, ROLES, salaryOf } from '@/lib/tycoon/sim/hiring'
@@ -47,6 +47,7 @@ export interface RandomEvent {
 const roundTo = (n: number, step: number) => Math.max(step, Math.round(n / step) * step)
 const burnPerDay = (s: GameState) => monthlyBurn(s) / DAYS_PER_MONTH
 const newestProduct = (s: GameState) => s.products[s.products.length - 1]
+const poachable = (s: GameState) => s.employees.filter((e) => e.keptDay === undefined || s.day - e.keptDay > POACH_IMMUNITY_DAYS)
 const nameOf = (s: GameState, id: number | undefined) => s.employees.find((e) => e.id === id)?.name ?? 'Someone'
 const investorAmount = (s: GameState) => roundTo(monthlyBurn(s) * INVESTOR_MONTHS_OF_BURN, 500)
 const addReputation = (s: GameState, amount: number) => {
@@ -169,11 +170,14 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
     id: 'poach',
     title: 'Job offer',
     weight: 2,
-    when: (s) => s.employees.length >= 3 && s.day >= 60,
+    when: (s) => s.employees.length >= 3 && s.day >= 60 && poachable(s).length > 0,
     prepare: (s) => {
-      const total = (e: GameState['employees'][number]) => DISCIPLINES.reduce((sum, d) => sum + e.skills[d], 0)
-      const best = s.employees.reduce((a, b) => (total(b) > total(a) ? b : a))
-      return { employeeId: best.id, rivalId: s.rivals.length > 0 ? pick(s, s.rivals).id : 0 }
+      // Better paid and unhappier people are likelier targets; someone just kept by a counter-offer is left alone.
+      const candidates = poachable(s)
+      const weight = (e: GameState['employees'][number]) => e.salary * (1.5 - e.morale / 100)
+      let roll = rand(s) * candidates.reduce((sum, e) => sum + weight(e), 0)
+      const target = candidates.find((e) => (roll -= weight(e)) < 0) ?? candidates[candidates.length - 1]
+      return { employeeId: target.id, rivalId: s.rivals.length > 0 ? pick(s, s.rivals).id : 0 }
     },
     text: ({ state, data }) => `${nameOf(state, data.employeeId)} has an offer from ${rivalName(state, data)} and is thinking about leaving.`,
     choices: ({ state, data }) => {
@@ -186,6 +190,7 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
           note: 'a retention bonus',
           apply: () => {
             adjustMorale(state, 8, employee?.id)
+            if (employee) employee.keptDay = state.day
             return `${name} decided to stay.`
           },
         }),

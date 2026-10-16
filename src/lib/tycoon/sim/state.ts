@@ -118,6 +118,7 @@ function validEmployee(v: unknown): boolean {
     isNum(v.levelDay) &&
     isNum(v.hiredDay) &&
     (v.readySince === null || isNum(v.readySince)) &&
+    (v.keptDay === undefined || isNum(v.keptDay)) &&
     (v.training === null ||
       (isObj(v.training) && (DISCIPLINES as readonly string[]).includes(v.training.discipline as string) && isNum(v.training.finishDay)))
   )

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RANDOM_EVENTS, getRandomEvent } from '@/lib/tycoon/data/events'
-import { EVENT_COOLDOWN_DAYS, EVENT_MIN_DAY, OVERSHOOT_CAP } from '@/lib/tycoon/sim/balance'
+import { EVENT_COOLDOWN_DAYS, EVENT_MIN_DAY, OVERSHOOT_CAP, POACH_IMMUNITY_DAYS } from '@/lib/tycoon/sim/balance'
 import { dailyIncome } from '@/lib/tycoon/sim/economy'
 import { deskCount } from '@/lib/tycoon/sim/offices'
 import { describePendingEvent, resolveRandomEvent, rollRandomEvent } from '@/lib/tycoon/sim/events'
@@ -193,22 +193,37 @@ describe('event outcomes', () => {
     expect(statMultiplier(ignored, 'revenue')).toBe(1)
   })
 
-  it('poaching targets the most skilled employee: a counter-offer keeps them, otherwise they leave', () => {
+  it('poaching targets someone on the team: a counter-offer keeps them, otherwise they leave', () => {
     const stay = offered('poach')
     const target = stay.pendingEvent!.data.employeeId
-    const total = (id: number) => DISCIPLINES.reduce((s, d) => s + stay.employees.find((e) => e.id === id)!.skills[d], 0)
-    expect(stay.employees.every((e) => total(e.id) <= total(target))).toBe(true)
+    expect(stay.employees.some((e) => e.id === target)).toBe(true)
 
     const staying = structuredClone(stay)
     const money = staying.money
     resolveRandomEvent(staying, choiceIndex(staying, 'Make a counter-offer'))
     expect(staying.employees.some((e) => e.id === target)).toBe(true)
     expect(staying.money).toBeLessThan(money)
+    expect(staying.employees.find((e) => e.id === target)!.keptDay).toBe(staying.day)
 
     const leaving = structuredClone(stay)
     resolveRandomEvent(leaving, choiceIndex(leaving, 'Let them go'))
     expect(leaving.employees.some((e) => e.id === target)).toBe(false)
     expect(leaving.employees).toHaveLength(stay.employees.length - 1)
+  })
+
+  it('poaching spreads over the team and skips someone a counter-offer just kept', () => {
+    const targets = new Set<number>()
+    for (let seed = 1; seed <= 40; seed++) targets.add(offered('poach', richState(seed)).pendingEvent!.data.employeeId)
+    expect(targets.size).toBeGreaterThan(1)
+
+    const state = richState()
+    for (const e of state.employees) e.keptDay = state.day
+    const [free] = state.employees
+    free.keptDay = state.day - POACH_IMMUNITY_DAYS - 1
+    expect(getRandomEvent('poach')!.prepare!(state).employeeId).toBe(free.id)
+
+    state.employees[0].keptDay = state.day
+    expect(getRandomEvent('poach')!.when(state)).toBe(false)
   })
 
   it('viral: free boost is smaller than the paid one', () => {

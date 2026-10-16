@@ -28,6 +28,8 @@ export interface Employee {
   hiredDay: number
   /** The day they became ready for their next promotion, or null if they aren't. */
   readySince: number | null
+  /** The day a counter-offer last kept them; a rival leaves them alone for a while after. */
+  keptDay?: number
 }
 
 export interface ProductType {
@@ -161,8 +163,6 @@ export interface DayWork {
   points: Skills
   /** True when the work went into a bug-fixing sprint. */
   fixing: boolean
-  /** Bugs this person squashed today, in a fix sprint. */
-  bugs: number
 }
 
 /** Things a modifier or a research effect can scale. */

@@ -79,7 +79,7 @@ function seat(arrangement: Arrangement, index: number): { x: number; y: number }
 /** The sprites face right; whoever sits on the right of a partition has their computer to the left. */
 const facesLeft = (index: number): boolean => (index & 1) === 1
 
-/** A 7x7 pixel ladybug with its bottom centre at the origin, so it squashes onto the spot where it sat. */
+/** A 7x7 pixel ladybug with its bottom centre at the origin. */
 function bugGraphic(): Graphics {
   const g = new Graphics()
   g.rect(2, 0, 1, 1).rect(4, 0, 1, 1).rect(2, 1, 3, 1).fill(INK) // antennae and head
@@ -353,8 +353,6 @@ const FADE_DISTANCE = 10
 
 interface Popup {
   view: Container
-  /** A number that floats up and fades, or a bug that gets squashed where it stands. */
-  kind: 'rise' | 'squash'
   age: number
   startY: number
 }
@@ -1102,14 +1100,7 @@ export class OfficeScene {
       }
       const { x, y } = seat(this.arrangement, desk)
       const { x: screenX, y: screenY } = this.toScreen(x, y - 2)
-      if (total >= 1) this.addPopup(this.numberPopup(Math.round(total), work.fixing ? BUG_RED : colorNumber(DISCIPLINE_COLORS[top]), work.fixing), 'rise', screenX, screenY)
-      if (work.bugs > 0 && this.live.length < MAX_POPUPS) {
-        const bug = bugGraphic()
-        bug.scale.set(this.scale * 1.5)
-        const view = new Container()
-        view.addChild(bug)
-        this.addPopup(view, 'squash', screenX + 9 * this.scale, screenY)
-      }
+      if (total >= 1) this.addPopup(this.numberPopup(Math.round(total), work.fixing ? BUG_RED : colorNumber(DISCIPLINE_COLORS[top]), work.fixing), screenX, screenY)
     }
   }
 
@@ -1141,10 +1132,10 @@ export class OfficeScene {
     return view
   }
 
-  private addPopup(view: Container, kind: Popup['kind'], x: number, y: number): void {
+  private addPopup(view: Container, x: number, y: number): void {
     view.position.set(x, y)
     this.popups.addChild(view)
-    this.live.push({ view, kind, age: 0, startY: y })
+    this.live.push({ view, age: 0, startY: y })
   }
 
   /** Popups live shorter at higher speeds so they don't pile up. */
@@ -1159,16 +1150,8 @@ export class OfficeScene {
         this.live.splice(i, 1)
         continue
       }
-      if (popup.kind === 'rise') {
-        popup.view.y = popup.startY - 14 * this.scale * (1 - (1 - t) ** 2)
-        popup.view.alpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4
-      } else {
-        // The bug scuttles a moment, then gets flattened and fades.
-        const squash = Math.min(Math.max((t - 0.3) / 0.2, 0), 1)
-        popup.view.scale.set(1 + 0.5 * squash, 1 - 0.75 * squash)
-        popup.view.x += squash === 0 ? Math.sin(popup.age / 40) * 0.4 : 0
-        popup.view.alpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4
-      }
+      popup.view.y = popup.startY - 14 * this.scale * (1 - (1 - t) ** 2)
+      popup.view.alpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4
     }
   }
 }

@@ -60,15 +60,6 @@ export function stopFix(state: GameState, officeId?: number): Result {
   return OK
 }
 
-const pointsOf = (work: DayWork) => DISCIPLINES.reduce((sum, d) => sum + work.points[d], 0)
-
-/** Hands today's squashed bugs to the office's people who did the most work, one each in turn, for the popups. */
-function creditSquashes(state: GameState, office: Office, count: number): void {
-  const staff = new Set(staffOf(state, office).map((e) => e.id))
-  const workers = state.dayWork.filter((w) => staff.has(w.employeeId) && pointsOf(w) > 0).sort((a, b) => pointsOf(b) - pointsOf(a))
-  for (let i = 0; i < count && workers.length > 0; i++) workers[i % workers.length].bugs += 1
-}
-
 /**
  * After the day's work on a fix sprint: bugs go away as the bars fill, so the product gets better
  * while the sprint runs. When every bar is full the sprint ends on its own.
@@ -89,7 +80,6 @@ export function fixDay(state: GameState, office: Office): void {
     product.bugs = Math.max(0, product.bugs - squashed)
     project.bugsFixed = fixed
     state.bugsFixed += squashed
-    creditSquashes(state, office, squashed)
   }
   if (done) {
     office.project = null

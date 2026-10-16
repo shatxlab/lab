@@ -13,15 +13,18 @@ import {
 } from './balance'
 import { DISCIPLINES, type Discipline, type Project } from './types'
 
+/** What the progress helpers need: a project, or a bug-fixing job. */
+type Work = Pick<Project, 'target' | 'progress'>
+
 /** Progress / target for one discipline, capped at OVERSHOOT_CAP. */
-export function coverage(project: Project, discipline: Discipline): number {
+export function coverage(project: Work, discipline: Discipline): number {
   const target = project.target[discipline]
   if (target <= 0) return OVERSHOOT_CAP
   return Math.min(project.progress[discipline] / target, OVERSHOOT_CAP)
 }
 
 /** How far along the whole project is, 0..1: every bar counts up to its target, by its size. */
-export function overallProgress(project: Project): number {
+export function overallProgress(project: Work): number {
   let done = 0
   let total = 0
   for (const d of DISCIPLINES) {
@@ -31,7 +34,7 @@ export function overallProgress(project: Project): number {
   return total > 0 ? done / total : 1
 }
 
-export function isReady(project: Project): boolean {
+export function isReady(project: Work): boolean {
   return DISCIPLINES.every((d) => project.progress[d] >= project.target[d])
 }
 

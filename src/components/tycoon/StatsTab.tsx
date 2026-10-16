@@ -78,6 +78,39 @@ export function StatsTab() {
         </div>
       </div>
 
+      {state.retired.length > 0 && (
+        <section className="past-products">
+          <h3>Past products</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Left</th>
+                  <th className="num">Users</th>
+                  <th className="num">Earned</th>
+                  <th>What happened</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...state.retired].reverse().map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      {p.name}
+                      {p.hit && ' 🚀'}
+                    </td>
+                    <td>{monthLabel(p.endDay)}</td>
+                    <td className="num">{formatCount(p.users)}</td>
+                    <td className="num">{formatMoney(p.totalRevenue)}</td>
+                    <td>{p.outcome === 'sold' ? `Sold${p.buyer ? ` to ${p.buyer}` : ''} for ${formatMoney(p.price)}` : 'Retired'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {points.length < 2 ? (
         <p className="muted">The charts fill in as months pass. Check back after the first month.</p>
       ) : asTable ? (

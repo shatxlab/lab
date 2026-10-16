@@ -1,7 +1,7 @@
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { PRODUCT_WORDS } from '@/lib/tycoon/data/names'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
-import { RIVALS } from '@/lib/tycoon/data/rivals'
+import { NEWCOMERS, RIVALS, type RivalSeed } from '@/lib/tycoon/data/rivals'
 import {
   ACQUISITION_DAYS,
   ACQUISITION_FLOOR,
@@ -94,30 +94,49 @@ function makeProduct(state: GameState, rival: Rival, releaseDay: number): RivalP
   }
 }
 
+/** Puts a studio on the market from its seed, with its first products already out. */
+function addRival(state: GameState, seed: RivalSeed, products: number): Rival {
+  const rival: Rival = {
+    id: state.nextId++,
+    name: seed.name,
+    skill: seed.skill,
+    reputation: seed.reputation,
+    focus: [...seed.focus],
+    size: seed.size,
+    nextLaunchDay: state.day + Math.round(randRange(state, 20, RIVAL_LAUNCH_MAX_DAYS)),
+    business: seed.business,
+    growth: seed.growth,
+    businessCap: seed.business * RIVAL_BUSINESS_CAP,
+  }
+  state.rivals.push(rival)
+  for (let i = 0; i < products; i++) {
+    const product = makeProduct(state, rival, state.day - Math.round(randRange(state, 60, 400)))
+    // Out for a while and recently kept up: its users have long since arrived.
+    product.updatedDay = state.day + Math.floor(randRange(state, -60, 0))
+    product.users = product.reach * 0.8
+    state.rivalProducts.push(product)
+  }
+  return rival
+}
+
 /** The competition at the start: established studios with products already out, and a newcomer or two. */
 export function createRivals(state: GameState): void {
+  for (const seed of RIVALS) addRival(state, seed, seed.products)
+}
+
+/** For a save from before there were ten studios: the ones it lacks move in, each with a single product. */
+export function introduceRivals(state: GameState): void {
   for (const seed of RIVALS) {
-    const rival: Rival = {
-      id: state.nextId++,
-      name: seed.name,
-      skill: seed.skill,
-      reputation: seed.reputation,
-      focus: [...seed.focus],
-      size: seed.size,
-      nextLaunchDay: Math.round(randRange(state, 20, RIVAL_LAUNCH_MAX_DAYS)),
-      business: seed.business,
-      growth: seed.growth,
-      businessCap: seed.business * RIVAL_BUSINESS_CAP,
-    }
-    state.rivals.push(rival)
-    for (let i = 0; i < seed.products; i++) {
-      const product = makeProduct(state, rival, -Math.round(randRange(state, 60, 400)))
-      // Out for a while and recently kept up: its users have long since arrived.
-      product.updatedDay = Math.floor(randRange(state, -60, 0))
-      product.users = product.reach * 0.8
-      state.rivalProducts.push(product)
-    }
+    if (!state.rivals.some((r) => r.name === seed.name)) addRival(state, seed, Math.min(seed.products, 1))
   }
+}
+
+/** A new studio starts up as an era begins, if the market has room and it is not already here. */
+export function rivalArrives(state: GameState, era: number): void {
+  const seed = NEWCOMERS[era]
+  if (!seed || state.rivals.some((r) => r.name === seed.name)) return
+  const rival = addRival(state, seed, 0)
+  state.events.push({ type: 'notice', text: `A new studio, ${rival.name}, is starting up in the ${seed.focus[0].replace('_', ' ')} market.` })
 }
 
 function launch(state: GameState, rival: Rival): void {
@@ -129,6 +148,8 @@ function launch(state: GameState, rival: Rival): void {
   rival.size = sizeFor(rival.reputation)
   rival.nextLaunchDay = state.day + launchGap(state, product.size)
   const type = getProductType(product.productTypeId).name.toLowerCase()
+  // With ten studios launching, only news that touches you gets a toast: a hit, or a product in a market you are in.
+  if (!product.hit && !state.products.some((p) => p.productTypeId === product.productTypeId)) return
   state.events.push({
     type: 'notice',
     text: product.hit
@@ -238,6 +259,7 @@ export function acquire(state: GameState, rivalId: number): Result {
       reach: p.reach,
       users: p.users,
       bugs: 5 * PROJECT_SIZES[p.size].work,
+      pendingBugs: 0,
       hit: p.hit,
       totalRevenue: 0,
       updates: p.updatedDay > p.releaseDay ? [{ day: p.updatedDay }] : [],

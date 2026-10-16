@@ -14,7 +14,7 @@ import { promote, promotionBlocker as careerBlocker } from '../../src/lib/tycoon
 import { acceptContract, contractBlocker } from '../../src/lib/tycoon/sim/contracts.ts'
 import { dailyIncome, monthlyBurn } from '../../src/lib/tycoon/sim/economy.ts'
 import { describePendingEvent, resolveRandomEvent } from '../../src/lib/tycoon/sim/events.ts'
-import { startFix } from '../../src/lib/tycoon/sim/fixes.ts'
+import { availableFixers, onCallUnlocked, setOnCall, startFix } from '../../src/lib/tycoon/sim/fixes.ts'
 import { hire, hireCost, ROLE_DISCIPLINE } from '../../src/lib/tycoon/sim/hiring.ts'
 import { campaignCost, promoteProduct, promotionBlocker, promotionCost, updateBlocker } from '../../src/lib/tycoon/sim/lifecycle.ts'
 import { marketDemand } from '../../src/lib/tycoon/sim/market.ts'
@@ -132,10 +132,24 @@ const worthKeeping = (state: GameState) => {
   return state.products.filter((p) => productRevenue(p) > 20 && productRevenue(p) > income * 0.04).sort((a, b) => productRevenue(b) - productRevenue(a))
 }
 
-/** Fixes or updates a product that needs it, otherwise returns false so something new is started. */
-function tryMaintain(state: GameState, office: Office, smart: boolean): boolean {
+/** Sends a developer and a tester after the bugs of products worth keeping; once Incident management is done, keeps a pair on call. */
+function dispatchFixers(state: GameState): void {
+  const best = (role: 'developer' | 'tester') => availableFixers(state, role).sort((a, b) => b.skills[role === 'developer' ? 'engineering' : 'qa'] - a.skills[role === 'developer' ? 'engineering' : 'qa'])[0]
+  if (onCallUnlocked(state) && !state.onCall) {
+    const [developer, tester] = [best('developer'), best('tester')]
+    if (developer && tester) setOnCall(state, developer.id, tester.id)
+  }
   for (const product of worthKeeping(state)) {
-    if (bugFactor(product) < 0.8 && startFix(state, product.id, office.id).ok) return true
+    if (bugFactor(product) >= 0.8) continue
+    const [developer, tester] = [best('developer'), best('tester')]
+    if (developer && tester) startFix(state, product.id, developer.id, tester.id)
+  }
+}
+
+/** Updates a product that needs it, otherwise returns false so something new is started. Fixing goes on beside it. */
+function tryMaintain(state: GameState, office: Office, smart: boolean): boolean {
+  dispatchFixers(state)
+  for (const product of worthKeeping(state)) {
     const missing = missingFeatures(product, state.day).filter((id) => featureLock(state, FEATURES.find((f) => f.id === id)!) === null)
     const behind = smart && missing.length > 0
     if ((interest(product, state.day) < 0.8 || behind) && updateBlocker(state, office, product) === null) {

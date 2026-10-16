@@ -77,8 +77,8 @@ export const TIERS: readonly Tier[] = ['small', 'medium', 'large']
 export interface Project {
   id: number
   name: string
-  /** A new product, an update to the live product `parentId`, a bug-fixing sprint on it, or work for a client. */
-  kind: 'new' | 'update' | 'fix' | 'contract'
+  /** A new product, an update to the live product `parentId`, or work for a client. */
+  kind: 'new' | 'update' | 'contract'
   parentId: number | null
   productTypeId: string
   /** An update is always the size of the product it updates. */
@@ -95,9 +95,6 @@ export interface Project {
   alphaOffered: boolean
   /** Multiplier on the bugs a release ships with, from choices made during development; 1 when nothing happened. */
   bugRisk: number
-  /** Fix sprints: how many bugs the sprint set out to fix, and how many are fixed so far. 0 for other projects. */
-  bugs: number
-  bugsFixed: number
   /** Client work: who it is for, what it pays on delivery, and when it is due. Null for everything else. */
   contract: ContractTerms | null
 }
@@ -140,6 +137,8 @@ export interface Product {
   users: number
   /** Open bugs. Fractional while users are still finding the next one. */
   bugs: number
+  /** Bugs an update shipped that users have not found yet; they come to light over the next weeks. */
+  pendingBugs: number
   /** True if it broke out at launch and reaches far more people than it otherwise would. */
   hit: boolean
   totalRevenue: number
@@ -147,6 +146,48 @@ export interface Product {
   /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
   boostUntil: number
   boostUsers: number
+}
+
+/** A bug-fixing job: a developer and a tester, from any office, working through a product's bugs together. */
+export interface Fix {
+  id: number
+  productId: number
+  developerId: number
+  testerId: number
+  /** Points the job needs: engineering from the developer, QA from the tester. */
+  target: Skills
+  progress: Skills
+  /** How many bugs the job set out to fix, and how many are fixed so far. */
+  bugs: number
+  bugsFixed: number
+  startDay: number
+  /** True when Incident management started it on its own. */
+  auto: boolean
+}
+
+/** The standing pair that Incident management sends to the buggiest product on its own. */
+export interface OnCall {
+  developerId: number
+  testerId: number
+}
+
+/** A product that left the portfolio: switched off, or sold to a rival. */
+export interface RetiredProduct {
+  id: number
+  name: string
+  productTypeId: string
+  size: ProjectSize
+  hit: boolean
+  releaseDay: number
+  endDay: number
+  /** Users it had when it left. */
+  users: number
+  totalRevenue: number
+  outcome: 'retired' | 'sold'
+  /** What a sale paid; 0 for a plain retirement. */
+  price: number
+  /** The rival that bought it, or null for a retirement (or a sale with no rival left to buy it). */
+  buyer: string | null
 }
 
 /** One monthly sample for the stats charts. Money is the balance; income and burn are per day. */
@@ -296,7 +337,13 @@ export interface GameState {
   acquiredIncome: number
   lifetimeRevenue: number
   shippedCount: number
-  /** Bugs fixed in sprints, ever. */
+  /** Bug-fixing jobs in progress, each with its two people. */
+  fixes: Fix[]
+  /** The Incident management pair, once that research is done and the player has picked them. */
+  onCall: OnCall | null
+  /** Products that were retired or sold, oldest first. */
+  retired: RetiredProduct[]
+  /** Bugs fixed by fixing jobs, ever. */
   bugsFixed: number
   /** Good launches since the last breakout hit; each one makes the next hit likelier. */
   launchesSinceHit: number

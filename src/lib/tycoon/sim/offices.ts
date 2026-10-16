@@ -31,6 +31,22 @@ export function staffOf(state: GameState, office: Office): Employee[] {
   return state.employees.filter((e) => e.officeId === office.id)
 }
 
+/** Everyone who is off fixing bugs right now, whatever office they sit in. */
+export function fixingIds(state: GameState): Set<number> {
+  const ids = new Set<number>()
+  for (const fix of state.fixes) {
+    ids.add(fix.developerId)
+    ids.add(fix.testerId)
+  }
+  return ids
+}
+
+/** The people in this office who work on its project: those not away on a bug-fixing job. */
+export function workersOf(state: GameState, office: Office): Employee[] {
+  const away = fixingIds(state)
+  return staffOf(state, office).filter((e) => !away.has(e.id))
+}
+
 /** Desks across every office. */
 export function deskCount(state: GameState): number {
   return state.offices.reduce((sum, o) => sum + officeSpec(o).desks, 0)
@@ -55,7 +71,7 @@ export function officeOf(state: GameState, employee: Employee): Office {
   return getOffice(state, employee.officeId) ?? state.offices[0]
 }
 
-/** True if some office is already updating or fixing this product. */
+/** True if some office is already updating this product. */
 export function productInWork(state: GameState, productId: number): boolean {
   return activeProjects(state).some(({ project }) => project.kind !== 'new' && project.parentId === productId)
 }

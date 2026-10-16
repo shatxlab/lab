@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { startProject } from '@/lib/tycoon/sim/project'
-import { createInitialState, deserialize, serialize } from '@/lib/tycoon/sim/state'
+import { createInitialState, deserialize, serialize, STATE_VERSION } from '@/lib/tycoon/sim/state'
 import { advance } from '@/lib/tycoon/sim/tick'
 
 function play(seed: number) {
@@ -75,5 +75,61 @@ describe('serialize / deserialize', () => {
     expect(deserialize('42')).toBeNull()
     expect(deserialize('null')).toBeNull()
     expect(deserialize(JSON.stringify({ ...createInitialState(1), version: 999 }))).toBeNull()
+  })
+})
+
+describe('upgrading a version 3 save', () => {
+  /** What a version 3 save looks like: no fixing jobs, on-call pair, past products or hidden bugs, and a bug-fixing sprint holding the office. */
+  function v3(): Record<string, any> {
+    const state = createInitialState(4)
+    startProject(state, 'web_app', ['accounts'])
+    state.products.push({
+      id: 77, name: 'Old', productTypeId: 'web_app', size: 'small', featureIds: [], quality: 70, releaseDay: 1, reach: 1000, users: 500,
+      bugs: 9, pendingBugs: 0, hit: false, totalRevenue: 10, updates: [], boostUntil: 0, boostUsers: 0,
+    })
+    const raw = JSON.parse(serialize(state))
+    raw.version = 3
+    delete raw.fixes
+    delete raw.onCall
+    delete raw.retired
+    for (const p of raw.products) delete p.pendingBugs
+    raw.rivals = raw.rivals.slice(0, 5)
+    raw.rivalProducts = raw.rivalProducts.filter((p: any) => raw.rivals.some((r: any) => r.id === p.rivalId))
+    return raw
+  }
+
+  it('brings the new fields, drops a sprint that held an office, and adds the new studios', () => {
+    const raw = v3()
+    raw.offices[0].project = {
+      ...raw.offices[0].project, kind: 'fix', parentId: 77, bugs: 9, bugsFixed: 3,
+    }
+    const upgraded = deserialize(JSON.stringify(raw))!
+    expect(upgraded).not.toBeNull()
+    expect(upgraded.version).toBe(STATE_VERSION)
+    expect(upgraded.offices[0].project).toBeNull()
+    expect(upgraded.fixes).toEqual([])
+    expect(upgraded.onCall).toBeNull()
+    expect(upgraded.retired).toEqual([])
+    expect(upgraded.products.every((p) => p.pendingBugs === 0)).toBe(true)
+    expect(upgraded.products.find((p) => p.id === 77)!.bugs).toBe(9) // the bugs stay
+    expect(upgraded.rivals).toHaveLength(10)
+  })
+
+  it('keeps an ordinary project, without the sprint fields', () => {
+    const raw = v3()
+    raw.offices[0].project.bugs = 0
+    raw.offices[0].project.bugsFixed = 0
+    const upgraded = deserialize(JSON.stringify(raw))!
+    expect(upgraded.offices[0].project).not.toBeNull()
+    expect(upgraded.offices[0].project).not.toHaveProperty('bugs')
+  })
+
+  it('still rejects older versions and a version 3 save with a missing field', () => {
+    const raw = v3()
+    raw.version = 2
+    expect(deserialize(JSON.stringify(raw))).toBeNull()
+    const broken = v3()
+    delete broken.money
+    expect(deserialize(JSON.stringify(broken))).toBeNull()
   })
 })

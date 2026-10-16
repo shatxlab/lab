@@ -12,7 +12,7 @@ function ResearchRow({ node }: { node: ResearchNode }) {
   const done = isResearched(state, node.id)
   const active = state.research.active?.id === node.id
   const blocker = researchBlocker(state, node)
-  const { features, productTypes } = unlocksOf(node.id)
+  const { features, productTypes, abilities } = unlocksOf(node.id)
 
   return (
     <div className={`research-node ${done ? 'done' : ''} ${active ? 'active' : ''}`}>
@@ -23,9 +23,9 @@ function ResearchRow({ node }: { node: ResearchNode }) {
         </span>
       </div>
       <p className="muted">{node.description}</p>
-      {(features.length > 0 || productTypes.length > 0) && (
+      {(features.length > 0 || productTypes.length > 0 || abilities.length > 0) && (
         <p className="unlocks">
-          Unlocks: {[...productTypes.map((t) => `${t} (product)`), ...features].join(', ')}
+          Unlocks: {[...productTypes.map((t) => `${t} (product)`), ...features, ...abilities].join(', ')}
         </p>
       )}
       {done ? (

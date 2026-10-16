@@ -83,8 +83,6 @@ export function acceptContract(state: GameState, offerId: number, officeId?: num
     hype: 1,
     alphaOffered: true,
     bugRisk: 1,
-    bugs: 0,
-    bugsFixed: 0,
     contract: { client: offer.client, pay: offer.pay, dueDay: state.day + offer.days },
   }
   return OK

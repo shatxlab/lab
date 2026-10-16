@@ -42,6 +42,7 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
     reach: 10_000,
     users: 10_000,
     bugs: 0,
+    pendingBugs: 0,
     hit: false,
     totalRevenue: 0,
     updates: [],

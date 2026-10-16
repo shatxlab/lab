@@ -4,7 +4,7 @@ import { useGame } from './context'
 /** From the garage to the top: the stages behind, the goals for the current one, and what is still ahead. */
 export function JourneyTab() {
   const state = useGame()
-  const signature = state.products.find((p) => p.id === state.signatureId)
+  const signature = state.products.find((p) => p.id === state.signatureId) ?? state.retired.find((p) => p.id === state.signatureId)
 
   return (
     <div className="journey">

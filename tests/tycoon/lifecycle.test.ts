@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CAMPAIGNS, LAUNCH_ADOPTERS, PROMOTIONS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from '@/lib/tycoon/sim/balance'
 import { campaignCost, estimateReach, promotionCost, promoteProduct, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
-import { productRevenue, productsDay, releaseBugs, revenueForUsers } from '@/lib/tycoon/sim/products'
+import { bugProneness, productRevenue, productsDay, releaseBugs, revenueForUsers } from '@/lib/tycoon/sim/products'
 import { projectQuality, projectTarget, reachAfterUpdate, shipProject, startProject, startUpdate } from '@/lib/tycoon/sim/project'
 import { featureReach } from '@/lib/tycoon/sim/scoring'
 import { createInitialState, deserialize, serialize } from '@/lib/tycoon/sim/state'
@@ -91,13 +91,16 @@ describe('updates', () => {
     const reach = product.reach
     const reputation = state.reputation
     const shipped = state.shippedCount
+    const proneness = bugProneness(product.quality)
 
     expect(shipProject(state).ok).toBe(true)
     expect(product.updates).toEqual([{ day: state.day }])
     expect(product.featureIds).toEqual(['accounts', 'dark_mode'])
     // Same quality, one more feature: the reach grows by exactly what the feature adds.
     expect(product.reach / reach).toBeCloseTo(featureReach('web_app', ['accounts', 'dark_mode']) / featureReach('web_app', ['accounts']), 6)
-    expect(product.bugs).toBeCloseTo(4 + releaseBugs(project), 6)
+    // The new bugs are not found yet: they come to light over the next weeks.
+    expect(product.bugs).toBe(4)
+    expect(product.pendingBugs).toBeCloseTo(releaseBugs(project) * proneness, 6)
     expect(state.offices[0].project).toBeNull()
     expect(state.shippedCount).toBe(shipped) // an update is not a new product
     expect(state.reputation).toBeGreaterThan(reputation)
@@ -334,7 +337,7 @@ describe('store', () => {
     const store = createStore(studioWithProduct(), 0)
     store.startUpdate(50, [])
     finishProject(store.state)
-    const bugs = releaseBugs(store.state.offices[0].project!)
+    const bugs = releaseBugs(store.state.offices[0].project!) * bugProneness(store.state.products[0].quality) // before the update can raise it
     expect(store.shipProject().ok).toBe(true)
     expect(store.dialog.value).toMatchObject({ kind: 'result', productId: 50, update: true, reach: store.state.products[0].reach })
     const dialog = store.dialog.value

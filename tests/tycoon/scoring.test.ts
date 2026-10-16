@@ -23,8 +23,6 @@ function makeProject(productTypeId: string, featureIds: string[], fraction: numb
     hype: 1,
     alphaOffered: false,
     bugRisk: 1,
-    bugs: 0,
-    bugsFixed: 0,
     contract: null,
   }
 }

@@ -10,7 +10,6 @@ function status(state: GameState, office: Office): string {
   const project = office.project
   if (!project) return staffOf(state, office).length === 0 ? 'empty' : 'idle'
   const done = `${Math.round(overallProgress(project) * 100)}%`
-  if (project.kind === 'fix') return `fixing · ${done}`
   if (project.kind === 'contract') return `client · ${done}`
   return `${project.name} · ${done}`
 }

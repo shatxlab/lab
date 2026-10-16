@@ -212,12 +212,12 @@ describe('development events', () => {
     }
   })
 
-  it('leave a bug-fixing sprint alone, except for the offer to crunch', () => {
+  it('leave a bug-fixing pair alone: they are not an office project', () => {
     const state = richState()
     state.offices[0].project = null
-    expect(startFix(state, 900).ok).toBe(true)
-    for (const id of ['scope_creep', 'rival_announcement', 'tech_debt']) expect(getRandomEvent(id)!.when(state), id).toBe(false)
-    expect(getRandomEvent('crunch_offer')!.when(state)).toBe(true)
+    state.employees.push(makeEmployee(104, { qa: 60 }, 2000, 'tester'))
+    expect(startFix(state, 900, 100, 104).ok).toBe(true)
+    for (const id of ['scope_creep', 'rival_announcement', 'tech_debt', 'crunch_offer']) expect(getRandomEvent(id)!.when(state), id).toBe(false)
   })
 
   it('let tech debt ship as bugs instead of costing work', () => {

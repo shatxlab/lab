@@ -25,7 +25,7 @@ import {
 import { campaignCost, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { resolveOffice, staffOf } from './offices'
-import { releaseBugs } from './products'
+import { bugProneness, releaseBugs } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
 import { pick, rand, randRange } from './rng'
@@ -115,8 +115,6 @@ export function startProject(
     hype: 1,
     alphaOffered: false,
     bugRisk: 1,
-    bugs: 0,
-    bugsFixed: 0,
     contract: null,
   }
   return OK
@@ -168,8 +166,6 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     hype: 1,
     alphaOffered: false,
     bugRisk: 1,
-    bugs: 0,
-    bugsFixed: 0,
     contract: null,
   }
   return OK
@@ -183,7 +179,7 @@ export function shipProject(state: GameState, campaign?: Tier, officeId?: number
   const office = resolveOffice(state, officeId)
   const project = office?.project
   if (!office || !project) return fail('No project to ship')
-  if (project.kind !== 'new' && project.kind !== 'update') return fail(`${project.kind === 'fix' ? 'Bug fixing' : 'Client work'} has nothing to ship`)
+  if (project.kind !== 'new' && project.kind !== 'update') return fail('Client work has nothing to ship')
   return project.kind === 'update' ? shipUpdate(state, office, project) : shipNewProduct(state, office, project, campaign)
 }
 
@@ -218,8 +214,6 @@ export function estimateUpdateReach(state: GameState, productId: number, feature
     hype: 1,
     alphaOffered: true,
     bugRisk: 1,
-    bugs: 0,
-    bugsFixed: 0,
     contract: null,
   }
   return reachAfterUpdate(product, plan, projectQuality(state, plan))
@@ -271,6 +265,7 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
     reach,
     users: reach * LAUNCH_ADOPTERS,
     bugs,
+    pendingBugs: 0,
     hit,
     totalRevenue: 0,
     updates: [],
@@ -301,9 +296,10 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   if (!product) return fail('The product to update is gone')
 
   const quality = projectQuality(state, project)
-  const bugs = releaseBugs(project)
+  // Hidden at first: users find them over the following weeks, and a well-made product has fewer.
+  const bugs = releaseBugs(project) * bugProneness(product.quality)
   product.reach = reachAfterUpdate(product, project, quality)
-  product.bugs += bugs
+  product.pendingBugs += bugs
   product.updates.push({ day: state.day })
   product.featureIds.push(...project.featureIds)
   product.quality = Math.max(product.quality, quality)

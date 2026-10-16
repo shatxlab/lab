@@ -26,6 +26,8 @@ export interface ResearchNode {
   era?: number
   /** Permanent multipliers, applied through `statMultiplier`. Content unlocks live on the features and types. */
   effects: { stat: Stat; mult: number }[]
+  /** Something the game lets you do once it is done, named for the dialog (and checked in the sim by id). */
+  ability?: string
 }
 
 export const RESEARCH: readonly ResearchNode[] = [
@@ -117,6 +119,17 @@ export const RESEARCH: readonly ResearchNode[] = [
     effects: [{ stat: 'quality', mult: 1.02 }],
   },
   {
+    id: 'incident_management',
+    name: 'Incident management',
+    branch: 'qa',
+    description: 'Put a developer and a tester on call: they start fixing the buggiest product on their own, and work on their office\'s project when nothing is on fire.',
+    cost: 30000,
+    days: 40,
+    requires: ['test_automation'],
+    effects: [],
+    ability: 'an on-call fixing pair',
+  },
+  {
     id: 'cloud_infra',
     name: 'Cloud infrastructure',
     branch: 'qa',
@@ -188,8 +201,9 @@ export function getResearch(id: string): ResearchNode | undefined {
 }
 
 /** Names of the features and product types that finishing `id` makes available. */
-export function unlocksOf(id: string): { features: string[]; productTypes: string[] } {
+export function unlocksOf(id: string): { features: string[]; productTypes: string[]; abilities: string[] } {
   return {
+    abilities: BY_ID.get(id)?.ability ? [BY_ID.get(id)!.ability!] : [],
     features: FEATURES.filter((f) => f.requiresResearch === id).map((f) => f.name),
     productTypes: PRODUCT_TYPES.filter((t) => t.requiresResearch === id).map((t) => t.name),
   }

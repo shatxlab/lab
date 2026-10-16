@@ -7,14 +7,18 @@ import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { STAGES } from '@/lib/tycoon/data/stages'
 import { LEVELS, OFFICE_KINDS, START_MONEY } from './balance'
 import { refreshContracts } from './contracts'
-import { createRivals } from './rivals'
+import { createRivals, introduceRivals } from './rivals'
 import { generateEmployee, refreshCandidates, ROLES } from './hiring'
 import { sampleNow } from './history'
 import { initialMarket } from './market'
 import { DISCIPLINES, PROJECT_SIZE_IDS, STATS, type GameState } from './types'
 
-/** Version 2 replaced fading income with users and bugs, version 3 brought offices; older saves can't be carried over. */
-export const STATE_VERSION = 3
+/**
+ * Version 2 replaced fading income with users and bugs, version 3 brought offices, version 4 moved bug
+ * fixing to a developer and tester pair, hid an update's new bugs for a while and added selling products.
+ * Version 3 saves are upgraded on load (see `upgradeFromV3`); older ones can't be carried over.
+ */
+export const STATE_VERSION = 4
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
@@ -37,6 +41,9 @@ export function createInitialState(seed: number): GameState {
     acquiredIncome: 0,
     lifetimeRevenue: 0,
     shippedCount: 0,
+    fixes: [],
+    onCall: null,
+    retired: [],
     bugsFixed: 0,
     launchesSinceHit: 0,
     signatureId: null,
@@ -138,6 +145,7 @@ function validProduct(v: unknown): boolean {
     isNum(v.reach) &&
     isNum(v.users) &&
     isNum(v.bugs) &&
+    isNum(v.pendingBugs) &&
     typeof v.hit === 'boolean' &&
     isNum(v.totalRevenue) &&
     Array.isArray(v.updates) &&
@@ -152,7 +160,7 @@ function validProject(v: unknown): boolean {
     isObj(v) &&
     isNum(v.id) &&
     typeof v.name === 'string' &&
-    (v.kind === 'new' || v.kind === 'update' || v.kind === 'fix' || v.kind === 'contract') &&
+    (v.kind === 'new' || v.kind === 'update' || v.kind === 'contract') &&
     (v.parentId === null || isNum(v.parentId)) &&
     knownType(v.productTypeId) &&
     knownSize(v.size) &&
@@ -165,8 +173,6 @@ function validProject(v: unknown): boolean {
     isNum(v.hype) &&
     typeof v.alphaOffered === 'boolean' &&
     isNum(v.bugRisk) &&
-    isNum(v.bugs) &&
-    isNum(v.bugsFixed) &&
     (v.contract === null || (isObj(v.contract) && typeof v.contract.client === 'string' && isNum(v.contract.pay) && isNum(v.contract.dueDay)))
   )
 }
@@ -217,13 +223,50 @@ function validOffer(v: unknown): boolean {
   )
 }
 
+function validFix(v: unknown, state: Obj): boolean {
+  return (
+    isObj(v) &&
+    isNum(v.id) &&
+    isNum(v.productId) &&
+    isNum(v.developerId) &&
+    isNum(v.testerId) &&
+    isSkills(v.target) &&
+    isSkills(v.progress) &&
+    isNum(v.bugs) &&
+    isNum(v.bugsFixed) &&
+    isNum(v.startDay) &&
+    typeof v.auto === 'boolean' &&
+    (state.products as Obj[]).some((p) => p.id === v.productId) &&
+    (state.employees as Obj[]).some((e) => e.id === v.developerId) &&
+    (state.employees as Obj[]).some((e) => e.id === v.testerId)
+  )
+}
+
+function validRetired(v: unknown): boolean {
+  return (
+    isObj(v) &&
+    isNum(v.id) &&
+    typeof v.name === 'string' &&
+    knownType(v.productTypeId) &&
+    knownSize(v.size) &&
+    typeof v.hit === 'boolean' &&
+    isNum(v.releaseDay) &&
+    isNum(v.endDay) &&
+    isNum(v.users) &&
+    isNum(v.totalRevenue) &&
+    (v.outcome === 'retired' || v.outcome === 'sold') &&
+    isNum(v.price) &&
+    (v.buyer === null || typeof v.buyer === 'string')
+  )
+}
+
 function validOffice(v: unknown, products: unknown[]): boolean {
   if (!isObj(v) || !isNum(v.id) || !Object.keys(OFFICE_KINDS).includes(v.kind as string) || !Number.isInteger(v.theme)) return false
   const project = v.project
   if (project === null) return true
   if (!validProject(project) || !isObj(project)) return false
-  // An update or a fix sprint has to point at a product that exists.
-  if (project.kind === 'update' || project.kind === 'fix') return products.some((p) => isObj(p) && p.id === project.parentId)
+  // An update has to point at a product that exists.
+  if (project.kind === 'update') return products.some((p) => isObj(p) && p.id === project.parentId)
   return true
 }
 
@@ -262,12 +305,23 @@ function validState(v: unknown): v is GameState {
     (v.stage as number) < STAGES.length &&
     Array.isArray(v.products) &&
     v.products.every(validProduct) &&
-    (v.signatureId === null || v.products.some((p) => isObj(p) && p.id === v.signatureId)) &&
+    Array.isArray(v.retired) &&
+    v.retired.every(validRetired) &&
+    // The signature hit may have been sold or retired since.
+    (v.signatureId === null ||
+      v.products.some((p) => isObj(p) && p.id === v.signatureId) ||
+      v.retired.some((p) => isObj(p) && p.id === v.signatureId)) &&
     Array.isArray(v.offices) &&
     v.offices.length > 0 &&
     v.offices.every((o) => validOffice(o, v.products as unknown[])) &&
     Array.isArray(v.employees) &&
     v.employees.every(validEmployee) &&
+    Array.isArray(v.fixes) &&
+    v.fixes.every((f) => validFix(f, v)) &&
+    (v.onCall === null ||
+      (isObj(v.onCall) &&
+        (v.employees as Obj[]).some((e) => e.id === (v.onCall as Obj).developerId) &&
+        (v.employees as Obj[]).some((e) => e.id === (v.onCall as Obj).testerId))) &&
     // Everyone works in an office that exists.
     v.employees.every((e) => (v.offices as Obj[]).some((o) => o.id === (e as Obj).officeId)) &&
     Array.isArray(v.candidates) &&
@@ -282,6 +336,32 @@ function validState(v: unknown): v is GameState {
     isNum(v.daysAtTop) &&
     isNum(v.acquiredIncome)
   )
+}
+
+/**
+ * Brings a version 3 save up to date: bug-fixing sprints, which took a whole office, are dropped (the bugs
+ * stay on the product); products get no hidden bugs; there are no fixing jobs, on-call pair or past products.
+ */
+function upgradeFromV3(raw: unknown): unknown {
+  if (!isObj(raw) || raw.version !== 3) return raw
+  const withoutFixes = (office: unknown) => {
+    if (!isObj(office) || !isObj(office.project) || office.project.kind !== 'fix') return office
+    return { ...office, project: null }
+  }
+  const stripBugFields = (office: unknown) => {
+    if (!isObj(office) || !isObj(office.project)) return office
+    const { bugs: _bugs, bugsFixed: _fixed, ...project } = office.project
+    return { ...office, project }
+  }
+  return {
+    ...raw,
+    version: STATE_VERSION,
+    offices: Array.isArray(raw.offices) ? raw.offices.map(withoutFixes).map(stripBugFields) : raw.offices,
+    products: Array.isArray(raw.products) ? raw.products.map((p) => (isObj(p) ? { pendingBugs: 0, ...p } : p)) : raw.products,
+    fixes: [],
+    onCall: null,
+    retired: [],
+  }
 }
 
 /**
@@ -311,9 +391,14 @@ function dropRemovedContent(raw: unknown): unknown {
  */
 export function deserialize(json: string): GameState | null {
   try {
-    const parsed = dropRemovedContent(JSON.parse(json))
+    const raw: unknown = JSON.parse(json)
+    const upgraded = isObj(raw) && raw.version === 3
+    const parsed = dropRemovedContent(upgradeFromV3(raw))
     if (!validState(parsed)) return null
-    return { ...parsed, dayWork: [], events: [] }
+    const state: GameState = { ...parsed, dayWork: [], events: [] }
+    // The market grew since version 3: new studios move in.
+    if (upgraded) introduceRivals(state)
+    return state
   } catch {
     return null
   }

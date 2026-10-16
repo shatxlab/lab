@@ -4,6 +4,7 @@ import { checkBankruptcy, costsDay, revenueDay } from './economy'
 import { rollRandomEvent } from './events'
 import { recordHistory } from './history'
 import { careerDay } from './careers'
+import { fixesDay } from './fixes'
 import { refreshCandidates, salaryOf } from './hiring'
 import { updateMarket } from './market'
 import { checkMilestones } from './milestones'
@@ -11,26 +12,30 @@ import { pruneModifiers } from './modifiers'
 import { researchDay } from './research'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { productsDay } from './products'
-import { rankingDay, rivalsDay } from './rivals'
+import { rankingDay, rivalArrives, rivalsDay } from './rivals'
 import { checkStage } from './stages'
 import { moraleDay, trainingDay } from './staff'
 import type { GameState, SimEvent } from './types'
 import { workDay } from './work'
 
 /**
- * The only place time moves. Order: work, the rivals, users and bugs, income, the ranking, a new era, costs, research, training, morale, expiring modifiers, monthly raises and
+ * The only place time moves. Order: bug fixing, work, the rivals, users and bugs, income, the ranking, a new era, costs, research, training, morale, expiring modifiers, monthly raises and
  * market drift and a history sample, hire-pool refresh, bankruptcy, milestones and the journey, then maybe a random event.
  */
 export function advanceDay(state: GameState): void {
   if (state.gameOver) return
   state.day += 1
   state.dayWork = []
+  fixesDay(state)
   workDay(state)
   rivalsDay(state)
   productsDay(state)
   revenueDay(state)
   rankingDay(state)
-  if (eraIndexAt(state.day) !== eraIndexAt(state.day - 1)) state.events.push({ type: 'era', era: eraIndexAt(state.day) })
+  if (eraIndexAt(state.day) !== eraIndexAt(state.day - 1)) {
+    state.events.push({ type: 'era', era: eraIndexAt(state.day) })
+    rivalArrives(state, eraIndexAt(state.day))
+  }
   costsDay(state)
   researchDay(state)
   trainingDay(state)

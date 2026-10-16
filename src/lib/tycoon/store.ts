@@ -3,11 +3,12 @@ import { silentSfx, type SfxPlayer } from '@/lib/tycoon/audio'
 import { promote } from '@/lib/tycoon/sim/careers'
 import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
-import { startFix, stopFix } from '@/lib/tycoon/sim/fixes'
+import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { promoteProduct } from '@/lib/tycoon/sim/lifecycle'
 import { getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { acquire } from '@/lib/tycoon/sim/rivals'
+import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
 import { shipProject, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
 import { startResearch } from '@/lib/tycoon/sim/research'
 import { startTraining, teamOuting } from '@/lib/tycoon/sim/staff'
@@ -90,10 +91,15 @@ export interface Store {
   /** Ships an office's project; `campaign` buys launch marketing for a new product. */
   shipProject(campaign?: Tier, officeId?: number): Result
   startUpdate(productId: number, featureIds: readonly string[], officeId?: number): Result
-  /** Starts a bug-fixing sprint on a live product. */
-  startFix(productId: number, officeId?: number): Result
-  /** Ends an office's bug-fixing sprint early, keeping what it fixed. */
-  stopFix(officeId?: number): Result
+  /** Sends a developer and a tester to fix a live product's bugs. */
+  startFix(productId: number, developerId: number, testerId: number): Result
+  /** Ends a bug-fixing job early, keeping what it fixed. */
+  stopFix(fixId: number): Result
+  /** Puts a developer and a tester on call (needs Incident management): they start fixing on their own. */
+  setOnCall(developerId: number, testerId: number): Result
+  clearOnCall(): Result
+  /** Retires a product, or sells it to a rival when it has enough users. */
+  sunsetProduct(productId: number): Result
   /** Takes a client job on. */
   acceptContract(offerId: number, officeId?: number): Result
   /** Walks away from an office's client job. */
@@ -266,18 +272,34 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return result
     },
 
-    startFix(productId, officeId) {
-      const result = startFix(state, productId, officeFor(officeId))
+    startFix(productId, developerId, testerId) {
+      const result = startFix(state, productId, developerId, testerId)
       if (!result.ok) return result
-      dialog.value = null
       if (speed.value === 0) speed.value = 1
       bump()
       sfx.play('click')
       return result
     },
 
-    stopFix(officeId) {
-      const result = stopFix(state, officeFor(officeId))
+    stopFix(fixId) {
+      const result = stopFix(state, fixId)
+      if (!result.ok) return result
+      handleEvents(drainEvents(state))
+      bump()
+      sfx.play('click')
+      return result
+    },
+
+    setOnCall(developerId, testerId) {
+      return cue(changed(setOnCall(state, developerId, testerId)), 'click')
+    },
+
+    clearOnCall() {
+      return cue(changed(clearOnCall(state)), 'click')
+    },
+
+    sunsetProduct(productId) {
+      const result = sunsetProduct(state, productId)
       if (!result.ok) return result
       handleEvents(drainEvents(state))
       bump()

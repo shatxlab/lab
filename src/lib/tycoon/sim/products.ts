@@ -4,6 +4,10 @@ import {
   BUG_COMPLAINT_REPUTATION,
   BUG_COMPLAINTS,
   BUG_DISCOVERY,
+  BUG_PRONE_MAX,
+  BUG_PRONE_MIN,
+  BUG_PRONE_SPREAD,
+  BUG_SURFACE_RATE,
   BUG_LEAK_FLOOR,
   BUG_LEAK_NO_QA,
   BUG_TOLERANCE,
@@ -141,11 +145,25 @@ export function releaseBugs(project: Project): number {
   return points * BUGS_PER_POINT * leak * project.bugRisk
 }
 
-/** New bugs users find per day: more in bigger products, and more the more people use it. */
+/** How prone to bugs a product's code is, from its quality: 1 at quality 60, much less for a polished product. */
+export function bugProneness(quality: number): number {
+  return Math.min(BUG_PRONE_MAX, Math.max(BUG_PRONE_MIN, (100 - quality) / BUG_PRONE_SPREAD))
+}
+
+/** New bugs users find per day: more in bigger products, more the more people use it, and fewer in well-made ones. */
 export function bugsFoundPerDay(product: Product): number {
   const size = PROJECT_SIZES[product.size]
   const usage = product.users / (getProductType(product.productTypeId).audience * size.reach)
-  return BUG_DISCOVERY * size.work * Math.sqrt(Math.max(usage, 0))
+  return BUG_DISCOVERY * size.work * Math.sqrt(Math.max(usage, 0)) * bugProneness(product.quality)
+}
+
+/** Moves a share of the bugs an update shipped, which nobody has found yet, into the open ones. */
+export function surfaceBugs(product: Product): void {
+  if (product.pendingBugs <= 0) return
+  const surfacing = product.pendingBugs * BUG_SURFACE_RATE
+  const left = product.pendingBugs - surfacing
+  product.bugs += left < 0.01 ? product.pendingBugs : surfacing
+  product.pendingBugs = left < 0.01 ? 0 : left
 }
 
 /**
@@ -170,6 +188,7 @@ export function productsDay(state: GameState): void {
     if (state.day < product.boostUntil) product.users += product.boostUsers
 
     const before = bugDensity(product)
+    surfaceBugs(product)
     product.bugs += bugsFoundPerDay(product)
     if (before < BUG_COMPLAINTS && bugDensity(product) >= BUG_COMPLAINTS) {
       state.reputation = Math.max(0, Math.min(REPUTATION_MAX, state.reputation - BUG_COMPLAINT_REPUTATION))

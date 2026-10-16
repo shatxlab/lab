@@ -4,17 +4,19 @@ import {
   BUG_COMPLAINT_REPUTATION,
   BUG_COMPLAINTS,
   BUG_LEAK_FLOOR,
+  BUG_PRONE_MAX,
+  BUG_PRONE_MIN,
+  BUG_SURFACE_RATE,
   BUG_TOLERANCE,
   FRESH_DAYS,
   MARKET_CAP,
   OVERSHOOT_CAP,
-  POINTS_PER_BUG,
   PROJECT_SIZES,
   USER_DECLINE,
 } from '@/lib/tycoon/sim/balance'
-import { fixBlocker, fixTarget, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
 import {
   bugFactor,
+  bugProneness,
   bugsFoundPerDay,
   interest,
   nextUsers,
@@ -22,14 +24,12 @@ import {
   productsDay,
   releaseBugs,
   saturate,
+  surfaceBugs,
   targetUsers,
 } from '@/lib/tycoon/sim/products'
 import { shipProject, startProject, startUpdate } from '@/lib/tycoon/sim/project'
-import { deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
 import { DISCIPLINES, type GameState } from '@/lib/tycoon/sim/types'
-import { workDay } from '@/lib/tycoon/sim/work'
-import { createStore } from '@/lib/tycoon/store'
 import { makeEmployee, makeProduct, makeState, richState } from './helpers'
 
 /** A studio with no project and one live product with `bugs` open. */
@@ -116,6 +116,36 @@ describe('bugs', () => {
     expect(bugsFoundPerDay(makeProduct({ size: 'large', users: 2_500 * PROJECT_SIZES.large.reach }))).toBeCloseTo(bugsFoundPerDay(small) * 4)
   })
 
+  it('are found less in a well-made product than in a rough one', () => {
+    expect(bugProneness(60)).toBe(1)
+    expect(bugProneness(0)).toBe(BUG_PRONE_MAX)
+    expect(bugProneness(100)).toBe(BUG_PRONE_MIN)
+    expect(bugProneness(90)).toBeLessThan(bugProneness(70))
+    const rough = makeProduct({ quality: 50, users: 10_000 })
+    const polished = makeProduct({ quality: 92, users: 10_000 })
+    expect(bugsFoundPerDay(polished)).toBeLessThan(bugsFoundPerDay(rough) / 3)
+  })
+
+  it('shipped with an update come to light gradually, not all on the day', () => {
+    const product = makeProduct({ bugs: 2, pendingBugs: 60 })
+    surfaceBugs(product)
+    expect(product.bugs).toBeCloseTo(2 + 60 * BUG_SURFACE_RATE)
+    expect(product.pendingBugs).toBeCloseTo(60 * (1 - BUG_SURFACE_RATE))
+    expect(product.bugs + product.pendingBugs).toBeCloseTo(62)
+    for (let i = 0; i < 400; i++) surfaceBugs(product)
+    expect(product.pendingBugs).toBe(0)
+    expect(product.bugs).toBeCloseTo(62)
+  })
+
+  it('never jump by dozens in a day: a product with a big update waiting still adds only a trickle', () => {
+    const state = buggyStudio(5)
+    const product = state.products[0]
+    product.pendingBugs = 70
+    const before = product.bugs
+    productsDay(state)
+    expect(product.bugs - before).toBeLessThan(5)
+  })
+
   it('cost reputation once, with a warning, when users start complaining in public', () => {
     const state = buggyStudio(BUG_COMPLAINTS - 0.01)
     const reputation = state.reputation
@@ -130,101 +160,6 @@ describe('bugs', () => {
     const outage = getRandomEvent('server_outage')!
     expect(outage.when(buggyStudio(3))).toBe(false)
     expect(outage.when(buggyStudio(20))).toBe(true)
-  })
-})
-
-describe('bug-fixing sprints', () => {
-  it('need points for every bug open now, mostly engineering and QA', () => {
-    const state = buggyStudio(12.7)
-    expect(startFix(state, 50).ok).toBe(true)
-    const project = state.offices[0].project!
-    expect(project).toMatchObject({ kind: 'fix', parentId: 50, name: 'Atlas', bugs: 12, bugsFixed: 0, featureIds: [] })
-    expect(project.target).toEqual(fixTarget(12))
-    const total = DISCIPLINES.reduce((sum, d) => sum + project.target[d], 0)
-    expect(total).toBeCloseTo(12 * POINTS_PER_BUG, -1)
-    expect(project.target.engineering).toBeGreaterThan(project.target.qa)
-    expect(project.target.qa).toBeGreaterThan(project.target.design)
-  })
-
-  it('refuse a product with no bugs, a busy studio, an empty office or an unknown product', () => {
-    const clean = buggyStudio(0.6)
-    expect(fixBlocker(clean, clean.offices[0], clean.products[0])).toBe('No bugs to fix')
-    const busy = buggyStudio()
-    startProject(busy, 'web_app', [])
-    expect(startFix(busy, 50)).toEqual({ ok: false, reason: 'A project is in progress' })
-    const empty = buggyStudio()
-    empty.employees = []
-    expect(startFix(empty, 50)).toEqual({ ok: false, reason: 'Hire someone first' })
-    expect(startFix(buggyStudio(), 999).ok).toBe(false)
-  })
-
-  it('fix bugs as the bars fill, credit the workers, and end on their own', () => {
-    const state = buggyStudio(10)
-    startFix(state, 50)
-    const product = state.products[0]
-    let days = 0
-    while (state.offices[0].project && days < 100) {
-      state.day += 1
-      state.dayWork = []
-      workDay(state)
-      days += 1
-      if (state.offices[0].project) {
-        expect(product.bugs).toBeCloseTo(10 - state.offices[0].project.bugsFixed)
-        for (const d of DISCIPLINES) expect(state.offices[0].project.progress[d]).toBeLessThanOrEqual(state.offices[0].project.target[d]) // no polish past the target
-      }
-    }
-    expect(state.offices[0].project).toBeNull()
-    expect(product.bugs).toBe(0)
-    expect(state.bugsFixed).toBe(10)
-    const events = drainEvents(state)
-    expect(events.some((e) => e.type === 'notice' && e.text === 'Atlas: 10 bugs fixed.')).toBe(true)
-    expect(events.some((e) => e.type === 'projectReady')).toBe(false)
-  })
-
-  it('can stop early and keep what was fixed; there is nothing to ship', () => {
-    const state = buggyStudio(30)
-    startFix(state, 50)
-    expect(shipProject(state)).toEqual({ ok: false, reason: 'Bug fixing has nothing to ship' })
-    for (let i = 0; i < 5; i++) workDay(state)
-    const fixed = state.offices[0].project!.bugsFixed
-    expect(fixed).toBeGreaterThan(0)
-    expect(stopFix(state).ok).toBe(true)
-    expect(state.offices[0].project).toBeNull()
-    expect(state.products[0].bugs).toBeCloseTo(30 - fixed)
-    expect(stopFix(state).ok).toBe(false)
-  })
-
-  it('end quietly if the product disappears', () => {
-    const state = buggyStudio()
-    startFix(state, 50)
-    state.products = []
-    workDay(state)
-    expect(state.offices[0].project).toBeNull()
-  })
-
-  it('survive a save, and a sprint on a missing product is rejected', () => {
-    const state = buggyStudio()
-    startFix(state, 50)
-    workDay(state)
-    const restored = deserialize(serialize(state))!
-    expect(restored.offices[0].project).toEqual(state.offices[0].project)
-    expect(restored.bugsFixed).toBe(state.bugsFixed)
-
-    const raw = JSON.parse(serialize(state))
-    raw.offices[0].project.parentId = 12345
-    expect(deserialize(JSON.stringify(raw))).toBeNull()
-  })
-
-  it('run through the store: starting closes dialogs and unpauses, stopping posts a toast', () => {
-    const state = buggyStudio()
-    const store = createStore(state, 0)
-    store.openDialog({ kind: 'studio' })
-    expect(store.startFix(50).ok).toBe(true)
-    expect(store.dialog.value).toBeNull()
-    expect(store.speed.value).toBe(1)
-    expect(store.startFix(50).ok).toBe(false)
-    expect(store.stopFix().ok).toBe(true)
-    expect(store.toasts.value.some((t) => t.text.startsWith('Stopped fixing Atlas'))).toBe(true)
   })
 })
 

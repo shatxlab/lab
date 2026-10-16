@@ -138,7 +138,16 @@ export const BUG_COMPLAINTS = 30
 export const BUG_COMPLAINT_REPUTATION = 2
 /** Points a bug-fixing sprint needs per bug, shared between the disciplines like this. */
 export const POINTS_PER_BUG = 6
-export const FIX_SPLIT: Skills = { design: 0.1, engineering: 0.55, qa: 0.35 }
+/** A fixing job is done by a developer (engineering) and a tester (QA) only. */
+export const FIX_SPLIT: Skills = { design: 0, engineering: 0.6, qa: 0.4 }
+/** Bugs an update ships come to light over time: this share of the hidden ones each day. */
+export const BUG_SURFACE_RATE = 1 / 20
+/** Bug-proneness is (100 - quality) / this, so 1 at quality 60, within these limits. */
+export const BUG_PRONE_SPREAD = 40
+export const BUG_PRONE_MIN = 0.25
+export const BUG_PRONE_MAX = 1.5
+/** Incident management starts a fix once a product has this many bugs per unit of its size's work. */
+export const AUTO_FIX_DENSITY = 10
 
 // Market: demand per product type drifts around 1.0 and is applied when a product ships.
 export const MARKET_MIN = 0.6
@@ -354,3 +363,15 @@ export const MOVE_OUT_COST = 40000
 export const NEW_OFFICE_COST = 150000
 /** One office per colour scheme the renderer has. */
 export const MAX_OFFICES = 4
+
+// Selling and retiring products
+/** A product with at least this many users is sold to a rival; with fewer it is only switched off. */
+export const SALE_MIN_USERS = 100_000
+/** A sale pays this many months of what the product earns now. */
+export const SALE_MONTHS = 12
+/** A hit sells for this much more. */
+export const SALE_HIT_BONUS = 1.25
+/** Morale lost by everyone, and reputation lost, when a product is sold (a hit costs more reputation). */
+export const SALE_MORALE_PENALTY = 5
+export const SALE_REPUTATION_PENALTY = 3
+export const SALE_HIT_REPUTATION_PENALTY = 6

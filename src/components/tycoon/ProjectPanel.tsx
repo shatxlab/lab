@@ -1,8 +1,6 @@
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { OVERSHOOT_CAP, PROJECT_SIZES } from '@/lib/tycoon/sim/balance'
 import { contractPay } from '@/lib/tycoon/sim/contracts'
-import { fixBlocker } from '@/lib/tycoon/sim/fixes'
-import { bugDensity } from '@/lib/tycoon/sim/products'
 import { projectQuality } from '@/lib/tycoon/sim/project'
 import { isReady } from '@/lib/tycoon/sim/scoring'
 import { DISCIPLINES, type Discipline, type GameState, type Office, type Project } from '@/lib/tycoon/sim/types'
@@ -11,14 +9,11 @@ import { formatMoney } from '@/lib/tycoon/format'
 import { useGame, useOffice, useStore } from './context'
 import { cssVars } from './style'
 
-/** Bugs per unit of work at which the idle panel suggests a bug-fixing sprint. */
-const SUGGEST_FIX = 5
-
 function Bar({ project, discipline }: { project: Project; discipline: Discipline }) {
   const progress = project.progress[discipline]
   const target = project.target[discipline]
   const done = progress >= target
-  // Only products and updates can be polished past their target; everything else fills to the end.
+  // Only products and updates can be polished past their target; client work fills to the end.
   const cap = project.kind === 'new' || project.kind === 'update' ? OVERSHOOT_CAP : 1
   const fill = Math.min(progress / (target * cap), 1) * 100
 
@@ -45,34 +40,6 @@ function Bars({ project }: { project: Project }) {
         <Bar key={d} project={project} discipline={d} />
       ))}
     </div>
-  )
-}
-
-/** The product whose bugs most need fixing and that this office could work on, if any is buggy enough to mention. */
-function buggiest(state: GameState, office: Office) {
-  const worst = state.products
-    .filter((p) => fixBlocker(state, office, p) === null)
-    .sort((a, b) => bugDensity(b) - bugDensity(a))[0]
-  return worst && bugDensity(worst) >= SUGGEST_FIX ? worst : undefined
-}
-
-function FixPanel({ office, project }: { office: Office; project: Project }) {
-  const store = useStore()
-  const state = useGame()
-  return (
-    <section className="project fixing">
-      <div className="project-head">
-        <div>
-          <strong>🐞 Fixing {project.name}</strong>
-          <span className="muted">
-            {' '}
-            {project.bugsFixed} of {project.bugs} bugs fixed · day {state.day - project.startDay}
-          </span>
-        </div>
-        <button onClick={() => store.stopFix(office.id)}>Stop fixing</button>
-      </div>
-      <Bars project={project} />
-    </section>
   )
 }
 
@@ -106,16 +73,10 @@ export function ProjectPanel() {
   const project = office.project
 
   if (!project) {
-    const buggy = buggiest(state, office)
     return (
       <section className="project idle">
         <span className="muted">No project in progress. The team is burning salary.</span>
         <div className="idle-actions">
-          {buggy && (
-            <button onClick={() => store.startFix(buggy.id, office.id)}>
-              🐞 Fix {Math.floor(buggy.bugs)} bugs in {buggy.name}
-            </button>
-          )}
           <button className="primary" onClick={() => store.openDialog({ kind: 'new-project', officeId: office.id })}>
             Start a project
           </button>
@@ -123,7 +84,6 @@ export function ProjectPanel() {
       </section>
     )
   }
-  if (project.kind === 'fix') return <FixPanel office={office} project={project} />
   if (project.kind === 'contract') return <ContractPanel office={office} project={project} />
 
   const type = getProductType(project.productTypeId)

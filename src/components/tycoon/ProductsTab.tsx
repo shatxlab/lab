@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { PROJECT_SIZES, PROMOTIONS } from '@/lib/tycoon/sim/balance'
-import { fixBlocker, fixTarget } from '@/lib/tycoon/sim/fixes'
+import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
+import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
 import { promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, targetUsers } from '@/lib/tycoon/sim/products'
 import { TIERS, type GameState, type Product } from '@/lib/tycoon/sim/types'
-import { estimateDays } from '@/lib/tycoon/sim/work'
 import { useGame, useOffice, useStore } from './context'
-import { formatAge, formatCount, formatDateShort, formatDays, formatMoney, TIER_NAME } from '@/lib/tycoon/format'
+import { FixPicker, OnCallPanel } from './FixControls'
+import { formatAge, formatCount, formatDateShort, formatMoney, TIER_NAME } from '@/lib/tycoon/format'
 
 /** Bugs per unit of work above which the count shows in red: users are noticeably leaving. */
 const BUGGY = 10
@@ -27,11 +28,15 @@ function ProductRow({ product }: { product: Product }) {
   // Updates and fixes go to the office on screen.
   const office = useOffice()
   const [promoting, setPromoting] = useState(false)
+  const [fixing, setFixing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
 
   const type = getProductType(product.productTypeId)
   const blocker = updateBlocker(state, office, product)
-  const fixProblem = fixBlocker(state, office, product)
-  const fixDays = estimateDays(state, fixTarget(Math.floor(product.bugs)), office)
+  const fixProblem = fixBlocker(state, product)
+  const fixingNow = fixOf(state, product.id) !== undefined
+  const sunsetProblem = sunsetBlocker(state, product)
+  const outcome = sunsetOutcome(product)
   const promoLeft = product.boostUntil - state.day
   const updates = product.updates.length
   const bugs = Math.floor(product.bugs)
@@ -84,18 +89,42 @@ function ProductRow({ product }: { product: Product }) {
         <button disabled={blocker !== null} onClick={() => store.openDialog({ kind: 'new-project', updateOf: product.id, officeId: office.id })}>
           Update
         </button>
-        <button
-          disabled={fixProblem !== null}
-          title={fixProblem ?? undefined}
-          onClick={() => store.startFix(product.id, office.id)}
-        >
-          Fix bugs{fixProblem === null && <small> · {formatDays(fixDays)}</small>}
+        <button disabled={fixProblem !== null} aria-expanded={fixing} title={fixProblem ?? undefined} onClick={() => setFixing(!fixing)}>
+          Fix bugs…
         </button>
         <button aria-expanded={promoting} onClick={() => setPromoting(!promoting)}>
           Promote…
         </button>
+        <button disabled={sunsetProblem !== null} title={sunsetProblem ?? undefined} aria-expanded={confirming} onClick={() => setConfirming(!confirming)}>
+          {outcome === 'sold' ? 'Sell…' : 'Retire…'}
+        </button>
         {blocker && <small className="muted">{blocker}</small>}
+        {!blocker && fixProblem && <small className="muted">{fixProblem}</small>}
       </div>
+      {fixing && !fixingNow && <FixPicker product={product} onDone={() => setFixing(false)} />}
+      {confirming && (
+        <div className="confirm-sunset">
+          {outcome === 'sold' ? (
+            <small>
+              A rival buys {product.name} for <strong>{formatMoney(salePrice(product))}</strong>. The team will miss it
+              {product.hit ? ' (a hit: the studio\'s name takes a bigger knock)' : ''}.
+            </small>
+          ) : (
+            <small>
+              Switch {product.name} off for good. It has too few {type.userNoun} to sell; nothing is lost beyond the product.
+            </small>
+          )}
+          <button
+            className="danger"
+            onClick={() => {
+              store.sunsetProduct(product.id)
+              setConfirming(false)
+            }}
+          >
+            {outcome === 'sold' ? 'Sell it' : 'Retire it'}
+          </button>
+        </div>
+      )}
       {promoting && (
         <div className="tiers">
           {promoLeft > 0 ? (
@@ -129,6 +158,7 @@ export function ProductsTab() {
   if (products.length === 0) return <p className="muted">Nothing shipped yet.</p>
   return (
     <div className="products">
+      <OnCallPanel />
       {products.map((p) => (
         <ProductRow key={p.id} product={p} />
       ))}

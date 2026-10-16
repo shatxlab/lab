@@ -48,8 +48,8 @@ describe('research data', () => {
 
   it('does something: every node has an effect or unlocks content', () => {
     for (const node of RESEARCH) {
-      const { features, productTypes } = unlocksOf(node.id)
-      expect(node.effects.length + features.length + productTypes.length, node.id).toBeGreaterThan(0)
+      const { features, productTypes, abilities } = unlocksOf(node.id)
+      expect(node.effects.length + features.length + productTypes.length + abilities.length, node.id).toBeGreaterThan(0)
     }
   })
 

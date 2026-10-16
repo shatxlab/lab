@@ -120,6 +120,17 @@ describe('project sizes', () => {
     expect(money - state.money).toBe(price)
   })
 
+  it('let a player in debt launch without a campaign, but not buy one', () => {
+    const state = studio()
+    startProject(state, 'web_app', ['accounts'], 'small')
+    finish(state)
+    state.money = -500
+    expect(shipProject(state, 'small').ok).toBe(false)
+    expect(state.offices[0].project).not.toBeNull()
+    expect(shipProject(state).ok).toBe(true)
+    expect(state.money).toBe(-500)
+  })
+
   it('give bigger projects longer before the crunch sets in', () => {
     expect(crunchDays('small')).toBe(MORALE_CRUNCH_DAYS)
     const state = richState()

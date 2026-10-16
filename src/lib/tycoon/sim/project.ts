@@ -245,7 +245,7 @@ function launchDemand(state: GameState, productTypeId: string): number {
 function shipNewProduct(state: GameState, office: Office, project: Project, campaign: Tier | undefined): Result {
   const quality = projectQuality(state, project)
   const cost = campaign ? campaignCost(state, project, quality, campaign) : 0
-  if (cost > state.money) return fail('Not enough money for that campaign')
+  if (campaign && cost > state.money) return fail('Not enough money for that campaign')
 
   let reach = computeReach(project, quality, state.reputation, launchDemand(state, project.productTypeId))
   const bugs = releaseBugs(project)

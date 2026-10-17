@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AUTO_FIX_DENSITY, POINTS_PER_BUG } from '@/lib/tycoon/sim/balance'
+import { POINTS_PER_BUG } from '@/lib/tycoon/sim/balance'
 import {
   availableFixers,
   clearOnCall,
@@ -243,19 +243,44 @@ describe('Incident management', () => {
   })
 
   it('starts a fix on its own once a product is buggy enough, and the pair is back on the project when done', () => {
-    const state = onCallStudio(5 * AUTO_FIX_DENSITY)
+    const state = onCallStudio(10)
     setOnCall(state, DEV, TESTER)
-    expect(bugDensity(state.products[0])).toBeGreaterThanOrEqual(AUTO_FIX_DENSITY)
     fixDay(state)
     expect(state.fixes).toHaveLength(1)
     expect(state.fixes[0]).toMatchObject({ productId: 50, developerId: DEV, testerId: TESTER, auto: true })
     while (state.fixes.length > 0) fixDay(state)
     expect(workersOf(state, state.offices[0]).map((e) => e.id)).toContain(DEV)
-    expect(state.products[0].bugs).toBeLessThan(AUTO_FIX_DENSITY)
+    expect(state.products[0].bugs).toBeLessThan(1)
   })
 
-  it('stays out of the way while products are clean enough, working on the office project', () => {
-    const state = onCallStudio(2)
+  it('takes a single bug on any product, whatever its size', () => {
+    for (const size of ['small', 'medium', 'large', 'flagship'] as const) {
+      const state = onCallStudio(1)
+      state.products[0].size = size
+      setOnCall(state, DEV, TESTER)
+      fixDay(state)
+      // A bug that small is reproduced and fixed within the day it is picked up.
+      expect(state.products[0].bugs, size).toBeLessThan(1)
+      expect(state.bugsFixed, size).toBe(1)
+    }
+  })
+
+  it('keeps taking bugs as they come, one small job after another', () => {
+    const state = onCallStudio(0)
+    setOnCall(state, DEV, TESTER)
+    let found = 0
+    for (let day = 0; day < 40; day += 1) {
+      state.products[0].bugs += 0.4
+      found += 0.4
+      fixDay(state)
+    }
+    // Everything reported but the last fraction has been fixed, with no pile-up in between.
+    expect(state.bugsFixed).toBeGreaterThanOrEqual(Math.floor(found) - 1)
+    expect(state.products[0].bugs).toBeLessThan(2)
+  })
+
+  it('stays out of the way, working on the office project, while no bug is open', () => {
+    const state = onCallStudio(0.5)
     setOnCall(state, DEV, TESTER)
     fixDay(state)
     expect(state.fixes).toEqual([])
@@ -263,15 +288,15 @@ describe('Incident management', () => {
   })
 
   it('picks the buggiest product, one job per product', () => {
-    const state = onCallStudio(5 * AUTO_FIX_DENSITY)
-    state.products.push(makeProduct({ id: 51, name: 'Beta', bugs: 9 * AUTO_FIX_DENSITY }))
+    const state = onCallStudio(10)
+    state.products.push(makeProduct({ id: 51, name: 'Beta', bugs: 18 }))
     setOnCall(state, DEV, TESTER)
     fixDay(state)
     expect(state.fixes.map((f) => f.productId)).toEqual([51])
   })
 
   it('ends the arrangement, with a notice, when one of the pair leaves', () => {
-    const state = onCallStudio(5 * AUTO_FIX_DENSITY)
+    const state = onCallStudio(10)
     setOnCall(state, DEV, TESTER)
     state.employees = state.employees.filter((e) => e.id !== DEV)
     fixDay(state)
@@ -281,7 +306,7 @@ describe('Incident management', () => {
   })
 
   it('runs inside a normal day', () => {
-    const state = onCallStudio(5 * AUTO_FIX_DENSITY)
+    const state = onCallStudio(10)
     setOnCall(state, DEV, TESTER)
     advanceDay(state)
     expect(state.fixes).toHaveLength(1)

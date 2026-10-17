@@ -1,4 +1,4 @@
-import { AUTO_FIX_DENSITY, FIX_SPLIT, POINTS_PER_BUG, SKILL_GAIN } from './balance'
+import { FIX_SPLIT, POINTS_PER_BUG, SKILL_GAIN } from './balance'
 import { fixingIds } from './offices'
 import { dailyContribution, expectedContribution } from './work'
 import { statMultiplier } from './modifiers'
@@ -129,14 +129,18 @@ export function clearOnCall(state: GameState): Result {
   return OK
 }
 
-/** The product that most needs a fixing job, if any is buggy enough and not already being fixed. */
+/**
+ * The product that most needs a fixing job: any product with an open bug that nobody is fixing, the buggiest
+ * (per its size) first. Incident management is a standing practice, so there is no bar to clear: every bug
+ * that is reported is picked up, reproduced and fixed as it comes.
+ */
 function needsFixing(state: GameState): Product | undefined {
   return state.products
-    .filter((p) => p.bugs >= 1 && !fixOf(state, p.id) && bugDensity(p) >= AUTO_FIX_DENSITY)
+    .filter((p) => p.bugs >= 1 && !fixOf(state, p.id))
     .sort((a, b) => bugDensity(b) - bugDensity(a))[0]
 }
 
-/** The on-call pair, when both are still here, picks up the buggiest product; if one has left, the arrangement ends. */
+/** The on-call pair, when both are still here and free, picks up the next product with open bugs; if one has left, the arrangement ends. */
 function autoFix(state: GameState): void {
   const onCall = state.onCall
   if (!onCall) return

@@ -104,7 +104,7 @@ export function OnCallPanel() {
     <section className="on-call">
       <div className="section-head">
         <h3>On call</h3>
-        <span className="muted">The pair starts fixing the buggiest product on its own, and works on its office's project when nothing is on fire.</span>
+        <span className="muted">The pair picks up every bug as it is reported, buggiest product first, and works on its office's project whenever nothing is open.</span>
       </div>
       {onCall && dev && tester ? (
         <div className="product-actions">

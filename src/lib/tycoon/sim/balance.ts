@@ -146,9 +146,6 @@ export const BUG_SURFACE_RATE = 1 / 20
 export const BUG_PRONE_SPREAD = 40
 export const BUG_PRONE_MIN = 0.25
 export const BUG_PRONE_MAX = 1.5
-/** Incident management starts a fix once a product has this many bugs per unit of its size's work. */
-export const AUTO_FIX_DENSITY = 10
-
 // Market: demand per product type drifts around 1.0 and is applied when a product ships.
 export const MARKET_MIN = 0.6
 export const MARKET_MAX = 1.5

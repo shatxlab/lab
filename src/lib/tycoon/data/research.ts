@@ -122,7 +122,7 @@ export const RESEARCH: readonly ResearchNode[] = [
     id: 'incident_management',
     name: 'Incident management',
     branch: 'qa',
-    description: 'Put a developer and a tester on call: they start fixing the buggiest product on their own, and work on their office\'s project when nothing is on fire.',
+    description: 'Put a developer and a tester on call: every bug that is reported is picked up and fixed as it comes, and they work on their office\'s project when nothing is open.',
     cost: 30000,
     days: 40,
     requires: ['test_automation'],

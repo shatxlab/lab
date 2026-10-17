@@ -13,7 +13,6 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | `/board` | Whiteboard · Доска | A deliberately small whiteboard: rectangles, arrows and text in white chalk on a dark board, one line weight, undo and redo, one button that clears the board and one that downloads a PNG. Dragging an element moves it, dragging the empty canvas moves the board; two fingers or Ctrl and the wheel zoom. One board, saved in the browser. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
-| `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
 | `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Normal or Nah", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". Thousands of prompts across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode with a conversation-starter line on each hand-written card. |
 | `/tycoon` | Software Tycoon · Империя софта | A management sim about running a small software studio: hire a team, pick a product and its features, watch Design / Engineering / QA fill up, ship, and grow from a garage through offices to a company while rivals and events push back. The PixiJS office scene animates your staff; the whole simulation is pure TypeScript with an autosave to local storage. |
 
@@ -95,7 +94,6 @@ src/
                      (operations/: open, compare, QR, PDF, image, charts, OCR, DOCX editor, reader)
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
-  components/wordle/ Wordle island
   components/board/  Whiteboard island (shell and the Workspace canvas with its toolbar)
   components/focus/  Focus island (the room, flow panel; FocusScene hosts Tycoon's Pixi office)
   components/alias/  Alias game island (setup, round, results screens)
@@ -112,7 +110,6 @@ src/
   lib/image/         EXIF reading and lossless stripping, resize plan, canvas pipeline
   lib/pdf/           page-range parsing and pdf-lib operations
   lib/workbench/     asset model, capability registry, operation registry, i18n
-  lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
   lib/charts/        sheet → typed columns, chart spec + shape detection, scale/tick math, SVG builder, palette, export, i18n
   lib/send/          "Send to phone" payload codec (size-capped, defensive) + fragment hook
   lib/board/         element model, geometry/hit-testing, history, viewport, gestures, SVG output, storage, i18n
@@ -131,7 +128,7 @@ src/
   pages/             one .astro per route + manifest.webmanifest.ts
   styles/            apps.css (design tokens, header, a11y base) + viewer.css
                      + tools.css + alias.css + couples.css + crossword.css
-                     + wordle.css + tycoon.css (the game's own dark palette,
+                     + tycoon.css (the game's own dark palette,
                      scoped to .tycoon-root)
 scripts/             crossword generator, PDF.js asset copy, pwa/ (service worker
                      generator, Astro integration), tycoon/ (headless balance
@@ -143,7 +140,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  convert/ qr/ image/ pdf/ wordle/ focus/ send/ charts/ board/  logic tests per tool
+  convert/ qr/ image/ pdf/ focus/ send/ charts/ board/  logic tests per tool
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers

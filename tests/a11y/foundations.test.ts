@@ -31,7 +31,7 @@ describe("accessibility foundations", () => {
   });
 
   it("does not remove focus outlines without a replacement indicator", () => {
-    for (const file of ["alias", "couples", "crossword", "wordle", "tools"]) {
+    for (const file of ["alias", "couples", "crossword", "tools"]) {
       const source = read(`src/styles/${file}.css`);
       for (const match of source.matchAll(/([^{}]+){[^{}]*outline:\s*none[^{}]*}/g)) {
         const rule = match[0];

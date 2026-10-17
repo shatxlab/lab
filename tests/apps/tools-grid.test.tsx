@@ -25,7 +25,6 @@ describe("ToolsGrid", () => {
     expect(text).toContain("Рабочая область");
     expect(text).toContain("Алиас");
     expect(text).toContain("Кроссворд");
-    expect(text).toContain("Вордли");
     expect(text).toContain("Игры для пар");
     view.unmount();
   });

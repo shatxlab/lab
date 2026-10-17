@@ -68,7 +68,7 @@ describe("workbench image operation", () => {
     view.unmount();
   });
 
-  it("publishes a finished result through onProduce", async () => {
+  it("lists a finished result with its own download, and does not publish a second copy", async () => {
     processImage.mockResolvedValue({
       blob: new Blob([new Uint8Array([1, 2, 3])], { type: "image/webp" }),
       name: "holiday-min.webp",
@@ -80,9 +80,10 @@ describe("workbench image operation", () => {
     const onProduce = vi.fn();
     const asset = createAssetFromBytes("holiday.png", new Uint8Array([137, 80, 78, 71]), "image");
     const view = await mount(<ImageOperation lang="en" assets={[asset]} onProduce={onProduce} />);
-    await waitFor(() => expect(onProduce).toHaveBeenCalledTimes(1));
-    expect(onProduce).toHaveBeenCalledWith(expect.objectContaining({ name: "holiday-min.webp", type: "image/webp", kind: "image" }));
-    expect([...(onProduce.mock.calls[0]![0].bytes as Uint8Array)]).toEqual([1, 2, 3]);
+    await waitFor(() => expect(document.body.textContent).toContain("holiday-min.webp"));
+    const download = [...document.querySelectorAll("button")].find((node) => node.textContent?.includes("Download"));
+    expect(download).toBeTruthy();
+    expect(onProduce).not.toHaveBeenCalled();
     view.unmount();
   });
 

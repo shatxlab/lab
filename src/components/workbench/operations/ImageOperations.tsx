@@ -2,12 +2,24 @@
  * `image.edit` — convert, resize and compress images, or strip their
  * metadata. It works on every image open in the workbench at once (a batch
  * downloads as a zip).
+ *
+ * Built so a thousand photos stay usable:
+ * - Files are never copied into memory: each is read only while it is being
+ *   processed, a few at a time, and only the (smaller) result is kept.
+ * - From `BATCH_MIN` images on, nothing starts by itself: a setting changed with
+ *   a slider would otherwise restart the whole batch. Processing runs on request,
+ *   with progress, and can be stopped and continued.
+ * - The list is held outside React state and published a few times a second, and
+ *   only a page of rows is on screen at a time, with thumbnails decoded small and
+ *   only when visible.
+ * - "Download all" streams a zip file by file instead of building it in memory.
  */
 
 import * as React from "react";
 import { Download, MapPin } from "lucide-react";
-import { zipSync } from "fflate";
 
+import { BlobThumb } from "@/components/workbench/BlobThumb";
+import { ShowMore } from "@/components/workbench/ShowMore";
 import {
   ActionButton,
   SelectField,
@@ -19,7 +31,7 @@ import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
 import { readJpegMetadata, readPngMetadata, type ImageMetadata } from "@/lib/image/exif";
 import { ti } from "@/lib/image/i18n";
-import { MIME_BY_FORMAT, savedPercent, uniqueNames, type OutputFormat, type ResizeMode } from "@/lib/image/plan";
+import { MIME_BY_FORMAT, savedPercent, type OutputFormat, type ResizeMode } from "@/lib/image/plan";
 import {
   DEFAULT_IMAGE_SETTINGS,
   ImageError,
@@ -31,10 +43,13 @@ import {
   type ProcessNote,
   type ProcessedImage,
 } from "@/lib/image/process";
+import { PAGE_SIZE, imagesLabel, isBatch } from "@/lib/workbench/batch";
+import { useItemStore } from "@/lib/workbench/item-store";
 import type { OperationProps } from "@/lib/workbench/operation";
+import { createLimiter, defaultConcurrency, runPool } from "@/lib/workbench/pool";
 import { useSeedAssets } from "@/lib/workbench/use-seed-assets";
-import { formatBytes } from "@/lib/viewer/utils";
-import { cn } from "@/lib/viewer/utils";
+import { archiveNames, zipBlobs } from "@/lib/workbench/zip";
+import { cn, formatBytes } from "@/lib/viewer/utils";
 
 const STORAGE_KEY = "lab:image:v1";
 
@@ -42,14 +57,13 @@ type Found = { label: string; value: string; warn?: boolean }[];
 
 interface Item {
   id: number;
+  /** A handle on the original; its bytes are only read while it is processed. */
   file: File;
-  status: "working" | "done" | "error";
-  /** Stable identity for output dedupe across re-seeds (asset id or file fingerprint). */
-  sourceKey: string;
-  /** Settings the current result was made with. */
+  /** `idle` until a run picks it up, `waiting` while it is queued in a run. */
+  status: "idle" | "waiting" | "working" | "done" | "error";
+  /** Settings the current result (or failure) was made with. */
   doneKey?: string;
   result?: ProcessedImage;
-  url?: string;
   error?: string;
   found?: Found;
   /** True once the original's metadata has been inspected. */
@@ -67,6 +81,9 @@ const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
   bmp: "image/bmp",
   svg: "image/svg+xml",
 };
+
+/** Metadata is read for a couple of files at a time, as their rows come into view. */
+const inspectLimit = createLimiter(2);
 
 function describeMetadata(lang: AppLang, meta: ImageMetadata): Found {
   const found: Found = [];
@@ -135,24 +152,23 @@ function loadSettings(): ImageSettings {
   }
 }
 
-export function ImageOperation({
-  lang,
-  assets,
-  params,
-  setParams,
-  onProduce,
-}: OperationProps) {
+export function ImageOperation({ lang, assets, params, setParams }: OperationProps) {
   const [settings, setSettings] = React.useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
   const [hydrated, setHydrated] = React.useState(false);
-  const [items, setItems] = React.useState<Item[]>([]);
   const [avifOk, setAvifOk] = React.useState(false);
+  const [running, setRunning] = React.useState(false);
+  const [packing, setPacking] = React.useState<{ done: number; total: number } | null>(null);
+  const [shown, setShown] = React.useState(PAGE_SIZE);
+
+  const store = useItemStore<Item>();
+  const storeRef = React.useRef(store);
+  storeRef.current = store;
+  const items = store.items;
   const idRef = React.useRef(0);
-  const itemsRef = React.useRef(items);
-  itemsRef.current = items;
-  // Keep the latest props for the process effect without restarting it.
-  const onProduceRef = React.useRef(onProduce);
-  onProduceRef.current = onProduce;
-  const producedRef = React.useRef<Set<string>>(new Set());
+  // Bumped to retire every run still in flight (new settings, new files, unmount).
+  const generation = React.useRef(0);
+  const stopRequested = React.useRef(false);
+  const inspecting = React.useRef(new Set<number>());
 
   React.useEffect(() => {
     const stored = loadSettings();
@@ -177,107 +193,139 @@ export function ImageOperation({
   const settingsKey = JSON.stringify(settings);
   const debouncedKey = useDebouncedString(settingsKey, 250);
   const itemSignature = items.map((item) => item.id).join(",");
+  const batch = isBatch(items.length);
 
-  const patch = React.useCallback((id: number, changes: Partial<Item>) => {
-    setItems((current) =>
-      current.map((item) => {
-        if (item.id !== id) return item;
-        if (changes.url !== undefined && item.url) URL.revokeObjectURL(item.url);
-        return { ...item, ...changes };
-      }),
-    );
-  }, []);
-
-  // (Re)process everything whose result does not match the current settings.
-  React.useEffect(() => {
-    if (!hydrated) return;
-    let cancelled = false;
-    const effective = JSON.parse(debouncedKey) as ImageSettings;
-    (async () => {
-      for (const item of itemsRef.current) {
-        if (cancelled) return;
-        if (item.doneKey === debouncedKey) continue;
-        patch(item.id, { status: "working" });
+  /** Process every item that has no result for `key` yet, a few at a time. */
+  const run = React.useCallback(async (key: string, retryFailed: boolean) => {
+    generation.current += 1;
+    const mine = generation.current;
+    stopRequested.current = false;
+    const effective = JSON.parse(key) as ImageSettings;
+    const todo = storeRef.current
+      .all()
+      .filter((item) => item.doneKey !== key || (retryFailed && item.status === "error"))
+      .map((item) => item.id);
+    if (todo.length === 0) return;
+    storeRef.current.updateMany(todo, { status: "waiting" });
+    setRunning(true);
+    await runPool(
+      todo,
+      defaultConcurrency(),
+      async (id) => {
+        const item = storeRef.current.get(id);
+        if (!item || mine !== generation.current) return;
+        storeRef.current.update(id, { status: "working" });
         try {
           const result = await processImage(item.file, effective);
-          if (cancelled) return;
-          patch(item.id, { status: "done", result, url: URL.createObjectURL(result.blob), doneKey: debouncedKey, error: undefined });
-          const produceKey = `${item.sourceKey}:${debouncedKey}`;
-          if (onProduceRef.current && !producedRef.current.has(produceKey)) {
-            producedRef.current.add(produceKey);
-            try {
-              const bytes = new Uint8Array(await result.blob.arrayBuffer());
-              if (!cancelled) onProduceRef.current({ name: result.name, type: result.mime, bytes, kind: "image" });
-            } catch {
-              // Publishing an output is best-effort.
-            }
-          }
+          // A run that was replaced (new settings, new files) must not write over its successor.
+          if (mine !== generation.current) return;
+          storeRef.current.update(id, { status: "done", result, doneKey: key, error: undefined });
         } catch (error) {
-          if (cancelled) return;
-          patch(item.id, { status: "error", doneKey: debouncedKey, error: error instanceof ImageError ? error.code : "decode" });
+          if (mine !== generation.current) return;
+          storeRef.current.update(id, { status: "error", doneKey: key, error: error instanceof ImageError ? error.code : "decode" });
         }
-      }
-    })();
+      },
+      () => stopRequested.current || mine !== generation.current,
+    );
+    if (mine === generation.current) {
+      // Whatever a stop left unstarted goes back to waiting for the next run.
+      setRunning(false);
+    }
+  }, []);
+
+  // Small sets follow the settings live; a batch waits for the button.
+  React.useEffect(() => {
+    if (!hydrated || batch || items.length === 0) return;
+    void run(debouncedKey, false);
     return () => {
-      cancelled = true;
+      generation.current += 1;
     };
-  }, [debouncedKey, itemSignature, hydrated, patch]);
+    // `items` is read through the store; its ids are what should restart the run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedKey, itemSignature, hydrated, batch, run]);
 
   React.useEffect(
     () => () => {
-      for (const item of itemsRef.current) if (item.url) URL.revokeObjectURL(item.url);
+      generation.current += 1;
     },
     [],
   );
 
-  const addFiles = React.useCallback(
-    (files: File[], sourceKeys?: readonly string[]) => {
-      const fresh: Item[] = [];
-      files.forEach((file, index) => {
-        if (!(file.type.startsWith("image/") || /\.(png|jpe?g|webp|avif|gif|bmp|svg)$/i.test(file.name))) return;
-        fresh.push({
-          id: (idRef.current += 1),
-          file,
-          status: "working",
-          inspected: false,
-          sourceKey: sourceKeys?.[index] ?? `${file.name}:${file.size}`,
-        });
-      });
-      if (fresh.length === 0) return;
-      setItems((current) => [...current, ...fresh]);
-      for (const item of fresh) {
-        void inspect(lang, item.file).then((found) => patch(item.id, { found, inspected: true }));
-      }
-    },
-    [lang, patch],
-  );
-
-  // Auto-add the image assets supplied by the workbench (no picker in that mode).
+  // Take the image assets supplied by the workbench. Nothing is read here: an
+  // item only holds the file, and its bytes are read when it is processed.
   useSeedAssets(assets, async (list, isCancelled) => {
-    const files: File[] = [];
-    const keys: string[] = [];
+    const fresh: Item[] = [];
     for (const asset of list) {
       if (asset.kind !== "image") continue;
       try {
-        const bytes = await asset.bytes();
-        const type = asset.source.type || IMAGE_MIME_BY_EXTENSION[asset.extension] || "application/octet-stream";
-        files.push(new File([bytes as unknown as BlobPart], asset.name, { type }));
-        keys.push(asset.id);
+        const blob = await asset.toBlob();
+        const type = asset.source.type || IMAGE_MIME_BY_EXTENSION[asset.extension] || "";
+        // A File over a Blob is a reference, not a copy.
+        fresh.push({
+          id: (idRef.current += 1),
+          file: new File([blob], asset.name, { type, lastModified: asset.source.lastModified }),
+          status: "idle",
+          inspected: false,
+        });
       } catch {
         // A file we cannot read simply never reaches the list.
       }
     }
-    if (files.length === 0 || isCancelled()) return;
-    addFiles(files, keys);
+    if (isCancelled()) return;
+    storeRef.current.reset(fresh);
   });
 
+  /** Read a row's metadata the first time it is shown. */
+  const inspectItem = React.useCallback(
+    (id: number) => {
+      const item = storeRef.current.get(id);
+      if (!item || item.inspected || inspecting.current.has(id)) return;
+      inspecting.current.add(id);
+      void inspectLimit(() => inspect(lang, item.file)).then((found) => storeRef.current.update(id, { found, inspected: true }));
+    },
+    [lang],
+  );
+
+  const counts = React.useMemo(() => {
+    let fresh = 0;
+    let failed = 0;
+    let stale = 0;
+    let remaining = 0;
+    let from = 0;
+    let to = 0;
+    let bytes = 0;
+    for (const item of items) {
+      bytes += item.file.size;
+      const current = item.doneKey === settingsKey;
+      if (item.result && current) {
+        fresh += 1;
+        from += item.file.size;
+        to += item.result.blob.size;
+      } else if (item.result) stale += 1;
+      if (item.status === "error" && current) failed += 1;
+      if (!current || item.status === "error") remaining += 1;
+    }
+    return { fresh, failed, stale, remaining, from, to, bytes };
+  }, [items, settingsKey]);
+
+  const downloadable = React.useMemo(
+    () => items.filter((item) => item.result && (!batch || item.doneKey === settingsKey)),
+    [items, batch, settingsKey],
+  );
+
   const downloadAll = async () => {
-    const done = items.filter((item) => item.result);
-    const names = uniqueNames(done.map((item) => item.result!.name));
-    const files: Record<string, Uint8Array> = {};
-    for (const [index, item] of done.entries()) files[names[index]!] = new Uint8Array(await item.result!.blob.arrayBuffer());
-    // Images are already compressed; storing them keeps the zip fast.
-    saveBlob(new Blob([zipSync(files, { level: 0 }) as unknown as BlobPart], { type: "application/zip" }), "images.zip");
+    setPacking({ done: 0, total: downloadable.length });
+    try {
+      const archives = await zipBlobs(
+        downloadable.map((item) => ({ name: item.result!.name, blob: item.result!.blob })),
+        { onProgress: (done, total) => setPacking({ done, total }) },
+      );
+      const names = archiveNames("images", archives.length);
+      // Browsers swallow downloads fired together; space them out.
+      archives.forEach((blob, index) => window.setTimeout(() => saveBlob(blob, names[index]!), index * 400));
+    } finally {
+      setPacking(null);
+    }
   };
 
   const update = (changes: Partial<ImageSettings>) => {
@@ -287,9 +335,9 @@ export function ImageOperation({
   const updateResize = (changes: Partial<ImageSettings["resize"]>) => setSettings((current) => ({ ...current, resize: { ...current.resize, ...changes } }));
   const convert = settings.task === "convert";
   const losslessFormat = settings.format === "png";
-  const doneCount = items.filter((item) => item.result).length;
 
   const numberOrNull = (value: string) => (value === "" ? null : Math.max(1, Math.floor(Number(value)) || 1));
+  const showMore = React.useCallback(() => setShown((current) => current + PAGE_SIZE), []);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
@@ -380,22 +428,108 @@ export function ImageOperation({
       <section className="flex min-w-0 flex-col gap-3" aria-labelledby="image-results">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="image-results" className="text-sm font-semibold">
-            {ti(lang, "results")} {items.length > 0 && <span className="font-normal text-(--muted-fg)">({items.length})</span>}
+            {ti(lang, "results")} {items.length > 0 && <span className="font-normal text-(--muted-fg)">({items.length.toLocaleString(lang === "ru" ? "ru-RU" : "en-US")})</span>}
           </h2>
-          {doneCount > 1 && (
-            <ActionButton className="h-8 px-3 text-xs" onClick={() => void downloadAll()}>
+          {downloadable.length > 1 && !(batch && running) && (
+            <ActionButton className="h-8 px-3 text-xs" disabled={packing !== null} onClick={() => void downloadAll()}>
               <Download aria-hidden="true" className="size-3.5" />
-              {ti(lang, "downloadAll")}
+              {packing ? ti(lang, "packing", { done: packing.done, total: packing.total }) : ti(lang, "downloadAll")}
             </ActionButton>
           )}
         </div>
 
-        <ul className="flex flex-col gap-3" aria-live="polite">
-          {items.map((item) => (
-            <ResultCard key={item.id} lang={lang} item={item} />
+        {batch && (
+          <BatchBar
+            lang={lang}
+            running={running}
+            counts={counts}
+            total={items.length}
+            onProcess={() => void run(settingsKey, true)}
+            onStop={() => {
+              stopRequested.current = true;
+              setRunning(false);
+            }}
+          />
+        )}
+
+        <ul className="flex flex-col gap-3" aria-live={batch ? "off" : "polite"}>
+          {items.slice(0, shown).map((item) => (
+            <ResultRow key={item.id} lang={lang} item={item} stale={batch && item.result !== undefined && item.doneKey !== settingsKey} onInspect={inspectItem} />
           ))}
         </ul>
+        {items.length > shown && <ShowMore label={ti(lang, "showMore", { n: Math.min(PAGE_SIZE, items.length - shown), left: items.length - shown })} onMore={showMore} />}
       </section>
+    </div>
+  );
+}
+
+interface Counts {
+  fresh: number;
+  failed: number;
+  stale: number;
+  remaining: number;
+  from: number;
+  to: number;
+  bytes: number;
+}
+
+/** The control strip of a batch: what is queued, how far it has got, and the button to run it. */
+function BatchBar({
+  lang,
+  running,
+  counts,
+  total,
+  onProcess,
+  onStop,
+}: {
+  lang: AppLang;
+  running: boolean;
+  counts: Counts;
+  total: number;
+  onProcess: () => void;
+  onStop: () => void;
+}) {
+  const percent = savedPercent(counts.from, counts.to);
+  const label = counts.fresh > 0 ? "applyRest" : "applyBatch";
+  return (
+    <div className={cn(panelClass, "flex flex-col gap-3")} data-batch-bar="">
+      {counts.fresh === 0 && !running && (
+        <>
+          <p className="text-sm font-medium">{ti(lang, "batchReady", { count: imagesLabel(lang, total), size: formatBytes(counts.bytes) })}</p>
+          <p className="text-xs text-(--muted-fg)">{ti(lang, counts.stale > 0 ? "batchStale" : "batchHint")}</p>
+        </>
+      )}
+      {(counts.fresh > 0 || running) && (
+        <div className="flex flex-col gap-1.5">
+          <p role="status" className="text-sm font-medium">
+            {running ? ti(lang, "batchProgress", { done: counts.fresh + counts.failed, total }) : ti(lang, "batchDone", { done: counts.fresh, total })}
+          </p>
+          <progress className="w-full" value={counts.fresh + counts.failed} max={total} aria-label={ti(lang, "batchProgress", { done: counts.fresh + counts.failed, total })} />
+          {counts.fresh > 0 && (
+            <p className="text-xs text-(--muted-fg)">
+              {ti(lang, "batchSizes", { from: formatBytes(counts.from), to: formatBytes(counts.to) })}{" "}
+              {percent > 0 ? `· ${ti(lang, "smaller", { percent })}` : percent < 0 ? `· ${ti(lang, "larger", { percent: -percent })}` : ""}
+            </p>
+          )}
+          {counts.failed > 0 && !running && (
+            <p role="alert" className="text-xs text-(--warning)">
+              {ti(lang, "batchFailed", { n: counts.failed })}
+            </p>
+          )}
+          {counts.stale > 0 && !running && <p className="text-xs text-(--muted-fg)">{ti(lang, "batchStale")}</p>}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {running ? (
+          <ActionButton variant="secondary" onClick={onStop}>
+            {ti(lang, "stop")}
+          </ActionButton>
+        ) : (
+          counts.remaining > 0 && (
+            <ActionButton onClick={onProcess}>{ti(lang, label, { count: imagesLabel(lang, counts.remaining) })}</ActionButton>
+          )
+        )}
+      </div>
     </div>
   );
 }
@@ -409,20 +543,34 @@ const NOTE_KEYS: Record<ProcessNote, "noteAlreadySmall" | "noteAnimatedGif" | "n
 
 const ERROR_KEYS = { fileTooLarge: "errFileTooLarge", tooManyPixels: "errTooManyPixels", decode: "errDecode", encode: "errEncode" } as const;
 
-function ResultCard({ lang, item }: { lang: AppLang; item: Item }) {
+const ResultRow = React.memo(function ResultRow({
+  lang,
+  item,
+  stale,
+  onInspect,
+}: {
+  lang: AppLang;
+  item: Item;
+  stale: boolean;
+  onInspect: (id: number) => void;
+}) {
   const { result } = item;
   const percent = result ? savedPercent(item.file.size, result.blob.size) : 0;
+  // Metadata is read when the row first appears, not for the whole batch up front.
+  React.useEffect(() => onInspect(item.id), [item.id, onInspect]);
 
   return (
-    <li className={cn(panelClass, "flex flex-col gap-3")}>
+    <li className={cn(panelClass, "flex flex-col gap-3", stale && "opacity-60")}>
       <div className="flex gap-3">
         <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-(--border) bg-(--bg)">
-          {item.url ? <img src={item.url} alt="" className="max-h-full max-w-full object-contain" /> : <span className="text-xs text-(--muted-fg)">…</span>}
+          <BlobThumb blob={result?.blob ?? item.file} px={80} fit="contain" />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="truncate font-medium" title={result?.name ?? item.file.name}>
             {result?.name ?? item.file.name}
           </p>
+          {item.status === "idle" && !result && <p className="text-sm text-(--muted-fg)">{formatBytes(item.file.size)}</p>}
+          {item.status === "waiting" && <p className="text-sm text-(--muted-fg)">{ti(lang, "waiting")}</p>}
           {item.status === "working" && (
             <p role="status" className="text-sm text-(--muted-fg)">
               {ti(lang, "working")}
@@ -436,10 +584,11 @@ function ResultCard({ lang, item }: { lang: AppLang; item: Item }) {
           {result && (
             <>
               <p className="text-sm">
-                <span className="text-(--muted-fg)">{formatBytes(item.file.size)}</span> → <strong>{formatBytes(result.blob.size)}</strong>{" "}
+                <span className="whitespace-nowrap text-(--muted-fg)">{formatBytes(item.file.size)}</span> → <strong className="whitespace-nowrap">{formatBytes(result.blob.size)}</strong>{" "}
                 <span className={cn("text-xs", percent > 0 ? "text-(--success)" : percent < 0 ? "text-(--warning)" : "text-(--muted-fg)")}>
                   {percent > 0 ? ti(lang, "smaller", { percent }) : percent < 0 ? ti(lang, "larger", { percent: -percent }) : ti(lang, "sameSize")}
                 </span>
+                {stale && <span className="ml-2 text-xs text-(--muted-fg)">{ti(lang, "outdated")}</span>}
               </p>
               {result.width > 0 && <p className="text-xs text-(--muted-fg)">{ti(lang, "dims", { width: result.width, height: result.height })}</p>}
               {result.notes.map((note) => (
@@ -451,16 +600,16 @@ function ResultCard({ lang, item }: { lang: AppLang; item: Item }) {
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
-          {result && item.url && (
-            <a
-              href={item.url}
-              download={result.name}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-(--accent) px-3 text-xs font-medium text-(--accent-fg) no-underline hover:bg-(--accent)/90"
+          {result && (
+            <button
+              type="button"
+              onClick={() => saveBlob(result.blob, result.name)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-(--accent) px-3 text-xs font-medium text-(--accent-fg) hover:bg-(--accent)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)"
             >
               <Download aria-hidden="true" className="size-3.5" />
               {ti(lang, "download")}
               <span className="sr-only"> {result.name}</span>
-            </a>
+            </button>
           )}
         </div>
       </div>
@@ -485,7 +634,7 @@ function ResultCard({ lang, item }: { lang: AppLang; item: Item }) {
       )}
     </li>
   );
-}
+});
 
 function useDebouncedString(value: string, delay: number): string {
   const [state, setState] = React.useState(value);

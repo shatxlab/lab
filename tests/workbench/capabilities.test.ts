@@ -77,6 +77,17 @@ describe("capabilitiesFor", () => {
     expect(actsOn([one, asset("text"), two], two, "image.edit")).toEqual(["one.png", "two.jpg"]);
   });
 
+  it("reads every open picture together in text recognition, but a PDF alone", () => {
+    const one = asset("image", "one.png");
+    const two = asset("image", "two.png");
+    const doc = asset("pdf", "doc.pdf");
+    expect(actsOn([one, doc, two], two, "ocr.recognize")).toEqual(["one.png", "two.png"]);
+    expect(actsOn([one, two], one, "ocr.recognize")).toEqual(["one.png", "two.png"]);
+    expect(actsOn([one, doc, two], doc, "ocr.recognize")).toEqual(["doc.pdf"]);
+    // A single picture is just itself.
+    expect(actsOn([one, doc], one, "ocr.recognize")).toEqual(["one.png"]);
+  });
+
   it("reads an EPUB and offers nothing for unknown binaries", () => {
     expect(offeredIds([asset("epub")])).toEqual(["book.read"]);
     expect(offeredIds([asset("binary")])).toEqual([]);

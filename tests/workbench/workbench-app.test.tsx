@@ -9,10 +9,17 @@ import { wb } from "@/lib/workbench/i18n";
 import type { OperationProps } from "@/lib/workbench/operation";
 import { axeViolations, click, mount, waitFor } from "../helpers/dom";
 
+const saved = vi.hoisted(() => ({ files: [] as { blob: Blob; name: string }[] }));
+vi.mock("@/lib/apps/file-open", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/apps/file-open")>()),
+  saveBlob: (blob: Blob, name: string) => void saved.files.push({ blob, name }),
+}));
+
 afterEach(() => {
   document.body.innerHTML = "";
   localStorage.clear();
   vi.restoreAllMocks();
+  saved.files = [];
 });
 
 const fileInput = () => document.querySelector<HTMLInputElement>('input[type="file"]')!;
@@ -95,7 +102,6 @@ describe("WorkbenchApp — empty screen", () => {
     expect(buttonWithText(starters, label("text.diff"))).toBeTruthy();
     expect(buttonWithText(starters, label("qr.generate"))).toBeTruthy();
     expect(tabs()).toHaveLength(0);
-    expect(section("wb-outputs")).toBeNull();
     expect(document.body.textContent).not.toContain("compare:");
     view.unmount();
   });
@@ -254,27 +260,108 @@ describe("WorkbenchApp — set membership badges", () => {
 });
 
 describe("WorkbenchApp — tray thumbnails", () => {
-  it("shows a blob image for pictures and a kind glyph for other files", async () => {
+  it("draws a small canvas for pictures and a kind glyph for other files, without making an object URL", async () => {
     const created: string[] = [];
-    const revoked: string[] = [];
     (URL as unknown as Record<string, unknown>).createObjectURL = (blob: Blob) => {
-      const url = `blob:test/${created.length}`;
-      created.push(url);
       void blob;
-      return url;
+      created.push("blob:test");
+      return "blob:test";
     };
-    (URL as unknown as Record<string, unknown>).revokeObjectURL = (url: string) => void revoked.push(url);
 
     const view = await mount(<WorkbenchApp operations={stubs} />);
     await addFiles(png("photo.png"), text("note.txt"));
     const thumb = (name: string) => fileRow(name)!.closest("li")!.querySelector("[data-asset-thumb]")!;
-    await waitFor(() => expect(thumb("photo.png").querySelector("img")?.getAttribute("src")).toMatch(/^blob:/));
-    expect(thumb("photo.png").querySelector("img")?.getAttribute("alt")).toBe("");
+    await waitFor(() => expect(thumb("photo.png").querySelector("canvas")).toBeTruthy());
+    expect(thumb("photo.png").getAttribute("data-asset-thumb")).toBe("image");
     expect(thumb("note.txt").getAttribute("data-asset-thumb")).toBe("text");
     expect(thumb("note.txt").querySelector("svg")).toBeTruthy();
+    // A full-size photo is never put in an <img>: nothing may hold an object URL for it.
+    expect(created).toEqual([]);
+    expect(document.querySelector("[data-asset-thumb] img")).toBeNull();
+    view.unmount();
+  });
+});
 
-    await click(document.querySelector<HTMLButtonElement>(`button[aria-label="${wb("en", "remove", { name: "photo.png" })}"]`));
-    await waitFor(() => expect(revoked).toContain(created[0]));
+describe("WorkbenchApp — image batch row", () => {
+  const photos = (n: number) => Array.from({ length: n }, (_, i) => png(`IMG_${String(i + 1).padStart(3, "0")}.png`));
+  const rows = () => [...(section("wb-assets")?.querySelectorAll("li") ?? [])];
+  const removeBatchButton = (count: string) => document.querySelector<HTMLButtonElement>(`button[aria-label="${wb("en", "removeBatch", { count })}"]`);
+
+  it("lists up to nine images one by one", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(...photos(9));
+    await waitFor(() => expect(rows()).toHaveLength(9));
+    expect(section("wb-assets")!.querySelector("[data-asset-batch]")).toBeNull();
+    view.unmount();
+  });
+
+  it("folds ten or more images into one row with their count and total size", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(...photos(10));
+    await waitFor(() => expect(section("wb-assets")!.querySelector("[data-asset-batch]")).toBeTruthy());
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0]!.textContent).toContain(wb("en", "imageBatch"));
+    expect(rows()[0]!.textContent).toContain("10 images");
+    expect(rows()[0]!.textContent).toContain("40 B");
+    expect(rows()[0]!.textContent).not.toContain("IMG_001.png");
+    view.unmount();
+  });
+
+  it("keeps other files on their own rows beside the batch, in order", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(text("before.txt"), ...photos(12), text("after.txt"));
+    await waitFor(() => expect(rows()).toHaveLength(3));
+    const names = rows().map((row) => row.textContent ?? "");
+    expect(names[0]).toContain("before.txt");
+    expect(names[1]).toContain("12 images");
+    expect(names[2]).toContain("after.txt");
+    view.unmount();
+  });
+
+  it("hands every image to the image tool, and the batch row is the selected one", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(...photos(11));
+    await waitFor(() => expect(document.body.textContent).toContain("image: IMG_001.png, IMG_002.png"));
+    expect(document.body.textContent).toContain("IMG_011.png");
+    expect(section("wb-assets")!.querySelector("[data-asset-batch] button[aria-pressed]")?.getAttribute("aria-pressed")).toBe("true");
+    view.unmount();
+  });
+
+  it("removes the whole batch with one button and drops back to the empty screen", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(...photos(10));
+    await waitFor(() => expect(removeBatchButton("10 images")).toBeTruthy());
+    await click(removeBatchButton("10 images"));
+    await waitFor(() => expect(section("wb-assets")).toBeNull());
+    view.unmount();
+  });
+
+  it("selects the file that is left when the selected batch is removed", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(text("keep.txt"), ...photos(10));
+    await waitFor(() => expect(removeBatchButton("10 images")).toBeTruthy());
+    await click(removeBatchButton("10 images"));
+    await waitFor(() => expect(section("wb-assets")!.querySelector("[data-asset-batch]")).toBeNull());
+    expect(document.body.textContent).toContain("open: keep.txt");
+    view.unmount();
+  });
+
+  it("counts a thousand images without listing them", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(...photos(1000));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    expect(rows()[0]!.textContent).toContain("1,000 images");
+    expect(document.querySelectorAll("[data-asset-thumb] canvas")).toHaveLength(0);
+    view.unmount();
+  });
+
+  it("badges every picture of an OCR batch, as it does for the image tool", async () => {
+    const view = await mount(<WorkbenchApp operations={stubs} />);
+    await addFiles(...photos(3));
+    await waitFor(() => expect(tab("ocr.recognize")).toBeTruthy());
+    await click(tab("ocr.recognize"));
+    await waitFor(() => expect(document.body.textContent).toContain("ocr: IMG_001.png, IMG_002.png, IMG_003.png"));
+    expect(document.querySelectorAll("[data-member-badge]")).toHaveLength(3);
     view.unmount();
   });
 });
@@ -378,20 +465,19 @@ describe("WorkbenchApp — unsaved work", () => {
   });
 });
 
-describe("WorkbenchApp — results", () => {
-  it("publishes outputs and opens one as the selected file", async () => {
+describe("WorkbenchApp — produced files", () => {
+  it("downloads a file an operation produces straight away, with no second list of results", async () => {
     const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": ProduceStub }} />);
     await addFiles(text("note.txt"));
     await waitFor(() => expect(buttonWithText(document.body, "Produce output")).toBeTruthy());
     await click(buttonWithText(document.body, "Produce output"));
-    await waitFor(() => expect(section("wb-outputs")!.textContent).toContain("result.txt"));
-
-    await click(buttonWithText(section("wb-outputs")!, wb("en", "openAsAsset")));
-    await waitFor(() => {
-      expect(fileRow("result.txt")?.getAttribute("aria-pressed")).toBe("true");
-      // The tray disappears again once it is empty.
-      expect(section("wb-outputs")).toBeNull();
-    });
+    expect(saved.files).toHaveLength(1);
+    expect(saved.files[0]!.name).toBe("result.txt");
+    expect(saved.files[0]!.blob.type).toBe("text/plain;charset=utf-8");
+    expect(await saved.files[0]!.blob.text()).toBe("done");
+    // Nothing lists it again under the operation.
+    expect(section("wb-outputs")).toBeNull();
+    expect(document.body.textContent).not.toContain("result.txt");
     view.unmount();
   });
 });

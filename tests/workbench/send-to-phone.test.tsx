@@ -43,16 +43,6 @@ const opened = (name: string) =>
       </p>
     );
   };
-function ProduceStub({ onProduce }: OperationProps) {
-  return (
-    <button
-      type="button"
-      onClick={() => onProduce?.({ name: "result.txt", type: "text/plain;charset=utf-8", bytes: new TextEncoder().encode("the output"), kind: "text" })}
-    >
-      Produce output
-    </button>
-  );
-}
 const stubs: Partial<Record<CapabilityId, React.ComponentType<OperationProps>>> = {
   "doc.open": opened("open"),
   "pdf.merge": opened("merge"),
@@ -126,17 +116,6 @@ describe("workbench — sending text to a phone", () => {
     await click(buttonByLabel(wb("en", "sendNamed", { name: "big.txt" })));
     await waitFor(() => expect(text()).toContain(ts("en", "tooLargeTitle")));
     expect(document.querySelector('[role="img"] svg')).toBeNull();
-    view.unmount();
-  });
-
-  it("also offers it on a text output", async () => {
-    const view = await mount(<WorkbenchApp operations={{ ...stubs, "doc.open": ProduceStub }} />);
-    await addFiles(note("a.txt", "x"));
-    await waitFor(() => expect(buttonWithText("Produce output")).toBeTruthy());
-    await click(buttonWithText("Produce output"));
-    await waitFor(() => expect(buttonByLabel(wb("en", "sendNamed", { name: "result.txt" }))).toBeTruthy());
-    await click(buttonByLabel(wb("en", "sendNamed", { name: "result.txt" })));
-    await waitFor(() => expect(document.querySelector('[role="img"] svg')).toBeTruthy());
     view.unmount();
   });
 });

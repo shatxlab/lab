@@ -7,10 +7,14 @@ import { OcrOperation } from "@/components/workbench/operations/OcrOperations";
 import { toc } from "@/lib/ocr/i18n";
 import type { OcrResult, PageResult } from "@/lib/ocr/run";
 import { createAssetFromBytes } from "@/lib/workbench/asset";
-import type { OperationOutput } from "@/lib/workbench/operation";
 import { axeViolations, click, mount, waitFor } from "../helpers/dom";
 
 const run = vi.hoisted(() => ({ calls: [] as Record<string, unknown>[], result: null as unknown }));
+const saved = vi.hoisted(() => ({ files: [] as { blob: Blob; name: string }[] }));
+vi.mock("@/lib/apps/file-open", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/apps/file-open")>()),
+  saveBlob: (blob: Blob, name: string) => void saved.files.push({ blob, name }),
+}));
 vi.mock("@/lib/ocr/run", async (importActual) => {
   const actual = await importActual<typeof import("@/lib/ocr/run")>();
   return {
@@ -32,6 +36,7 @@ const MANIFEST = {
 let store: Map<string, Response>;
 beforeEach(() => {
   run.calls = [];
+  saved.files = [];
   store = new Map();
   vi.stubGlobal("caches", { open: async () => ({ match: async (url: string) => store.get(url)?.clone(), put: async (url: string, response: Response) => void store.set(url, response), delete: async (url: string) => store.delete(url) }) });
   vi.stubGlobal("Worker", class {});
@@ -65,19 +70,18 @@ const page = (number: number, words = [word("clear", 96, 10), word("hmm", 60, 60
 });
 const result = (over: Partial<OcrResult> = {}): OcrResult => ({ text: "clear hmm garbled\n", confidence: 70, pages: 1, details: [page(1)], table: null, ...over });
 
-function Host({ outputs }: { outputs: OperationOutput[] }) {
+function Host() {
   const [params, setParams] = React.useState<Record<string, unknown>>({});
   const asset = React.useMemo(() => createAssetFromBytes("scan.png", new Uint8Array([137, 80, 78, 71]), "image"), []);
-  return <OcrOperation lang="en" assets={[asset]} params={params} setParams={(patch) => setParams((p) => ({ ...p, ...patch }))} onProduce={(o) => outputs.push(o)} />;
+  return <OcrOperation lang="en" assets={[asset]} params={params} setParams={(patch) => setParams((p) => ({ ...p, ...patch }))} />;
 }
 
 async function ready() {
-  const outputs: OperationOutput[] = [];
-  const view = await mount(<Host outputs={outputs} />);
+  const view = await mount(<Host />);
   await waitFor(() => expect(button(/^Download \(/)).toBeTruthy());
   await click(button(/^Download \(/)!);
   await waitFor(() => expect(button("Recognize text")!.disabled).toBe(false));
-  return { view, outputs };
+  return { view };
 }
 
 async function choose(select: HTMLSelectElement, value: string) {
@@ -114,27 +118,28 @@ describe("OCR options", () => {
 });
 
 describe("OCR table layout", () => {
-  it("shows the table that was read, and adds a spreadsheet to the outputs", async () => {
+  it("shows the table that was read, and downloads it as a spreadsheet", async () => {
     run.result = result({ table: [["Item", "Qty"], ["Pen, blue", "2"]], text: "Item\tQty\nPen, blue\t2\n", details: [page(1)] });
-    const { view, outputs } = await ready();
+    const { view } = await ready();
     await choose(layoutSelect(), "table");
     await click(button("Recognize text")!);
     await waitFor(() => expect(text()).toContain(toc("en", "tableFound", { rows: 2, cols: 2 })));
     expect([...document.querySelectorAll("tbody tr")].map((r) => [...r.querySelectorAll("td")].map((c) => c.textContent))).toEqual([["Item", "Qty"], ["Pen, blue", "2"]]);
-    expect(outputs).toHaveLength(1);
-    expect(outputs[0]).toMatchObject({ name: "scan.csv", type: "text/csv;charset=utf-8", kind: "sheet" });
-    expect(new TextDecoder().decode(outputs[0]!.bytes)).toBe('Item,Qty\n"Pen, blue",2\n');
-    expect(text()).toContain(toc("en", "addedCsv", { name: "scan.csv" }));
+    await click(button(toc("en", "downloadCsv"))!);
+    expect(saved.files).toHaveLength(1);
+    expect(saved.files[0]!.name).toBe("scan.csv");
+    expect(saved.files[0]!.blob.type).toBe("text/csv;charset=utf-8");
+    expect(await saved.files[0]!.blob.text()).toBe('Item,Qty\n"Pen, blue",2\n');
     view.unmount();
   });
 
-  it("says so when no table was found, and adds nothing", async () => {
+  it("says so when no table was found, and offers nothing to download", async () => {
     run.result = result({ table: [], text: "\n", details: [] });
-    const { view, outputs } = await ready();
+    const { view } = await ready();
     await choose(layoutSelect(), "table");
     await click(button("Recognize text")!);
     await waitFor(() => expect(text()).toContain(toc("en", "tableNone")));
-    expect(outputs).toHaveLength(0);
+    expect(button(toc("en", "downloadCsv"))).toBeUndefined();
     view.unmount();
   });
 });

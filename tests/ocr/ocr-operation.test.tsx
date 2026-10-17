@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OcrOperation } from "@/components/workbench/operations/OcrOperations";
 import { createAssetFromBytes, type Asset } from "@/lib/workbench/asset";
-import type { OperationOutput } from "@/lib/workbench/operation";
 import { hasOperation } from "@/lib/workbench/operations";
 import { axeViolations, click, mount, waitFor } from "../helpers/dom";
 
@@ -33,12 +32,19 @@ const MANIFEST = {
   ],
 };
 
+const saved = vi.hoisted(() => ({ files: [] as { blob: Blob; name: string }[] }));
+vi.mock("@/lib/apps/file-open", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/apps/file-open")>()),
+  saveBlob: (blob: Blob, name: string) => void saved.files.push({ blob, name }),
+}));
+
 let store: Map<string, Response>;
 let fetched: string[];
 let manifest: unknown;
 
 beforeEach(() => {
   run.calls = [];
+  saved.files = [];
   run.fail = null;
   run.hang = false;
   run.result = { text: "Hello world\n", confidence: 91.4, pages: 1, details: [], table: null };
@@ -78,16 +84,15 @@ const checkbox = (label: string) =>
 const image = () => createAssetFromBytes("scan.png", new Uint8Array([137, 80, 78, 71]), "image");
 const pdf = (): Asset => ({ ...createAssetFromBytes("doc.pdf", new Uint8Array([37, 80, 68, 70]), "pdf"), pdf: async () => ({ numPages: 5 }) as never });
 
-function Host({ asset, lang = "en", outputs }: { asset: Asset; lang?: "en" | "ru"; outputs: OperationOutput[] }) {
+function Host({ asset, lang = "en" }: { asset: Asset; lang?: "en" | "ru" }) {
   const [params, setParams] = React.useState<Record<string, unknown>>({});
-  return <OcrOperation lang={lang} assets={[asset]} params={params} setParams={(patch) => setParams((p) => ({ ...p, ...patch }))} onProduce={(o) => outputs.push(o)} />;
+  return <OcrOperation lang={lang} assets={[asset]} params={params} setParams={(patch) => setParams((p) => ({ ...p, ...patch }))} />;
 }
 
 async function open(asset: Asset, lang: "en" | "ru" = "en") {
-  const outputs: OperationOutput[] = [];
-  const view = await mount(<Host asset={asset} lang={lang} outputs={outputs} />);
+  const view = await mount(<Host asset={asset} lang={lang} />);
   await waitFor(() => expect(button(/Download|Recognize|Скачать|Распознать/)).toBeTruthy());
-  return { view, outputs };
+  return { view };
 }
 
 describe("OcrOperation — files", () => {
@@ -159,14 +164,14 @@ describe("OcrOperation — files", () => {
 
   it("says so when this build ships no OCR files", async () => {
     manifest = null;
-    const view = await mount(<Host asset={image()} outputs={[]} />);
+    const view = await mount(<Host asset={image()} />);
     await waitFor(() => expect(text()).toContain("not part of this build"));
     view.unmount();
   });
 
   it("says so when the browser cannot run it", async () => {
     vi.stubGlobal("Worker", undefined);
-    const view = await mount(<Host asset={image()} outputs={[]} />);
+    const view = await mount(<Host asset={image()} />);
     await waitFor(() => expect(text()).toContain("cannot run text recognition"));
     view.unmount();
   });
@@ -180,15 +185,16 @@ describe("OcrOperation — recognising", () => {
     return opened;
   }
 
-  it("recognises an image, shows the text with its confidence and adds a text file to the outputs", async () => {
-    const { view, outputs } = await ready(image());
+  it("recognises an image, shows the text with its confidence and downloads it as a text file", async () => {
+    const { view } = await ready(image());
     await click(button("Recognize text")!);
     await waitFor(() => expect(document.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe("Hello world\n"));
     expect(text()).toContain("Average confidence 91%");
-    expect(text()).toContain("Added to your outputs as scan.txt.");
-    expect(outputs).toHaveLength(1);
-    expect(outputs[0]).toMatchObject({ name: "scan.txt", type: "text/plain;charset=utf-8", kind: "text" });
-    expect(new TextDecoder().decode(outputs[0]!.bytes)).toBe("Hello world\n");
+    await click(button("Download as text (.txt)")!);
+    expect(saved.files).toHaveLength(1);
+    expect(saved.files[0]!.name).toBe("scan.txt");
+    expect(saved.files[0]!.blob.type).toBe("text/plain;charset=utf-8");
+    expect(await saved.files[0]!.blob.text()).toBe("Hello world\n");
     const call = run.calls[0]!;
     expect(call.languages).toEqual(["eng"]);
     expect(call.preprocess).toEqual({ contrast: true, blackWhite: false, enlarge: true });
@@ -207,27 +213,26 @@ describe("OcrOperation — recognising", () => {
     view.unmount();
   });
 
-  it("adds nothing to the outputs, and says so, when no text was found", async () => {
+  it("offers nothing to download, and says so, when no text was found", async () => {
     run.result = { text: "  \n", confidence: 10, pages: 1, details: [], table: null };
-    const { view, outputs } = await ready(image());
+    const { view } = await ready(image());
     await click(button("Recognize text")!);
     await waitFor(() => expect(text()).toContain("No text was found"));
-    expect(outputs).toHaveLength(0);
+    expect(button("Download as text (.txt)")).toBeUndefined();
     view.unmount();
   });
 
   it("shows an error when recognising fails", async () => {
     run.fail = new Error("out of memory");
-    const { view, outputs } = await ready(image());
+    const { view } = await ready(image());
     await click(button("Recognize text")!);
     await waitFor(() => expect(document.querySelector('[role="alert"]')?.textContent).toContain("out of memory"));
-    expect(outputs).toHaveLength(0);
     view.unmount();
   });
 
   it("can be stopped while it works", async () => {
     run.hang = true;
-    const { view, outputs } = await ready(image());
+    const { view } = await ready(image());
     await click(button("Recognize text")!);
     await waitFor(() => expect(button("Stop")).toBeTruthy());
     expect(text()).toContain("Reading page 1 of 1…");
@@ -235,7 +240,6 @@ describe("OcrOperation — recognising", () => {
     await click(button("Stop")!);
     await waitFor(() => expect(text()).toContain("Stopped."));
     expect(button("Recognize text")).toBeTruthy();
-    expect(outputs).toHaveLength(0);
     view.unmount();
   });
 

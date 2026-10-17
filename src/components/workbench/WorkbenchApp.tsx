@@ -11,16 +11,18 @@
  *   the running operation has unsaved work; then the files just join the tray.
  * - Leaving an operation with unsaved work (another tab, another file,
  *   removing its file) asks first, in a dialog that defaults to keeping the work.
- * - A produced result joins the tray as the selected file when opened.
+ * - Ten or more images are one batch row in the tray, not ten rows.
+ * - A file an operation produces without a results list of its own (a chart
+ *   export, a signed PDF, a saved copy) is downloaded straight away.
  *
  * SSR note: nothing here touches `window`/`document` at module scope — the
  * paste listener and the lazy operation loader only run inside effects.
  */
 
 import * as React from "react";
-import { Download, Smartphone, X } from "lucide-react";
+import { Images, Smartphone, X } from "lucide-react";
 
-import { AssetThumb } from "@/components/workbench/AssetThumb";
+import { AssetThumb, BatchThumb } from "@/components/workbench/AssetThumb";
 import { ConfirmSheet } from "@/components/workbench/ConfirmSheet";
 import { ReceiveDialog } from "@/components/tools/ReceiveDialog";
 import { SendToPhone } from "@/components/tools/SendToPhone";
@@ -39,9 +41,9 @@ import {
   type CapabilityId,
   type OfferedCapability,
 } from "@/lib/workbench/capabilities";
-import { createAssetFromBytes, createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
-import { imageMime } from "@/components/viewer/viewers/ImageView";
-import { detectAssetKind, isTextual } from "@/lib/workbench/kinds";
+import { createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
+import { imagesLabel, isBatch } from "@/lib/workbench/batch";
+import { isTextual } from "@/lib/workbench/kinds";
 import { MAX_SENDABLE_BYTES, TEXT_SEND_KIND, parseTextSend, textToSend } from "@/lib/workbench/send";
 import { wb } from "@/lib/workbench/i18n";
 import { loadOperation } from "@/lib/workbench/operations";
@@ -136,14 +138,38 @@ export interface AssetTrayProps {
   activeId?: CapabilityId | null;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
+  /** Remove several files at once (a whole image batch). */
+  onRemoveMany: (ids: readonly string[]) => void;
   onClear: () => void;
+}
+
+/** One line in the tray: a file, or all the images of a batch. */
+export type TrayRow = { type: "asset"; asset: Asset } | { type: "batch"; assets: readonly Asset[] };
+
+/**
+ * What the tray lists. From `BATCH_MIN` images on they collapse into a single
+ * row, placed where the first of them was; everything else keeps its own row.
+ */
+export function trayRows(assets: readonly Asset[]): TrayRow[] {
+  const images = assets.filter((asset) => asset.kind === "image");
+  if (!isBatch(images.length)) return assets.map((asset) => ({ type: "asset", asset }));
+  const rows: TrayRow[] = [];
+  let placed = false;
+  for (const asset of assets) {
+    if (asset.kind !== "image") rows.push({ type: "asset", asset });
+    else if (!placed) {
+      rows.push({ type: "batch", assets: images });
+      placed = true;
+    }
+  }
+  return rows;
 }
 
 /** The marker in front of a file's name: A/B for Compare, 1..n for Merge, a chip for a batch. */
 function memberBadge(lang: AppLang, activeId: CapabilityId | null | undefined, position: number): string | null {
   if (activeId === "text.diff") return position < 2 ? ["A", "B"][position]! : null;
   if (activeId === "pdf.merge") return String(position + 1);
-  if (activeId === "image.edit") return wb(lang, "inBatch");
+  if (activeId === "image.edit" || activeId === "ocr.recognize") return wb(lang, "inBatch");
   return null;
 }
 
@@ -159,9 +185,11 @@ export function AssetTray({
   activeId,
   onSelect,
   onRemove,
+  onRemoveMany,
   onClear,
 }: AssetTrayProps) {
-  const single = assets.length === 1;
+  const rows = trayRows(assets);
+  const single = rows.length === 1 && rows[0]!.type === "asset";
   // Tray order is the order Compare panes and Merge use.
   const memberIds = setMembers && assets.filter((asset) => setMembers.has(asset.id)).map((asset) => asset.id);
   const details = (asset: Asset) => {
@@ -197,13 +225,52 @@ export function AssetTray({
           <h2 id="wb-assets" className="text-sm font-semibold">
             {wb(lang, "assets")}
           </h2>
-          <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={onClear}>
-            {wb(lang, "clear")}
-          </ActionButton>
+          {rows.length > 1 && (
+            <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={onClear}>
+              {wb(lang, "clear")}
+            </ActionButton>
+          )}
         </div>
       )}
       <ul className="flex flex-col gap-2">
-        {assets.map((asset) => {
+        {rows.map((row) => {
+          if (row.type === "batch") {
+            const inBatch = row.assets.some((asset) => asset.id === selectedId);
+            const total = row.assets.reduce((sum, asset) => sum + asset.size, 0);
+            const count = imagesLabel(lang, row.assets.length);
+            return (
+              <li
+                key="image-batch"
+                data-asset-batch=""
+                className={cn(
+                  "flex flex-wrap items-center gap-3 rounded-lg border bg-(--bg) px-3 py-2",
+                  inBatch ? "border-(--accent)" : "border-(--border)",
+                )}
+              >
+                <BatchThumb />
+                <button
+                  type="button"
+                  aria-pressed={inBatch}
+                  onClick={() => onSelect(inBatch && selectedId ? selectedId : row.assets[0]!.id)}
+                  className="flex min-w-0 flex-1 flex-col rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)"
+                >
+                  <span className="truncate font-medium">{wb(lang, "imageBatch")}</span>
+                  <span className="text-xs text-(--muted-fg)">
+                    {count} · {formatBytes(total)}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={wb(lang, "removeBatch", { count })}
+                  onClick={() => onRemoveMany(row.assets.map((asset) => asset.id))}
+                  className={ICON_BUTTON_CLASS}
+                >
+                  <X aria-hidden="true" className="size-4" />
+                </button>
+              </li>
+            );
+          }
+          const { asset } = row;
           const selected = asset.id === selectedId;
           return (
             <li
@@ -336,110 +403,6 @@ export function OperationHost({ id, operations, lang, ...props }: OperationHostP
   return <Component lang={lang} {...props} />;
 }
 
-/* -------------------------------------------------------------- output tray */
-
-export interface OutputEntry {
-  id: string;
-  output: OperationOutput;
-}
-
-/** A thumbnail for image outputs; a neutral slot for everything else. */
-function OutputPreview({ output }: { output: OperationOutput }) {
-  const mime = output.type.startsWith("image/")
-    ? output.type
-    : output.kind === "image"
-      ? imageMime(output.name.slice(output.name.lastIndexOf(".") + 1))
-      : null;
-  const [url, setUrl] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    if (!mime) return;
-    const objectUrl = URL.createObjectURL(new Blob([output.bytes as unknown as BlobPart], { type: mime }));
-    setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [output, mime]);
-  if (!mime) return null;
-  return (
-    <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-(--border) bg-(--bg)" aria-hidden="true">
-      {url ? <img src={url} alt="" className="size-full object-cover" /> : null}
-    </span>
-  );
-}
-
-export interface OutputTrayProps {
-  lang: AppLang;
-  outputs: readonly OutputEntry[];
-  onOpenAsAsset: (entry: OutputEntry) => void;
-  onRemove: (id: string) => void;
-}
-
-export function OutputTray({ lang, outputs, onOpenAsAsset, onRemove }: OutputTrayProps) {
-  const downloadAll = React.useCallback(() => {
-    outputs.forEach((entry, index) => {
-      // Browsers swallow rapid programmatic downloads; stagger them a little.
-      window.setTimeout(
-        () =>
-          saveBlob(new Blob([entry.output.bytes as unknown as BlobPart], { type: entry.output.type }), entry.output.name),
-        index * 300,
-      );
-    });
-  }, [outputs]);
-  if (outputs.length === 0) return null;
-  return (
-    <section className={cn(panelClass, "flex flex-col gap-3")} aria-labelledby="wb-outputs">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="wb-outputs" className="text-sm font-semibold">
-          {wb(lang, "outputs")}
-        </h2>
-        {outputs.length > 1 ? (
-          <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={downloadAll}>
-            <Download aria-hidden="true" className="size-3.5" />
-            {wb(lang, "downloadAll")}
-          </ActionButton>
-        ) : null}
-      </div>
-      <ul className="flex flex-col gap-2">
-        {outputs.map((entry) => (
-          <li key={entry.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-(--border) bg-(--bg) px-3 py-2">
-            <OutputPreview output={entry.output} />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium" title={entry.output.name}>
-                {entry.output.name}
-              </span>
-              <span className="text-xs text-(--muted-fg)">
-                {entry.output.kind ?? detectAssetKind(entry.output.name)} · {formatBytes(entry.output.bytes.length)}
-              </span>
-            </div>
-            <ActionButton
-              variant="secondary"
-              className="h-8 px-3 text-xs"
-              onClick={() =>
-                saveBlob(new Blob([entry.output.bytes as unknown as BlobPart], { type: entry.output.type }), entry.output.name)
-              }
-            >
-              <Download aria-hidden="true" className="size-3.5" />
-              {wb(lang, "download")}
-            </ActionButton>
-            <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => onOpenAsAsset(entry)}>
-              {wb(lang, "openAsAsset")}
-            </ActionButton>
-            {isTextual(entry.output.kind ?? detectAssetKind(entry.output.name)) && entry.output.bytes.length <= MAX_SENDABLE_BYTES && (
-              <SendTextButton lang={lang} name={entry.output.name} getText={() => new TextDecoder().decode(entry.output.bytes)} />
-            )}
-            <button
-              type="button"
-              aria-label={wb(lang, "removeOutput", { name: entry.output.name })}
-              onClick={() => onRemove(entry.id)}
-              className={ICON_BUTTON_CLASS}
-            >
-              <X aria-hidden="true" className="size-4" />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 /* ------------------------------------------------------------------ shell */
 
 export interface WorkbenchAppProps {
@@ -455,11 +418,9 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
   // The user's explicit tab; null means "the best offered action".
   const [activeId, setActiveId] = React.useState<CapabilityId | null>(null);
   const [paramsById, setParamsById] = React.useState<Record<string, Record<string, unknown>>>({});
-  const [outputs, setOutputs] = React.useState<OutputEntry[]>([]);
   // Unsaved work, tagged with the operation that reported it so a newly
   // opened operation never inherits (or loses) another one's state.
   const [dirtyReport, setDirtyReport] = React.useState({ key: "", dirty: false });
-  const outputSeq = React.useRef(0);
 
   // Read through refs so the stable callbacks below always see the latest.
   const dirtyRef = React.useRef(false);
@@ -529,7 +490,7 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     : (current?.capability.id ?? null);
   const operationAssets = current?.assets ?? EMPTY_ASSETS;
   const setMembers = React.useMemo<ReadonlySet<string>>(
-    () => new Set(current?.capability.set ? current.assets.map((asset) => asset.id) : []),
+    () => new Set(current && (current.capability.set || current.assets.length > 1) ? current.assets.map((asset) => asset.id) : []),
     [current],
   );
   const operationKey = `${active}:${operationAssets.map((asset) => asset.id).join("|")}`;
@@ -565,15 +526,19 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     requestLeave(() => setActiveId(id));
   };
 
-  const removeAsset = (id: string) => {
+  const removeAssets = (ids: readonly string[]) => {
+    const gone = new Set(ids);
     const remove = () => {
-      const index = assets.findIndex((asset) => asset.id === id);
-      const rest = assets.filter((asset) => asset.id !== id);
-      setAssets(rest);
-      // Removing the selected file selects its neighbour.
-      if (id === selected?.id) setSelectedId((rest[index] ?? rest[index - 1])?.id ?? null);
+      setAssets(assets.filter((asset) => !gone.has(asset.id)));
+      // Removing the selected file selects its nearest neighbour that stays.
+      if (selected && gone.has(selected.id)) {
+        const index = assets.indexOf(selected);
+        const after = assets.slice(index + 1).find((asset) => !gone.has(asset.id));
+        const before = assets.slice(0, index).reverse().find((asset) => !gone.has(asset.id));
+        setSelectedId((after ?? before)?.id ?? null);
+      }
     };
-    if (operationAssets.some((asset) => asset.id === id)) requestLeave(remove);
+    if (operationAssets.some((asset) => gone.has(asset.id))) requestLeave(remove);
     else remove();
   };
 
@@ -591,26 +556,11 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     [],
   );
 
+  // A file an operation hands over is saved straight away: there is no second
+  // list of results to keep in step with the operation's own.
   const handleProduce = React.useCallback((output: OperationOutput) => {
-    outputSeq.current += 1;
-    const id = `output-${outputSeq.current}`;
-    setOutputs((list) => [...list, { id, output }]);
+    saveBlob(new Blob([output.bytes as unknown as BlobPart], { type: output.type }), output.name);
   }, []);
-
-  const removeOutput = React.useCallback((id: string) => {
-    setOutputs((list) => list.filter((entry) => entry.id !== id));
-  }, []);
-
-  // The ONLY path from an output back into the tray — never automatic,
-  // otherwise an operation that publishes while reading its own output loops.
-  const openAsAsset = (entry: OutputEntry) =>
-    requestLeave(() => {
-      const asset = createAssetFromBytes(entry.output.name, entry.output.bytes, entry.output.kind);
-      setAssets((list) => [...list, asset]);
-      setOutputs((list) => list.filter((item) => item.id !== entry.id));
-      setSelectedId(asset.id);
-      setActiveId(null);
-    });
 
   const operation = active && (
     <OperationHost
@@ -645,7 +595,8 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
             setMembers={setMembers}
             activeId={active}
             onSelect={selectFile}
-            onRemove={removeAsset}
+            onRemove={(id) => removeAssets([id])}
+            onRemoveMany={removeAssets}
             onClear={clearAssets}
           />
           {hint.length > 0 && (
@@ -676,8 +627,6 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
           )}
         </>
       )}
-
-      <OutputTray lang={lang} outputs={outputs} onOpenAsAsset={openAsAsset} onRemove={removeOutput} />
 
       {received && (
         <ReceiveDialog

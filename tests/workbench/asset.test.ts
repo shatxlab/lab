@@ -45,4 +45,20 @@ describe("createAsset", () => {
 
     expect(arrayBuffer).toHaveBeenCalledTimes(1);
   });
+
+  it("hands back the original file as a Blob without reading it", async () => {
+    const arrayBuffer = vi.fn(async () => new ArrayBuffer(4));
+    const original = new Blob([new Uint8Array(4)], { type: "image/png" });
+    const asset = createAsset({ name: "p.png", size: 4, blob: original, arrayBuffer });
+
+    expect(await asset.toBlob()).toBe(original);
+    expect(arrayBuffer).not.toHaveBeenCalled();
+  });
+
+  it("builds a Blob from the bytes when there is no original file", async () => {
+    const asset = createAssetFromBytes("p.png", new Uint8Array([1, 2, 3]), "image");
+    const blob = await asset.toBlob();
+    expect(blob.size).toBe(3);
+    expect([...new Uint8Array(await blob.arrayBuffer())]).toEqual([1, 2, 3]);
+  });
 });

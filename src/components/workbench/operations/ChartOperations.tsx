@@ -1,8 +1,8 @@
 /**
  * `chart.make` — turn a spreadsheet into a chart: line, bars (grouped when there
  * are several series), histogram or scatter, picked from the shape of the data and
- * adjustable by hand. The SVG shown is the SVG exported, into the Outputs tray
- * (and as a PNG drawn from it).
+ * adjustable by hand. The SVG shown is the SVG exported (and, as a PNG, drawn
+ * from it); either is downloaded when asked for.
  */
 
 import * as React from "react";

@@ -134,7 +134,7 @@ interface MergeEntry extends PdfEntry {
   ranges: string;
 }
 
-export function PdfMergeOperation({ lang, assets, onProduce }: OperationProps) {
+export function PdfMergeOperation({ lang, assets }: OperationProps) {
   const [entries, setEntries] = React.useState<MergeEntry[]>([]);
   const [notice, setNotice] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -191,7 +191,6 @@ export function PdfMergeOperation({ lang, assets, onProduce }: OperationProps) {
       const bytes = await mergePdfs(parts);
       const pages = ready.reduce((sum, entry, index) => sum + (parts[index]!.pages?.length ?? entry.pageCount ?? 0), 0);
       setResult({ blob: new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), pages });
-      onProduce?.({ name: "merged.pdf", type: "application/pdf", bytes, kind: "pdf" });
     } catch (failure) {
       setError(errorMessage(lang, failure));
     } finally {
@@ -347,7 +346,7 @@ function SingleFileLoader({ lang, entry, onEntry }: { lang: AppLang; entry: PdfE
   );
 }
 
-export function PdfSplitOperation({ lang, assets, onProduce }: OperationProps) {
+export function PdfSplitOperation({ lang, assets }: OperationProps) {
   const [entry, setEntry] = React.useState<PdfEntry | null>(null);
   const [mode, setMode] = React.useState<SplitMode>("extract");
   const [ranges, setRanges] = React.useState("");
@@ -384,7 +383,6 @@ export function PdfSplitOperation({ lang, assets, onProduce }: OperationProps) {
         const label = mode === "extract" ? partLabel(plan.parts[0]!) : "all";
         const name = `${base}-${label}.pdf`;
         setResult({ blob: new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), name, count: 1, zip: false });
-        onProduce?.({ name, type: "application/pdf", bytes, kind: "pdf" });
       } else {
         const files: Record<string, Uint8Array> = {};
         const width = String(plan.parts.length).length;
@@ -395,7 +393,6 @@ export function PdfSplitOperation({ lang, assets, onProduce }: OperationProps) {
         const bytes = zipSync(files, { level: 0 });
         const name = `${base}-split.zip`;
         setResult({ blob: new Blob([bytes as unknown as BlobPart], { type: "application/zip" }), name, count: plan.parts.length, zip: true });
-        onProduce?.({ name, type: "application/zip", bytes, kind: "binary" });
       }
     } catch (failure) {
       setError(errorMessage(lang, failure));

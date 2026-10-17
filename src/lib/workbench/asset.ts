@@ -25,6 +25,11 @@ export interface AssetSource {
   type?: string;
   /** `File.lastModified`, when the source is a real file. */
   lastModified?: number;
+  /**
+   * The original file, when there is one. Handing it on costs nothing, unlike
+   * `bytes()`, which reads the whole file into memory and keeps it there.
+   */
+  blob?: Blob;
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 
@@ -39,6 +44,12 @@ export interface Asset {
 
   /** Raw bytes, read once and cached. */
   bytes(): Promise<Uint8Array>;
+  /**
+   * The content as a Blob. For a file from disk this is the file itself and
+   * reads nothing; use it (not `bytes()`) wherever a Blob will do, so large
+   * files and big batches are not copied into memory.
+   */
+  toBlob(): Promise<Blob>;
   /** Decoded text, honouring BOM/declared charset. */
   text(): Promise<string>;
   /** Parsed JSON/YAML/TOML value (or parsed JSON for any other text). */
@@ -70,6 +81,9 @@ export function createAsset(source: AssetSource, kind?: AssetKind): Asset {
   let bytesPromise: Promise<Uint8Array> | undefined;
   const bytes = (): Promise<Uint8Array> =>
     (bytesPromise ??= source.arrayBuffer().then((buffer) => new Uint8Array(buffer)));
+
+  const toBlob = async (): Promise<Blob> =>
+    source.blob ?? new Blob([(await bytes()) as unknown as BlobPart], { type: source.type ?? "" });
 
   const text = async (): Promise<string> => {
     const { decodeTextBytes } = await import("@/lib/viewer/charset");
@@ -105,6 +119,7 @@ export function createAsset(source: AssetSource, kind?: AssetKind): Asset {
     extension,
     source,
     bytes,
+    toBlob,
     text,
     json,
     workbook,
@@ -119,6 +134,7 @@ export function createAssetFromFile(file: File): Asset {
     size: file.size,
     type: file.type,
     lastModified: file.lastModified,
+    blob: file,
     arrayBuffer: () => file.arrayBuffer(),
   });
 }

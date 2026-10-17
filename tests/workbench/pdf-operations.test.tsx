@@ -57,7 +57,7 @@ describe("workbench PDF operations", () => {
     view.unmount();
   });
 
-  it("publishes the merged PDF through onProduce", async () => {
+  it("offers the merged PDF as its own download, without a second copy in a tray", async () => {
     const onProduce = vi.fn();
     const view = await mount(
       <PdfMergeOperation
@@ -68,11 +68,9 @@ describe("workbench PDF operations", () => {
     );
     await waitFor(() => expect(document.body.textContent).toContain("2 pages"));
     await click(button("Merge"));
-    await waitFor(() => expect(onProduce).toHaveBeenCalled());
-    const output = onProduce.mock.calls[0]![0] as { name: string; type: string; bytes: Uint8Array };
-    expect(output.name).toBe("merged.pdf");
-    expect(output.type).toBe("application/pdf");
-    expect(output.bytes.length).toBeGreaterThan(0);
+    await waitFor(() => expect(document.body.textContent).toContain("Merged 3 pages into one file"));
+    expect(button("Download")).toBeTruthy();
+    expect(onProduce).not.toHaveBeenCalled();
     view.unmount();
   });
 
@@ -86,7 +84,7 @@ describe("workbench PDF operations", () => {
     view.unmount();
   });
 
-  it("publishes a split file through onProduce", async () => {
+  it("offers a split file as its own download, without a second copy in a tray", async () => {
     const onProduce = vi.fn();
     const view = await mount(
       <PdfSplitOperation
@@ -98,11 +96,9 @@ describe("workbench PDF operations", () => {
     await waitFor(() => expect(document.body.textContent).toContain("3 pages"));
     await type(document.querySelector('input[placeholder="1-3, 7"]'), "1");
     await click(button("Split"));
-    await waitFor(() => expect(onProduce).toHaveBeenCalled());
-    const output = onProduce.mock.calls[0]![0] as { name: string; type: string; bytes: Uint8Array };
-    expect(output.name).toBe("doc-1.pdf");
-    expect(output.type).toBe("application/pdf");
-    expect(output.bytes.length).toBeGreaterThan(0);
+    await waitFor(() => expect(document.body.textContent).toContain("Created 1 file"));
+    expect(button("Download")).toBeTruthy();
+    expect(onProduce).not.toHaveBeenCalled();
     view.unmount();
   });
 

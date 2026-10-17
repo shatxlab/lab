@@ -48,6 +48,12 @@ export interface Capability {
    * The operation then receives all of them, in tray order.
    */
   set?: (count: number) => boolean;
+  /**
+   * Present for file capabilities that can also take a whole batch: when the
+   * selected file is one of these kinds, the operation receives every open file
+   * of that kind (in tray order) instead of just the selected one.
+   */
+  batch?: ReadonlySet<AssetKind>;
   /** Also offered on the empty screen, working on typed input instead of files. */
   starter?: boolean;
 }
@@ -103,6 +109,8 @@ export const CAPABILITIES: readonly Capability[] = [
     label: { en: "Recognize text", ru: "Распознать текст" },
     weight: 650,
     kinds: kinds("image", "pdf"),
+    // Pictures are read together, so a stack of photographed pages is one job.
+    batch: kinds("image"),
   },
   {
     id: "pdf.sign",
@@ -149,7 +157,10 @@ export function capabilitiesFor(assets: readonly Asset[], selected: Asset | null
   for (const capability of SORTED) {
     if (!capability.kinds.has(selected.kind)) continue;
     if (!capability.set) {
-      offered.push({ capability, assets: [selected] });
+      const together = capability.batch?.has(selected.kind)
+        ? assets.filter((asset) => asset.kind === selected.kind)
+        : [selected];
+      offered.push({ capability, assets: together });
       continue;
     }
     const group = members(capability, assets);

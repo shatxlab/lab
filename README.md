@@ -8,7 +8,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 
 | Route | Tool | What it does |
 |---|---|---|
-| `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Recognize text** (OCR) reads a picture or the pages of a scanned PDF, in English and Russian, on the device. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
+| `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once, up to thousands of photos. **Recognize text** (OCR) reads a picture, a stack of pictures in one go, or the pages of a scanned PDF, in English and Russian, on the device. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
 | `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes and lo-fi music, always open in a full-screen pixel office. Press Start and follow the 25/5/15 flow (a break after every Pomodoro, a long one after every fourth); during a break people go for coffee, water, a sit on the sofa, a book or a snack; give a Pomodoro up and one of the six people packs a box and walks out the door, and when the office is empty you hire a new team. Music is generated in the browser. Pause, skip breaks, mute, the countdown in the tab title. Nothing is saved. |
 | `/board` | Whiteboard · Доска | A deliberately small whiteboard: rectangles, arrows and text in white chalk on a dark board, one line weight, undo and redo, one button that clears the board and one that downloads a PNG. Dragging an element moves it, dragging the empty canvas moves the board; two fingers or Ctrl and the wheel zoom. One board, saved in the browser. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
@@ -303,7 +303,7 @@ in a series colour, and an opt-in hatch (45°/135°) for colour-blind readers an
 print. The hover layer (`components/charts/ChartView.tsx`) is a crosshair on
 lines, a band on bars and histograms, and the nearest dot within 24px on a
 scatter; arrow keys show the same details, and a table of the plotted data is one
-button away. Export adds an SVG or a canvas-drawn PNG to the Outputs tray, on a
+button away. Export downloads an SVG or a canvas-drawn PNG, on a
 light or dark background whatever the page theme is.
 
 ### Recognize text (OCR)
@@ -325,9 +325,8 @@ small pictures (below 1600 px, up to 3×; above 4000 px it is scaled down;
 transparent areas become white). PDF pages are drawn at about 200 dpi, up to
 50 per run, chosen by a page range. Progress covers engine start-up and every
 page, and Stop terminates the worker. The text is shown with the mean confidence
-and added to the Outputs tray as `<name>.txt`, where Edit, Compare or the QR
-generator can take it on. The tool says plainly that handwriting and tiny or
-blurred text read poorly.
+and can be copied or downloaded as `<name>.txt`. The tool says plainly that
+handwriting and tiny or blurred text read poorly.
 
 Pages can be prepared and read in four ways (`lib/ocr/layout.ts` holds the maths,
 all of it on plain arrays so it is tested without a browser). **Straighten tilted
@@ -343,11 +342,53 @@ single-block mode. **Table** reads the page as one block with spacing preserved,
 then rebuilds the table from the word boxes: each line is cut into cells where
 the gap is wider than a space, and cells line up into columns by the horizontal
 bands they cover, so empty cells and right-aligned numbers stay in their columns.
-The result opens in the workbench as a `.csv` spreadsheet. After any read, the
+The result downloads as a `.csv` spreadsheet. After any read, the
 words the engine was unsure of (below 75% confidence, red below 50%) are listed
 and boxed on the page as it was read, so a person knows where to look first. To add a language, put its
 `.traineddata.gz` where the copy script looks and name it in `LANGUAGES` there
 (and in `LANGUAGE_NAMES` in `lib/ocr/assets.ts`).
+
+### Many files at once
+
+The workbench is meant to hold a thousand photos (a few GB) without lagging, which
+shapes how images and OCR are built.
+
+- **Nothing is copied up front.** An `Asset` keeps a handle on the dropped `File`
+  (`asset.toBlob()`, free), and only the code that works on a file reads its bytes,
+  while it works on it. `bytes()` caches forever, so it is kept for documents and
+  never used for photos.
+- **Ten images are one row.** From `BATCH_MIN` (10, `lib/workbench/batch.ts`) the
+  Files section shows a single "Image batch · 1,000 images · 2.0 GB" row (`trayRows`
+  in `WorkbenchApp.tsx`) with one remove button; each image still has its own row
+  under Results. Below ten, files are listed one by one as before.
+- **Work is bounded.** `lib/workbench/pool.ts` runs two or three files at once
+  (one on a phone with little memory), never all of them. Decoding a 12 MP photo
+  takes tens of megabytes.
+- **A batch runs on request.** Below ten images the results follow the settings live.
+  From ten, nothing starts by itself, because a slider moved over a thousand
+  photos would restart a thousand jobs: a "Process N images" button runs it, with
+  progress and Stop, and processing again only does what is missing, outdated or
+  failed. Results made with older settings are marked *Outdated*.
+- **The list is cheap.** Items live in a ref and are published to React a few times
+  a second (`lib/workbench/item-store.ts`); only the item that changed is replaced,
+  so memoised rows skip the rest. Results show fifty rows at a time, more as the
+  list is scrolled (`ShowMore`). Thumbnails are decoded already shrunk
+  (`createImageBitmap` with a target width) onto a small canvas, only when
+  visible, a couple at a time (`lib/workbench/thumb.ts`); a full-size photo is
+  never put in an `<img>`.
+- **The zip streams.** `lib/workbench/zip.ts` writes files into a zip one at a time
+  (fflate's streaming `Zip`) and assembles the archive from `Blob` pieces, so the
+  batch is not held in memory twice. Past 3 GB or 60,000 files it splits into
+  `images-1.zip`, `images-2.zip`…
+- **OCR on several pictures** reads them with one engine (starting it costs
+  seconds), one after another (`runOcrBatch` in `lib/ocr/run.ts`). Only each
+  picture's text is kept, not word boxes or page images. Stop keeps what was read
+  and the button then reads the rest.
+
+On 1,000 generated 12 MP JPEGs (3.1 GB) in Chrome, shrinking to 1920 px: 61 s, the
+page never blocked for more than ~0.1 s and about 20 MB of JavaScript memory, where
+the version before took 366 s, froze the page for up to a minute at a time and held
+3.3 GB of JavaScript memory.
 
 ### Focus office
 
@@ -446,7 +487,10 @@ and the 1200×630 social card are generated from it by
 Anything that works on a file belongs in the workbench, not on its own page:
 add a capability to `src/lib/workbench/capabilities.ts` (label, group, weight,
 `match`), its component under `src/components/workbench/operations/`, and one
-line in `src/lib/workbench/operations.ts`. For a standalone page (games):
+line in `src/lib/workbench/operations.ts`. An operation that makes a file either
+shows its own result with a Download button, or calls `onProduce`, which downloads
+it straight away: there is no separate list of outputs. For a standalone page
+(games):
 
 1. Add the tool's island under `src/components/<tool>/` and its logic under
    `src/lib/<tool>/` — reuse the shared helpers in `src/components/tools/ui.tsx`

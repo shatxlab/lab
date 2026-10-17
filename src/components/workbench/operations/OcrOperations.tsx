@@ -3,14 +3,20 @@
  * (tesseract, in a web worker) and its language data are about 10 MB, so they are
  * downloaded on request, with their real sizes shown, kept in a cache of their
  * own and removable. Nothing is ever sent anywhere: the files come from this site
- * and the recognition happens on this device. The result is added to the Outputs
- * tray as a text file.
+ * and the recognition happens on this device. The result is shown here and can be
+ * copied or downloaded as a text file.
+ *
+ * With several pictures open they are read as a batch: one engine for all of them,
+ * one after another, each into its own text file (see OcrBatchResults).
  */
 
 import * as React from "react";
+import { Download } from "lucide-react";
 
 import { imageMime } from "@/components/viewer/viewers/ImageView";
+import { OcrBatchResults, type OcrBatchItem } from "@/components/workbench/operations/OcrBatchResults";
 import { ActionButton, CopyButton, SelectField, inputClass, labelClass, panelClass, textareaClass } from "@/components/tools/ui";
+import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
 import { OCR_CACHE, cacheSupported, cachedFiles, downloadFiles, removeFiles, totalSize } from "@/lib/apps/heavy-assets";
 import { LANGUAGE_NAMES, allFiles, loadManifest, planFor, supportsSimd, type OcrManifest } from "@/lib/ocr/assets";
@@ -18,9 +24,11 @@ import { toc } from "@/lib/ocr/i18n";
 import { DEFAULT_PREPROCESS, type PreprocessOptions } from "@/lib/ocr/preprocess";
 import { OcrWords } from "@/components/workbench/operations/OcrWords";
 import { tableToCsv } from "@/lib/ocr/layout";
-import { LAYOUTS, MAX_PDF_PAGES, runOcr, type Layout, type OcrProgress, type OcrResult } from "@/lib/ocr/run";
+import { LAYOUTS, MAX_PDF_PAGES, runOcr, runOcrBatch, type BatchProgress, type Layout, type OcrProgress, type OcrResult } from "@/lib/ocr/run";
 import { parsePageRanges } from "@/lib/pdf/ranges";
 import { cn, formatBytes } from "@/lib/viewer/utils";
+import type { Asset } from "@/lib/workbench/asset";
+import { useItemStore } from "@/lib/workbench/item-store";
 import type { OperationProps } from "@/lib/workbench/operation";
 
 type Manifest = { status: "loading" } | { status: "missing" } | { status: "ready"; manifest: OcrManifest };
@@ -30,6 +38,9 @@ type Run =
   | { status: "running"; progress: OcrProgress | null }
   | { status: "done"; result: OcrResult; name: string; csv: boolean }
   | { status: "error"; message: string };
+
+/** A batch row with the picture it reads, which is not shown. */
+type BatchEntry = OcrBatchItem & { asset: Asset };
 
 const supported = (): boolean => typeof WebAssembly === "object" && typeof Worker !== "undefined";
 const baseName = (name: string): string => name.replace(/\.[^./\\]+$/, "") || "text";
@@ -51,9 +62,15 @@ function stageLabel(lang: AppLang, progress: OcrProgress | null): string {
   }
 }
 
-export function OcrOperation({ lang, assets, params, setParams, onProduce }: OperationProps) {
+export function OcrOperation({ lang, assets, params, setParams }: OperationProps) {
   const asset = assets[0];
   const isPdf = asset?.kind === "pdf";
+  // Several pictures are one job; a PDF or a single picture keeps the page-by-page view.
+  const batch = assets.length > 1;
+  const entries = useItemStore<BatchEntry>();
+  const entriesRef = React.useRef(entries);
+  entriesRef.current = entries;
+  const [batchStage, setBatchStage] = React.useState<BatchProgress["stage"] | null>(null);
   const [manifest, setManifest] = React.useState<Manifest>({ status: "loading" });
   const [cached, setCached] = React.useState<Set<string>>(new Set());
   const [run, setRun] = React.useState<Run>({ status: "idle" });
@@ -117,6 +134,23 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
   // Leaving the tab stops anything in progress.
   React.useEffect(() => () => abort.current?.abort(), []);
 
+  // One row per picture of a batch. Nothing is read yet: that happens when its turn comes.
+  const assetKey = assets.map((a) => a.id).join("|");
+  React.useEffect(() => {
+    if (!batch) return;
+    entriesRef.current.reset(
+      assets.map((a, index) => ({
+        id: index + 1,
+        asset: a,
+        source: a.name,
+        name: `${baseName(a.name)}.txt`,
+        status: "waiting" as const,
+      })),
+    );
+    // The assets prop is stable for a given set of ids.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch, assetKey]);
+
   if (!asset) return null;
   if (!supported()) return <p className="text-sm text-(--warning)">{toc(lang, "unsupported")}</p>;
   if (manifest.status === "loading") return <p className="text-sm text-(--muted-fg)">{toc(lang, "loadingManifest")}</p>;
@@ -175,20 +209,86 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
         signal: controller.signal,
         onProgress: (progress) => setRun({ status: "running", progress }),
       });
-      // A table becomes a spreadsheet the workbench can open and chart; anything else is text.
+      // A table becomes a spreadsheet; anything else is text.
       const csv = result.table !== null;
       const name = `${baseName(asset.name)}.${csv ? "csv" : "txt"}`;
       setRun({ status: "done", result, name, csv });
-      if (result.table && result.table.length > 0) {
-        onProduce?.({ name, type: "text/csv;charset=utf-8", bytes: new TextEncoder().encode(tableToCsv(result.table)), kind: "sheet" });
-      } else if (!csv && result.text.trim() !== "") {
-        onProduce?.({ name, type: "text/plain;charset=utf-8", bytes: new TextEncoder().encode(result.text), kind: "text" });
-      }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") setRun({ status: "idle" }), setNote(toc(lang, "stopped"));
       else setRun({ status: "error", message: toc(lang, "failed", { detail: error instanceof Error ? error.message : String(error) }) });
     } finally {
       abort.current = null;
+    }
+  };
+
+  const recognizeBatch = async () => {
+    const controller = new AbortController();
+    abort.current = controller;
+    setNote("");
+    setBatchStage("start");
+    setRun({ status: "running", progress: null });
+    const list = entriesRef.current;
+    const todo = list.all().filter((item) => item.status !== "done");
+    list.updateMany(todo.map((item) => item.id), { status: "waiting" });
+    try {
+      await runOcrBatch({
+        sources: todo.map((item) => ({
+          id: item.id,
+          blob: async () => {
+            const blob = await item.asset.toBlob();
+            // The engine tells an SVG from its type, which a file from disk may lack.
+            return blob.type ? blob : blob.slice(0, blob.size, imageMime(item.asset.extension));
+          },
+        })),
+        languages: chosen,
+        plan,
+        preprocess,
+        straighten,
+        layout,
+        signal: controller.signal,
+        onStart: (id) => {
+          // The engine is up as soon as the first picture is being read.
+          setBatchStage(null);
+          entriesRef.current.update(id, { status: "working" }, true);
+        },
+        onResult: (id, outcome) => {
+          if (!outcome.ok) {
+            entriesRef.current.update(id, { status: "error" }, true);
+            return;
+          }
+          const { result } = outcome;
+          const csv = result.table !== null;
+          const text = csv ? (result.table!.length > 0 ? tableToCsv(result.table!) : "") : result.text.trim() === "" ? "" : result.text;
+          const current = entriesRef.current.get(id);
+          entriesRef.current.update(
+            id,
+            {
+              status: "done",
+              text,
+              csv,
+              rows: result.table?.length,
+              confidence: result.confidence,
+              name: current ? `${baseName(current.source)}.${csv ? "csv" : "txt"}` : undefined,
+            },
+            true,
+          );
+        },
+        onProgress: (progress) => setBatchStage(progress.id === null ? progress.stage : null),
+      });
+      setRun({ status: "idle" });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        // The picture being read when it stopped goes back in the queue.
+        const reading = entriesRef.current.all().filter((item) => item.status === "working").map((item) => item.id);
+        entriesRef.current.updateMany(reading, { status: "waiting" });
+        setRun({ status: "idle" });
+        setNote(toc(lang, "stopped"));
+      } else {
+        setRun({ status: "error", message: toc(lang, "failed", { detail: error instanceof Error ? error.message : String(error) }) });
+      }
+    } finally {
+      abort.current = null;
+      setBatchStage(null);
     }
   };
 
@@ -294,7 +394,7 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
           />
           <span className="text-xs text-(--muted-fg)">{toc(lang, "layoutHint")}</span>
         </div>
-        {isPdf && check("markPages")}
+        {isPdf && !batch && check("markPages")}
         {isPdf && (
           <label className={labelClass}>
             {toc(lang, "pages")}
@@ -306,6 +406,16 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
         )}
       </section>
 
+      {batch ? (
+        <OcrBatchResults
+          lang={lang}
+          items={entries.items}
+          run={{ running: run.status === "running", starting: run.status === "running" && (batchStage === "engine" || batchStage === "language" || batchStage === "start") ? batchStage : null }}
+          canStart={ready && !busy}
+          onStart={() => void recognizeBatch()}
+          onStop={() => abort.current?.abort()}
+        />
+      ) : (
       <div className="flex flex-wrap items-center gap-3">
         {run.status !== "running" ? (
           <ActionButton onClick={() => void recognize()} disabled={!ready || busy || pagesInvalid}>
@@ -323,6 +433,7 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
           </label>
         )}
       </div>
+      )}
 
       {note && (
         <p className="text-sm text-(--muted-fg)" role="status">
@@ -360,7 +471,12 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
                     </tbody>
                   </table>
                 </div>
-                <p className="text-xs text-(--muted-fg)">{toc(lang, "addedCsv", { name: run.name })}</p>
+                <div>
+                  <ActionButton variant="secondary" onClick={() => saveBlob(new Blob([tableToCsv(run.result.table!)], { type: "text/csv;charset=utf-8" }), run.name)}>
+                    <Download aria-hidden="true" className="size-4" />
+                    {toc(lang, "downloadCsv")}
+                  </ActionButton>
+                </div>
               </>
             ) : (
               <p className="text-sm text-(--muted-fg)">{toc(lang, "tableNone")}</p>
@@ -375,7 +491,12 @@ export function OcrOperation({ lang, assets, params, setParams, onProduce }: Ope
                 <span>{toc(lang, "confidence", { n: Math.round(run.result.confidence) })}</span>
                 {run.result.pages > 1 && <span>{toc(lang, "pagesDone", { n: run.result.pages })}</span>}
               </div>
-              <p className="text-xs text-(--muted-fg)">{toc(lang, "added", { name: run.name })}</p>
+              <div>
+                <ActionButton variant="secondary" onClick={() => saveBlob(new Blob([run.result.text], { type: "text/plain;charset=utf-8" }), run.name)}>
+                  <Download aria-hidden="true" className="size-4" />
+                  {toc(lang, "downloadText")}
+                </ActionButton>
+              </div>
             </>
           )}
           {run.result.details.some((page) => page.straightened !== 0 || page.columns > 1) && (

@@ -98,6 +98,13 @@ export interface RunOptions {
   markPages: boolean;
   onProgress: (progress: OcrProgress) => void;
   signal?: AbortSignal;
+  /**
+   * An engine that is already running, and stays the caller's: it is not
+   * started or stopped here. Starting one takes a while, so a batch shares it.
+   */
+  engine?: Engine;
+  /** Keep each page's picture in the result (to box doubtful words on). Costs an encode per page; default true. */
+  keepImages?: boolean;
   /** For tests. */
   createEngine?: typeof createEngine;
   tools?: CanvasTools;
@@ -168,12 +175,13 @@ export async function runOcr(options: RunOptions): Promise<OcrResult> {
     onProgress({ fraction: overall(stage, fraction, current.index, pages), stage, page: current.page, pages });
 
   if (signal?.aborted) throw abortError();
-  let engine: Engine | null = null;
+  const shared = options.engine ?? null;
+  let engine: Engine | null = shared;
   const cancelled = new Promise<never>((_, reject) => signal?.addEventListener("abort", () => reject(abortError()), { once: true }));
   const guard = <T>(promise: Promise<T>): Promise<T> => Promise.race([promise, cancelled]);
 
   try {
-    engine = await guard(start(plan, languages, (status, fraction) => report(status, fraction)));
+    engine ??= await guard(start(plan, languages, (status, fraction) => report(status, fraction)));
     const details: PageResult[] = [];
     for (let index = 0; index < pages; index += 1) {
       current = { page: numbers[index]!, index };
@@ -224,7 +232,7 @@ export async function runOcr(options: RunOptions): Promise<OcrResult> {
         weighted += result.confidence;
         if (strip.canvas !== canvas) strip.canvas.width = strip.canvas.height = 0;
       }
-      const image = await tools.blob(canvas);
+      const image = options.keepImages === false ? null : await tools.blob(canvas);
       details.push({
         number: numbers[index]!,
         text: texts.filter(Boolean).join("\n\n"),
@@ -245,7 +253,111 @@ export async function runOcr(options: RunOptions): Promise<OcrResult> {
     const text = table ? `${table.map((row) => row.join("\t")).join("\n")}\n` : joinPages(details.map((page) => page.text), numbers, markPages);
     return { text, confidence: details.reduce((sum, page) => sum + page.confidence, 0) / Math.max(1, details.length), pages, details, table };
   } finally {
-    // Stopping the worker is what cancels a recognition in progress.
+    // Stopping the worker is what cancels a recognition in progress. A shared
+    // engine belongs to the caller, who stops it when the whole job is over.
+    if (!shared) await engine?.terminate().catch(() => {});
+  }
+}
+
+/* ------------------------------------------------------------------- batch */
+
+/** One picture of a batch; its file is only opened when its turn comes. */
+export interface BatchSource {
+  id: number;
+  blob(): Promise<Blob>;
+}
+
+export type BatchOutcome = { ok: true; result: OcrResult } | { ok: false; error: unknown };
+
+export interface BatchProgress {
+  /** 0–1 over the whole batch. */
+  fraction: number;
+  /** Files finished so far, and how many there are. */
+  done: number;
+  total: number;
+  stage: OcrProgress["stage"];
+  /** The file being read, or null while the engine starts. */
+  id: number | null;
+}
+
+export interface BatchOptions {
+  sources: readonly BatchSource[];
+  languages: readonly string[];
+  plan: Plan;
+  preprocess: PreprocessOptions;
+  straighten?: boolean;
+  layout?: Layout;
+  onStart?: (id: number) => void;
+  /** Called once per file, as soon as it is read (or fails). */
+  onResult: (id: number, outcome: BatchOutcome) => void;
+  onProgress: (progress: BatchProgress) => void;
+  signal?: AbortSignal;
+  /** For tests. */
+  createEngine?: typeof createEngine;
+  tools?: CanvasTools;
+}
+
+const isAbort = (error: unknown): boolean => error instanceof DOMException && error.name === "AbortError";
+
+/**
+ * Read many pictures with one engine. Starting the engine costs seconds, so it
+ * is started once; a file that cannot be read is reported and the rest go on.
+ * Only stopping (the signal) ends the batch early, with an AbortError.
+ */
+export async function runOcrBatch(options: BatchOptions): Promise<void> {
+  const { sources, signal } = options;
+  const total = sources.length;
+  const start = options.createEngine ?? createEngine;
+  if (signal?.aborted) throw abortError();
+  const cancelled = new Promise<never>((_, reject) => signal?.addEventListener("abort", () => reject(abortError()), { once: true }));
+  const guard = <T>(promise: Promise<T>): Promise<T> => Promise.race([promise, cancelled]);
+
+  let engine: Engine | null = null;
+  let done = 0;
+  try {
+    engine = await guard(
+      start(options.plan, options.languages, (status, fraction) =>
+        options.onProgress({ fraction: ENGINE_SHARE * Math.max(0, Math.min(1, fraction)), done, total, stage: status, id: null }),
+      ),
+    );
+    for (const source of sources) {
+      if (signal?.aborted) throw abortError();
+      options.onStart?.(source.id);
+      try {
+        const blob = await guard(source.blob());
+        const result = await runOcr({
+          source: { kind: "image", blob },
+          languages: options.languages,
+          plan: options.plan,
+          preprocess: options.preprocess,
+          straighten: options.straighten,
+          layout: options.layout,
+          markPages: false,
+          // Boxing doubtful words needs each page's picture; a batch has no such view.
+          keepImages: false,
+          engine,
+          signal,
+          tools: options.tools,
+          onProgress: (progress) => {
+            const inner = Math.max(0, Math.min(1, (progress.fraction - ENGINE_SHARE) / (1 - ENGINE_SHARE)));
+            options.onProgress({
+              fraction: ENGINE_SHARE + (1 - ENGINE_SHARE) * ((done + inner) / total),
+              done,
+              total,
+              stage: progress.stage,
+              id: source.id,
+            });
+          },
+        });
+        options.onResult(source.id, { ok: true, result });
+      } catch (error) {
+        if (isAbort(error)) throw error;
+        options.onResult(source.id, { ok: false, error });
+      }
+      done += 1;
+    }
+    options.onProgress({ fraction: 1, done, total, stage: "recognizing", id: null });
+  } finally {
     await engine?.terminate().catch(() => {});
   }
 }

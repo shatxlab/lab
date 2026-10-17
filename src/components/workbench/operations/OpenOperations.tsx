@@ -7,8 +7,7 @@
  * disagree silently: while an edit is unsaved, Preview is locked and the
  * shell is told through `onDirtyChange`.
  *
- * Saving always produces a copy in the Outputs tray; the original file is
- * never modified.
+ * Saving always downloads a copy; the original file is never modified.
  */
 
 import * as React from "react";

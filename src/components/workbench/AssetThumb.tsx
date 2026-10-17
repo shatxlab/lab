@@ -5,9 +5,9 @@
  */
 
 import * as React from "react";
-import { BookOpen, Braces, FileQuestion, FileText, Table, type LucideIcon } from "lucide-react";
+import { BookOpen, Braces, FileQuestion, FileText, Images, Table, type LucideIcon } from "lucide-react";
 
-import { imageMime } from "@/components/viewer/viewers/ImageView";
+import { BlobThumb } from "@/components/workbench/BlobThumb";
 import type { Asset } from "@/lib/workbench/asset";
 import type { AssetKind } from "@/lib/workbench/kinds";
 
@@ -29,29 +29,26 @@ const SLOT =
   "grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-(--border) bg-(--bg) text-(--muted-fg)";
 
 function ImageThumb({ asset }: { asset: Asset }) {
-  const [url, setUrl] = React.useState<string | null>(null);
+  const [blob, setBlob] = React.useState<Blob | null>(null);
   React.useEffect(() => {
     let cancelled = false;
-    let objectUrl: string | null = null;
-    setUrl(null);
+    setBlob(null);
+    // The file itself, not a copy of its bytes; the thumbnail is decoded small.
     void asset
-      .bytes()
-      .then((bytes) => {
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(new Blob([bytes as unknown as BlobPart], { type: imageMime(asset.extension) }));
-        setUrl(objectUrl);
+      .toBlob()
+      .then((value) => {
+        if (!cancelled) setBlob(value);
       })
       .catch(() => {
         // An unreadable file just keeps the empty slot.
       });
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [asset]);
   return (
     <span className={SLOT} aria-hidden="true" data-asset-thumb="image">
-      {url ? <img src={url} alt="" className="size-full object-cover" /> : null}
+      <BlobThumb blob={blob} px={40} />
     </span>
   );
 }
@@ -62,6 +59,15 @@ export function AssetThumb({ asset }: { asset: Asset }) {
   return (
     <span className={SLOT} aria-hidden="true" data-asset-thumb={asset.kind}>
       <Glyph className="size-5" />
+    </span>
+  );
+}
+
+/** The tile for a whole batch of images: one glyph, nothing decoded. */
+export function BatchThumb() {
+  return (
+    <span className={SLOT} aria-hidden="true" data-asset-thumb="batch">
+      <Images className="size-5" />
     </span>
   );
 }

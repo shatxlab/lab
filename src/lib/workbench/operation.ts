@@ -2,8 +2,8 @@
  * The contract every workbench operation implements.
  *
  * An operation is a plain React component that receives the assets selected
- * for it and, when it produces a document, hands it back through `onProduce`
- * so the shell can offer it in the Outputs tray. Parameters live in the shell
+ * for it and, when it produces a file with no results list of its own, hands it
+ * back through `onProduce`, which the shell downloads. Parameters live in the shell
  * (persisted per capability id), so an operation is stateless with respect to
  * everything except its own draft while typing.
  *
@@ -34,7 +34,7 @@ export interface OperationProps {
   /** Persisted parameters for this capability, when hosted by the shell. */
   params?: Record<string, unknown>;
   setParams?: (patch: Record<string, unknown>) => void;
-  /** Publish a result into the Outputs tray. */
+  /** Hand over a produced file; the shell downloads it. Operations with their own results list do not use it. */
   onProduce?: (output: OperationOutput) => void;
   /** True while the shell is running another operation. */
   busy?: boolean;

@@ -18,7 +18,7 @@
  */
 
 import * as React from "react";
-import { Download, Layers, PenTool, Smartphone, X } from "lucide-react";
+import { Download, Smartphone, X } from "lucide-react";
 
 import { AssetThumb } from "@/components/workbench/AssetThumb";
 import { ConfirmSheet } from "@/components/workbench/ConfirmSheet";
@@ -42,10 +42,7 @@ import {
 import { createAssetFromBytes, createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
 import { imageMime } from "@/components/viewer/viewers/ImageView";
 import { detectAssetKind, isTextual } from "@/lib/workbench/kinds";
-import { MAX_SENDABLE_BYTES, TEXT_SEND_KIND, canSendToFlashcards, parseTextSend, textToSend } from "@/lib/workbench/send";
-import { writeHandoff } from "@/lib/flash/handoff";
-import { writeBoardHandoff } from "@/lib/board/handoff";
-import { MAX_FILE_BYTES, parseBoardFile } from "@/lib/board/storage";
+import { MAX_SENDABLE_BYTES, TEXT_SEND_KIND, parseTextSend, textToSend } from "@/lib/workbench/send";
 import { wb } from "@/lib/workbench/i18n";
 import { loadOperation } from "@/lib/workbench/operations";
 import { EMPTY_ASSETS, type OperationComponent, type OperationOutput } from "@/lib/workbench/operation";
@@ -75,84 +72,6 @@ function SendTextButton({ lang, name, getText }: { lang: AppLang; name: string; 
         </button>
       )}
     />
-  );
-}
-
-/** Hands text to Flashcards, which opens in a new tab and asks where the cards should go. */
-function SendToFlashButton({ lang, name, getText }: { lang: AppLang; name: string; getText: () => Promise<string> | string }) {
-  const [message, setMessage] = React.useState("");
-  const timer = React.useRef<number | undefined>(undefined);
-  React.useEffect(() => () => window.clearTimeout(timer.current), []);
-
-  const say = (text: string) => {
-    setMessage(text);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setMessage(""), 8000);
-  };
-  const send = async () => {
-    if (!writeHandoff({ name, text: await getText() })) return say(wb(lang, "flashFailed"));
-    if (!window.open(withBase("/flash"), "_blank")) say(wb(lang, "flashBlocked"));
-  };
-
-  return (
-    <>
-      <button type="button" aria-label={wb(lang, "sendFlash", { name })} onClick={() => void send()} className={ICON_BUTTON_CLASS}>
-        <Layers aria-hidden="true" className="size-4" />
-      </button>
-      {message && (
-        <span role="status" className="basis-full text-xs text-(--warning)">
-          {message}
-        </span>
-      )}
-    </>
-  );
-}
-
-/**
- * Offered only for a JSON file that really is a Whiteboard board (checked once, in the
- * background); hands it to the Whiteboard, which opens in a new tab and adds it as a board.
- */
-function OpenInBoardButton({ lang, name, size, getText }: { lang: AppLang; name: string; size: number; getText: () => Promise<string> | string }) {
-  const [board, setBoard] = React.useState<string | null>(null);
-  const [message, setMessage] = React.useState("");
-  const timer = React.useRef<number | undefined>(undefined);
-  React.useEffect(() => () => window.clearTimeout(timer.current), []);
-
-  React.useEffect(() => {
-    if (size > MAX_FILE_BYTES || !name.toLowerCase().endsWith(".json")) return;
-    let cancelled = false;
-    void Promise.resolve(getText())
-      .then((text) => {
-        if (!cancelled && parseBoardFile(text)) setBoard(text);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-    // The file never changes under an asset id, so it is read once.
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (board === null) return null;
-  const say = (text: string) => {
-    setMessage(text);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setMessage(""), 8000);
-  };
-  const open = () => {
-    if (!writeBoardHandoff({ name, text: board })) return say(wb(lang, "boardFailed"));
-    if (!window.open(withBase("/board"), "_blank")) say(wb(lang, "boardBlocked"));
-  };
-  return (
-    <>
-      <button type="button" aria-label={wb(lang, "sendBoard", { name })} onClick={open} className={ICON_BUTTON_CLASS}>
-        <PenTool aria-hidden="true" className="size-4" />
-      </button>
-      {message && (
-        <span role="status" className="basis-full text-xs text-(--warning)">
-          {message}
-        </span>
-      )}
-    </>
   );
 }
 
@@ -308,8 +227,6 @@ export function AssetTray({
                   {details(asset)}
                 </button>
               )}
-              {asset.kind === "json" && <OpenInBoardButton lang={lang} name={asset.name} size={asset.size} getText={() => asset.text()} />}
-              {canSendToFlashcards(asset.kind, asset.name, asset.size) && <SendToFlashButton lang={lang} name={asset.name} getText={() => asset.text()} />}
               {isTextual(asset.kind) && asset.size <= MAX_SENDABLE_BYTES && (
                 <SendTextButton lang={lang} name={asset.name} getText={() => asset.text()} />
               )}
@@ -505,12 +422,6 @@ export function OutputTray({ lang, outputs, onOpenAsAsset, onRemove }: OutputTra
             <ActionButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => onOpenAsAsset(entry)}>
               {wb(lang, "openAsAsset")}
             </ActionButton>
-            {(entry.output.kind ?? detectAssetKind(entry.output.name)) === "json" && (
-              <OpenInBoardButton lang={lang} name={entry.output.name} size={entry.output.bytes.length} getText={() => new TextDecoder().decode(entry.output.bytes)} />
-            )}
-            {canSendToFlashcards(entry.output.kind ?? detectAssetKind(entry.output.name), entry.output.name, entry.output.bytes.length) && (
-              <SendToFlashButton lang={lang} name={entry.output.name} getText={() => new TextDecoder().decode(entry.output.bytes)} />
-            )}
             {isTextual(entry.output.kind ?? detectAssetKind(entry.output.name)) && entry.output.bytes.length <= MAX_SENDABLE_BYTES && (
               <SendTextButton lang={lang} name={entry.output.name} getText={() => new TextDecoder().decode(entry.output.bytes)} />
             )}

@@ -58,23 +58,6 @@ export const TOOLS: readonly ToolEntry[] = [
     },
   },
   {
-    id: "flash",
-    path: "/flash",
-    category: "productivity",
-    files: { en: "Decks · spaced repetition · CSV import", ru: "Колоды · интервальные повторения · импорт CSV" },
-    title: { en: "Flashcards", ru: "Карточки" },
-    description: {
-      en: "Study decks with spaced repetition: a few minutes a day, import from CSV or a pasted list, Markdown on both sides.",
-      ru: "Колоды с интервальными повторениями: несколько минут в день, импорт из CSV или списка, Markdown с обеих сторон.",
-    },
-    keywords: "flashcards cards deck study spaced repetition anki fsrs memorize vocabulary csv карточки колода учить повторение запоминание слова словарь",
-    seo: {
-      title: "Flashcards with spaced repetition",
-      description:
-        "Study flashcard decks with spaced repetition in your browser — import from CSV or a pasted list, Markdown cards, EN/RU. Free, private and offline.",
-    },
-  },
-  {
     id: "focus",
     path: "/focus",
     category: "productivity",
@@ -95,34 +78,16 @@ export const TOOLS: readonly ToolEntry[] = [
     id: "board",
     path: "/board",
     category: "productivity",
-    files: { en: "Boxes · arrows · pen · SVG, PNG and JSON export", ru: "Блоки · стрелки · карандаш · экспорт SVG, PNG и JSON" },
+    files: { en: "Rectangles · arrows · text · PNG export", ru: "Прямоугольники · стрелки · текст · экспорт PNG" },
     title: { en: "Whiteboard", ru: "Доска" },
     description: {
-      en: "A small whiteboard for sketching: boxes, ellipses, arrows, notes and freehand, with undo, pan and zoom, several boards and SVG, PNG or JSON export.",
-      ru: "Небольшая доска для набросков: блоки, эллипсы, стрелки, заметки и рисование от руки, отмена, перемещение и масштаб, несколько досок, экспорт в SVG, PNG и JSON.",
+      en: "A small whiteboard for quick sketches: rectangles, arrows and text, with undo and a PNG download.",
+      ru: "Небольшая доска для быстрых набросков: прямоугольники, стрелки и текст, отмена и скачивание PNG.",
     },
-    keywords: "whiteboard draw sketch diagram boxes arrows shapes pen notes excalidraw доска рисовать набросок схема диаграмма стрелки фигуры заметки",
+    keywords: "whiteboard draw sketch diagram boxes arrows notes доска рисовать набросок схема стрелки заметки",
     seo: {
       title: "Online whiteboard and sketchpad",
-      description:
-        "A free, private whiteboard in your browser: draw boxes, arrows, text and freehand, pan and zoom, keep several boards and export SVG, PNG or JSON. Works offline.",
-    },
-  },
-  {
-    id: "cv",
-    path: "/cv",
-    category: "productivity",
-    files: { en: "Résumé · ATS-safe templates · PDF, Word, text", ru: "Резюме · шаблоны для ATS · PDF, Word, текст" },
-    title: { en: "CV builder", ru: "Конструктор резюме" },
-    description: {
-      en: "Fill in a form and get a clean one-column résumé that applicant-tracking systems can read. Print to PDF with selectable text, or download Word, text or JSON.",
-      ru: "Заполните форму и получите аккуратное резюме в одну колонку, которое читают системы отбора кандидатов. Печать в PDF с выделяемым текстом, скачивание в Word, текст или JSON.",
-    },
-    keywords: "cv resume curriculum vitae builder ats applicant tracking template pdf docx job application резюме конструктор шаблон ats вакансия работа pdf word",
-    seo: {
-      title: "ATS-friendly CV and résumé builder",
-      description:
-        "Build a clean one-column résumé that applicant-tracking systems can read: four templates, English or Russian, PDF with real text, Word, text or JSON. Free and private.",
+      description: "A free, private whiteboard in your browser: draw rectangles, arrows and text, and download a PNG. Works offline.",
     },
   },
   {

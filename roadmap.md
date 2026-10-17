@@ -86,7 +86,7 @@ Not doing: cloud sync or a backend, full RRULE, tombstone merge.
   `src/lib/calendar/` with `dates.ts` (Monday-first grid, ISO week; may reuse
   `localDay` from `lib/apps/local-day.ts`), `model.ts` (entries, yearly
   expansion, multi-day bar layout), `storage.ts` (key `lab:calendar:v1`, pattern
-  of `lib/flash/storage.ts`), `backup-file.ts` (handle in IndexedDB, restore,
+  of `lib/board/storage.ts`), `backup-file.ts` (handle in IndexedDB, restore,
   debounced writer, all APIs injectable), `ics.ts` (parse and build), `i18n.ts`;
   `tests/calendar/` mirroring them.
 - Changed: `src/lib/apps/tools.ts` (a `TOOLS` entry, unique title and

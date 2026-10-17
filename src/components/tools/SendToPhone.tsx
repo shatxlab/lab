@@ -11,7 +11,7 @@ export interface SendToPhoneProps {
   lang: AppLang;
   /** Names the data so the receiving tool knows what it got. */
   kind: string;
-  /** The tool's page path, with the site base (e.g. `withBase("/flash")`). */
+  /** The tool's page path, with the site base (e.g. `withBase("/board")`). */
   toolPath: string;
   /** Called when the dialog opens, so big data is only read and encoded on demand. */
   getData: () => unknown | Promise<unknown>;

@@ -9,10 +9,8 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | Route | Tool | What it does |
 |---|---|---|
 | `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once. **Recognize text** (OCR) reads a picture or the pages of a scanned PDF, in English and Russian, on the device. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
-| `/flash` | Flashcards · Карточки | Spaced-repetition study decks, built for a few minutes a day. FSRS scheduling with four grades (the answer buttons show the next interval), a daily new-card allowance, a no-schedule cram mode and a streak. Import from a pasted list (`term — definition`), CSV, TSV or JSON; send text there from the workbench; export a deck as TSV or JSON; Markdown on both sides; EN/RU. |
 | `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes and lo-fi music, always open in a full-screen pixel office. Press Start and follow the 25/5/15 flow (a break after every Pomodoro, a long one after every fourth); during a break people go for coffee, water, a sit on the sofa, a book or a snack; give a Pomodoro up and one of the six people packs a box and walks out the door, and when the office is empty you hire a new team. Music is generated in the browser. Pause, skip breaks, mute, the countdown in the tab title. Nothing is saved. |
-| `/board` | Whiteboard · Доска | A small whiteboard for sketching: rectangles, ellipses, arrows, text and freehand, with select/move/resize, undo and redo, pan and zoom (two fingers, wheel, Space-drag), a grid, several boards, and export to SVG, PNG or a plain-JSON board file you can open again. |
-| `/cv` | CV builder · Конструктор резюме | Fill in a form and get a clean one-column résumé that applicant-tracking systems can read: four templates (classic, modern, minimal, plain), English or Russian headings, A4 or Letter. Print to PDF with selectable text, or download Word (.docx), plain text or a CV file you can reopen; several CVs, live preview. |
+| `/board` | Whiteboard · Доска | A deliberately small whiteboard: rectangles, arrows and text in white chalk on a dark board, one line weight, undo and redo, one button that clears the board and one that downloads a PNG. Dragging an element moves it, dragging the empty canvas moves the board; two fingers or Ctrl and the wheel zoom. One board, saved in the browser. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
@@ -98,10 +96,8 @@ src/
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/wordle/ Wordle island
-  components/cv/     CV builder island (shell, form editor, CvDocument templates)
-  components/board/  Whiteboard island (shell with boards, Workspace canvas and toolbar)
+  components/board/  Whiteboard island (shell and the Workspace canvas with its toolbar)
   components/focus/  Focus island (the room, flow panel; FocusScene hosts Tycoon's Pixi office)
-  components/flash/  Flashcards island (deck list, deck editor/import, study session)
   components/alias/  Alias game island (setup, round, results screens)
   components/crossword/ Crossword island (picker, board, grid, clues, completion)
   components/couples/ Couples game island (menu, setup, play, summary)
@@ -119,10 +115,8 @@ src/
   lib/wordle/        scoring, hard mode, storage, keyboard layouts, word lists
   lib/charts/        sheet → typed columns, chart spec + shape detection, scale/tick math, SVG builder, palette, export, i18n
   lib/send/          "Send to phone" payload codec (size-capped, defensive) + fragment hook
-  lib/cv/            schema, section view-model, edit helpers, HTML/DOCX/text export, storage, i18n
   lib/board/         element model, geometry/hit-testing, history, viewport, gestures, SVG output, storage, i18n
   lib/focus/         timestamp-based flow state machine, seeded office, lo-fi score and Web Audio player, cues, i18n
-  lib/flash/         FSRS scheduler, deck model + queues, import parsers, store ops, i18n, sound, storage
   lib/alias/         Game engine: words, deck, scoring, i18n, sound, storage
   lib/crossword/     Generated puzzles + word bank, grid builder, reducer, i18n, sound, storage
   lib/couples/       Seed vocabulary + prompt builder, deck, i18n, sound, storage
@@ -149,7 +143,7 @@ tests/
   alias/             deck, scoring, storage, sound and render tests
   couples/           prompt counts/uniqueness, deck, storage, sound, layout and flow tests
   workbench/         capability registry, shell and per-operation UI tests (jsdom)
-  convert/ qr/ image/ pdf/ wordle/ flash/ focus/ send/ charts/ board/ cv/  logic tests per tool (flash/ also has the jsdom flow tests)
+  convert/ qr/ image/ pdf/ wordle/ focus/ send/ charts/ board/  logic tests per tool
   a11y/              axe-core checks of every tool's first screen + CSS foundations
   pwa/               service-worker behaviour, manifest, registration prompt
   helpers/           shared mount/click/type/axe helpers
@@ -236,126 +230,25 @@ against the sim as a headless balance check, and
 through the game's scenarios; its PWA scenario from the standalone app is not
 ported because the lab's own service worker covers it.
 
-### Flashcards
-
-`lib/flash/fsrs.ts` is the FSRS-4.5 memory model with its published default
-weights and no learning steps: each card carries a stability and a difficulty,
-and every review updates both. `lib/flash/model.ts` is the day-based deck
-model (`localDay()` gives the local calendar day, so "tomorrow" follows the
-user's midnight), the study queue (overdue cards first, then the daily
-new-card allowance), cram, streaks and `recordReview`. A card answered
-*Again* returns a few cards later in the same session but is scheduled only
-once; cram never touches the schedule.
-
-Everything is stored under `lab:flash:v1`, so the settings backup covers it;
-`storage.ts` re-validates the whole shape on read (limits: 100 decks, 5 000
-cards per deck, 4 000 characters per side). Cards are rendered with the
-viewer's sanitising Markdown renderer, loaded on first use. Imports are
-detected, not chosen (`parse.ts`): tab-separated rows, CSV with an optional
-`front,back,tags` header (comma or semicolon), one `term — definition` per
-line, or JSON (an array of `{ front, back, tags }` objects, with the usual
-alternative names such as question/answer or term/definition, an array of
-`[front, back]` pairs, a `{ cards: [...] }` wrapper, or a plain
-`{ "term": "definition" }` map). `toTsv` and `toJson` write a deck back out in
-forms `parseImport` reads. The deck list has an **Import a deck** panel (paste,
-or choose a `.csv`, `.tsv`, `.json` or text file; the file name becomes the deck
-name), and each deck can still take more cards the same way.
-
-**Send to Flashcards:** text, Markdown, JSON and CSV/TSV files in the workbench
-(and its outputs) get a layers icon that leaves the text in
-`lab-handoff:flash` (outside the settings backup, valid for ten minutes,
-collected once) and opens Flashcards in a new tab. There a dialog shows the
-cards found and asks whether they make a new deck, named after the file, or join
-an existing one; nothing is added until the user confirms. Logic tests are in
-`tests/flash/` (golden FSRS intervals, parsers, queues, storage, handoff) with
-jsdom flow tests of the whole island.
-
-### CV builder
-
-One schema (`lib/cv/schema.ts`) feeds the form, every template and every
-export, and `lib/cv/sections.ts` turns it into the one view-model they all read
-(a header and ordered sections of blocks, empty things left out, standard
-headings in the CV's own language), so they cannot disagree. A template is a
-class on one `CvDocument` sheet styled in `styles/cv.css`: always a single column
-of real text in reading order, with no tables, floats, columns, grid, images or
-absolutely positioned boxes inside the sheet. Also no letter-spacing or
-small-caps, and only regular and bold weights, because Chrome's PDF output for
-those can come out as split text that a parser reads as "S U M M A R Y"; this
-was found by printing each template to PDF and extracting its text with pdf.js,
-and `tests/cv/ats.test.tsx` now guards it by reading the stylesheet.
-
-Printing uses the browser, so the PDF is real selectable text: the page hides
-everything but a print copy of the sheet (always in the DOM, so any tab can
-print). The site's CSP forbids an inline `<style>`, so paper and margins are four
-static named `@page` rules (`cv-a4`, `cv-letter` and their compact variants)
-chosen by a class on the print copy, with an unnamed A4 rule as the fallback for
-browsers without the `page` property. Word export goes through the existing
-`lib/docx` writer from plain structural HTML (`cvToHtml`), so the heading and
-bullet structure survives; plain text and a JSON CV file (`format: "lab-cv"`)
-are the other exports. Everything stored or opened goes through `cleanCv`, which
-bounds every field and list, repairs settings and ids, and only ever links
-`http(s)` addresses. CVs autosave under `lab:cv:v1`.
-
-**Other sections** (certifications, languages, awards, volunteering,
-publications, courses, or any heading you type) are custom sections of entries
-with a title, detail, date and bullets; they print after Skills, in the order you
-give them, as ordinary headings. Web links in the Word file are real hyperlinks
-(the docx writer gained `a` support: blue and underlined, an external
-relationship per distinct address, `http(s)` only) and the address always stays
-visible as text. Entries and sections reorder by dragging a handle (one Pointer
-Events path, `useSortable`; the pure `targetIndex` decides where it lands), with
-the up and down buttons kept for keyboard and screen-reader users.
-
-**Import from pasted text** (`lib/cv/import.ts`) reads an old CV or a LinkedIn
-profile copied as text into a new CV to check: contact details by pattern,
-links labelled by site, the usual section headings in English and Russian (and
-any heading in capitals as a section of its own), entries split by blank lines
-and dates, dates in several styles including "Present" and "по настоящее время",
-"role at company | place" and multi-line headings, schools and degrees told apart
-by keyword, "Label: items" skill lines, and unmarked description lines as bullets.
-Lines are capped so no input can make the matching slow. It is a guesser: it shows
-what it found, creates a separate CV, and asks you to check every field.
-
 ### Whiteboard
 
-A board is a list of elements (rectangle, ellipse, arrow, pen stroke, text) in
-drawing order, in plain JSON; a board *file* is that list with a
-`format: "lab-board"` marker, so any text tool can open it. Rendering is SVG
-nodes, not canvas: `lib/board/svg.ts` describes each element once as a node
-tree, which the page turns into React elements and export serialises into a
-standalone SVG (PNG is drawn from that through a canvas), so the file is the
-board. Pointer handling is pure functions in `lib/board/gesture.ts` — begin,
-update, preview and finish a gesture (draw, move, resize, marquee, pan) — and
-the pinch maths keeps the point between two fingers under them; the component
-only forwards events (one Pointer Events path for mouse, touch and pen: one
-finger draws, two move and zoom). Undo is a snapshot stack (`history.ts`), one
-step per gesture. Everything read from storage or a file goes through
-`cleanElements`, which bounds coordinates, counts and text, repairs styles and
-drops anything malformed. Boards autosave (debounced, and on page hide) under
-`lab:board:v1`. Colours are the chart palette's validated hues, resolved per
-theme, so a board looks right in light and dark and exports with explicit colours.
+One board, no options. A board is a list of elements (rectangle, arrow, text) in
+drawing order, drawn in white at a single line weight (7) and text size (36) on a
+dark surface that stays dark in both site themes (`lib/board/model.ts`).
+Rendering is SVG nodes, not canvas: `lib/board/svg.ts` describes each element
+once as a node tree, which the page turns into React elements and PNG export
+serialises into a standalone SVG (drawn through a canvas), so the picture is the
+board. Pointer handling is pure functions in `lib/board/gesture.ts`: with a tool
+picked, a drag draws one rectangle or arrow and the tool lets go again; with no
+tool, a drag on an element moves it and a drag on empty canvas moves the
+canvas. A click on text edits it, and the text tool places new text. Two fingers
+or Ctrl and the wheel zoom (no zoom buttons or readout); the plain wheel pans.
 
-**Connectors.** An arrow can name the shape its start (`from`) and its end (`to`)
-belong to. Dropping an arrow end within 10px of a rectangle, ellipse or text
-attaches it (the shape is outlined while aiming), and the arrow's coordinates
-become the points where the line between the two shapes' centres leaves them
-(`lib/board/connect.ts`). `resolveBindings` runs on every change, so moving or
-resizing a shape drags its arrows along, deleting it leaves the arrow where it
-was, moving an arrow on its own lets go of its shapes, and the saved file and the
-SVG export need no knowledge of bindings (the coordinates are always in sync).
-**Snap to grid** (a toolbar toggle, remembered) puts the start and end of shapes
-and arrows, the corner a group lands on when moved, and a resize handle on the
-24px grid; freehand strokes stay free. **Order:** bring to front or send to back
-(Ctrl+Shift+] and [), and a step forward or back (Ctrl+] and [).
-**Copy, cut and paste** (Ctrl+C, X, V, and toolbar buttons) use the whiteboard's
-own clipboard in `lab-clipboard:board`, which survives switching boards, other
-tabs and reloads (it is outside the settings backup, and it never touches the
-system clipboard): pasted elements get fresh ids, arrows stay attached to copies
-of their shapes and let go of the rest, and a paste lands where the elements were
-(a step aside on the board they came from, centred in view if they were off
-screen). A JSON file in the workbench that is a board gets **Open in
-Whiteboard**, which hands it over (`lab-handoff:board`) to a new tab where it is
-added as a board.
+Undo and redo are snapshots (`history.ts`). The trash button clears the board as
+one undoable step. The board autosaves (debounced, and on page hide) under
+`lab:board:v2`; `storage.ts` re-validates everything on read and drops anything
+malformed, so the settings backup can carry it safely. Logic tests are in
+`tests/board/logic.test.ts`, with jsdom flow tests of the island beside them.
 
 ### Charts
 
@@ -514,7 +407,7 @@ office has no outings and no bookshelf.
 ### Send to phone
 
 Small data moves from a computer to a phone without a server: a **Send to
-phone** action (a deck in Flashcards; a text file or text output in the
+phone** action (a text file or text output in the
 workbench) shows a QR code, the phone's own camera app opens the link, and the
 tool previews what arrived and imports it only on confirmation. The data lives
 in the URL fragment (`#send=1.<kind>.<payload>`: JSON → deflate → base64url),

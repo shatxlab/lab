@@ -30,13 +30,13 @@ describe("capabilitiesFor", () => {
   });
 
   it("limits a single PDF to open, sign and split", () => {
-    expect(offeredIds([asset("pdf")])).toEqual(["doc.open", "pdf.sign", "ocr.recognize", "pdf.split"]);
+    expect(offeredIds([asset("pdf")])).toEqual(["doc.open", "pdf.sign", "pdf.split"]);
   });
 
   it("adds Merge, over every open PDF, once there are two", () => {
     const a = asset("pdf", "a.pdf");
     const b = asset("pdf", "b.pdf");
-    expect(offeredIds([a, b])).toEqual(["pdf.merge", "doc.open", "pdf.sign", "ocr.recognize", "pdf.split"]);
+    expect(offeredIds([a, b])).toEqual(["pdf.merge", "doc.open", "pdf.sign", "pdf.split"]);
     expect(actsOn([a, b], b, "pdf.merge")).toEqual(["a.pdf", "b.pdf"]);
   });
 
@@ -67,7 +67,7 @@ describe("capabilitiesFor", () => {
     const sheet = asset("sheet", "data.xlsx");
     const photo = asset("image", "photo.png");
     expect(offeredIds([sheet, photo], sheet)).toEqual(["doc.open", "chart.make"]);
-    expect(offeredIds([sheet, photo], photo)).toEqual(["image.edit", "ocr.recognize"]);
+    expect(offeredIds([sheet, photo], photo)).toEqual(["image.edit"]);
     expect(actsOn([sheet, photo], photo, "image.edit")).toEqual(["photo.png"]);
   });
 
@@ -75,17 +75,6 @@ describe("capabilitiesFor", () => {
     const one = asset("image", "one.png");
     const two = asset("image", "two.jpg");
     expect(actsOn([one, asset("text"), two], two, "image.edit")).toEqual(["one.png", "two.jpg"]);
-  });
-
-  it("reads every open picture together in text recognition, but a PDF alone", () => {
-    const one = asset("image", "one.png");
-    const two = asset("image", "two.png");
-    const doc = asset("pdf", "doc.pdf");
-    expect(actsOn([one, doc, two], two, "ocr.recognize")).toEqual(["one.png", "two.png"]);
-    expect(actsOn([one, two], one, "ocr.recognize")).toEqual(["one.png", "two.png"]);
-    expect(actsOn([one, doc, two], doc, "ocr.recognize")).toEqual(["doc.pdf"]);
-    // A single picture is just itself.
-    expect(actsOn([one, doc], one, "ocr.recognize")).toEqual(["one.png"]);
   });
 
   it("reads an EPUB and offers nothing for unknown binaries", () => {

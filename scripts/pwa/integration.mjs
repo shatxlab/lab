@@ -10,11 +10,8 @@ import { renderServiceWorker } from "./sw-source.mjs";
  * on-demand data. PDF.js's standard fonts and colour profiles are small and
  * needed by simple PDFs, so they ARE precached; its CMaps and WASM decoders
  * (several MB, rarely needed) are cached the first time a document uses them.
- * The OCR engine and language data (about 12 MB) are never precached: the OCR
- * tool downloads them on request, with progress, into a cache of their own.
- * Only its small manifest is, so the tool still knows what it has offline.
  */
-const EXCLUDE = [/^sw\.js$/, /^_headers$/, /^\.nojekyll$/, /^pdfjs\/(?!standard_fonts\/|iccs\/)/, /^ocr\/(?!manifest\.json$)/, /\.map$/];
+const EXCLUDE = [/^sw\.js$/, /^_headers$/, /^\.nojekyll$/, /^pdfjs\/(?!standard_fonts\/|iccs\/)/, /\.map$/];
 
 async function* walk(dir, prefix = "") {
   for (const entry of await readdir(dir, { withFileTypes: true })) {

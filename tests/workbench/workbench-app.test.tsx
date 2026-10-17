@@ -91,7 +91,6 @@ const stubs = {
   "text.diff": opened("compare"),
   "qr.generate": opened("qr"),
   "chart.make": opened("chart"),
-  "ocr.recognize": opened("ocr"),
 };
 
 describe("WorkbenchApp — empty screen", () => {
@@ -133,7 +132,7 @@ describe("WorkbenchApp — one file", () => {
   it("offers open, sign and split for a PDF and hints at merge", async () => {
     const view = await mount(<WorkbenchApp operations={stubs} />);
     await addFiles(pdf("doc.pdf"));
-    await waitFor(() => expect(tabLabels()).toEqual([label("doc.open"), label("pdf.sign"), label("ocr.recognize"), label("pdf.split")]));
+    await waitFor(() => expect(tabLabels()).toEqual([label("doc.open"), label("pdf.sign"), label("pdf.split")]));
     expect(document.body.textContent).toContain(wb("en", "addMoreHint", { actions: label("pdf.merge") }));
     view.unmount();
   });
@@ -173,7 +172,7 @@ describe("WorkbenchApp — several files", () => {
     await waitFor(() => expect(document.body.textContent).toContain("open: data.csv"));
     await addFiles(png("photo.png"));
     await waitFor(() => expect(document.body.textContent).toContain("image: photo.png"));
-    expect(tabLabels()).toEqual([label("image.edit"), label("ocr.recognize")]);
+    expect(tabLabels()).toEqual([label("image.edit")]);
 
     await click(fileRow("data.csv"));
     await waitFor(() => expect(document.body.textContent).toContain("open: data.csv"));
@@ -352,16 +351,6 @@ describe("WorkbenchApp — image batch row", () => {
     await waitFor(() => expect(rows()).toHaveLength(1));
     expect(rows()[0]!.textContent).toContain("1,000 images");
     expect(document.querySelectorAll("[data-asset-thumb] canvas")).toHaveLength(0);
-    view.unmount();
-  });
-
-  it("badges every picture of an OCR batch, as it does for the image tool", async () => {
-    const view = await mount(<WorkbenchApp operations={stubs} />);
-    await addFiles(...photos(3));
-    await waitFor(() => expect(tab("ocr.recognize")).toBeTruthy());
-    await click(tab("ocr.recognize"));
-    await waitFor(() => expect(document.body.textContent).toContain("ocr: IMG_001.png, IMG_002.png, IMG_003.png"));
-    expect(document.querySelectorAll("[data-member-badge]")).toHaveLength(3);
     view.unmount();
   });
 });

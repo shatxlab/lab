@@ -169,7 +169,7 @@ export function trayRows(assets: readonly Asset[]): TrayRow[] {
 function memberBadge(lang: AppLang, activeId: CapabilityId | null | undefined, position: number): string | null {
   if (activeId === "text.diff") return position < 2 ? ["A", "B"][position]! : null;
   if (activeId === "pdf.merge") return String(position + 1);
-  if (activeId === "image.edit" || activeId === "ocr.recognize") return wb(lang, "inBatch");
+  if (activeId === "image.edit") return wb(lang, "inBatch");
   return null;
 }
 
@@ -490,7 +490,7 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     : (current?.capability.id ?? null);
   const operationAssets = current?.assets ?? EMPTY_ASSETS;
   const setMembers = React.useMemo<ReadonlySet<string>>(
-    () => new Set(current && (current.capability.set || current.assets.length > 1) ? current.assets.map((asset) => asset.id) : []),
+    () => new Set(current?.capability.set ? current.assets.map((asset) => asset.id) : []),
     [current],
   );
   const operationKey = `${active}:${operationAssets.map((asset) => asset.id).join("|")}`;

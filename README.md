@@ -8,7 +8,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 
 | Route | Tool | What it does |
 |---|---|---|
-| `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once, up to thousands of photos. **Recognize text** (OCR) reads a picture, a stack of pictures in one go, or the pages of a scanned PDF, in English and Russian, on the device. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
+| `/tools` | Workbench | One page for every file. Drop or paste files; one file is selected at a time and its actions appear as tabs, with the best one already open. Actions over several files (merge, compare, image batch) appear when the selected file is part of a matching set. **Open** (PDF, Word, spreadsheets, JSON/YAML/TOML, Markdown, HTML, text): Preview with *Save as* (CSV/JSON/XLSX, HTML/Markdown/text, JSON ⇄ YAML ⇄ TOML) and *Print*, or Edit (source, JSON, sheet grid, Word rich text) and save a copy. **EPUB:** read with chapter navigation, in-book search, bookmarks, themes and remembered position. **PDF:** merge, split and sign. **Images:** convert, resize, compress, strip EXIF/GPS, one or many at once, up to thousands of photos. **Charts:** a spreadsheet becomes a line, bar (grouped for several series), histogram or scatter chart, guessed from the data and adjustable, with a data table, SVG and PNG export. **Compare** two files by content (JSON pretty-printed, sheets as CSV, Word as text). **Without a file:** compare two texts, create a QR code. Anything a one-line terminal command does (hashes, Base64, UUIDs, regex, word count, case conversion, QR scanning) is deliberately left out. |
 | `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes and lo-fi music, always open in a full-screen pixel office. Press Start and follow the 25/5/15 flow (a break after every Pomodoro, a long one after every fourth); during a break people go for coffee, water, a sit on the sofa, a book or a snack; give a Pomodoro up and one of the six people packs a box and walks out the door, and when the office is empty you hire a new team. Music is generated in the browser. Pause, skip breaks, mute, the countdown in the tab title. Nothing is saved. |
 | `/board` | Whiteboard · Доска | A deliberately small whiteboard: rectangles, arrows and text in white chalk on a dark board, one line weight, undo and redo, one button that clears the board and one that downloads a PNG. Dragging an element moves it, dragging the empty canvas moves the board; two fingers or Ctrl and the wheel zoom. One board, saved in the browser. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
@@ -91,7 +91,7 @@ src/
   components/apps/   EPUB reader, header controls (command palette, settings
                      backup, language/theme), PWA registration, tools grid
   components/workbench/ The /tools workbench shell + one operation per capability
-                     (operations/: open, compare, QR, PDF, image, charts, OCR, DOCX editor, reader)
+                     (operations/: open, compare, QR, PDF, image, charts, DOCX editor, reader)
   components/tools/  Shared tool UI (ToolPage, FilePicker, tabs, menus, diff view)
   components/viewer/ Document renderers used by the workbench (PDF, image, sheet, JSON, …)
   components/board/  Whiteboard island (shell and the Workspace canvas with its toolbar)
@@ -306,52 +306,10 @@ scatter; arrow keys show the same details, and a table of the plotted data is on
 button away. Export downloads an SVG or a canvas-drawn PNG, on a
 light or dark background whatever the page theme is.
 
-### Recognize text (OCR)
-
-`ocr.recognize` is a workbench capability on images and PDFs. The engine is
-tesseract.js in a web worker; its files (worker, WebAssembly engine, language
-data) are about 9 MB for English plus Russian and are copied into `assets/ocr/`
-at build time by `scripts/copy-ocr-assets.mjs` (git-ignored, with a
-`manifest.json` of real sizes). They come from this site, never a CDN, are never
-precached, and are downloaded on request with a progress bar into the Cache
-Storage entry `lab-ocr-v1` (`lib/apps/heavy-assets.ts`); the tool shows what is
-missing and its size, and can remove it all. The service worker answers the
-worker's requests from that cache, so recognition then works offline. The worker
-is started from its own URL (not a blob), so the page's CSP needed no change.
-
-Before recognising, `lib/ocr/preprocess.ts` makes the image grey, stretches
-the contrast, optionally flattens it to black and white (Otsu) and enlarges
-small pictures (below 1600 px, up to 3×; above 4000 px it is scaled down;
-transparent areas become white). PDF pages are drawn at about 200 dpi, up to
-50 per run, chosen by a page range. Progress covers engine start-up and every
-page, and Stop terminates the worker. The text is shown with the mean confidence
-and can be copied or downloaded as `<name>.txt`. The tool says plainly that
-handwriting and tiny or blurred text read poorly.
-
-Pages can be prepared and read in four ways (`lib/ocr/layout.ts` holds the maths,
-all of it on plain arrays so it is tested without a browser). **Straighten tilted
-pages** (on by default) estimates the tilt of a page by projecting its ink onto
-the vertical axis at trial angles within ±10° and taking the angle at which the
-text lines are sharpest, then turns the page if the tilt is at least 0.4° and
-clearly real. **Columns** finds the gutters between columns of text (runs of
-ink-free columns at least 1.5% of the width with a tenth of the ink on each
-side), cuts the page there and reads each strip in turn, left to right, so the
-columns are not interleaved line by line; a heading across the columns can hide
-the gutter, and then the page is read as one. **One block** is the engine's
-single-block mode. **Table** reads the page as one block with spacing preserved,
-then rebuilds the table from the word boxes: each line is cut into cells where
-the gap is wider than a space, and cells line up into columns by the horizontal
-bands they cover, so empty cells and right-aligned numbers stay in their columns.
-The result downloads as a `.csv` spreadsheet. After any read, the
-words the engine was unsure of (below 75% confidence, red below 50%) are listed
-and boxed on the page as it was read, so a person knows where to look first. To add a language, put its
-`.traineddata.gz` where the copy script looks and name it in `LANGUAGES` there
-(and in `LANGUAGE_NAMES` in `lib/ocr/assets.ts`).
-
 ### Many files at once
 
 The workbench is meant to hold a thousand photos (a few GB) without lagging, which
-shapes how images and OCR are built.
+shapes how the image tool is built.
 
 - **Nothing is copied up front.** An `Asset` keeps a handle on the dropped `File`
   (`asset.toBlob()`, free), and only the code that works on a file reads its bytes,
@@ -380,10 +338,6 @@ shapes how images and OCR are built.
   (fflate's streaming `Zip`) and assembles the archive from `Blob` pieces, so the
   batch is not held in memory twice. Past 3 GB or 60,000 files it splits into
   `images-1.zip`, `images-2.zip`…
-- **OCR on several pictures** reads them with one engine (starting it costs
-  seconds), one after another (`runOcrBatch` in `lib/ocr/run.ts`). Only each
-  picture's text is kept, not word boxes or page images. Stop keeps what was read
-  and the button then reads the rest.
 
 On 1,000 generated 12 MP JPEGs (3.1 GB) in Chrome, shrinking to 1920 px: 61 s, the
 page never blocked for more than ~0.1 s and about 20 MB of JavaScript memory, where

@@ -7,10 +7,10 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "predev": "node scripts/copy-pdfjs-assets.mjs && node scripts/copy-ocr-assets.mjs",
+    "predev": "node scripts/copy-pdfjs-assets.mjs",
     "dev": "astro dev --host 127.0.0.1",
     "start": "astro preview --host 127.0.0.1",
-    "prebuild": "node scripts/copy-pdfjs-assets.mjs && node scripts/copy-ocr-assets.mjs",
+    "prebuild": "node scripts/copy-pdfjs-assets.mjs",
     "build": "astro build",
     "preview": "astro preview --host 127.0.0.1",
     "test": "vitest run",
@@ -41,7 +41,6 @@
     "smol-toml": "^1.9.0",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.3",
-    "tesseract.js": "^7.0.0",
     "turndown": "^7.2.4",
     "typescript": "^5.9.3",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
@@ -50,8 +49,6 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@tailwindcss/vite": "^4.3.3",
-    "@tesseract.js-data/eng": "^1.0.0",
-    "@tesseract.js-data/rus": "^1.0.0",
     "@types/node": "^26.4.1",
     "@types/pngjs": "^6.0.5",
     "@types/qrcode": "^1.5.6",

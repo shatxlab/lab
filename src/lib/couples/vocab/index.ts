@@ -2,7 +2,7 @@
  * Seed vocabulary for the couples games, per language.
  *
  * Each locale provides the same structure: scenario frames per theme (feeding
- * «Норм или стрём» and «Кто из нас» / "Fine or Cringe" and "Who of Us") and
+ * «Норм или стрём» and «Кто из нас» / "Normal or Nah" and "Who of Us") and
  * either-dilemma axes per theme (feeding «ИлиТо» / "This or That").
  */
 

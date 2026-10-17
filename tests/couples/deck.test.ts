@@ -51,4 +51,28 @@ describe("couples deck", () => {
     const session = dealSession(pool(50, 5), 20);
     expect(session.cards).toHaveLength(20);
   });
+
+  it("takes turns between themes so a small theme still shows up", () => {
+    const big: CouplesQuestion[] = Array.from({ length: 300 }, (_, index) => ({
+      ...pool(1)[0],
+      id: `norm:home:${index}`,
+      theme: "home" as const,
+      group: `home-${index}`,
+    }));
+    const small: CouplesQuestion[] = Array.from({ length: 5 }, (_, index) => ({
+      ...pool(1)[0],
+      id: `norm:conflict:${index}`,
+      theme: "conflict" as const,
+      group: `conflict-${index}`,
+    }));
+    for (let seed = 1; seed <= 20; seed += 1) {
+      let state = seed;
+      const rng = () => {
+        state = (state * 1664525 + 1013904223) % 4294967296;
+        return state / 4294967296;
+      };
+      const themes = dealSession([...big, ...small], 4, rng).cards.map((card) => card.theme);
+      expect(themes.filter((theme) => theme === "conflict")).toHaveLength(2);
+    }
+  });
 });

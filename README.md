@@ -14,7 +14,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
 | `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
 | `/wordle` | Wordle · Вордли | Five-letter word game in English and Russian (~1000 answers each; guesses must be real words — about 12,500 English and 4,800 Russian are accepted). On-screen and physical keyboard, hard mode, high-contrast colours, statistics and shareable results. |
-| `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Fine or Cringe", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". 3 000 prompts per game per language across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode. |
+| `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Normal or Nah", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". Thousands of prompts across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode with a conversation-starter line on each hand-written card. |
 | `/tycoon` | Software Tycoon · Империя софта | A management sim about running a small software studio: hire a team, pick a product and its features, watch Design / Engineering / QA fill up, ship, and grow from a garage through offices to a company while rivals and events push back. The PixiJS office scene animates your staff; the whole simulation is pure TypeScript with an autosave to local storage. |
 
 `/` is the landing page listing the tools, grouped by category.
@@ -174,9 +174,20 @@ the second partner answers, and the reveal shows whether they agreed. In the
 `Вместе` mode there is no handoff — the couple discusses and casts one shared
 answer, and the summary recaps their joint picks.
 
-Rather than committing 9 000 literal strings, `lib/couples/questions.ts`
-expands a compact seed vocabulary (`vocab.ts`) at load time into **3 000
-prompts per game, 300 per theme** — 9 000 in total. `norm` and `who` are built
+Prompts come from two sources, chosen per theme by `lib/couples/questions.ts`.
+
+**Hand-written cards** (`lib/couples/cards/<lang>/<theme>.ts`) are whole
+sentences written natively for each language, each with a `followUp` line that
+the `Вместе` mode shows as a conversation starter. A card is worth keeping when
+couples would honestly answer it differently, it describes a concrete scene,
+it reveals something about the two of them, and it carries one idea. The
+`conflict` theme is migrated; register a theme in `cards/index.ts` to switch it
+over. `tests/couples/cards.test.ts` lints them (length, duplicates, repeated
+openings).
+
+**Generated cards** serve every theme not migrated yet. Rather than committing
+literal strings, `questions.ts` expands a compact seed vocabulary (`vocab/`) at
+load time into **300 prompts per game per theme**. `norm` and `who` are built
 from *coherent scenario frames*: a sentence pattern whose verb fits every
 object in its slots, crossed to produce concrete situations («Есть {a} с {b}»
 × блюда × добавки). Both games share a theme's object lists, so one seed feeds
@@ -185,8 +196,9 @@ object in its slots, crossed to produce concrete situations («Есть {a} с {
 expansion byte-for-byte deterministic, so the browser and the tests always see
 the same deck; cards carry their seed object as a `group` so a deal never
 repeats the same object with a different tail.
-`tests/couples/questions.test.ts` enforces the per-game and per-theme counts
-and global prompt uniqueness.
+`tests/couples/questions.test.ts` enforces the per-theme counts and global prompt
+uniqueness. A mixed «все темы» deal takes turns between themes, so a small
+hand-written theme is not drowned out by a large generated one.
 
 ### Crosswords
 

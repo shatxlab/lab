@@ -1,50 +1,69 @@
 import { describe, expect, it } from "vitest";
 
+import { CURATED } from "@/lib/couples/cards";
 import {
   PER_THEME,
-  QUESTIONS_PER_GAME,
   buildAllQuestions,
   buildGameQuestions,
   questionsFor,
   resolveOptions,
 } from "@/lib/couples/questions";
 import { THEME_IDS } from "@/lib/couples/themes";
-import type { GameId } from "@/lib/couples/types";
+import type { GameId, Lang, ThemeId } from "@/lib/couples/types";
 
 const GAMES: GameId[] = ["norm", "either", "who"];
+
+/** How many cards a theme should hold: its curated size, or the generated default. */
+function expectedSize(game: GameId, theme: ThemeId, lang: Lang): number {
+  return CURATED[lang][theme]?.[game].length ?? PER_THEME;
+}
 
 describe("couples question builder", () => {
   it("builds the same structure for the English deck", () => {
     for (const game of GAMES) {
-      expect(buildGameQuestions(game, "en")).toHaveLength(QUESTIONS_PER_GAME);
       for (const theme of THEME_IDS) {
-        expect(questionsFor(game, theme, "en"), `en/${game}/${theme}`).toHaveLength(PER_THEME);
+        expect(questionsFor(game, theme, "en"), `en/${game}/${theme}`).toHaveLength(
+          expectedSize(game, theme, "en"),
+        );
       }
     }
     const enPrompts = buildAllQuestions("en").map((question) => question.prompt);
     const ruPrompts = buildAllQuestions("ru").map((question) => question.prompt);
     expect(new Set(enPrompts).size).toBe(enPrompts.length);
     expect(new Set([...enPrompts, ...ruPrompts]).size).toBe(enPrompts.length + ruPrompts.length);
+    // Generated themes still use the "Which of us would…" frame.
     expect(enPrompts.some((prompt) => prompt.includes("Which of us"))).toBe(true);
   });
 
   it("keeps the norm options per language", () => {
     for (const question of questionsFor("norm", "all", "en")) {
-      expect(question.options).toEqual(["Fine", "Cringe"]);
+      expect(question.options).toEqual(["Normal", "Nah"]);
     }
   });
 
-  it("seeds exactly 3000 prompts per game", () => {
-    for (const game of GAMES) {
-      expect(buildGameQuestions(game)).toHaveLength(QUESTIONS_PER_GAME);
-      expect(QUESTIONS_PER_GAME).toBe(3000);
+  it("gives generated themes 300 prompts and curated themes exactly their cards", () => {
+    for (const lang of ["en", "ru"] as const) {
+      for (const game of GAMES) {
+        for (const theme of THEME_IDS) {
+          const curated = CURATED[lang][theme]?.[game];
+          expect(questionsFor(game, theme, lang), `${lang}/${game}/${theme}`).toHaveLength(
+            curated ? curated.length : PER_THEME,
+          );
+        }
+      }
     }
   });
 
-  it("splits every game into 300 prompts per theme", () => {
-    for (const game of GAMES) {
-      for (const theme of THEME_IDS) {
-        expect(questionsFor(game, theme), `${game}/${theme}`).toHaveLength(PER_THEME);
+  it("carries a follow-up on curated cards only", () => {
+    for (const lang of ["en", "ru"] as const) {
+      for (const game of GAMES) {
+        for (const theme of THEME_IDS) {
+          const curated = CURATED[lang][theme]?.[game];
+          for (const question of questionsFor(game, theme, lang)) {
+            if (curated) expect(question.followUp?.length, question.id).toBeGreaterThan(0);
+            else expect(question.followUp, question.id).toBeUndefined();
+          }
+        }
       }
     }
   });
@@ -85,13 +104,20 @@ describe("couples question builder", () => {
     }
   });
 
-  it("keeps both either options distinct and present in the prompt", () => {
-    for (const question of questionsFor("either", "all")) {
-      const [a, b] = question.options;
-      expect(a).not.toBe(b);
-      expect(question.prompt).toContain(a);
-      expect(question.prompt).toContain(b);
-      expect(question.prompt.trim().endsWith("?")).toBe(true);
+  it("keeps both either options distinct and non-empty", () => {
+    for (const lang of ["en", "ru"] as const) {
+      for (const question of questionsFor("either", "all", lang)) {
+        const [a, b] = question.options;
+        expect(a.trim().length, question.id).toBeGreaterThan(0);
+        expect(a).not.toBe(b);
+        // Generated cards spell both options out in the prompt; curated ones
+        // set the scene and let the buttons carry the choice.
+        if (!question.followUp) {
+          expect(question.prompt).toContain(a);
+          expect(question.prompt).toContain(b);
+          expect(question.prompt.trim().endsWith("?")).toBe(true);
+        }
+      }
     }
   });
 

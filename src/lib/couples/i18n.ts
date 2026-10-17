@@ -54,6 +54,7 @@ type StringKey =
   | "question"
   | "chipNorm"
   | "chipCringe"
+  | "followUpLabel"
   | "revealMatch"
   | "revealNoMatch"
   | "revealMatchNote"
@@ -113,7 +114,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     theme: "Theme",
     themeAll: "All themes",
     themes: "themes",
-    themeHint: "Each theme holds 300 questions.",
+    themeHint: "Each theme has its own deck of questions.",
     count: "How many cards",
     cards: "cards",
     countHint: "Enough for one evening. You can always start over with new questions.",
@@ -130,8 +131,9 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     passBody: "Now {name} answers. The other player should look away.",
     passButton: "I'm {name}, show it",
     question: "Question",
-    chipNorm: "Fine",
-    chipCringe: "Cringe",
+    chipNorm: "Normal",
+    chipCringe: "Nah",
+    followUpLabel: "Talk it over",
     revealMatch: "Matched!",
     revealNoMatch: "No match",
     revealMatchNote: "You answered the same",
@@ -190,7 +192,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     theme: "Тема",
     themeAll: "Все темы",
     themes: "темы",
-    themeHint: "В каждой теме по 300 вопросов.",
+    themeHint: "У каждой темы своя колода вопросов.",
     count: "Сколько карточек",
     cards: "карточек",
     countHint: "Хватит на один вечер. Можно начать заново с новыми вопросами.",
@@ -209,6 +211,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     question: "Вопрос",
     chipNorm: "Норм",
     chipCringe: "Стрём",
+    followUpLabel: "Обсудите",
     revealMatch: "Совпали!",
     revealNoMatch: "Не совпали",
     revealMatchNote: "Вы ответили одинаково",

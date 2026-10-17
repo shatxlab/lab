@@ -1,3 +1,4 @@
+import { CURATED } from "./cards";
 import { EITHER_AXES, FRAMES } from "./vocab";
 import { THEME_IDS } from "./themes";
 import type { CouplesQuestion, GameId, Lang, ThemeId } from "./types";
@@ -5,15 +6,19 @@ import type { CouplesQuestion, GameId, Lang, ThemeId } from "./types";
 /**
  * Deterministic prompt builder.
  *
- * The seed vocabulary in `vocab/` is expanded here into 3 000 prompts per game
- * per language (300 per theme). Everything is driven by a seeded PRNG, so the
- * exact same deck is produced on every build, in the browser and in tests — no
- * network, no randomness at runtime.
+ * A theme is served from one of two sources:
+ * - hand-written cards in `cards/` (used as-is, one per prompt), or
+ * - for themes not yet migrated, the seed vocabulary in `vocab/`, expanded here
+ *   into `PER_THEME` prompts per game per language.
+ *
+ * Everything is driven by a seeded PRNG, so the exact same deck is produced on
+ * every build, in the browser and in tests — no network, no randomness at
+ * runtime.
  */
 
-/** Options shown for «Норм или стрём» / "Fine or Cringe", per language. */
+/** Options shown for «Норм или стрём» / "Normal or Nah", per language. */
 export const NORM_OPTIONS: Record<Lang, readonly [string, string]> = {
-  en: ["Fine", "Cringe"],
+  en: ["Normal", "Nah"],
   ru: ["Норм", "Стрём"],
 };
 
@@ -26,10 +31,8 @@ const WHO_WRAP: Record<Lang, (pattern: string) => string> = {
   ru: (pattern) => `Кто из нас скорее ${pattern}?`,
 };
 
-/** Prompts generated per theme, per game, per language. */
+/** Prompts generated per theme, per game, per language, for themes without curated cards. */
 export const PER_THEME = 300;
-
-export const QUESTIONS_PER_GAME = PER_THEME * THEME_IDS.length;
 
 /* ------------------------------------------------------------- deterministic rng */
 
@@ -81,6 +84,7 @@ interface Candidate {
   prompt: string;
   options: [string, string];
   group: string;
+  followUp?: string;
 }
 
 function fill(pattern: string, a: string, b?: string): string {
@@ -139,6 +143,17 @@ function eitherCandidates(theme: ThemeId, lang: Lang): Candidate[] {
   return out;
 }
 
+/** The theme's hand-written cards for one game, in authored order. */
+function curatedCandidates(game: GameId, theme: ThemeId, lang: Lang): Candidate[] | null {
+  const cards = CURATED[lang][theme]?.[game];
+  if (!cards) return null;
+  return cards.map((card, index) => {
+    const options: [string, string] =
+      game === "norm" ? [...NORM_OPTIONS[lang]] : game === "who" ? [...WHO_OPTIONS] : [...(card.options ?? ["", ""])];
+    return { prompt: card.prompt, options, group: `curated:${theme}:${index}`, followUp: card.followUp };
+  });
+}
+
 /* ------------------------------------------------------------------- builder */
 
 function candidatesFor(game: GameId, theme: ThemeId, lang: Lang): Candidate[] {
@@ -152,12 +167,14 @@ function buildGame(game: GameId, lang: Lang): CouplesQuestion[] {
   const out: CouplesQuestion[] = [];
 
   for (const theme of THEME_IDS) {
+    const curated = curatedCandidates(game, theme, lang);
     const rng = rngFor(`couples:${game}:${theme}`);
-    const candidates = shuffle(candidatesFor(game, theme, lang), rng);
+    const candidates = curated ?? shuffle(candidatesFor(game, theme, lang), rng);
+    const limit = curated ? curated.length : PER_THEME;
 
     let added = 0;
     for (const candidate of candidates) {
-      if (added >= PER_THEME) break;
+      if (added >= limit) break;
       if (used.has(candidate.prompt)) continue;
       used.add(candidate.prompt);
       out.push({
@@ -167,6 +184,7 @@ function buildGame(game: GameId, lang: Lang): CouplesQuestion[] {
         prompt: candidate.prompt,
         options: [...candidate.options],
         group: candidate.group,
+        ...(candidate.followUp ? { followUp: candidate.followUp } : {}),
       });
       added += 1;
     }
@@ -177,7 +195,7 @@ function buildGame(game: GameId, lang: Lang): CouplesQuestion[] {
 
 const CACHE = new Map<string, CouplesQuestion[]>();
 
-/** All prompts for one game and language, grouped by theme and capped at 300 per theme. */
+/** All prompts for one game and language, grouped by theme. */
 export function buildGameQuestions(game: GameId, lang: Lang = "ru"): CouplesQuestion[] {
   const key = `${lang}:${game}`;
   const cached = CACHE.get(key);
@@ -187,7 +205,7 @@ export function buildGameQuestions(game: GameId, lang: Lang = "ru"): CouplesQues
   return built;
 }
 
-/** Every prompt for every game in one language (9 000 in total). */
+/** Every prompt for every game in one language. */
 export function buildAllQuestions(lang: Lang = "ru"): CouplesQuestion[] {
   return (["norm", "either", "who"] as const).flatMap((game) => buildGameQuestions(game, lang));
 }

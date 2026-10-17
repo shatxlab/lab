@@ -8,11 +8,11 @@ export const GAMES: readonly GameDef[] = [
   {
     id: "norm",
     emoji: "🤔",
-    name: { ru: "Норм или стрём", en: "Fine or Cringe" },
+    name: { ru: "Норм или стрём", en: "Normal or Nah" },
     tagline: { ru: "Оцениваем странности", en: "Rating each other's quirks" },
     description: {
       ru: "Ведущий зачитывает ситуацию, оба решают — это норм или уже стрём. Совпадёте или нет?",
-      en: "One of you reads a situation out loud and both decide — fine or cringe. Will your verdicts match?",
+      en: "One of you reads a situation out loud and both decide — normal or nah. Will your verdicts match?",
     },
     gradient: "linear-gradient(135deg, #0f766e 0%, #22c55e 100%)",
     accent: "#0f766e",
@@ -50,8 +50,8 @@ export function getGame(id: GameId): GameDef {
 }
 
 /**
- * Ten couples-flavoured themes. Every game seeds 300 prompts per theme, so the
- * picker and a mixed «все темы» deck both stay varied.
+ * Ten couples-flavoured themes. Each one has its own deck for every game, and a
+ * mixed «все темы» deal takes turns between them.
  */
 export const THEMES: readonly ThemeDef[] = [
   {

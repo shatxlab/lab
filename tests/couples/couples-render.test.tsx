@@ -43,7 +43,7 @@ describe("couples screens render", () => {
     expect(html).toContain("Как вас зовут?");
     expect(html).toContain("Все темы");
     expect(html).toContain("Начать игру");
-    expect(html).toContain("3000");
+    expect(html).toContain(String(questionsFor("norm", "all").length));
   });
 
   it("play renders the prompt and both options", () => {
@@ -67,6 +67,33 @@ describe("couples screens render", () => {
     expect(html).toContain("Норм");
     expect(html).toContain("Стрём");
     expect(html).toContain("1 / 10");
+  });
+
+  it("together mode shows a curated card's follow-up, match mode does not", () => {
+    const curated = questionsFor("norm", "conflict")[0];
+    const render = (phase: "voteTogether" | "voteA") =>
+      renderToStaticMarkup(
+        <PlayScreen
+          settings={settings}
+          question={curated}
+          options={resolveOptions(curated, settings.names)}
+          index={0}
+          total={10}
+          phase={phase}
+          votes={{ a: null, b: null }}
+          soundOn
+          onVote={() => undefined}
+          onPass={() => undefined}
+          onNext={() => undefined}
+          onExit={() => undefined}
+          onToggleSound={() => undefined}
+        />,
+      );
+    expect(curated.followUp).toBeTruthy();
+    const together = render("voteTogether");
+    expect(together).toContain("Обсудите");
+    expect(together).toContain(curated.followUp?.replace(/&/g, "&amp;") ?? "");
+    expect(render("voteA")).not.toContain("Обсудите");
   });
 
   it("play shows the handoff cover", () => {

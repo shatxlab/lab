@@ -94,6 +94,12 @@ export function PlayScreen({
             {phase === "voteB" ? turnLabel(settings.lang, nameB) : phase === "voteA" ? turnLabel(settings.lang, nameA) : TXT.question}
           </p>
           <h2 className="cp-prompt">{question.prompt}</h2>
+          {phase === "voteTogether" && question.followUp ? (
+            <p className="cp-followup">
+              <span className="cp-followup-label">{TXT.followUpLabel}</span>
+              {question.followUp}
+            </p>
+          ) : null}
 
           {phase === "reveal" ? (
             <div className="cp-reveal" aria-live="polite">

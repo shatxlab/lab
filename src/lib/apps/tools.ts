@@ -146,19 +146,19 @@ export const TOOLS: readonly ToolEntry[] = [
     path: "/couples",
     category: "games",
     files: {
-      en: "English · Русский · 3 games · 18 000 questions",
-      ru: "Русский · English · 3 игры · 18 000 вопросов",
+      en: "English · Русский · 3 games · thousands of questions",
+      ru: "Русский · English · 3 игры · тысячи вопросов",
     },
     title: { en: "Games for couples", ru: "Игры для пар" },
     description: {
-      en: "Fine or Cringe, This or That and Who of Us for two: answer in turns and see how much you match.",
+      en: "Normal or Nah, This or That and Who of Us for two: answer in turns and see how much you match.",
       ru: "Норм или стрём, ИлиТо и Кто из нас для двоих: отвечайте по очереди и смотрите, насколько вы совпадаете.",
     },
-    keywords: "couples pairs two players this or that fine or cringe who of us пары двоих илито норм стрём",
+    keywords: "couples pairs two players this or that normal or nah who of us пары двоих илито норм стрём",
     seo: {
       title: "Games for couples: This or That & more",
       description:
-        "Fine or Cringe, This or That and Who of Us for two: 18,000 questions, secret voting and an agreement score. In English and Russian.",
+        "Normal or Nah, This or That and Who of Us for two: thousands of questions, secret voting and an agreement score. In English and Russian.",
     },
   },
   {

@@ -9,10 +9,33 @@ export interface Session {
 }
 
 /**
+ * Order cards so themes take turns. Themes can differ a lot in size (a curated
+ * theme has dozens of cards, a generated one hundreds), and a plain shuffle of
+ * a mixed pool would almost never surface the small ones.
+ */
+function interleaveByTheme(cards: readonly CouplesQuestion[], rng: () => number): CouplesQuestion[] {
+  const buckets = new Map<string, CouplesQuestion[]>();
+  for (const card of cards) {
+    const bucket = buckets.get(card.theme);
+    if (bucket) bucket.push(card);
+    else buckets.set(card.theme, [card]);
+  }
+  const queues = shuffle([...buckets.keys()], rng).map((theme) => buckets.get(theme) ?? []);
+  const out: CouplesQuestion[] = [];
+  for (let round = 0; out.length < cards.length; round += 1) {
+    for (const queue of queues) {
+      if (round < queue.length) out.push(queue[round]);
+    }
+  }
+  return out;
+}
+
+/**
  * Deal `count` distinct cards from `pool`. A runtime shuffle means every
  * session shows different prompts, and the first pass takes at most one card
  * per `group` (seed predicate) so the same base never repeats with a different
- * adjunct. The second pass tops up with the remaining cards if there aren't
+ * adjunct. Themes take turns, so a mixed deck gives each theme an equal share.
+ * The second pass tops up with the remaining cards if there aren't
  * enough distinct groups for the requested count.
  */
 export function dealSession(
@@ -21,7 +44,7 @@ export function dealSession(
   rng: () => number = Math.random,
 ): Session {
   const target = Math.max(0, Math.min(count, pool.length));
-  const shuffled = shuffle(pool, rng);
+  const shuffled = interleaveByTheme(shuffle(pool, rng), rng);
   const cards: CouplesQuestion[] = [];
   const picked = new Set<string>();
   const groups = new Set<string>();

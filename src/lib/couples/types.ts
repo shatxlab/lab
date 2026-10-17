@@ -63,6 +63,11 @@ export interface CouplesQuestion {
    * different manner adjuncts.
    */
   group: string;
+  /**
+   * Hand-written conversation starter shown in «Вместе» / "Together" mode.
+   * Only curated cards have one.
+   */
+  followUp?: string;
 }
 
 /** Phases of a single card. */

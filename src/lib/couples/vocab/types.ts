@@ -4,7 +4,7 @@ export type { ThemeId };
 
 /** A sentence pattern plus the objects it crosses. */
 export interface ScenarioFrame {
-  /** Infinitive pattern for «Норм или стрём» / "Fine or Cringe". */
+  /** Infinitive pattern for «Норм или стрём» / "Normal or Nah". */
   norm: string;
   /**
    * Pattern completing "Кто из нас скорее …?" (ru) or "Which of us would …?"

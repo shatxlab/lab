@@ -19,8 +19,11 @@ export const MIN_WIDTH: Record<Arrangement, number> = { wide: MIN_VISIBLE_WIDTH,
 
 const FIRST_ROW = 132
 const ROW_GAP = 30
-/** The room's last row worth showing in the wide arrangement, by rows of desks (fewer desks show less floor). */
-const WIDE_BOTTOMS = [170, 200, 224] as const
+/**
+ * The room's last row worth showing in the wide arrangement, by rows of desks (fewer desks show less floor). The
+ * last row's desks stand on legs reaching 5 rows past their front, which is where the next row would start.
+ */
+const WIDE_BOTTOMS = [170, 200, 230] as const
 /** In the tall arrangement the pets lie below the desks, so the room runs this far past the last row. */
 const TALL_MARGIN = 62
 
@@ -28,6 +31,14 @@ const TALL_MARGIN = 62
 export function partitionAt(arrangement: Arrangement, p: number): [x: number, y: number] {
   if (arrangement === 'tall') return [89, FIRST_ROW + ROW_GAP * p]
   return [p % 2 === 0 ? 33 : 145, FIRST_ROW + ROW_GAP * Math.floor(p / 2)]
+}
+
+/**
+ * Whether partition `p`'s desks run up to another partition in front of them. The pack draws desks that way, so
+ * the ones that do not (the last row, and a short one above a gap) need a front and legs to stand on.
+ */
+export function partitionInFront(arrangement: Arrangement, p: number, desks: number): boolean {
+  return 2 * (p + (arrangement === 'tall' ? 1 : 2)) < desks
 }
 
 /** The room's last row worth showing with this many desks: just below the desks (and the pets). */

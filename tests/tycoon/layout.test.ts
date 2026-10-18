@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chairX, MIN_VISIBLE_WIDTH, MIN_WIDTH, MIRROR, partitionAt, ROOM_TOP, roomBottom, SCENE_WIDTH, sceneLayout, seatX } from '@/lib/tycoon/render-support/layout'
+import { chairX, MIN_VISIBLE_WIDTH, MIN_WIDTH, MIRROR, partitionAt, partitionInFront, ROOM_TOP, roomBottom, SCENE_WIDTH, sceneLayout, seatX } from '@/lib/tycoon/render-support/layout'
 
 const BOTTOMS = [170, 200, 224] // the room's last row for one, two and three rows of desks
 
@@ -76,7 +76,7 @@ describe('desk arrangements', () => {
       [33, 192],
       [145, 192],
     ])
-    expect([4, 8, 12].map((desks) => roomBottom('wide', desks))).toEqual([170, 200, 224])
+    expect([4, 8, 12].map((desks) => roomBottom('wide', desks))).toEqual([170, 200, 230])
   })
 
   it('stack them two to a row in one centred column on tall screens, with the pets below', () => {
@@ -87,6 +87,16 @@ describe('desk arrangements', () => {
     }
     expect(roomBottom('tall', 4)).toBeGreaterThan(partitionAt('tall', 1)[1] + 30)
     expect(roomBottom('tall', 12)).toBeGreaterThan(roomBottom('tall', 4))
+  })
+
+  it('know which desks have no partition in front of them and stand on legs', () => {
+    expect([0, 1, 2, 3].map((p) => partitionInFront('wide', p, 8))).toEqual([true, true, false, false])
+    expect([0, 1, 2].map((p) => partitionInFront('wide', p, 6))).toEqual([true, false, false])
+    expect([0, 1, 2].map((p) => partitionInFront('tall', p, 5))).toEqual([true, true, false])
+    // The legs reach 5 rows past the desk front, which is where the next row's partition would start.
+    for (const desks of [4, 8, 12]) {
+      expect(roomBottom('wide', desks)).toBeGreaterThanOrEqual(partitionAt('wide', desks / 2 - 1)[1] + 30 + 5)
+    }
   })
 })
 

@@ -4,7 +4,7 @@ import { getOffice, officeSpec, staffOf } from '@/lib/tycoon/sim/offices'
 import { DISCIPLINES, type Discipline, type Employee, type GameState, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
 import type { Atlas, FrameName } from './atlas'
-import { chairX, MIN_WIDTH, partitionAt, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
+import { chairX, MIN_WIDTH, partitionAt, partitionInFront, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
 import { blinkingAt, momentAt } from '../render-support/activity'
@@ -91,10 +91,10 @@ function bugGraphic(): Graphics {
 }
 
 /**
- * What a desk needs to stand on its own in the garage, which has no partitions, drawn from the desk's top-left
- * corner: an edge down the side the pack leaves open (in an office it meets the pole between two desks), the
- * front of the desk and two legs. The pack only draws desks running up to the next partition, so a bare desk
- * top on the concrete looks sunk into the floor.
+ * What a desk needs to stand on its own, in the garage (which has no partitions) or in an office's last row,
+ * drawn from the desk's top-left corner: an edge down the side the pack leaves open (in an office it meets the
+ * pole between two desks), the front of the desk and two legs. The pack only draws desks running up to the next
+ * partition, so a bare desk top on the floor looks sunk into it.
  */
 function freestandingDesk(right: boolean): Graphics {
   const g = new Graphics()
@@ -996,7 +996,9 @@ export class OfficeScene {
 
       const deskX = px + (right ? 40 : 19)
       this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
-      if (this.shown?.kind === 'garage') this.desks.addChild(freestandingDesk(right)).position.set(deskX, py + 11)
+      if (this.shown?.kind === 'garage' || !partitionInFront(this.arrangement, i >> 1, desks)) {
+        this.desks.addChild(freestandingDesk(right)).position.set(deskX, py + 11)
+      }
       if (!vacancy || hasComputer(vacancy)) {
         const kind = workstationFor(i)
         const { gap, width, top } = WORKSTATIONS[kind]

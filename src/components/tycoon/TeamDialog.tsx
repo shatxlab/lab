@@ -6,6 +6,7 @@ import {
   FOUNDER_PAY_SHARE,
   LEAD_FREE_TEAM,
   LEAD_SPEED,
+  MAX_OFFICES,
   MORALE_UNHAPPY,
   MOVE_OUT_COST,
   NO_LEAD_SPEED,
@@ -158,6 +159,7 @@ export function TeamDialog() {
             </button>
           </div>
         ) : (
+          state.offices.length < MAX_OFFICES && (
           <div className="upgrade">
             <span>
               Open another office: <strong>{OFFICE_KINDS.office.desks} more desks</strong> and a team on its own project
@@ -167,6 +169,7 @@ export function TeamDialog() {
               Open · {formatMoney(newOfficeCost(state))}
             </button>
           </div>
+          )
         )}
       </section>
 

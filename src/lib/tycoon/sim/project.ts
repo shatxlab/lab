@@ -1,5 +1,4 @@
 import { getFeature } from '@/lib/tycoon/data/features'
-import { PRODUCT_WORDS } from '@/lib/tycoon/data/names'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import {
   CAMPAIGNS,
@@ -24,6 +23,7 @@ import {
 } from './balance'
 import { campaignCost, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
+import { freshProductName } from './naming'
 import { resolveOffice, staffOf } from './offices'
 import { bugProneness, releaseBugs } from './products'
 import { moraleFromRelease } from './staff'
@@ -102,7 +102,7 @@ export function startProject(
 
   office.project = {
     id: state.nextId++,
-    name: pick(state, PRODUCT_WORDS),
+    name: freshProductName(state),
     kind: 'new',
     parentId: null,
     productTypeId,
@@ -225,16 +225,36 @@ function reputationFromRelease(state: GameState, project: Project, quality: numb
   state.reputation = Math.max(0, Math.min(REPUTATION_MAX, state.reputation + change))
 }
 
+/** What a launch's breakout chance is made of: a base from the streak, times a factor each for quality, market and buzz. */
+export interface HitBreakdown {
+  chance: number
+  /** Before the other factors: grows with every good launch since the last hit. */
+  base: number
+  /** Good launches since the last hit. */
+  misses: number
+  quality: number
+  market: number
+  buzz: number
+  /** True when the chance was cut down to the highest it can be. */
+  capped: boolean
+}
+
 /**
  * The chance a launch of this quality breaks out: none for anything less than good, more for better
  * products, hotter markets and louder launches, and more again for every good launch since the last hit.
  */
-export function hitChance(state: GameState, project: Project, quality: number, campaign?: Tier): number {
-  if (quality < HIT_MIN_QUALITY) return 0
-  const tries = HIT_BASE_CHANCE + HIT_CHANCE_PER_MISS * state.launchesSinceHit
+export function hitBreakdown(state: GameState, project: Project, quality: number, campaign?: Tier): HitBreakdown {
+  const misses = state.launchesSinceHit
+  const base = HIT_BASE_CHANCE + HIT_CHANCE_PER_MISS * misses
   const qualityFactor = 0.5 + (quality - HIT_MIN_QUALITY) / (100 - HIT_MIN_QUALITY)
+  const market = marketDemand(state, project.productTypeId)
   const buzz = project.hype * (campaign ? HIT_CAMPAIGN_BOOST[campaign] : 1)
-  return Math.min(HIT_MAX_CHANCE, tries * qualityFactor * marketDemand(state, project.productTypeId) * buzz)
+  const raw = quality < HIT_MIN_QUALITY ? 0 : base * qualityFactor * market * buzz
+  return { chance: Math.min(HIT_MAX_CHANCE, raw), base, misses, quality: qualityFactor, market, buzz, capped: raw > HIT_MAX_CHANCE }
+}
+
+export function hitChance(state: GameState, project: Project, quality: number, campaign?: Tier): number {
+  return hitBreakdown(state, project, quality, campaign).chance
 }
 
 /** The market at launch, plus a little luck per release. */

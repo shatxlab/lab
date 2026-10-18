@@ -1,5 +1,4 @@
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
-import { PRODUCT_WORDS } from '@/lib/tycoon/data/names'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { NEWCOMERS, RIVALS, type RivalSeed } from '@/lib/tycoon/data/rivals'
 import {
@@ -31,6 +30,7 @@ import {
 } from './balance'
 import { dailyIncome } from './economy'
 import { marketDemand } from './market'
+import { freshProductName } from './naming'
 import { interestSince, revenueForUsers } from './products'
 import { pick, rand, randRange } from './rng'
 import { expectedFeatures } from '@/lib/tycoon/data/eras'
@@ -82,7 +82,7 @@ function makeProduct(state: GameState, rival: Rival, releaseDay: number): RivalP
   return {
     id: state.nextId++,
     rivalId: rival.id,
-    name: pick(state, PRODUCT_WORDS),
+    name: freshProductName(state),
     productTypeId: type.id,
     size,
     quality,

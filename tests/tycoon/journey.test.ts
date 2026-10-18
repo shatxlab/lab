@@ -19,7 +19,7 @@ import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { hire } from '@/lib/tycoon/sim/hiring'
 import { deskCount, moveOut, moveOutBlocker, newOfficeCost, openOffice, openOfficeBlocker, staffOf, transfer } from '@/lib/tycoon/sim/offices'
 import { estimateReach } from '@/lib/tycoon/sim/lifecycle'
-import { hitChance, projectQuality, shipProject, startProject } from '@/lib/tycoon/sim/project'
+import { hitBreakdown, hitChance, projectQuality, shipProject, startProject } from '@/lib/tycoon/sim/project'
 import { checkStage, stageComplete } from '@/lib/tycoon/sim/stages'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
@@ -275,6 +275,22 @@ describe('client contracts', () => {
 })
 
 describe('breakout hits', () => {
+  it('explain their chance: the shown factors multiply out to it', () => {
+    const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
+    startProject(state, 'web_app', [])
+    const project = state.offices[0].project!
+    state.launchesSinceHit = 3
+    state.market.web_app = 1.2
+    const b = hitBreakdown(state, project, 85, 'medium')
+    expect(b.capped).toBe(false)
+    expect(b.misses).toBe(3)
+    expect(b.chance).toBeCloseTo(b.base * b.quality * b.market * b.buzz, 10)
+    expect(b.chance).toBe(hitChance(state, project, 85, 'medium'))
+    expect(hitBreakdown(state, project, 60).chance).toBe(0)
+    state.launchesSinceHit = 100
+    expect(hitBreakdown(state, project, 95, 'large').capped).toBe(true)
+  })
+
   it('need a good product, and get likelier with quality, buzz, a hot market and every miss', () => {
     const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
     startProject(state, 'web_app', [])

@@ -1062,6 +1062,12 @@
   accent-color: var(--accent);
 }
 
+.tycoon-root .hit-factors {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
 @media (max-width: 520px) {
   .tycoon-root .tiers {
     grid-template-columns: 1fr;

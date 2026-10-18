@@ -175,8 +175,10 @@ function buildGame(game: GameId, lang: Lang): CouplesQuestion[] {
     let added = 0;
     for (const candidate of candidates) {
       if (added >= limit) break;
-      if (used.has(candidate.prompt)) continue;
-      used.add(candidate.prompt);
+      // Dilemmas can share a lead-in; what makes one unique is its lead-in plus its two buttons.
+      const identity = game === "either" ? `${candidate.prompt}|${candidate.options.join("|")}` : candidate.prompt;
+      if (used.has(identity)) continue;
+      used.add(identity);
       out.push({
         id: `${lang}:${game}:${theme}:${added}`,
         game,

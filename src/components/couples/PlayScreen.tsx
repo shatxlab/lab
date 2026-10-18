@@ -17,6 +17,10 @@ interface PlayScreenProps {
   onNext(): void;
   onExit(): void;
   onToggleSound(): void;
+  /** Turn this card off for good. */
+  onHide(): void;
+  /** True once this card is already turned off. */
+  hidden: boolean;
 }
 
 function PickRow({
@@ -50,6 +54,8 @@ export function PlayScreen({
   onNext,
   onExit,
   onToggleSound,
+  onHide,
+  hidden,
 }: PlayScreenProps) {
   const TXT = stringsFor(settings.lang);
   const progress = total > 0 ? ((index + (phase === "reveal" ? 1 : 0)) / total) * 100 : 0;
@@ -146,6 +152,11 @@ export function PlayScreen({
           </button>
         ) : phase === "handoff" ? null : (
           <p className="cp-hint">{TXT.keyboardHint}</p>
+        )}
+        {phase !== "handoff" && (
+          <button type="button" className="cp-hide" onClick={onHide} disabled={hidden} aria-pressed={hidden}>
+            {hidden ? TXT.hiddenCard : TXT.hideCard}
+          </button>
         )}
       </footer>
     </div>

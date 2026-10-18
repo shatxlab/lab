@@ -55,6 +55,49 @@ function startNorm(host: HTMLElement) {
 }
 
 describe("CouplesGame flow", () => {
+  it("swaps a card for a fresh one when it is hidden for good, and never deals it again", () => {
+    const host = mount();
+    startNorm(host);
+    const first = text(host, ".cp-prompt");
+    expect(text(host, ".cp-counter")).toContain("1 / 10");
+
+    click(host, ".cp-hide");
+    const second = text(host, ".cp-prompt");
+    expect(second).not.toBe(first);
+    expect(text(host, ".cp-counter")).toContain("1 / 10");
+    expect(host.querySelector(".cp-pass")).toBeNull();
+
+    const stored = JSON.parse(localStorage.getItem("lab:couples:history:v1") ?? "{}");
+    expect(stored.hidden).toHaveLength(1);
+
+    // A new session in a fresh mount: the hidden card is gone from the pool for good.
+    act(() => root?.unmount());
+    root = null;
+    document.body.innerHTML = "";
+    const again = mount();
+    click(again, ".cp-game-card", 0);
+    expect(again.textContent).toContain("Скрытых карточек: 1");
+    click(again, ".cp-hidden-line button");
+    expect(again.textContent).not.toContain("Скрытых карточек");
+    expect(JSON.parse(localStorage.getItem("lab:couples:history:v1") ?? "{}").hidden).toEqual([]);
+  });
+
+  it("remembers what was shown, so tomorrow's first cards are new ones", () => {
+    const host = mount();
+    startNorm(host);
+    const shown = [text(host, ".cp-prompt")];
+    for (let i = 0; i < 4; i += 1) {
+      click(host, ".cp-option", 0);
+      click(host, ".cp-pass .cp-primary");
+      click(host, ".cp-option", 0);
+      click(host, ".cp-play-footer .cp-primary");
+      shown.push(text(host, ".cp-prompt"));
+    }
+    const seen = Object.keys(JSON.parse(localStorage.getItem("lab:couples:history:v1") ?? "{}").seen);
+    expect(seen).toHaveLength(5);
+    expect(new Set(shown).size).toBe(5);
+  });
+
   it("plays a full match-mode game and scores 100%", () => {
     const host = mount();
     expect(host.querySelectorAll(".cp-game-card")).toHaveLength(3);

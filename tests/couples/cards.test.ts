@@ -27,8 +27,14 @@ function eachDeck(run: (lang: Lang, theme: string, game: GameId, cards: readonly
 }
 
 describe("curated couples cards", () => {
-  it("covers the same themes in every language", () => {
-    expect(Object.keys(CURATED.en).sort()).toEqual(Object.keys(CURATED.ru).sort());
+  it("has an English theme only where there is a Russian one (Russian is written first)", () => {
+    for (const theme of Object.keys(CURATED.en)) expect(Object.keys(CURATED.ru)).toContain(theme);
+  });
+
+  it("covers every theme in Russian", () => {
+    expect(Object.keys(CURATED.ru).sort()).toEqual(
+      ["conflict", "food", "friends", "future", "habits", "home", "money", "romance", "tender", "travel"],
+    );
   });
 
   it("has enough cards per game", () => {

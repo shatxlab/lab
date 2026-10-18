@@ -2,21 +2,26 @@ import type { CSSProperties } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 
 import { stringsFor, t } from "@/lib/couples/i18n";
-import { questionCount } from "@/lib/couples/questions";
+import { withoutHidden, type CouplesHistory } from "@/lib/couples/history";
+import { questionsFor } from "@/lib/couples/questions";
 import { CARD_COUNTS, getGame, THEMES } from "@/lib/couples/themes";
-import type { CouplesSettings } from "@/lib/couples/types";
+import type { CouplesSettings, ThemeId } from "@/lib/couples/types";
 
 interface SetupScreenProps {
   settings: CouplesSettings;
   onChange(partial: Partial<CouplesSettings>): void;
   onStart(): void;
   onBack(): void;
+  /** What the couple turned off, so the counts show what they can still get. */
+  history: CouplesHistory;
+  onRestoreHidden(): void;
 }
 
-export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreenProps) {
+export function SetupScreen({ settings, onChange, onStart, onBack, history, onRestoreHidden }: SetupScreenProps) {
   const TXT = stringsFor(settings.lang);
   const game = getGame(settings.game);
-  const available = questionCount(settings.game, settings.theme, settings.lang);
+  const questionCount = (theme: ThemeId | "all") => withoutHidden(questionsFor(settings.game, theme, settings.lang), history).length;
+  const available = questionCount(settings.theme);
 
   const setName = (index: 0 | 1, value: string) => {
     const names: [string, string] = [settings.names[0], settings.names[1]];
@@ -101,6 +106,14 @@ export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreen
           <h2>{TXT.theme}</h2>
           <p>{TXT.themeHint}</p>
         </div>
+        {history.hidden.length > 0 && (
+          <p className="cp-hidden-line">
+            {t(settings.lang, "hiddenCount", { count: history.hidden.length })}
+            <button type="button" onClick={onRestoreHidden}>
+              {TXT.restoreHidden}
+            </button>
+          </p>
+        )}
         <div className="cp-theme-grid">
           <button
             type="button"
@@ -112,7 +125,7 @@ export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreen
               🎲
             </span>
             <span className="cp-theme-name">{TXT.themeAll}</span>
-            <span className="cp-theme-count">{questionCount(settings.game, "all", settings.lang)}</span>
+            <span className="cp-theme-count">{questionCount("all")}</span>
           </button>
           {THEMES.map((theme) => (
             <button
@@ -127,7 +140,7 @@ export function SetupScreen({ settings, onChange, onStart, onBack }: SetupScreen
                 {theme.emoji}
               </span>
               <span className="cp-theme-name">{theme.name[settings.lang]}</span>
-              <span className="cp-theme-count">{questionCount(settings.game, theme.id, settings.lang)}</span>
+              <span className="cp-theme-count">{questionCount(theme.id)}</span>
             </button>
           ))}
         </div>

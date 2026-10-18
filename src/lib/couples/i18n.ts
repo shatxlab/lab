@@ -68,6 +68,10 @@ type StringKey =
   | "cancel"
   | "close"
   | "keyboardHint"
+  | "hideCard"
+  | "hiddenCard"
+  | "hiddenCount"
+  | "restoreHidden"
   | "mute"
   | "unmute"
   // Summary
@@ -147,6 +151,10 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     cancel: "Cancel",
     close: "Close",
     keyboardHint: "Keyboard: 1 and 2 — pick an answer · Space — next",
+    hideCard: "Never show this card again",
+    hiddenCard: "Hidden for good",
+    hiddenCount: "Hidden cards: {count}",
+    restoreHidden: "Bring them back",
     mute: "Mute sound",
     unmute: "Unmute sound",
 
@@ -225,6 +233,10 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     cancel: "Отмена",
     close: "Закрыть",
     keyboardHint: "Клавиши: 1 и 2 — выбрать ответ · Пробел — дальше",
+    hideCard: "Больше не показывать эту карточку",
+    hiddenCard: "Скрыта насовсем",
+    hiddenCount: "Скрытых карточек: {count}",
+    restoreHidden: "Вернуть их",
     mute: "Выключить звук",
     unmute: "Включить звук",
 

@@ -5,6 +5,7 @@ import { MenuScreen } from "@/components/couples/MenuScreen";
 import { PlayScreen } from "@/components/couples/PlayScreen";
 import { SetupScreen } from "@/components/couples/SetupScreen";
 import { SummaryScreen } from "@/components/couples/SummaryScreen";
+import { emptyHistory } from "@/lib/couples/history";
 import { questionsFor, resolveOptions } from "@/lib/couples/questions";
 import { defaultSettings } from "@/lib/couples/storage";
 import type { RoundResult } from "@/lib/couples/types";
@@ -38,6 +39,8 @@ describe("couples screens render", () => {
         onChange={() => undefined}
         onStart={() => undefined}
         onBack={() => undefined}
+        history={emptyHistory()}
+        onRestoreHidden={() => undefined}
       />,
     );
     expect(html).toContain("Как вас зовут?");
@@ -62,6 +65,8 @@ describe("couples screens render", () => {
         onNext={() => undefined}
         onExit={() => undefined}
         onToggleSound={() => undefined}
+        onHide={() => undefined}
+        hidden={false}
       />,
     );
     expect(html).toContain("Норм");
@@ -87,6 +92,8 @@ describe("couples screens render", () => {
           onNext={() => undefined}
           onExit={() => undefined}
           onToggleSound={() => undefined}
+          onHide={() => undefined}
+          hidden={false}
         />,
       );
     expect(curated.followUp).toBeTruthy();
@@ -112,6 +119,8 @@ describe("couples screens render", () => {
         onNext={() => undefined}
         onExit={() => undefined}
         onToggleSound={() => undefined}
+        onHide={() => undefined}
+        hidden={false}
       />,
     );
     expect(html).toContain("Передайте телефон");

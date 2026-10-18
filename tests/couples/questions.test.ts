@@ -27,8 +27,9 @@ describe("couples question builder", () => {
         );
       }
     }
-    const enPrompts = buildAllQuestions("en").map((question) => question.prompt);
-    const ruPrompts = buildAllQuestions("ru").map((question) => question.prompt);
+    const identity = (question: { prompt: string; options: readonly string[] }) => `${question.prompt}|${question.options.join("|")}`;
+    const enPrompts = buildAllQuestions("en").map(identity);
+    const ruPrompts = buildAllQuestions("ru").map(identity);
     expect(new Set(enPrompts).size).toBe(enPrompts.length);
     expect(new Set([...enPrompts, ...ruPrompts]).size).toBe(enPrompts.length + ruPrompts.length);
     // Generated themes still use the "Which of us would…" frame.
@@ -70,8 +71,9 @@ describe("couples question builder", () => {
 
   it("never repeats a prompt inside a game", () => {
     for (const game of GAMES) {
-      const prompts = buildGameQuestions(game).map((question) => question.prompt);
-      expect(new Set(prompts).size).toBe(prompts.length);
+      // Dilemmas may share a lead-in ("Что хуже?"); a card is its lead-in plus its two buttons.
+      const identities = buildGameQuestions(game).map((question) => `${question.prompt}|${question.options.join("|")}`);
+      expect(new Set(identities).size).toBe(identities.length);
     }
   });
 

@@ -30,6 +30,7 @@ const text = () => document.body.textContent ?? "";
 const byLabel = (label: string) => document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
 const frame = () => document.querySelector<HTMLElement>('[role="group"][tabindex="0"]')!;
 const canvas = () => frame().querySelector<SVGSVGElement>("svg")!;
+const box = () => document.querySelector<HTMLTextAreaElement>("textarea[data-board-text]")!;
 const items = () => [...document.querySelectorAll("ul.sr-only li")].map((li) => li.textContent);
 
 function pointer(kind: string, x: number, y: number, init: { pointerId?: number } = {}) {
@@ -69,20 +70,20 @@ describe("Whiteboard", () => {
     expect(text()).toContain(tb("en", "hint"));
     expect(document.querySelector("select")).toBeNull();
     expect([...document.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Rectangle", "Arrow", "Text", "Undo", "Redo", "Clear the board", "Download PNG"],
+      ["Box", "Arrow", "Text", "Undo", "Redo", "Clear the board", "Download PNG"],
     );
     expect(text()).not.toMatch(/\d+%/);
     expect(await axeViolations()).toEqual([]);
     view.unmount();
   });
 
-  it("draws a rectangle with the tool, then goes back to moving things", async () => {
+  it("draws a box with the tool, then goes back to moving things", async () => {
     const view = await open();
-    await click(byLabel("Rectangle"));
-    expect(byLabel("Rectangle").getAttribute("aria-pressed")).toBe("true");
+    await click(byLabel("Box"));
+    expect(byLabel("Box").getAttribute("aria-pressed")).toBe("true");
     await drag(50, 50, 200, 150);
-    expect(byLabel("Rectangle").getAttribute("aria-pressed")).toBe("false");
-    expect(items()).toEqual(["Rectangle"]);
+    expect(byLabel("Box").getAttribute("aria-pressed")).toBe("false");
+    expect(items()).toEqual(["Box"]);
     const [el] = await savedElements(1);
     expect(el).toMatchObject({ type: "rect", x: 50, y: 50, w: 150, h: 100 });
     expect(canvas().innerHTML).toContain('stroke="#ffffff"');
@@ -97,6 +98,60 @@ describe("Whiteboard", () => {
     await pointer("pointerdown", 300, 300);
     await pointer("pointerup", 300, 300);
     expect(items()).toEqual(["Arrow"]);
+    view.unmount();
+  });
+
+  it("drops a box with a click, takes its label, and adds the next one linked by an arrow", async () => {
+    const view = await open();
+    await click(byLabel("Box"));
+    await pointer("pointerdown", 300, 200);
+    await pointer("pointerup", 300, 200);
+    await type(box(), "Client");
+    await act(async () => box().blur());
+    expect(items()).toEqual(["Box: Client"]);
+
+    await click(byLabel("Add a box to the right"));
+    await type(box(), "Server");
+    await act(async () => box().blur());
+    expect(items()).toEqual(["Box: Client", "Box: Server", "Arrow"]);
+    const [a, b, link] = await savedElements(3);
+    expect(link).toMatchObject({ type: "arrow", from: a!.id, to: b!.id });
+    expect(b).toMatchObject({ y: (a as { y: number }).y });
+
+    await click(byLabel("Add a box below"));
+    await act(async () => box().blur());
+    expect(items()).toEqual(["Box: Client", "Box: Server", "Arrow", "Box", "Arrow"]);
+    view.unmount();
+  });
+
+  it("links an arrow drawn between two boxes, so it follows a moved box; Delete removes a box with its arrows", async () => {
+    seed([{ id: "a", type: "rect", x: 0, y: 0, w: 100, h: 60, text: "A" }, { id: "b", type: "rect", x: 300, y: 0, w: 100, h: 60, text: "B" }]);
+    const view = await open();
+    await click(byLabel("Arrow"));
+    await drag(50, 30, 350, 30);
+    expect((await savedElements(3))[2]).toMatchObject({ from: "a", to: "b" });
+
+    await drag(350, 30, 350, 230);
+    await waitFor(() => expect(readBoard().elements[2]).toMatchObject({ to: "b" }));
+    await waitFor(() => expect((readBoard().elements[2] as { y2: number }).y2).toBeGreaterThan(150));
+
+    await press(frame(), "Delete");
+    expect(items()).toEqual(["Box: A"]);
+    view.unmount();
+  });
+
+  it("writes columns of text with Tab, level with each other", async () => {
+    const view = await open();
+    await click(byLabel("Text"));
+    await pointer("pointerdown", 40, 40);
+    await type(box(), "Before");
+    await press(box(), "Tab");
+    await type(box(), "After");
+    await act(async () => box().blur());
+    expect(items()).toEqual(["Text: Before", "Text: After"]);
+    const [left, right] = await savedElements(2);
+    expect(right).toMatchObject({ y: (left as { y: number }).y });
+    expect((right as { x: number }).x).toBeGreaterThan((left as { x: number }).x + 100);
     view.unmount();
   });
 
@@ -116,7 +171,6 @@ describe("Whiteboard", () => {
     const view = await open();
     await click(byLabel("Text"));
     await pointer("pointerdown", 40, 40);
-    const box = () => document.querySelector<HTMLTextAreaElement>("textarea[data-board-text]")!;
     await type(box(), "hello");
     await act(async () => box().blur());
     expect(items()).toEqual(["Text: hello"]);
@@ -140,7 +194,7 @@ describe("Whiteboard", () => {
     await savedElements(0);
 
     await click(byLabel("Undo"));
-    expect(items()).toEqual(["Rectangle", "Arrow"]);
+    expect(items()).toEqual(["Box", "Arrow"]);
     await click(byLabel("Redo"));
     expect(items()).toEqual([]);
     view.unmount();
@@ -149,9 +203,9 @@ describe("Whiteboard", () => {
   it("answers the keyboard: tool keys, Escape and undo", async () => {
     const view = await open();
     await press(frame(), "r");
-    expect(byLabel("Rectangle").getAttribute("aria-pressed")).toBe("true");
+    expect(byLabel("Box").getAttribute("aria-pressed")).toBe("true");
     await press(frame(), "Escape");
-    expect(byLabel("Rectangle").getAttribute("aria-pressed")).toBe("false");
+    expect(byLabel("Box").getAttribute("aria-pressed")).toBe("false");
     await press(frame(), "a");
     await drag(0, 0, 100, 100);
     expect(items()).toEqual(["Arrow"]);
@@ -188,12 +242,12 @@ describe("Whiteboard", () => {
 
   it("keeps the board across a reload", async () => {
     const first = await open();
-    await click(byLabel("Rectangle"));
+    await click(byLabel("Box"));
     await drag(30, 30, 90, 90);
     await savedElements(1);
     first.unmount();
     const again = await open();
-    expect(items()).toEqual(["Rectangle"]);
+    expect(items()).toEqual(["Box"]);
     again.unmount();
   });
 });

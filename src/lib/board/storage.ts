@@ -1,3 +1,4 @@
+import { connect } from "@/lib/board/geometry";
 import {
   COORD_LIMIT,
   MAX_ELEMENTS,
@@ -50,12 +51,16 @@ export function cleanElement(raw: unknown, seen: Set<string>): BoardElement | nu
   switch (input.type) {
     case "rect": {
       const [x, y, w, h] = [coord(input.x), coord(input.y), coord(input.w), coord(input.h)];
-      if (x !== null && y !== null && w !== null && h !== null) element = { id, type: "rect", x, y, w: Math.abs(w), h: Math.abs(h) };
+      if (x !== null && y !== null && w !== null && h !== null) element = { id, type: "rect", x, y, w: Math.abs(w), h: Math.abs(h), text: typeof input.text === "string" ? input.text.slice(0, MAX_TEXT) : "" };
       break;
     }
     case "arrow": {
       const [x1, y1, x2, y2] = [coord(input.x1), coord(input.y1), coord(input.x2), coord(input.y2)];
-      if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) element = { id, type: "arrow", x1, y1, x2, y2 };
+      if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
+        element = { id, type: "arrow", x1, y1, x2, y2 };
+        if (typeof input.from === "string" && input.from !== "") element.from = input.from.slice(0, 40);
+        if (typeof input.to === "string" && input.to !== "") element.to = input.to.slice(0, 40);
+      }
       break;
     }
     case "text": {
@@ -76,7 +81,7 @@ export function cleanElements(raw: unknown): BoardElement[] {
     const element = cleanElement(item, seen);
     if (element) out.push(element);
   }
-  return out;
+  return connect(out);
 }
 
 function cleanView(raw: unknown): View {

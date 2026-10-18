@@ -6,16 +6,16 @@
  */
 
 import * as React from "react";
-import { Download, MoveUpRight, Redo2, Square, Trash2, Type, Undo2 } from "lucide-react";
+import { Download, MoveUpRight, Plus, Redo2, Square, Trash2, Type, Undo2 } from "lucide-react";
 
 import { renderNode } from "@/components/board/render";
 import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
-import { topmostAt, type Point } from "@/lib/board/geometry";
-import { begin, finish, newText, panView, pinchView, preview, update, type Gesture, type Tool } from "@/lib/board/gesture";
+import { boundsOf, connect, fitLabel, remove, snap, textSize, topmostAt, type Point } from "@/lib/board/geometry";
+import { SNAP, begin, boxBeside, finish, newText, panView, pinchView, preview, textBeside, update, type Gesture, type Side, type Tool } from "@/lib/board/gesture";
 import { canRedo, canUndo, commit, createHistory, redo, undo, type History } from "@/lib/board/history";
 import { tb } from "@/lib/board/i18n";
-import { INK, MUTED, SURFACE, TEXT_SIZE, type BoardElement, type TextElement, type View } from "@/lib/board/model";
+import { INK, LABEL_PAD, MUTED, SURFACE, TEXT_SIZE, type BoardElement, type RectElement, type TextElement, type View } from "@/lib/board/model";
 import type { BoardState } from "@/lib/board/storage";
 import { boardSvg, describeElement } from "@/lib/board/svg";
 import { clampZoom, panBy, toScreen, toWorld, zoomAt } from "@/lib/board/viewport";
@@ -38,7 +38,7 @@ export interface WorkspaceProps {
 function kindLabel(lang: AppLang, el: BoardElement): string {
   switch (el.type) {
     case "rect":
-      return tb(lang, "kindRect");
+      return el.text ? tb(lang, "kindRectLabel", { text: el.text.slice(0, 40) }) : tb(lang, "kindRect");
     case "arrow":
       return tb(lang, "kindArrow");
     default:
@@ -55,7 +55,13 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
   const [tool, setTool] = React.useState<Tool | null>(null);
   const [view, setView] = React.useState<View>(board.view);
   const [gesture, setGesture] = React.useState<Gesture | null>(null);
-  const [editing, setEditing] = React.useState<{ element: TextElement; isNew: boolean } | null>(null);
+  /** Text or a box label being typed; a new text element is only added once it has some. */
+  const [editing, setEditing] = React.useState<{ element: TextElement | RectElement; isNew: boolean } | null>(null);
+  const [draft, setDraft] = React.useState("");
+  /** The element last clicked or moved: Delete removes it, and a box or text gets buttons to add the next one. */
+  const [selected, setSelected] = React.useState<string | null>(null);
+  /** Set once an edit is finished, so the blur that follows does not finish it again. */
+  const editDone = React.useRef(false);
   const [failed, setFailed] = React.useState(false);
 
   const wrapRef = React.useRef<HTMLDivElement>(null);
@@ -96,30 +102,61 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
 
   /* ---------------------------------------------------------- text editing */
 
-  const finishEdit = (value: string) => {
-    if (!editing) return;
+  /** Ends the edit and returns the board as it now is. */
+  const finishEdit = (value: string): BoardElement[] => {
+    if (!editing || editDone.current) return elements;
+    editDone.current = true;
     const { element, isNew } = editing;
     setEditing(null);
     const text = value.replace(/\s+$/, "");
-    if (isNew) {
-      if (text !== "") commitElements([...elements, { ...element, text }]);
+    let next = elements;
+    if (element.type === "rect") {
+      const current = elements.find((el): el is RectElement => el.id === element.id && el.type === "rect");
+      if (current && text !== current.text) next = connect(elements.map((el) => (el.id === current.id ? fitLabel({ ...current, text }) : el)));
+    } else if (isNew) {
+      if (text !== "") next = [...elements, { ...element, text }];
     } else if (text === "") {
-      commitElements(elements.filter((el) => el.id !== element.id));
+      next = elements.filter((el) => el.id !== element.id);
     } else if (text !== element.text) {
-      commitElements(elements.map((el) => (el.id === element.id ? { ...element, text } : el)));
+      next = elements.map((el) => (el.id === element.id ? { ...element, text } : el));
+    }
+    if (next !== elements) commitElements(next);
+    return next;
+  };
+
+  const startEdit = (element: TextElement | RectElement, isNew: boolean) => {
+    setGestureBoth(null);
+    setTool(null);
+    setSelected(element.id);
+    setDraft(element.text);
+    editDone.current = false;
+    setEditing({ element, isNew });
+  };
+
+  /** The next box to the right of or below a box, linked by an arrow; or the next column of text. */
+  const addBeside = (from: BoardElement[], id: string, side: Side) => {
+    const el = from.find((e) => e.id === id);
+    if (el?.type === "rect") {
+      const made = boxBeside(from, el, side);
+      commitElements(made.elements);
+      startEdit(made.box, false);
+    } else if (el?.type === "text") {
+      startEdit(textBeside(el), true);
     }
   };
 
-  const startEdit = (element: TextElement, isNew: boolean) => {
+  const removeSelected = () => {
+    if (!selected || !elements.some((el) => el.id === selected)) return;
     setGestureBoth(null);
-    setTool(null);
-    setEditing({ element, isNew });
+    commitElements(remove(elements, selected));
+    setSelected(null);
   };
 
   /* -------------------------------------------------------------- pointers */
 
   const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
     if (event.button === 2) return;
+    const board = editing ? finishEdit(draft) : elements;
     wrapRef.current?.focus({ preventScroll: true });
     event.currentTarget.setPointerCapture?.(event.pointerId);
     const screen = screenOf(event);
@@ -135,19 +172,19 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
     }
     if (pointers.current.size > 2 || ignoreUntilUp.current) return;
 
-    if (editing) finishEdit((document.querySelector("textarea[data-board-text]") as HTMLTextAreaElement | null)?.value ?? editing.element.text);
-
     const world = toWorld(view, screen.x, screen.y);
     const reach = event.pointerType === "touch" ? 14 : 6;
 
     if (tool === "text") {
-      const hit = topmostAt(elements, world, reach / view.zoom);
-      if (hit?.type === "text") startEdit(hit, false);
-      else startEdit(newText(world), true);
+      const hit = topmostAt(board, world, reach / view.zoom);
+      if (hit?.type === "text" || hit?.type === "rect") startEdit(hit, false);
+      else startEdit(snap(newText(world), board, SNAP / view.zoom) as TextElement, true);
       event.preventDefault();
       return;
     }
-    setGestureBoth(begin({ tool, elements, world, screen, view, reach }));
+    const next = begin({ tool, elements: board, world, screen, view, reach });
+    if (next.kind === "pan") setSelected(null);
+    setGestureBoth(next);
   };
 
   const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
@@ -182,8 +219,9 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
     if (done.elements !== elements) commitElements(done.elements);
     // One drawing per pick: the tool lets go, and dragging moves things again.
     if (g.kind === "draw") setTool(null);
-    const edit = done.edit ? elements.find((el) => el.id === done.edit) : undefined;
-    if (edit?.type === "text") startEdit(edit, false);
+    setSelected(g.kind === "move" ? g.id : null);
+    const edit = done.edit ? done.elements.find((el) => el.id === done.edit) : undefined;
+    if (edit?.type === "text" || edit?.type === "rect") startEdit(edit, false);
   };
 
   const onPointerCancel = (event: React.PointerEvent<SVGSVGElement>) => {
@@ -216,6 +254,7 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
 
   const doUndo = () => {
     setGestureBoth(null);
+    setSelected(null);
     setHist(undo);
   };
   const doRedo = () => {
@@ -225,6 +264,7 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
   const clear = () => {
     if (elements.length === 0) return;
     setGestureBoth(null);
+    setSelected(null);
     commitElements([]);
   };
   const pick = (next: Tool) => setTool((current) => (current === next ? null : next));
@@ -244,7 +284,12 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
     if (mod || event.altKey) return;
     if (key === "escape") {
       setGestureBoth(null);
+      setSelected(null);
       return setTool(null);
+    }
+    if (key === "delete" || key === "backspace") {
+      event.preventDefault();
+      return removeSelected();
     }
     const hit = TOOLS.find((entry) => entry.key === key);
     if (hit) pick(hit.tool);
@@ -262,6 +307,32 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
   /* ---------------------------------------------------------------- render */
 
   const cursor = tool === "text" ? "text" : tool ? "crosshair" : gesture?.kind === "pan" ? "grabbing" : "default";
+
+  // While a box's label is typed, the box shows at the size it will grow to, without its old label.
+  const editingBox = editing?.element.type === "rect" ? fitLabel({ ...(elements.find((el) => el.id === editing.element.id) as RectElement ?? editing.element), text: draft }) : null;
+  const drawnNow = editingBox ? connect(shown.map((el) => (el.id === editingBox.id ? { ...editingBox, text: "" } : el))) : shown.filter((el) => el.id !== editing?.element.id);
+  const picked = gesture ? undefined : (editingBox ?? elements.find((el) => el.id === selected));
+  const pickedBox = picked ? boundsOf(picked) : null;
+  const handles: { side: Side; label: string; at: Point }[] = [];
+  if (picked && pickedBox && picked.type !== "arrow") {
+    const right = toScreen(view, { x: pickedBox.x + pickedBox.w, y: pickedBox.y + pickedBox.h / 2 });
+    handles.push({ side: "right", label: tb(lang, picked.type === "rect" ? "boxRight" : "textRight"), at: { x: right.x + 26, y: right.y } });
+    if (picked.type === "rect") {
+      const below = toScreen(view, { x: pickedBox.x + pickedBox.w / 2, y: pickedBox.y + pickedBox.h });
+      handles.push({ side: "below", label: tb(lang, "boxBelow"), at: { x: below.x, y: below.y + 26 } });
+    }
+  }
+  const editorStyle = (): React.CSSProperties => {
+    const font = { fontSize: TEXT_SIZE * view.zoom, lineHeight: 1.25, color: INK, fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" };
+    if (editingBox) {
+      const corner = toScreen(view, editingBox);
+      const lines = draft.split("\n").length;
+      const padTop = Math.max(0, (editingBox.h - lines * TEXT_SIZE * 1.25) / 2) * view.zoom;
+      return { ...font, left: corner.x, top: corner.y, width: editingBox.w * view.zoom, height: editingBox.h * view.zoom, paddingTop: padTop, textAlign: "center", boxSizing: "border-box" };
+    }
+    const at = toScreen(view, editing!.element);
+    return { ...font, left: at.x, top: at.y, minWidth: 80, width: Math.max(120, (textSize(draft).w + TEXT_SIZE) * view.zoom) };
+  };
   const buttonClass = (on: boolean) =>
     cn(
       "inline-flex size-9 shrink-0 items-center justify-center rounded-md border text-(--fg) transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40",
@@ -319,7 +390,10 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
           onPointerCancel={onPointerCancel}
         >
           <g transform={`translate(${-view.x * view.zoom} ${-view.y * view.zoom}) scale(${view.zoom})`}>
-            {shown.filter((el) => el.id !== editing?.element.id).map((el) => renderNode(describeElement(el), el.id))}
+            {drawnNow.map((el) => renderNode(describeElement(el), el.id))}
+            {pickedBox && !editing && (
+              <rect x={pickedBox.x - 10} y={pickedBox.y - 10} width={pickedBox.w + 20} height={pickedBox.h + 20} rx={8} fill="none" stroke={MUTED} strokeWidth={2 / view.zoom} strokeDasharray={`${8 / view.zoom} ${6 / view.zoom}`} />
+            )}
           </g>
         </svg>
 
@@ -329,33 +403,46 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
             aria-label={tb(lang, "textLabel")}
             title={tb(lang, "textHint")}
             autoFocus
-            defaultValue={editing.element.text}
-            rows={Math.max(1, editing.element.text.split("\n").length)}
+            value={draft}
+            rows={Math.max(1, draft.split("\n").length)}
             spellCheck={false}
+            onChange={(event) => setDraft(event.target.value)}
             onBlur={(event) => finishEdit(event.target.value)}
             onKeyDown={(event) => {
               event.stopPropagation();
               if (event.key === "Escape") {
                 event.preventDefault();
-                setEditing(null);
+                finishEdit(editing.element.text);
+                wrapRef.current?.focus({ preventScroll: true });
               } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 finishEdit(event.currentTarget.value);
+                wrapRef.current?.focus({ preventScroll: true });
+              } else if (event.key === "Tab") {
+                // Straight on to the next box or column, as in a table.
+                event.preventDefault();
+                const id = editing.element.id;
+                addBeside(finishEdit(event.currentTarget.value), id, event.shiftKey && editing.element.type === "rect" ? "below" : "right");
               }
             }}
-            className="absolute resize-none overflow-hidden border border-dashed border-(--accent) bg-transparent p-0 outline-none"
-            style={{
-              left: toScreen(view, editing.element).x,
-              top: toScreen(view, editing.element).y,
-              fontSize: TEXT_SIZE * view.zoom,
-              lineHeight: 1.25,
-              color: INK,
-              minWidth: 80,
-              width: Math.max(120, 14 * TEXT_SIZE * view.zoom * 0.6),
-              fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
-            }}
+            className={cn("absolute resize-none overflow-hidden bg-transparent p-0 outline-none", !editingBox && "border border-dashed border-(--accent)")}
+            style={editorStyle()}
           />
         )}
+
+        {handles.map(({ side, label, at }) => (
+          <button
+            key={side}
+            type="button"
+            aria-label={label}
+            title={label}
+            onClick={() => picked && addBeside(live.current.elements, picked.id, side)}
+            className="absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-(--accent) bg-(--bg) text-(--accent) shadow-sm hover:bg-(--accent)/15 focus-visible:outline-2 focus-visible:outline-(--accent)"
+            style={{ left: at.x, top: at.y }}
+          >
+            <Plus aria-hidden="true" className="size-4" />
+          </button>
+        ))}
 
         {elements.length === 0 && !editing && (
           <p className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center text-sm" style={{ color: MUTED }}>

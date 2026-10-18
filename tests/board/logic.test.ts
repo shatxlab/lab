@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { boundsOf, hitTest, topmostAt, translate } from "@/lib/board/geometry";
-import { begin, drawn, finish, newText, panView, pinchView, preview, update } from "@/lib/board/gesture";
+import { boundsOf, connect, fitLabel, hitTest, remove, snap, topmostAt, translate } from "@/lib/board/geometry";
+import { begin, boxBeside, drawn, finish, newText, panView, pinchView, preview, textBeside, update } from "@/lib/board/gesture";
 import { canRedo, canUndo, commit, createHistory, redo, undo } from "@/lib/board/history";
-import { INK, SURFACE, type BoardElement } from "@/lib/board/model";
+import { BOX_H, BOX_W, INK, SURFACE, type BoardElement, type RectElement } from "@/lib/board/model";
 import { BOARD_STORAGE_KEY, cleanElements, emptyBoard, readBoard, writeBoard, type BoardStorage } from "@/lib/board/storage";
 import { boardSvg, describeElement, serializeNode } from "@/lib/board/svg";
 import { clampZoom, toScreen, toWorld, zoomAt } from "@/lib/board/viewport";
 
 const view = { x: 0, y: 0, zoom: 1 };
-const rect: BoardElement = { id: "r", type: "rect", x: 10, y: 10, w: 100, h: 60 };
+const rect: BoardElement = { id: "r", type: "rect", x: 10, y: 10, w: 100, h: 60, text: "" };
 const arrow: BoardElement = { id: "a", type: "arrow", x1: 0, y1: 200, x2: 100, y2: 200 };
 const note: BoardElement = { id: "t", type: "text", x: 300, y: 300, text: "hello" };
 
@@ -19,10 +19,40 @@ const memory = (): BoardStorage & { data: Map<string, string> } => {
 };
 
 describe("geometry", () => {
-  it("hits a rectangle on its outline only, so its inside can still pan the canvas", () => {
+  it("hits a box anywhere inside it, so its label is easy to click", () => {
     expect(hitTest(rect, { x: 10, y: 40 }, 2)).toBe(true);
-    expect(hitTest(rect, { x: 60, y: 40 }, 2)).toBe(false);
+    expect(hitTest(rect, { x: 60, y: 40 }, 2)).toBe(true);
     expect(hitTest(rect, { x: 300, y: 40 }, 2)).toBe(false);
+  });
+
+  it("grows a box to fit its label, about its centre", () => {
+    const grown = fitLabel({ ...rect, text: "a fairly long label" } as RectElement);
+    expect(grown.w).toBeGreaterThan(100);
+    expect(grown.x + grown.w / 2).toBeCloseTo(60);
+    const roomy = { ...rect, h: 200, text: "a" } as RectElement;
+    expect(fitLabel(roomy)).toBe(roomy);
+  });
+
+  it("keeps a linked arrow on the edges of its boxes, and drops it with a box", () => {
+    const right: BoardElement = { id: "r2", type: "rect", x: 300, y: 10, w: 100, h: 60, text: "" };
+    const link: BoardElement = { id: "l", type: "arrow", x1: 0, y1: 0, x2: 0, y2: 0, from: "r", to: "r2" };
+    const [, , joined] = connect([rect, right, link]);
+    expect(joined).toMatchObject({ y1: 40, y2: 40 });
+    expect((joined as { x1: number }).x1).toBeGreaterThan(110);
+    expect((joined as { x2: number }).x2).toBeLessThan(300);
+
+    const moved = connect([rect, translate(right, 0, 200), joined!]);
+    expect(moved[2]).toMatchObject({ from: "r", to: "r2" });
+    expect((moved[2] as { y2: number }).y2).toBeGreaterThan(200);
+    expect(remove(moved, "r2").map((el) => el.id)).toEqual(["r"]);
+    expect(translate(joined!, 1, 1)).not.toHaveProperty("from");
+  });
+
+  it("snaps boxes by their centres and text by its corner", () => {
+    const near = { ...rect, id: "n", x: 200, y: 14 };
+    expect(snap(near, [rect], 10)).toMatchObject({ x: 200, y: 10 });
+    expect(snap({ ...near, y: 40 }, [rect], 10)).toMatchObject({ y: 40 });
+    expect(snap({ ...note, id: "n", x: 600, y: 306 }, [note], 10)).toMatchObject({ x: 600, y: 300 });
   });
 
   it("hits an arrow along its length and text anywhere in its box", () => {
@@ -59,11 +89,34 @@ describe("gestures", () => {
     const start = begin({ ...input, tool: "rect", world: { x: 0, y: 0 }, screen: { x: 0, y: 0 } });
     const dragged = update(start, { x: 80, y: 40 }, view);
     expect(drawn(dragged as never)).toMatchObject({ type: "rect", w: 80, h: 40 });
-    expect(finish(dragged, [], view).elements).toHaveLength(1);
-    expect(finish(start, [], view).elements).toHaveLength(0);
+    expect(finish(dragged, [], view)).toMatchObject({ elements: [{ type: "rect" }], edit: (dragged as { id: string }).id });
 
     const line = update(begin({ ...input, tool: "arrow", world: { x: 0, y: 0 }, screen: { x: 0, y: 0 } }), { x: 50, y: 50 }, view);
     expect(finish(line, [], view).elements[0]).toMatchObject({ type: "arrow", x2: 50, y2: 50 });
+    expect(finish(begin({ ...input, tool: "arrow", world: { x: 0, y: 0 }, screen: { x: 0, y: 0 } }), [], view).elements).toHaveLength(0);
+  });
+
+  it("drops a box of the usual size where the box tool clicks", () => {
+    const click = begin({ ...input, tool: "rect", world: { x: 500, y: 500 }, screen: { x: 500, y: 500 } });
+    const done = finish(click, [], view);
+    expect(done.elements[0]).toMatchObject({ type: "rect", x: 500 - BOX_W / 2, y: 500 - BOX_H / 2, w: BOX_W, h: BOX_H, text: "" });
+    expect(done.edit).toBe(done.elements[0]!.id);
+  });
+
+  it("links an arrow drawn from one box to another", () => {
+    const right: BoardElement = { id: "r2", type: "rect", x: 300, y: 10, w: 100, h: 60, text: "" };
+    const g = update(begin({ ...input, elements: [rect, right], tool: "arrow", world: { x: 50, y: 40 }, screen: { x: 50, y: 40 } }), { x: 350, y: 40 }, view);
+    expect(finish(g, [rect, right], view).elements[2]).toMatchObject({ type: "arrow", from: "r", to: "r2" });
+  });
+
+  it("adds the next box beside one, past what is there, with an arrow to it", () => {
+    const below = boxBeside([rect], rect as RectElement, "below");
+    expect(below.box).toMatchObject({ x: 10, w: 100, h: 60, text: "" });
+    expect(below.box.y).toBeGreaterThan(70);
+    expect(below.elements.at(-1)).toMatchObject({ type: "arrow", from: "r", to: below.box.id });
+    const again = boxBeside(below.elements, rect as RectElement, "below");
+    expect(again.box.y).toBeGreaterThan(below.box.y + 60);
+    expect(textBeside(note as never)).toMatchObject({ type: "text", y: 300, text: "" });
   });
 
   it("previews and commits a move, and treats a click on text as an edit", () => {
@@ -74,8 +127,10 @@ describe("gestures", () => {
 
     const onText = begin({ elements: [note], view, reach: 6, tool: null, world: { x: 305, y: 305 }, screen: { x: 305, y: 305 } });
     expect(finish(onText, [note], view)).toMatchObject({ edit: "t" });
-    const onShape = begin({ ...input, tool: null, world: { x: 10, y: 40 }, screen: { x: 10, y: 40 } });
-    expect(finish(onShape, input.elements, view).edit).toBeUndefined();
+    const onBox = begin({ ...input, tool: null, world: { x: 10, y: 40 }, screen: { x: 10, y: 40 } });
+    expect(finish(onBox, input.elements, view).edit).toBe("r");
+    const onArrow = begin({ ...input, tool: null, world: { x: 50, y: 200 }, screen: { x: 50, y: 200 } });
+    expect(finish(onArrow, input.elements, view).edit).toBeUndefined();
   });
 
   it("zooms about the midpoint of a pinch", () => {
@@ -124,6 +179,12 @@ describe("svg", () => {
     expect(svg.startsWith("<svg")).toBe(true);
     expect(width).toBeGreaterThan(300);
     expect(height).toBeGreaterThan(300);
+  });
+
+  it("centres a box's label inside it", () => {
+    const markup = serializeNode(describeElement({ ...rect, text: "API" } as RectElement));
+    expect(markup).toContain('text-anchor="middle"');
+    expect(markup).toContain(">API</tspan>");
   });
 
   it("escapes text and still exports an empty board", () => {

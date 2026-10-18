@@ -21,7 +21,14 @@ export function describeElement(el: BoardElement): SvgNode {
   switch (el.type) {
     case "rect": {
       const b = boundsOf(el);
-      return { tag: "rect", attrs: { x: r(b.x), y: r(b.y), width: r(b.w), height: r(b.h), rx: 4, ...stroke, fill: "none" } };
+      const outline: SvgNode = { tag: "rect", attrs: { x: r(b.x), y: r(b.y), width: r(b.w), height: r(b.h), rx: 4, ...stroke, fill: "none" } };
+      if (el.text === "") return outline;
+      // The label sits centred in the box, each line centred under the last.
+      const lines = el.text.split("\n");
+      const cx = r(b.x + b.w / 2);
+      const top = b.y + b.h / 2 - (lines.length * TEXT_SIZE * 1.25) / 2;
+      const label = textNode(lines, cx, top, { "text-anchor": "middle" });
+      return { tag: "g", attrs: {}, children: [outline, label] };
     }
     case "arrow": {
       const [a, b] = arrowHead(el);
@@ -34,15 +41,18 @@ export function describeElement(el: BoardElement): SvgNode {
         ],
       };
     }
-    default: {
-      const lines = el.text.split("\n");
-      return {
-        tag: "text",
-        attrs: { x: r(el.x), y: r(el.y + TEXT_SIZE * 0.95), "font-size": TEXT_SIZE, fill: INK, "font-family": FONT, style: "white-space:pre" },
-        children: lines.map((line, i) => ({ tag: "tspan", attrs: { x: r(el.x), ...(i > 0 ? { dy: r(TEXT_SIZE * 1.25) } : {}) }, text: line })),
-      };
-    }
+    default:
+      return textNode(el.text.split("\n"), r(el.x), el.y);
   }
+}
+
+/** Lines of text whose first line's top is at `top`, each starting (or centred) at `x`. */
+function textNode(lines: string[], x: number, top: number, extra: Record<string, string> = {}): SvgNode {
+  return {
+    tag: "text",
+    attrs: { x, y: r(top + TEXT_SIZE * 0.95), "font-size": TEXT_SIZE, fill: INK, "font-family": FONT, style: "white-space:pre", ...extra },
+    children: lines.map((line, i) => ({ tag: "tspan", attrs: { x, ...(i > 0 ? { dy: r(TEXT_SIZE * 1.25) } : {}) }, text: line })),
+  };
 }
 
 const esc = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

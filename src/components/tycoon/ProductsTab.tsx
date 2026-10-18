@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
-import { PROJECT_SIZES, PROMOTIONS } from '@/lib/tycoon/sim/balance'
+import { PORTFOLIO_LIMIT, PROJECT_SIZES, PROMOTIONS } from '@/lib/tycoon/sim/balance'
+import { inGarage } from '@/lib/tycoon/sim/offices'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
-import { autoPromoteUnlocked, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { autoPromoteUnlocked, growBlocker, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, targetUsers } from '@/lib/tycoon/sim/products'
 import { TIERS, type GameState, type Product, type Tier } from '@/lib/tycoon/sim/types'
@@ -33,6 +34,8 @@ function ProductRow({ product }: { product: Product }) {
 
   const type = getProductType(product.productTypeId)
   const blocker = updateBlocker(state, office, product)
+  const next = nextSize(product.size)
+  const growProblem = next ? growBlocker(state, office, product) : null
   const fixProblem = fixBlocker(state, product)
   const fixingNow = fixOf(state, product.id) !== undefined
   const sunsetProblem = sunsetBlocker(state, product)
@@ -89,6 +92,15 @@ function ProductRow({ product }: { product: Product }) {
         <button disabled={blocker !== null} onClick={() => store.openDialog({ kind: 'new-project', updateOf: product.id, officeId: office.id })}>
           Update
         </button>
+        {next && (
+          <button
+            disabled={growProblem !== null}
+            title={growProblem ?? `Grow into a ${PROJECT_SIZES[next].name} product`}
+            onClick={() => store.openDialog({ kind: 'new-project', updateOf: product.id, officeId: office.id, grow: true })}
+          >
+            Grow to {PROJECT_SIZES[next].name}…
+          </button>
+        )}
         <button disabled={fixProblem !== null} aria-expanded={fixing} title={fixProblem ?? undefined} onClick={() => setFixing(!fixing)}>
           Fix bugs…
         </button>
@@ -175,6 +187,12 @@ export function ProductsTab() {
   if (products.length === 0) return <p className="muted">Nothing shipped yet.</p>
   return (
     <div className="products">
+      {!inGarage(state) && (
+        <p className="muted">
+          Portfolio {products.length}/{PORTFOLIO_LIMIT}
+          {newProductBlocker(state) && ` · ${newProductBlocker(state)}`}
+        </p>
+      )}
       <OnCallPanel />
       {products.map((p) => (
         <ProductRow key={p.id} product={p} />

@@ -16,7 +16,9 @@ import { dailyIncome, monthlyBurn } from '../../src/lib/tycoon/sim/economy.ts'
 import { describePendingEvent, resolveRandomEvent } from '../../src/lib/tycoon/sim/events.ts'
 import { availableFixers, onCallUnlocked, setOnCall, startFix } from '../../src/lib/tycoon/sim/fixes.ts'
 import { hire, hireCost, ROLE_DISCIPLINE } from '../../src/lib/tycoon/sim/hiring.ts'
-import { campaignCost, promoteProduct, promotionBlocker, promotionCost, updateBlocker } from '../../src/lib/tycoon/sim/lifecycle.ts'
+import { campaignCost, growBlocker, newProductBlocker, nextSize, promoteProduct, promotionBlocker, promotionCost, updateBlocker } from '../../src/lib/tycoon/sim/lifecycle.ts'
+import { sunsetBlocker, sunsetProduct } from '../../src/lib/tycoon/sim/sunset.ts'
+import { PORTFOLIO_LIMIT } from '../../src/lib/tycoon/sim/balance.ts'
 import { marketDemand } from '../../src/lib/tycoon/sim/market.ts'
 import { freeDesks, moveOut, moveOutBlocker, newOfficeCost, openOffice, openOfficeBlocker, staffOf } from '../../src/lib/tycoon/sim/offices.ts'
 import { bugFactor, interest, marketWeights, missingFeatures, productRevenue } from '../../src/lib/tycoon/sim/products.ts'
@@ -163,6 +165,41 @@ function tryMaintain(state: GameState, office: Office, smart: boolean): boolean 
   return false
 }
 
+/** Grows the best earner that is ready into its next size; the way to use a full portfolio. */
+function tryGrow(state: GameState, office: Office): boolean {
+  for (const product of [...state.products].sort((a, b) => productRevenue(b) - productRevenue(a))) {
+    if (!nextSize(product.size) || growBlocker(state, office, product) !== null) continue
+    const features = FEATURES.filter((f) => f.suits.includes(product.productTypeId) && featureLock(state, f) === null && !product.featureIds.includes(f.id))
+      .sort((a, b) => valuePerCost(b) - valuePerCost(a))
+      .slice(0, 2)
+      .map((f) => f.id)
+    if (startUpdate(state, product.id, features, office.id, true).ok) return true
+  }
+  return false
+}
+
+/** Adds features to the best earner that can take an update, when a new product isn't allowed. */
+function tryImprove(state: GameState, office: Office): boolean {
+  for (const product of [...state.products].sort((a, b) => productRevenue(b) - productRevenue(a))) {
+    if (updateBlocker(state, office, product) !== null) continue
+    const features = FEATURES.filter((f) => f.suits.includes(product.productTypeId) && featureLock(state, f) === null && !product.featureIds.includes(f.id))
+      .sort((a, b) => valuePerCost(b) - valuePerCost(a))
+      .slice(0, 2)
+      .map((f) => f.id)
+    if (startUpdate(state, product.id, features, office.id).ok) return true
+  }
+  return false
+}
+
+/** With a full portfolio, retires the weakest old product that isn't a hit to make room. */
+function retireWeakest(state: GameState): void {
+  if (state.products.length < PORTFOLIO_LIMIT) return
+  const weakest = state.products
+    .filter((p) => !p.hit && state.day - p.releaseDay > 400 && sunsetBlocker(state, p) === null)
+    .sort((a, b) => productRevenue(a) - productRevenue(b))[0]
+  if (weakest) sunsetProduct(state, weakest.id)
+}
+
 /** The best-paying job this office can finish in time, while money is short. */
 function tryContract(state: GameState, office: Office): boolean {
   if (state.money > 4 * monthlyBurn(state) || contractBlocker(state, office)) return false
@@ -198,6 +235,14 @@ function botStep(state: GameState, policy: Policy, firstHit: { day: number | nul
     if (policy.featureCount === null || office.project || staffOf(state, office).length === 0) continue
     if (policy.contracts && tryContract(state, office)) continue
     if (policy.maintain && tryMaintain(state, office, policy.smart ?? false)) continue
+    if (policy.maintain && newProductBlocker(state) !== null) {
+      if (tryGrow(state, office)) continue
+      retireWeakest(state)
+      if (newProductBlocker(state) !== null) {
+        tryImprove(state, office)
+        continue
+      }
+    }
     const type = chooseType(state, policy.smart ?? false)
     const features = chooseFeatures(state, type, policy.featureCount, policy.smart ?? false)
     startProject(state, type, features, chooseSize(state, office, type, features, policy), office.id)

@@ -1,11 +1,25 @@
-import { AUTO_PROMOTE_RESERVE_DAYS, CAMPAIGNS, DAYS_PER_MONTH, FRESH_DAYS, PROMOTIONS, UPDATE_MIN_AGE_DAYS, type MarketingOffer } from './balance'
+import {
+  AUTO_PROMOTE_RESERVE_DAYS,
+  CAMPAIGNS,
+  DAYS_PER_MONTH,
+  FRESH_DAYS,
+  GROW_MIN_AGE_DAYS,
+  NEW_PRODUCT_FREE_COUNT,
+  NEW_PRODUCT_GAP_DAYS,
+  PORTFOLIO_LIMIT,
+  PROJECT_SIZES,
+  PROMOTIONS,
+  UPDATE_MIN_AGE_DAYS,
+  type MarketingOffer,
+} from './balance'
 import { monthlyBurn } from './economy'
 import { logEntry } from './journal'
 import { marketDemand } from './market'
-import { productInWork, staffOf } from './offices'
+import { activeProjects, inGarage, productInWork, staffOf } from './offices'
 import { interest, lastReleaseDay, revenueForUsers, targetUsers } from './products'
 import { computeReach } from './scoring'
-import { fail, OK, TIERS, type GameState, type Office, type Product, type Project, type Result, type Tier } from './types'
+import { sizeLock } from './unlocks'
+import { fail, OK, PROJECT_SIZE_IDS, TIERS, type GameState, type Office, type Product, type Project, type ProjectSize, type Result, type Tier } from './types'
 
 /** Costs are rounded to a tidy $50 so they read as prices. */
 const price = (amount: number, floor: number) => Math.max(floor, Math.round(amount / 50) * 50)
@@ -112,4 +126,36 @@ export function productPhase(state: GameState, product: Product): ProductPhase {
   if (state.day - product.releaseDay < FRESH_DAYS) return 'Launch'
   if (interest(product, state.day) < 0.5) return 'Fading'
   return product.users < targetUsers(state, product) * 0.9 ? 'Growing' : 'Established'
+}
+
+/** Why another new product can't be started, or null when it can. Only applies outside the garage. */
+export function newProductBlocker(state: GameState): string | null {
+  if (inGarage(state)) return null
+  const making = activeProjects(state).filter((a) => a.project.kind === 'new').length
+  if (state.products.length + making >= PORTFOLIO_LIMIT) {
+    return `Your portfolio is full (${PORTFOLIO_LIMIT} products): retire one to make room, or grow one you have`
+  }
+  if (state.products.length >= NEW_PRODUCT_FREE_COUNT) {
+    const wait = NEW_PRODUCT_GAP_DAYS - (state.day - state.lastNewProductDay)
+    if (wait > 0) return `One new product a year: ${wait} more day${wait === 1 ? '' : 's'}`
+  }
+  return null
+}
+
+/** The size a product grows into, or null for a flagship. */
+export function nextSize(size: ProjectSize): ProjectSize | null {
+  return PROJECT_SIZE_IDS[PROJECT_SIZE_IDS.indexOf(size) + 1] ?? null
+}
+
+/** Why `office` can't start growing `product` into the next size, or null when it can. */
+export function growBlocker(state: GameState, office: Office, product: Product): string | null {
+  const next = nextSize(product.size)
+  if (!next) return 'Already as big as a product gets'
+  if (state.day - product.releaseDay < GROW_MIN_AGE_DAYS) return `Too young: ${GROW_MIN_AGE_DAYS - (state.day - product.releaseDay)} more days`
+  const busy = updateBlocker(state, office, product)
+  if (busy) return busy
+  const lock = sizeLock(state, next, office)
+  if (lock) return `${PROJECT_SIZES[next].name} projects need ${lock}`
+  const phase = productPhase(state, product)
+  return phase === 'Fading' ? 'Bring it back to life with an update first' : null
 }

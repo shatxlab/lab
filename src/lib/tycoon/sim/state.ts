@@ -59,6 +59,7 @@ export function createInitialState(seed: number): GameState {
     milestones: [],
     history: [],
     journal: [],
+    lastNewProductDay: -10000,
     gameOver: false,
     ending: null,
     exit: { declined: 0, nextDay: 0, pending: null },
@@ -404,6 +405,7 @@ function dropRemovedContent(raw: unknown): unknown {
   if (!isObj(raw)) return raw
   const upgraded: Obj = { ...raw }
   upgraded.journal = Array.isArray(raw.journal) ? raw.journal : []
+  upgraded.lastNewProductDay = isNum(raw.lastNewProductDay) ? raw.lastNewProductDay : -10000
   upgraded.ending = isObj(raw.ending) ? raw.ending : null
   const exit = isObj(raw.exit) ? raw.exit : {}
   upgraded.exit = { declined: isNum(exit.declined) ? exit.declined : 0, nextDay: isNum(exit.nextDay) ? exit.nextDay : 0, pending: isObj(exit.pending) ? exit.pending : null }

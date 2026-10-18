@@ -3,7 +3,7 @@ import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
 import { title } from './careers'
 import { describePendingEvent } from './events'
-import { promotionCost } from './lifecycle'
+import { nextSize, promotionCost } from './lifecycle'
 import { newOfficeCost, officeName, getOffice } from './offices'
 import { hitBreakdown, projectQuality } from './project'
 import { acquisitionPrice } from './rivals'
@@ -35,11 +35,12 @@ export const decisions = {
     ]
   },
 
-  startUpdate(state: GameState, productId: number, features: readonly string[], officeId: number): Decision {
+  startUpdate(state: GameState, productId: number, features: readonly string[], officeId: number, grow = false): Decision {
     const product = state.products.find((p) => p.id === productId)
+    const next = product && grow ? nextSize(product.size) : null
     return [
-      'project.update',
-      `Started an update to ${product?.name ?? 'a product'}`,
+      next ? 'project.grow' : features.length === 0 ? 'project.maintenance' : 'project.update',
+      next ? `Started growing ${product?.name} into a ${next} product` : `Started ${features.length === 0 ? 'maintenance on' : 'an update to'} ${product?.name ?? 'a product'}`,
       { features: featureNames(features), users: Math.round(product?.users ?? 0), ageDays: product ? state.day - product.releaseDay : 0, office: officeLabel(state, officeId) },
     ]
   },

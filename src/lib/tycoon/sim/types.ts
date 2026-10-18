@@ -97,6 +97,8 @@ export interface Project {
   alphaOffered: boolean
   /** Multiplier on the bugs a release ships with, from choices made during development; 1 when nothing happened. */
   bugRisk: number
+  /** Growing a product: the bigger size it becomes when this update ships. */
+  grows?: ProjectSize
   /** Client work: who it is for, what it pays on delivery, and when it is due. Null for everything else. */
   contract: ContractTerms | null
 }
@@ -380,6 +382,8 @@ export interface GameState {
   milestones: string[]
   /** Monthly samples for the stats charts, oldest first, capped. */
   history: HistoryPoint[]
+  /** The day the last new product was started (client work doesn't count), for the pace limit. */
+  lastNewProductDay: number
   gameOver: boolean
   /** How the run ended, once `gameOver`; null while it goes on. */
   ending: Ending | null

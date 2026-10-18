@@ -216,6 +216,17 @@ export const REPUTATION_MAX = 100
 export const REPUTATION_NEUTRAL_QUALITY = 50
 export const REPUTATION_DIVISOR = 15
 
+// Portfolio: once out of the garage a studio keeps a few products, not a pile
+/** Live products plus new ones in the making; to start another, retire one. */
+export const PORTFOLIO_LIMIT = 5
+/** Days between starting two new products, once the studio has a few (updates and growing a product are not limited). */
+export const NEW_PRODUCT_GAP_DAYS = 360
+/** Below this many live products the studio may start new ones freely. */
+export const NEW_PRODUCT_FREE_COUNT = 3
+/** A product has to be this old, and not new or fading, before it can grow into the next size. */
+export const GROW_MIN_AGE_DAYS = 240
+export const GROW_MAX_FEATURES = 3
+
 // Selling the studio: only possible from the garage
 /** The studio has to earn at least this much a day before anyone makes an offer. */
 export const EXIT_MIN_INCOME = 400

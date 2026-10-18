@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
-import { CONTRACT_DEPOSIT, DAYS_PER_MONTH, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
+import { CONTRACT_DEPOSIT, DAYS_PER_MONTH, GROW_MAX_FEATURES, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
 import { eraAt, expectedFeatures } from '@/lib/tycoon/data/eras'
 import { contractBlocker } from '@/lib/tycoon/sim/contracts'
+import { newProductBlocker, nextSize } from '@/lib/tycoon/sim/lifecycle'
 import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { marketDemand } from '@/lib/tycoon/sim/market'
 import { officeName, staffOf } from '@/lib/tycoon/sim/offices'
 import { marketWeights } from '@/lib/tycoon/sim/products'
-import { estimateUpdateReach, projectTarget, unlockedProductTypes } from '@/lib/tycoon/sim/project'
+import { estimateUpdateReach, growTarget, projectTarget, unlockedProductTypes } from '@/lib/tycoon/sim/project'
 import { featureLock, productTypeLock, sizeLock } from '@/lib/tycoon/sim/unlocks'
 import { DISCIPLINES, PROJECT_SIZE_IDS, type ContractOffer, type Office, type ProjectSize } from '@/lib/tycoon/sim/types'
 import { estimateDays } from '@/lib/tycoon/sim/work'
@@ -79,14 +80,16 @@ function ClientWork({ office }: { office: Office }) {
 }
 
 /** Plans a new product (or client work) for an office, or (with `updateOf`) an update to a live product. */
-export function NewProjectDialog({ updateOf, officeId }: { updateOf?: number; officeId?: number }) {
+export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateOf?: number; officeId?: number; grow?: boolean }) {
   const store = useStore()
   const state = useGame()
   const office = useOffice(officeId)
   const [mode, setMode] = useState<'product' | 'client'>('product')
   const product = updateOf === undefined ? undefined : state.products.find((p) => p.id === updateOf)
   const isUpdate = product !== undefined
-  const maxFeatures = isUpdate ? UPDATE_MAX_FEATURES : MAX_FEATURES
+  const growsTo = isUpdate && grow ? nextSize(product.size) : null
+  const maxFeatures = growsTo ? GROW_MAX_FEATURES : isUpdate ? UPDATE_MAX_FEATURES : MAX_FEATURES
+  const portfolioProblem = isUpdate ? null : newProductBlocker(state)
 
   const unlocked = unlockedProductTypes(state)
   const [typeId, setTypeId] = useState(product?.productTypeId ?? unlocked[unlocked.length - 1].id)
@@ -110,13 +113,13 @@ export function NewProjectDialog({ updateOf, officeId }: { updateOf?: number; of
   )
   const projectSize = product?.size ?? size
   const spec = PROJECT_SIZES[projectSize]
-  const target = projectTarget(typeId, selected, isUpdate ? 'update' : 'new', projectSize)
+  const target = growsTo ? growTarget(typeId, selected, projectSize, growsTo) : projectTarget(typeId, selected, isUpdate ? 'update' : 'new', projectSize)
   const days = estimateDays(state, target, office)
   // This office's share of the wages; rent is the studio's either way.
   const officeWages = staffOf(state, office).reduce((sum, e) => sum + e.salary, 0)
   const cost = (days * (officeWages || monthlyBurn(state))) / DAYS_PER_MONTH
   const full = selected.length >= maxFeatures
-  const reach = product ? estimateUpdateReach(state, product.id, selected) : 0
+  const reach = product ? estimateUpdateReach(state, product.id, selected, growsTo !== null) : 0
   /** What each feature adds to this project's bars. */
   const featureScale = WORK_SCALE * spec.work
 
@@ -130,13 +133,13 @@ export function NewProjectDialog({ updateOf, officeId }: { updateOf?: number; of
       current.includes(id) ? current.filter((x) => x !== id) : current.length < maxFeatures ? [...current, id] : current,
     )
   const start = () => {
-    const result = product ? store.startUpdate(product.id, selected, office.id) : store.startProject(typeId, selected, size, office.id)
+    const result = product ? store.startUpdate(product.id, selected, office.id, growsTo !== null) : store.startProject(typeId, selected, size, office.id)
     if (!result.ok) setError(result.reason)
   }
 
   if (updateOf !== undefined && !product) return null
 
-  const title = product ? `Update ${product.name}` : state.offices.length > 1 ? `New project · ${officeName(state, office)}` : 'New project'
+  const title = growsTo ? `Grow ${product?.name} into a ${PROJECT_SIZES[growsTo].name} product` : product ? `Update ${product.name}` : state.offices.length > 1 ? `New project · ${officeName(state, office)}` : 'New project'
   return (
     <Modal title={title} onClose={() => store.closeDialog()}>
       {!isUpdate && (
@@ -160,9 +163,14 @@ export function NewProjectDialog({ updateOf, officeId }: { updateOf?: number; of
         <>
         {product && (
           <p className="muted">
-            An update is a smaller project that brings {product.name}'s {type.userNoun} back to full interest, and its new
+            {growsTo ? (
+              <>
+                Growing turns {product.name} into a {PROJECT_SIZES[growsTo].name} product: it can reach {(PROJECT_SIZES[growsTo].reach / PROJECT_SIZES[product.size].reach).toFixed(1)}× as many {type.userNoun} and they stay interested longer. It costs what the extra scale adds, and you can build up to {GROW_MAX_FEATURES} features into it.
+              </>
+            ) : null}
+            {!growsTo && <>An update is a smaller project that brings {product.name}'s {type.userNoun} back to full interest, and its new
             features let it reach more people. It ships a few new bugs of its own. With no features chosen it is a
-            maintenance release: cheaper, and it keeps the product fresh without growing it.
+            maintenance release: cheaper, and it keeps the product fresh without growing it.</>}
           </p>
         )}
         {!isUpdate && (
@@ -286,11 +294,12 @@ export function NewProjectDialog({ updateOf, officeId }: { updateOf?: number; of
           )}
         </div>
 
+        {portfolioProblem && <p className="bad">{portfolioProblem}</p>}
         {error && <p className="bad">{error}</p>}
         <div className="actions">
           <button onClick={() => store.closeDialog()}>Cancel</button>
-          <button className="primary" onClick={start}>
-            {product ? (selected.length === 0 ? 'Start maintenance' : 'Start update') : 'Start project'}
+          <button className="primary" disabled={portfolioProblem !== null} title={portfolioProblem ?? undefined} onClick={start}>
+            {growsTo ? 'Start growing' : product ? (selected.length === 0 ? 'Start maintenance' : 'Start update') : 'Start project'}
           </button>
         </div>
         </>

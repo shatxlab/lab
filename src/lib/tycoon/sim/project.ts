@@ -9,6 +9,7 @@ import {
   HIT_MAX_CHANCE,
   HIT_MIN_QUALITY,
   HIT_REACH,
+  GROW_MAX_FEATURES,
   HIT_REPUTATION,
   MAINTENANCE_TARGET_SHARE,
   LAUNCH_ADOPTERS,
@@ -22,10 +23,10 @@ import {
   UPDATE_TARGET_SHARE,
   WORK_SCALE,
 } from './balance'
-import { campaignCost, startBoost, updateBlocker } from './lifecycle'
+import { campaignCost, growBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
-import { resolveOffice, staffOf } from './offices'
+import { inGarage, resolveOffice, staffOf } from './offices'
 import { bugProneness, releaseBugs } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
@@ -80,6 +81,18 @@ export function projectTarget(
   return target
 }
 
+/**
+ * The work to grow a product from `from` to `to`: what the bigger size adds over what is already built,
+ * plus the features chosen at the new size's scale.
+ */
+export function growTarget(productTypeId: string, featureIds: readonly string[], from: ProjectSize, to: ProjectSize): Skills {
+  const full = projectTarget(productTypeId, featureIds, 'new', to)
+  const built = projectTarget(productTypeId, [], 'new', from)
+  const target = emptySkills()
+  for (const d of DISCIPLINES) target[d] = Math.max(0, Math.round(full[d] - built[d]))
+  return target
+}
+
 /** Starts a new product in an office (the first one unless `officeId` says otherwise). */
 export function startProject(
   state: GameState,
@@ -102,6 +115,9 @@ export function startProject(
   if (sizeProblem) return fail(`${PROJECT_SIZES[size].name} projects need ${sizeProblem}`)
   const featureProblem = checkFeatures(state, featureIds, MAX_FEATURES)
   if (featureProblem) return fail(featureProblem)
+  const portfolioProblem = newProductBlocker(state)
+  if (portfolioProblem) return fail(portfolioProblem)
+  if (!inGarage(state)) state.lastNewProductDay = state.day
 
   office.project = {
     id: state.nextId++,
@@ -141,15 +157,16 @@ function checkFeatures(state: GameState, featureIds: readonly string[], max: num
 }
 
 /** Starts an update to a live product: a smaller project that wins back its users' interest and can add features. */
-export function startUpdate(state: GameState, productId: number, featureIds: readonly string[], officeId?: number): Result {
+export function startUpdate(state: GameState, productId: number, featureIds: readonly string[], officeId?: number, grow = false): Result {
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
-  const blocker = updateBlocker(state, office, product)
+  const blocker = grow ? growBlocker(state, office, product) : updateBlocker(state, office, product)
   if (blocker) return fail(blocker)
-  const problem = checkFeatures(state, featureIds, UPDATE_MAX_FEATURES)
+  const bigger = grow ? nextSize(product.size) : null
+  const problem = checkFeatures(state, featureIds, grow ? GROW_MAX_FEATURES : UPDATE_MAX_FEATURES)
   if (problem) return fail(problem)
   const repeated = featureIds.find((id) => product.featureIds.includes(id))
   if (repeated) return fail(`${getFeature(repeated).name} is already in ${product.name}`)
@@ -162,7 +179,8 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     productTypeId: product.productTypeId,
     size: product.size,
     featureIds: [...featureIds],
-    target: projectTarget(product.productTypeId, featureIds, 'update', product.size),
+    target: bigger ? growTarget(product.productTypeId, featureIds, product.size, bigger) : projectTarget(product.productTypeId, featureIds, 'update', product.size),
+    ...(bigger ? { grows: bigger } : {}),
     progress: emptySkills(),
     startDay: state.day,
     readyNotified: false,
@@ -198,10 +216,11 @@ export function reachAfterUpdate(product: Product, project: Project, quality: nu
 }
 
 /** The product's reach after an update with these features, if finished exactly on target; for the planning dialog. */
-export function estimateUpdateReach(state: GameState, productId: number, featureIds: readonly string[]): number {
+export function estimateUpdateReach(state: GameState, productId: number, featureIds: readonly string[], grow = false): number {
   const product = state.products.find((p) => p.id === productId)
   if (!product) return 0
-  const target = projectTarget(product.productTypeId, featureIds, 'update', product.size)
+  const bigger = grow ? nextSize(product.size) : null
+  const target = bigger ? growTarget(product.productTypeId, featureIds, product.size, bigger) : projectTarget(product.productTypeId, featureIds, 'update', product.size)
   const plan: Project = {
     id: 0,
     name: product.name,
@@ -219,7 +238,8 @@ export function estimateUpdateReach(state: GameState, productId: number, feature
     bugRisk: 1,
     contract: null,
   }
-  return reachAfterUpdate(product, plan, projectQuality(state, plan))
+  const reach = reachAfterUpdate(product, plan, projectQuality(state, plan))
+  return bigger ? reach * (PROJECT_SIZES[bigger].reach / PROJECT_SIZES[product.size].reach) : reach
 }
 
 /** Bigger releases move reputation further, both ways. */
@@ -322,6 +342,11 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   // Hidden at first: users find them over the following weeks, and a well-made product has fewer.
   const bugs = releaseBugs(project) * bugProneness(product.quality)
   product.reach = reachAfterUpdate(product, project, quality)
+  if (project.grows) {
+    product.reach *= PROJECT_SIZES[project.grows].reach / PROJECT_SIZES[product.size].reach
+    state.events.push({ type: 'notice', text: `${product.name} grew into a ${PROJECT_SIZES[project.grows].name} product.`, sound: 'milestone' })
+    product.size = project.grows
+  }
   product.pendingBugs += bugs
   product.updates.push({ day: state.day })
   product.featureIds.push(...project.featureIds)

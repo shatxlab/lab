@@ -31,7 +31,7 @@ const TOAST_MS = 6000
 export type Dialog =
   | null
   /** Plans work for an office (the selected one if left out); `updateOf` is a product id: plan an update to it instead. */
-  | { kind: 'new-project'; officeId?: number; updateOf?: number }
+  | { kind: 'new-project'; officeId?: number; updateOf?: number; grow?: boolean }
   | { kind: 'ship'; officeId: number }
   | { kind: 'ready'; officeId: number }
   | { kind: 'event' }
@@ -95,7 +95,7 @@ export interface Store {
   startProject(productTypeId: string, featureIds: readonly string[], size?: ProjectSize, officeId?: number): Result
   /** Ships an office's project; `campaign` buys launch marketing for a new product. */
   shipProject(campaign?: Tier, officeId?: number): Result
-  startUpdate(productId: number, featureIds: readonly string[], officeId?: number): Result
+  startUpdate(productId: number, featureIds: readonly string[], officeId?: number, grow?: boolean): Result
   /** Sends a developer and a tester to fix a live product's bugs. */
   startFix(productId: number, developerId: number, testerId: number): Result
   /** Ends a bug-fixing job early, keeping what it fixed. */
@@ -290,8 +290,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return result
     },
 
-    startUpdate(productId, featureIds, officeId) {
-      const result = logged(() => decisions.startUpdate(state, productId, featureIds, officeFor(officeId)), () => startUpdate(state, productId, featureIds, officeFor(officeId)))
+    startUpdate(productId, featureIds, officeId, grow) {
+      const result = logged(() => decisions.startUpdate(state, productId, featureIds, officeFor(officeId), grow), () => startUpdate(state, productId, featureIds, officeFor(officeId), grow))
       if (!result.ok) return result
       dialog.value = null
       if (speed.value === 0) speed.value = 1

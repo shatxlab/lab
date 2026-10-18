@@ -13,7 +13,7 @@ export function DialogHost() {
   const dialog = useSignal(useStore().dialog)
   switch (dialog?.kind) {
     case 'new-project':
-      return <NewProjectDialog updateOf={dialog.updateOf} officeId={dialog.officeId} />
+      return <NewProjectDialog updateOf={dialog.updateOf} officeId={dialog.officeId} grow={dialog.grow} />
     case 'ship':
       return <ShipDialog officeId={dialog.officeId} />
     case 'ready':

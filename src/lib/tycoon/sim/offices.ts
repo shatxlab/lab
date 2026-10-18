@@ -83,6 +83,11 @@ export function moveOutBlocker(state: GameState): string | null {
   return state.money < MOVE_OUT_COST ? 'Not enough money' : null
 }
 
+/** True while the studio is still in its garage. */
+export function inGarage(state: GameState): boolean {
+  return state.offices.some((o) => o.kind === 'garage')
+}
+
 /** Leaves the garage for a real office: the same team and project, with room for twelve. */
 export function moveOut(state: GameState): Result {
   const blocker = moveOutBlocker(state)

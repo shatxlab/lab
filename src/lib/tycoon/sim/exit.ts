@@ -1,13 +1,9 @@
 import { DAYS_PER_MONTH, EXIT_BASE_MULTIPLE, EXIT_GAP_DAYS, EXIT_MIN_INCOME, EXIT_RAISE_PER_DECLINE, EXIT_MAX_RAISES } from './balance'
 import { dailyIncome } from './economy'
 import { logEntry, runSummary } from './journal'
+import { inGarage } from './offices'
 import { standings } from './rivals'
 import { fail, OK, type GameState, type Result } from './types'
-
-/** True while the studio is still in its garage: the only time anyone will buy it. */
-export function inGarage(state: GameState): boolean {
-  return state.offices.some((o) => o.kind === 'garage')
-}
 
 /** What a buyer would pay now: years of what the studio earns, a better multiple each time you turn one down. */
 export function buyoutPrice(state: GameState): number {

@@ -141,7 +141,7 @@ function FixRow({ fix }: { fix: Fix }) {
         <span className="muted">
           {' '}
           · {developer?.name ?? '?'} + {tester?.name ?? '?'}
-          {fix.auto && ' · on call'} · {fix.bugsFixed} of {fix.bugs} fixed · {done}%
+          · {fix.bugsFixed} of {fix.bugs} fixed · {done}%
         </span>
       </span>
       <div className="track" aria-hidden="true" title={`${Math.round(fix.progress.engineering)}/${left.engineering} eng, ${Math.round(fix.progress.qa)}/${left.qa} QA`}>
@@ -152,13 +152,14 @@ function FixRow({ fix }: { fix: Fix }) {
   )
 }
 
-/** Every bug-fixing job in progress, under the project panel. */
+/** Every bug-fixing job sent by hand, under the project panel; the on-call pair's run in the background. */
 export function ActiveFixes() {
   const state = useGame()
-  if (state.fixes.length === 0) return null
+  const manual = state.fixes.filter((fix) => !fix.auto)
+  if (manual.length === 0) return null
   return (
     <div className="fixes">
-      {state.fixes.map((fix) => (
+      {manual.map((fix) => (
         <FixRow key={fix.id} fix={fix} />
       ))}
     </div>

@@ -251,6 +251,8 @@ describe('Incident management', () => {
     while (state.fixes.length > 0) fixDay(state)
     expect(workersOf(state, state.offices[0]).map((e) => e.id)).toContain(DEV)
     expect(state.products[0].bugs).toBeLessThan(1)
+    // The pair fixes all the time, so a finished job is not announced.
+    expect(drainEvents(state)).toEqual([])
   })
 
   it('takes a single bug on any product, whatever its size', () => {

@@ -196,6 +196,8 @@ export function fixesDay(state: GameState): void {
     }
     if (done) {
       state.fixes = state.fixes.filter((f) => f !== fix)
+      // On-call jobs come one after another, so they finish quietly: the bugs over the pair's heads say enough.
+      if (fix.auto) continue
       state.events.push({
         type: 'notice',
         text: `${product.name}: ${fix.bugs} bug${fix.bugs === 1 ? '' : 's'} fixed.`,

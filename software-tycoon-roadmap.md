@@ -25,6 +25,82 @@ Also `node scripts/tycoon/e2e.mjs` after `npm run build` (real Chrome; needs
 (`.aseprite`, large preview, CC0 licence) live in `art/pixeloffice/`, outside
 `assets/` so they are not published or precached.
 
+## Redesign: two acts (2026-10-18)
+
+From a year-20 playthrough (4 offices, Tech giant, ~80k/day, 75M lifetime, 5 promoted
+products, 3 rivals bought). The late game was grinding: promote five products, no
+reason to build or keep anything, rival purchases gave nothing, extra offices were
+redundant, client work stopped mattering at ~20k/day, and the player never fired
+anyone. Hits felt random, and feature choice was "pick the 3-star ones".
+Saves are not migrated for this work (one player); old saves load with defaults.
+
+**Shape.** Act 1 is the startup: build products until one clicks. At the garage the
+studio can sell (**the fork**); moving out closes that for good. Act 2 is a company
+with a few products it cares about, teams that own them, and a long run.
+
+### Built
+
+- **Names.** 247 product words; `freshProductName` (`sim/naming.ts`) avoids every
+  name in play, retired or on a rival's list, and falls back to two-word names.
+- **Offices.** The offer for a fifth office is hidden at the cap of 4.
+- **Hit chance** is explained in the launch dialog (`hitBreakdown`): streak,
+  quality, market, buzz, and whether it hit the cap.
+- **Run log.** `GameState.journal` records every player decision with the cash and
+  numbers at the time (`sim/decisions.ts`, written from the store), the sim's own
+  events (stage, era, hit, event offered, notices) and a monthly snapshot
+  (`sim/journal.ts`). Export it from the Menu or the end screen ("Export run log").
+  Capped at `JOURNAL_LIMIT`.
+- **Lifecycle.** Decay is about twice as slow (`FRESH_DAYS` 120, `STALE_DAYS` 180)
+  and slower again per update (`MATURITY_PER_UPDATE`, up to 4). An update with no
+  features is a cheaper **maintenance release** (`MAINTENANCE_TARGET_SHARE`).
+  Products show a phase (Launch, Growing, Established, Fading). **Marketing
+  automation** (Business research) lets a product promote itself at a chosen tier,
+  never below `AUTO_PROMOTE_RESERVE_DAYS` of burn (`autoPromoteDay`).
+- **Garage buyout.** Once the garage has a hit earning `EXIT_MIN_INCOME`, a rival
+  offers 3 years of income; "Not yet" brings a better one 90 days later
+  (`sim/exit.ts`, `EXIT_*`). Selling ends the run (`GameState.ending`). Moving out
+  clears and closes it (the button asks twice).
+- **Portfolio.** Outside the garage: 5 live products including ones being made
+  (`PORTFOLIO_LIMIT`), one new product per `NEW_PRODUCT_GAP_DAYS` once there are 3.
+  Updates and growth are not limited. **Growing** a product (Small, Medium, Large,
+  Flagship, in order, at least `GROW_MIN_AGE_DAYS` old, not fading) costs the
+  difference between sizes and scales its reach (`growBlocker`, `growTarget`,
+  `Project.grows`).
+
+Balance note: with these caps the best bot reaches ~11k/day at year 20 (was ~26k) and
+stalls at Industry leader. The bots are cruder than a person (they do not auto-promote
+or tune), so retune from a human run and its log, not from the bots.
+
+### Agreed, not built
+
+- **Offices.** Keep 4: US garage, then a US office; Europe is the second office at a
+  much higher price and opens a market (audience, localisation); offices 3 and 4 are
+  one more in each region.
+- **Garage hustle.** Make the first real product cost more than the starting money,
+  so contracts are the way in. Look for a non-contract mechanism later (grants,
+  pre-orders, sponsorship).
+- **Client work in Act 2.** It fades by the first office; replace it with enterprise
+  contracts and licensing tied to flagships.
+- **Long-game ending.** A legacy summary (years, peak income, hits, people who
+  stayed), reachable at any time, so the long run has something to compare. Selling
+  is garage-only.
+- **People and knowledge.** Per-product and per-type knowledge on each employee
+  (an RPG element); manual team assignment (split EU/US allowed); a new **Analyst**
+  (Junior to Senior) who can become **Product Manager** (Middle to Lead); laptop
+  only, one PM per office. Analysts produce insights that reveal hidden facts; the PM
+  owns a product's direction (bonus to feature fit and hit chance). Needs new
+  character art, reusing existing characters.
+- **Audiences and feature fit.** Each product type has 2-3 audiences, picked at
+  creation; feature value depends on the audience and is hidden until feedback or an
+  analyst reveals it. Post-release feedback says what users loved or missed.
+- **Competitors.** *Absorb* a rival: price from its income and growth; it leaves the
+  ranking; choose which of its products to keep (they take portfolio slots); generated
+  staff with expertise in its focus types; its office, in its region, replaces
+  building office 3 or 4. A *Subsidiary* option (independent, sends a share of its
+  income) comes later. Rivals should grow so buying early is a bargain.
+- **Research** as mechanisms, like Incident management, gated by company stage.
+- **Rival names** from a generator, so later newcomers do not depend on a hand list.
+
 ## First real playthrough (2026-10-15)
 
 The first human feedback, from two runs on a phone. Run 1 (about 30 minutes)
@@ -63,7 +139,9 @@ replay; the feedback below is the data.
   notice. Wanted: the office as a home, with physical things like servers.
 - **Rivals and eras have no weight.** Rivals are a scoreboard; eras did not
   change any decision. Reactions from rivals would help.
-- **The journey is the point.** No ending is wanted. Near the end of the
+- **The journey is the point.** (Superseded 2026-10-18: selling the studio from
+  the garage is an ending, and the long game gets a legacy summary; see the
+  redesign above.) Near the end of the
   content after about 2 hours (research nearly done, a third office is the only
   step left), so late content is needed.
 - **Unnoticed:** the 12% wage rise per era (higher pay was read as "more
@@ -222,17 +300,16 @@ Balance so far comes mostly from bots, plus the one human run above.
 
 - **The last era starts in year 9** and nothing changes after it: add eras or
   make them cycle. (The human run reached year 12 and saw nothing change.)
-- **Tech giant has no goals.** The agreed direction is a long journey, not an
-  ending or IPO-style reset, so anything here should extend the journey rather
-  than reset it. Options discussed, not chosen: an endless mode with growing
-  rivals; a legacy / new-studio start.
+- **Tech giant has no goals.** The long game stays a journey; the redesign above
+  adds a legacy summary and no IPO-style reset. Options still open: an endless mode
+  with growing rivals; a legacy / new-studio start.
 - Research (14 items) is finished early; repeatable research (CI II, III…) is
   not built.
 - Only 7 product types and 24 features; era "expected features" stop at the
   platform age. More product types are wanted.
 - Milestones were not reworked into the journey: "Fill all 12 desks" and "A real
   team" (5 people) assume the old single office.
-- Contracts do not scale into the late game.
+- Contracts do not scale into the late game (see the redesign: enterprise contracts).
 
 ## From the original plan, not done
 

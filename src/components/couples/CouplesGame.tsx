@@ -41,7 +41,9 @@ const EMPTY_STATS: CouplesStats = { games: 0, cards: 0, matches: 0 };
 
 export default function CouplesGame() {
   const readyRef = useLangReady<HTMLDivElement>();
-  const [settings, setSettings] = useState<CouplesSettings>(() => defaultSettings());
+  // Prerendered in English, the site default: the pre-paint guard only hides the island for another stored
+  // language, so an English visitor must not get a Russian first paint.
+  const [settings, setSettings] = useState<CouplesSettings>(() => defaultSettings("en"));
   const [stats, setStats] = useState<CouplesStats>(EMPTY_STATS);
   const [screen, setScreen] = useState<Screen>("menu");
   const [session, setSession] = useState<Session | null>(null);

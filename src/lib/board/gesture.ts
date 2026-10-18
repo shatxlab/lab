@@ -4,21 +4,22 @@
  * elements. The component only forwards events.
  *
  * With no tool picked, a drag on an element moves it and a drag on empty
- * canvas moves the canvas. With a tool picked, a drag draws; a click with the
- * box tool drops a box. An arrow drawn from one box to another links them.
+ * canvas moves the canvas. With the box tool, a drag draws a box and a click
+ * drops one. Arrows are never drawn by hand: they come with a box added
+ * beside another, and stay on their two boxes.
  */
 
-import { boundsOf, boxAt, boxFrom, connect, snap, textBox, topmostAt, translate, type Point } from "@/lib/board/geometry";
-import { BOX_GAP, BOX_H, BOX_W, newId, type ArrowElement, type BoardElement, type RectElement, type TextElement, type View } from "@/lib/board/model";
+import { boundsOf, boxFrom, connect, snap, textBox, topmostAt, translate, type Point } from "@/lib/board/geometry";
+import { BOX_GAP, BOX_H, BOX_W, TEXT_SIZE, newId, type ArrowElement, type BoardElement, type RectElement, type TextElement, type View } from "@/lib/board/model";
 import { toWorld } from "@/lib/board/viewport";
 
-export type DrawTool = "rect" | "arrow";
+export type DrawTool = "rect";
 export type Tool = DrawTool | "text";
 
 export type Gesture =
   | { kind: "draw"; tool: DrawTool; start: Point; current: Point; id: string }
   | { kind: "move"; id: string; origin: Point; current: Point; moved: boolean; tolerance: number }
-  | { kind: "pan"; startScreen: Point; startView: View };
+  | { kind: "pan"; startScreen: Point; startView: View; moved: boolean; slop: number };
 
 export interface BeginInput {
   /** The picked tool, or null for the automatic move/pan mode. */
@@ -28,7 +29,7 @@ export interface BeginInput {
   world: Point;
   screen: Point;
   view: View;
-  /** Screen pixels a pointer may miss a thin line by. */
+  /** Screen pixels a pointer may miss a thin line by, and may wander on a click before it counts as a drag of the canvas. */
   reach: number;
 }
 
@@ -42,7 +43,14 @@ export function begin(input: BeginInput): Gesture {
   if (tool) return { kind: "draw", tool, start: world, current: world, id: newId() };
   const hit = topmostAt(elements, world, reach / view.zoom);
   if (hit) return { kind: "move", id: hit.id, origin: world, current: world, moved: false, tolerance: SNAP / view.zoom };
-  return { kind: "pan", startScreen: screen, startView: view };
+  return { kind: "pan", startScreen: screen, startView: view, moved: false, slop: reach };
+}
+
+/** Has the pointer gone far enough from where it went down to move the canvas? A click that wobbles does not. */
+export function panning(gesture: Extract<Gesture, { kind: "pan" }>, screen: Point): Extract<Gesture, { kind: "pan" }> {
+  if (gesture.moved) return gesture;
+  const moved = Math.hypot(screen.x - gesture.startScreen.x, screen.y - gesture.startScreen.y) >= gesture.slop;
+  return moved ? { ...gesture, moved } : gesture;
 }
 
 export function update(gesture: Gesture, world: Point, view: View): Gesture {
@@ -75,36 +83,29 @@ export function pinchView(startView: View, a0: Point, b0: Point, a1: Point, b1: 
   return { zoom, x: anchor.x - mid1.x / zoom, y: anchor.y - mid1.y / zoom };
 }
 
-/** The element a drawing gesture would create right now; an arrow's ends attach to the boxes they are in. */
-export function drawn(gesture: Extract<Gesture, { kind: "draw" }>, elements: readonly BoardElement[] = []): BoardElement {
-  const { tool, start, current, id } = gesture;
-  if (tool === "rect") return { id, type: "rect", ...boxFrom(start, current), text: "" };
-  const arrow: ArrowElement = { id, type: "arrow", x1: start.x, y1: start.y, x2: current.x, y2: current.y };
-  const from = boxAt(elements, start);
-  const to = boxAt(elements, current);
-  if (from) arrow.from = from.id;
-  if (to && to !== from) arrow.to = to.id;
-  return arrow;
+/** The box a drawing gesture would create right now. */
+export function drawn(gesture: Extract<Gesture, { kind: "draw" }>): RectElement {
+  const { start, current, id } = gesture;
+  return { id, type: "rect", ...boxFrom(start, current), text: "" };
 }
 
 /** The board as it should be drawn while the gesture is in progress. */
 export function preview(gesture: Gesture | null, elements: readonly BoardElement[]): BoardElement[] {
   if (!gesture) return elements as BoardElement[];
-  if (gesture.kind === "draw") return connect([...elements, drawn(gesture, elements)]);
+  if (gesture.kind === "draw") return [...elements, drawn(gesture)];
   if (gesture.kind === "move" && gesture.moved) {
     const dx = gesture.current.x - gesture.origin.x;
     const dy = gesture.current.y - gesture.origin.y;
-    return connect(elements.map((el) => (el.id === gesture.id ? snap(translate(el, dx, dy), elements, gesture.tolerance) : el)));
+    // An arrow stays on its boxes: a drag along it only picks it.
+    return connect(elements.map((el) => (el.id === gesture.id && el.type !== "arrow" ? snap(translate(el, dx, dy), elements, gesture.tolerance) : el)));
   }
   return elements as BoardElement[];
 }
 
 /** Is this drawing big enough to keep? A stray click is not a rectangle. */
-function worthKeeping(el: BoardElement, zoom: number): boolean {
+function worthKeeping(el: RectElement, zoom: number): boolean {
   const min = 3 / zoom;
-  if (el.type === "rect") return el.w >= min || el.h >= min;
-  if (el.type === "arrow") return Math.hypot(el.x2 - el.x1, el.y2 - el.y1) >= min * 2;
-  return true;
+  return el.w >= min || el.h >= min;
 }
 
 export interface Finished {
@@ -116,9 +117,8 @@ export interface Finished {
 export function finish(gesture: Gesture, elements: readonly BoardElement[], view: View): Finished {
   switch (gesture.kind) {
     case "draw": {
-      const made = drawn(gesture, elements);
-      if (worthKeeping(made, view.zoom)) return { elements: connect([...elements, made]), edit: made.type === "rect" ? made.id : undefined };
-      if (made.type !== "rect") return { elements: elements as BoardElement[] };
+      const made = drawn(gesture);
+      if (worthKeeping(made, view.zoom)) return { elements: [...elements, made], edit: made.id };
       // A click with the box tool drops a box of the usual size, in line with its neighbours.
       const box = snap(newBox(gesture.start, gesture.id), elements, SNAP / view.zoom);
       return { elements: [...elements, box], edit: box.id };
@@ -143,14 +143,17 @@ export function newBox(center: Point, id = newId()): RectElement {
   return { id, type: "rect", x: center.x - BOX_W / 2, y: center.y - BOX_H / 2, w: BOX_W, h: BOX_H, text: "" };
 }
 
-export type Side = "right" | "below";
+/** Where the next box goes from a box: beside it, below it, or diagonally down; text only goes right or down. */
+export type Side = "right" | "left" | "below" | "below-left" | "below-right";
 
 /**
- * A new box the same size as `box`, to its right or below it, past anything
+ * A new box the same size as `box`, on that side of it, past anything
  * already there, with an arrow from `box` to it.
  */
 export function boxBeside(elements: readonly BoardElement[], box: RectElement, side: Side): { elements: BoardElement[]; box: RectElement } {
-  const step = side === "right" ? { x: box.w + BOX_GAP, y: 0 } : { x: 0, y: box.h + BOX_GAP };
+  const across = box.w + BOX_GAP;
+  const down = side === "right" || side === "left" ? 0 : box.h + BOX_GAP;
+  const step = { x: side === "right" || side === "below-right" ? across : side === "left" || side === "below-left" ? -across : 0, y: down };
   let next: RectElement = { ...translate(box, step.x, step.y), id: newId(), text: "" } as RectElement;
   const overlaps = (b: RectElement) =>
     elements.some((el) => {
@@ -163,8 +166,8 @@ export function boxBeside(elements: readonly BoardElement[], box: RectElement, s
   return { elements: connect([...elements, next, arrow]), box: next };
 }
 
-/** A new, empty text element level with `el`, to its right: the next column. */
-export function textBeside(el: TextElement): TextElement {
+/** A new, empty text element below `el`, the next line of its column; or level with it, to its right, the next column. */
+export function textBeside(el: TextElement, side: "right" | "below" = "right"): TextElement {
   const b = textBox(el);
-  return newText({ x: b.x + b.w + BOX_GAP / 2, y: b.y });
+  return side === "below" ? newText({ x: b.x, y: b.y + b.h + TEXT_SIZE / 2 }) : newText({ x: b.x + b.w + BOX_GAP / 2, y: b.y });
 }

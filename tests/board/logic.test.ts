@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { boundsOf, connect, fitLabel, hitTest, remove, snap, topmostAt, translate } from "@/lib/board/geometry";
-import { begin, boxBeside, drawn, finish, newText, panView, pinchView, preview, textBeside, update } from "@/lib/board/gesture";
+import { begin, boxBeside, drawn, finish, newText, panView, panning, pinchView, preview, textBeside, update } from "@/lib/board/gesture";
 import { canRedo, canUndo, commit, createHistory, redo, undo } from "@/lib/board/history";
 import { BOX_H, BOX_W, INK, SURFACE, type BoardElement, type RectElement } from "@/lib/board/model";
 import { BOARD_STORAGE_KEY, cleanElements, emptyBoard, readBoard, writeBoard, type BoardStorage } from "@/lib/board/storage";
@@ -85,15 +85,28 @@ describe("gestures", () => {
     if (pan.kind === "pan") expect(panView(pan, { x: 520, y: 490 })).toMatchObject({ x: -20, y: 10 });
   });
 
-  it("keeps a drawn rectangle or arrow and drops a stray click", () => {
+  it("only moves the canvas once a drag goes past a click's wobble", () => {
+    const pan = begin({ ...input, tool: null, world: { x: 500, y: 500 }, screen: { x: 500, y: 500 } });
+    if (pan.kind !== "pan") throw new Error("not a pan");
+    expect(panning(pan, { x: 503, y: 502 }).moved).toBe(false);
+    const dragged = panning(pan, { x: 510, y: 500 });
+    expect(dragged.moved).toBe(true);
+    expect(panning(dragged, { x: 501, y: 500 }).moved).toBe(true);
+  });
+
+  it("leaves an arrow on its boxes when it is dragged", () => {
+    let g = begin({ ...input, tool: null, world: { x: 50, y: 200 }, screen: { x: 50, y: 200 } });
+    expect(g).toMatchObject({ kind: "move", id: "a" });
+    g = update(g, { x: 150, y: 300 }, view);
+    expect(finish(g, input.elements, view).elements.find((el) => el.id === "a")).toEqual(arrow);
+  });
+
+  it("keeps a drawn rectangle", () => {
     const start = begin({ ...input, tool: "rect", world: { x: 0, y: 0 }, screen: { x: 0, y: 0 } });
     const dragged = update(start, { x: 80, y: 40 }, view);
     expect(drawn(dragged as never)).toMatchObject({ type: "rect", w: 80, h: 40 });
     expect(finish(dragged, [], view)).toMatchObject({ elements: [{ type: "rect" }], edit: (dragged as { id: string }).id });
 
-    const line = update(begin({ ...input, tool: "arrow", world: { x: 0, y: 0 }, screen: { x: 0, y: 0 } }), { x: 50, y: 50 }, view);
-    expect(finish(line, [], view).elements[0]).toMatchObject({ type: "arrow", x2: 50, y2: 50 });
-    expect(finish(begin({ ...input, tool: "arrow", world: { x: 0, y: 0 }, screen: { x: 0, y: 0 } }), [], view).elements).toHaveLength(0);
   });
 
   it("drops a box of the usual size where the box tool clicks", () => {
@@ -101,12 +114,6 @@ describe("gestures", () => {
     const done = finish(click, [], view);
     expect(done.elements[0]).toMatchObject({ type: "rect", x: 500 - BOX_W / 2, y: 500 - BOX_H / 2, w: BOX_W, h: BOX_H, text: "" });
     expect(done.edit).toBe(done.elements[0]!.id);
-  });
-
-  it("links an arrow drawn from one box to another", () => {
-    const right: BoardElement = { id: "r2", type: "rect", x: 300, y: 10, w: 100, h: 60, text: "" };
-    const g = update(begin({ ...input, elements: [rect, right], tool: "arrow", world: { x: 50, y: 40 }, screen: { x: 50, y: 40 } }), { x: 350, y: 40 }, view);
-    expect(finish(g, [rect, right], view).elements[2]).toMatchObject({ type: "arrow", from: "r", to: "r2" });
   });
 
   it("adds the next box beside one, past what is there, with an arrow to it", () => {
@@ -117,6 +124,19 @@ describe("gestures", () => {
     const again = boxBeside(below.elements, rect as RectElement, "below");
     expect(again.box.y).toBeGreaterThan(below.box.y + 60);
     expect(textBeside(note as never)).toMatchObject({ type: "text", y: 300, text: "" });
+  });
+
+  it("adds the next box to the left and diagonally down, and text below in its column", () => {
+    const at = (side: Parameters<typeof boxBeside>[2]) => boxBeside([rect], rect as RectElement, side).box;
+    expect(at("left")).toMatchObject({ y: 10 });
+    expect(at("left").x).toBeLessThan(10 - 100);
+    expect(at("below-left").x).toBe(at("left").x);
+    expect(at("below-left").y).toBe(at("below").y);
+    expect(at("below-right").x).toBe(at("right").x);
+    expect(at("below-right").y).toBe(at("below").y);
+    const next = textBeside(note as never, "below");
+    expect(next).toMatchObject({ type: "text", x: 300, text: "" });
+    expect(next.y).toBeGreaterThan(300);
   });
 
   it("previews and commits a move, and treats a click on text as an edit", () => {

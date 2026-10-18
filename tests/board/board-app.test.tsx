@@ -65,12 +65,12 @@ const savedElements = async (count: number) => {
 };
 
 describe("Whiteboard", () => {
-  it("is one board with only the essentials: three tools, undo, redo, clear, one download", async () => {
+  it("is one board with only the essentials: two tools, undo, redo, clear, one download", async () => {
     const view = await open();
     expect(text()).toContain(tb("en", "hint"));
     expect(document.querySelector("select")).toBeNull();
     expect([...document.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Box", "Arrow", "Text", "Undo", "Redo", "Clear the board", "Download PNG"],
+      ["Box", "Text", "Undo", "Redo", "Clear the board", "Download PNG"],
     );
     expect(text()).not.toMatch(/\d+%/);
     expect(await axeViolations()).toEqual([]);
@@ -90,18 +90,7 @@ describe("Whiteboard", () => {
     view.unmount();
   });
 
-  it("draws an arrow and leaves a stray click alone", async () => {
-    const view = await open();
-    await click(byLabel("Arrow"));
-    await drag(10, 10, 160, 90);
-    await click(byLabel("Arrow"));
-    await pointer("pointerdown", 300, 300);
-    await pointer("pointerup", 300, 300);
-    expect(items()).toEqual(["Arrow"]);
-    view.unmount();
-  });
-
-  it("drops a box with a click, takes its label, and adds the next one linked by an arrow", async () => {
+  it("drops a box with a click, takes its label, and adds the next one on any side but the top, linked by an arrow", async () => {
     const view = await open();
     await click(byLabel("Box"));
     await pointer("pointerdown", 300, 200);
@@ -109,6 +98,9 @@ describe("Whiteboard", () => {
     await type(box(), "Client");
     await act(async () => box().blur());
     expect(items()).toEqual(["Box: Client"]);
+    for (const side of ["right", "to the left", "below", "below to the left", "below to the right"]) {
+      expect(byLabel(`Add a box ${side === "right" ? "to the right" : side}`)).toBeTruthy();
+    }
 
     await click(byLabel("Add a box to the right"));
     await type(box(), "Server");
@@ -124,23 +116,29 @@ describe("Whiteboard", () => {
     view.unmount();
   });
 
-  it("links an arrow drawn between two boxes, so it follows a moved box; Delete removes a box with its arrows", async () => {
-    seed([{ id: "a", type: "rect", x: 0, y: 0, w: 100, h: 60, text: "A" }, { id: "b", type: "rect", x: 300, y: 0, w: 100, h: 60, text: "B" }]);
+  it("keeps an arrow on its boxes as one moves; Delete, or the button by it, removes one element", async () => {
+    seed([
+      { id: "a", type: "rect", x: 0, y: 0, w: 100, h: 60, text: "A" },
+      { id: "b", type: "rect", x: 300, y: 0, w: 100, h: 60, text: "B" },
+      { id: "l", type: "arrow", x1: 0, y1: 0, x2: 0, y2: 0, from: "a", to: "b" },
+      { id: "c", type: "rect", x: 0, y: 300, w: 100, h: 60, text: "C" },
+    ]);
     const view = await open();
-    await click(byLabel("Arrow"));
-    await drag(50, 30, 350, 30);
-    expect((await savedElements(3))[2]).toMatchObject({ from: "a", to: "b" });
-
     await drag(350, 30, 350, 230);
-    await waitFor(() => expect(readBoard().elements[2]).toMatchObject({ to: "b" }));
+    await waitFor(() => expect(readBoard().elements[2]).toMatchObject({ from: "a", to: "b" }));
     await waitFor(() => expect((readBoard().elements[2] as { y2: number }).y2).toBeGreaterThan(150));
 
     await press(frame(), "Delete");
+    expect(items()).toEqual(["Box: A", "Box: C"]);
+
+    await drag(50, 330, 60, 330);
+    await click(byLabel("Delete"));
     expect(items()).toEqual(["Box: A"]);
+    expect(document.querySelector('button[aria-label="Delete"]')).toBeNull();
     view.unmount();
   });
 
-  it("writes columns of text with Tab, level with each other", async () => {
+  it("writes text in columns: Tab for the next one to the right, Shift+Tab or + for the next one below", async () => {
     const view = await open();
     await click(byLabel("Text"));
     await pointer("pointerdown", 40, 40);
@@ -152,6 +150,17 @@ describe("Whiteboard", () => {
     const [left, right] = await savedElements(2);
     expect(right).toMatchObject({ y: (left as { y: number }).y });
     expect((right as { x: number }).x).toBeGreaterThan((left as { x: number }).x + 100);
+
+    await pointer("pointerdown", 45, 45);
+    await pointer("pointerup", 45, 45);
+    await press(box(), "Tab", { shiftKey: true });
+    await type(box(), "Under");
+    await act(async () => box().blur());
+    const under = (await savedElements(3))[2] as { x: number; y: number };
+    expect(under.x).toBe((left as { x: number }).x);
+    expect(under.y).toBeGreaterThan((left as { y: number }).y + 30);
+    expect(byLabel("Add text below")).toBeTruthy();
+    expect(byLabel("Add a column to the right")).toBeTruthy();
     view.unmount();
   });
 
@@ -164,6 +173,11 @@ describe("Whiteboard", () => {
     await drag(600, 400, 580, 380);
     await waitFor(() => expect(readBoard().view).toMatchObject({ x: 20, y: 20, zoom: 1 }));
     expect(readBoard().elements[0]).toMatchObject({ x: 140, y: 120 });
+
+    // A click that wobbles a little leaves the board where it is.
+    await drag(600, 400, 603, 402);
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 500)));
+    expect(readBoard().view).toMatchObject({ x: 20, y: 20, zoom: 1 });
     view.unmount();
   });
 
@@ -207,8 +221,10 @@ describe("Whiteboard", () => {
     await press(frame(), "Escape");
     expect(byLabel("Box").getAttribute("aria-pressed")).toBe("false");
     await press(frame(), "a");
+    expect(byLabel("Box").getAttribute("aria-pressed")).toBe("false");
+    await press(frame(), "r");
     await drag(0, 0, 100, 100);
-    expect(items()).toEqual(["Arrow"]);
+    expect(items()).toEqual(["Box"]);
     await press(frame(), "z", { ctrlKey: true });
     expect(items()).toEqual([]);
     view.unmount();

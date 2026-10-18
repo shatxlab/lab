@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { pressedKeys, typingScreen, WORKSTATIONS, workstationFor, workstationPixels, type WorkstationKind } from '@/lib/tycoon/render-support/workstations'
+import { pressedKeys, typingScreen, WORKSTATIONS, workstationFor, workstationPixels, workstationsFor, type WorkstationKind } from '@/lib/tycoon/render-support/workstations'
 
 const KINDS = Object.keys(WORKSTATIONS) as WorkstationKind[]
+/** The ones with a screen showing. */
+const LIT = KINDS.filter((kind) => kind !== 'laptopClosed')
 
 describe('workstation art', () => {
   it.each(KINDS)('the %s is a clean rectangle of known pixels', (kind) => {
@@ -13,7 +15,7 @@ describe('workstation art', () => {
     }
   })
 
-  it.each(KINDS)('the %s shows a thin sliver of glass, a row at a time from the top', (kind) => {
+  it.each(LIT)('the %s shows a thin sliver of glass, a row at a time from the top', (kind) => {
     const { art, screen, width } = WORKSTATIONS[kind]
     expect(screen.length).toBeGreaterThanOrEqual(5)
     screen.forEach((row, i) => {
@@ -25,7 +27,7 @@ describe('workstation art', () => {
     })
   })
 
-  it.each(KINDS)('the %s has keys on it for the animation to light', (kind) => {
+  it.each(LIT)('the %s has keys on it for the animation to light', (kind) => {
     const { art, keys } = WORKSTATIONS[kind]
     expect(keys.length).toBeGreaterThanOrEqual(2)
     for (const [x, y] of keys) expect(art[y]![x]).toBe('c')
@@ -128,5 +130,24 @@ describe('pressedKeys', () => {
       }
     }
     expect(seen.size).toBe(4)
+  })
+})
+
+describe('workstationsFor', () => {
+  it('gives developers a laptop, designers a PC, and testers both with the laptop shut', () => {
+    expect(workstationsFor('developer', 3)).toEqual(['laptop'])
+    expect(workstationsFor('designer', 3)).toEqual(['pc'])
+    expect(workstationsFor('tester', 3)).toEqual(['pc', 'laptopClosed'])
+  })
+
+  it('falls back to the desk pattern while nobody has worked there', () => {
+    for (let desk = 0; desk < 8; desk++) expect(workstationsFor(undefined, desk)).toEqual([workstationFor(desk)])
+  })
+
+  it('has a shut laptop with no glass or keys, that fits beside the PC on a desk', () => {
+    const { screen, keys, gap, width } = WORKSTATIONS.laptopClosed
+    expect(screen).toHaveLength(0)
+    expect(keys).toHaveLength(0)
+    expect(gap + width).toBeLessThanOrEqual(17)
   })
 })

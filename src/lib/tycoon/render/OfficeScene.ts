@@ -1,7 +1,7 @@
 import { Container, Graphics, RenderTexture, Sprite, Text, type Application, type PointData, type Texture } from 'pixi.js'
 import { MORALE_UNHAPPY } from '@/lib/tycoon/sim/balance'
 import { getOffice, officeSpec, staffOf } from '@/lib/tycoon/sim/offices'
-import { DISCIPLINES, type Discipline, type Employee, type GameState, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
+import { DISCIPLINES, type Discipline, type Employee, type GameState, type Role, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
 import type { Atlas, FrameName } from './atlas'
 import { chairX, MIN_WIDTH, partitionAt, partitionInFront, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
@@ -13,7 +13,7 @@ import { POSE_PAD, STEP_CYCLE, WALK_CYCLE, type Pose } from '../render-support/p
 import { pathLength, pathToDoors, pointAlong, routePath, walkoutPath, type Point } from '../render-support/walkout'
 import { chooseErrand, chooseSpot, nextOutAt, poseAtSpot, SPOTS, spotFree, stayFor, type Errand, type Spot, type Stay } from '../render-support/breaks'
 import { BOOKSHELF_HEIGHT, bookshelfRects } from '../render-support/bookshelf'
-import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationFor, type WorkstationSpec } from '../render-support/workstations'
+import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationsFor, type WorkstationSpec } from '../render-support/workstations'
 import { formatDateShort } from '@/lib/tycoon/format'
 
 /** Size of the room's artwork in sprite pixels. Walls and floor go on beyond it as far as the screen needs. */
@@ -262,6 +262,7 @@ class Workstation {
     const g = this.glow.clear()
     if (mode === 'off') return
     const { screen, keys } = this.spec
+    if (screen.length === 0) return
     for (const { x, y, w } of screen) g.rect(x, y, w, 1).fill(SCREEN_ON)
     // The glass is a sliver, so the code is a line on every other row of it.
     const cols = Math.max(...screen.map((row) => row.w))
@@ -418,7 +419,9 @@ export class OfficeScene {
   /** Who the keepsakes on the wall were last pinned up for, and at which desks; null when they must go up again. */
   private hungFor: string | null = null
   /** The computers on the desks as last furnished, by desk. */
-  private stations = new Map<number, Workstation>()
+  private stations = new Map<number, Workstation[]>()
+  /** Who last worked at each desk, which decides what is on it (and stays on it once they have gone). */
+  private deskRoles = new Map<number, Role>()
   /** How the desks are laid out, chosen for the shape of the screen. */
   private arrangement: Arrangement = 'wide'
   private areaW = SCENE_W
@@ -604,7 +607,7 @@ export class OfficeScene {
       const desk = this.seats.deskFor(id)
       if (desk !== undefined) modes.set(desk, moment.typing ? 'typing' : 'idle')
     }
-    for (const [desk, station] of this.stations) station.update(modes.get(desk) ?? 'off', this.time)
+    for (const [desk, stations] of this.stations) for (const station of stations) station.update(modes.get(desk) ?? 'off', this.time)
     if (this.options.breaks) this.updateBreaks(dtMs, this.options.breaks())
     this.updatePopups(dtMs, speed)
     this.updateLeaving(dtMs)
@@ -821,6 +824,7 @@ export class OfficeScene {
     this.builtDesks = -1
     this.occupied = new Set()
     this.vacated = new Set()
+    this.deskRoles = new Map()
   }
 
   /** Takes everyone off the stage (they are drawn again at their desks); outings in progress are forgotten. */
@@ -984,7 +988,7 @@ export class OfficeScene {
       for (const child of layer.removeChildren()) child.destroy({ children: true })
     }
     this.stations = new Map()
-    this.furnishedFor = this.occupancyKey()
+    this.furnishedFor = this.furnishKey()
 
     for (let i = 0; i < desks; i++) {
       const [px, py] = partitionAt(this.arrangement, i >> 1)
@@ -1000,13 +1004,16 @@ export class OfficeScene {
         this.desks.addChild(freestandingDesk(right)).position.set(deskX, py + 11)
       }
       if (!vacancy || hasComputer(vacancy)) {
-        const kind = workstationFor(i)
-        const { gap, width, top } = WORKSTATIONS[kind]
-        // Against the edge of the desk nearest the person, whichever side that is.
-        const x = deskX + (right ? DESK_WIDTH - gap - width : gap)
-        const station = new Workstation(WORKSTATIONS[kind], atlas.workstation(kind), x, py + top, right, i)
-        this.stations.set(i, station)
-        this.desks.addChild(station.container)
+        const stations: Workstation[] = []
+        for (const kind of workstationsFor(this.deskRoles.get(i), i)) {
+          const { gap, width, top } = WORKSTATIONS[kind]
+          // Against the edge of the desk nearest the person, whichever side that is.
+          const x = deskX + (right ? DESK_WIDTH - gap - width : gap)
+          const station = new Workstation(WORKSTATIONS[kind], atlas.workstation(kind), x, py + top, right, i)
+          stations.push(station)
+          this.desks.addChild(station.container)
+        }
+        this.stations.set(i, stations)
       }
       if (vacancy) this.dressVacantDesk(vacancy, deskX, py, right)
     }
@@ -1024,9 +1031,11 @@ export class OfficeScene {
     }
   }
 
-  /** Which desks have somebody at them, as a string to compare; empty when desks are not dressed by occupancy. */
-  private occupancyKey(): string {
-    return this.options.vacancies ? [...this.occupied].sort((a, b) => a - b).join(',') : ''
+  /** What the desks are furnished for, as a string to compare: who has worked at each, and (when dressed by occupancy) who is there now. */
+  private furnishKey(): string {
+    const occupancy = this.options.vacancies ? [...this.occupied].sort((a, b) => a - b).join(',') : ''
+    const roles = [...this.deskRoles].sort(([a], [b]) => a - b).map(([desk, role]) => `${desk}${role[0]}`).join(',')
+    return `${occupancy}|${roles}`
   }
 
   /** Fits the room to the rows of desks built so far and parks the pets just below them. */
@@ -1058,13 +1067,17 @@ export class OfficeScene {
       this.people.addChild(sprite.container)
     }
 
+    for (const { id, role } of staffOf(state, office)) {
+      const desk = this.seats.deskFor(id)
+      if (desk !== undefined) this.deskRoles.set(desk, role)
+    }
     if (this.options.vacancies) {
       const before = this.occupied
       this.occupied = new Set(ids.flatMap((id) => this.seats.deskFor(id) ?? []))
       for (const desk of before) if (!this.occupied.has(desk)) this.vacated.add(desk)
       for (const desk of this.occupied) this.vacated.delete(desk)
-      if (this.occupancyKey() !== this.furnishedFor) this.furnishDesks(this.builtDesks)
     }
+    if (this.furnishKey() !== this.furnishedFor) this.furnishDesks(this.builtDesks)
 
     // A garage has no partitions to pin anything to.
     const pinned = this.shown?.kind === 'office' ? ids : []

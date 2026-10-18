@@ -1,10 +1,13 @@
 /**
- * What sits on each desk: a laptop, or a PC with a flat monitor. The pictures are drawn here, one character
+ * What sits on each desk, by who works there: developers a laptop, designers a PC with a flat monitor, testers
+ * both (the laptop closed, off to the side). The pictures are drawn here, one character
  * per pixel, so the office needs no art beyond the pack. Typing is shown on the desk, not on the person:
  * the screen fills with lines of code and a few keys light up.
  */
 
-export type WorkstationKind = 'pc' | 'laptop'
+import type { Role } from '@/lib/tycoon/sim/types'
+
+export type WorkstationKind = 'pc' | 'laptop' | 'laptopClosed'
 
 /** One row of lit glass: `w` pixels from (`x`, `y`). */
 export interface Segment {
@@ -98,12 +101,22 @@ export const WORKSTATIONS: Readonly<Record<WorkstationKind, WorkstationSpec>> = 
     0,
     13,
   ),
+  // A second computer for testers, shut and put down on the desk beside the PC's keyboard: no glass to light.
+  laptopClosed: spec(['ooooooooooo', 'ogggggggggo', 'ooooooooooo'], 6, 25),
 }
 
-/** Which of the two a desk has. Fixed per desk, so a seat keeps its look whoever sits there, and mixed from the first pair. */
+/** What a desk has when nobody who works there is known: fixed per desk, and mixed from the first pair. */
 const DESK_PATTERN: readonly WorkstationKind[] = ['pc', 'laptop', 'laptop', 'pc', 'laptop', 'pc', 'pc', 'laptop']
 
 export const workstationFor = (desk: number): WorkstationKind => DESK_PATTERN[desk % DESK_PATTERN.length]!
+
+/** Everything on the desk of someone in `role`; a desk nobody has worked at yet gets the one computer of its pattern. */
+export function workstationsFor(role: Role | undefined, desk: number): readonly WorkstationKind[] {
+  if (role === 'developer') return ['laptop']
+  if (role === 'designer') return ['pc']
+  if (role === 'tester') return ['pc', 'laptopClosed']
+  return [workstationFor(desk)]
+}
 
 /** The picture as RGBA pixels. */
 export function workstationPixels(kind: WorkstationKind): { data: Uint8ClampedArray<ArrayBuffer>; width: number; height: number } {

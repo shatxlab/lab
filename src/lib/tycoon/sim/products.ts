@@ -16,6 +16,8 @@ import {
   EXPECTED_FEATURE_FLOOR,
   EXPECTED_FEATURE_PENALTY,
   FRESH_DAYS,
+  MATURITY_MAX_UPDATES,
+  MATURITY_PER_UPDATE,
   MARKET_CAP,
   MARKET_ROOM,
   PROJECT_SIZES,
@@ -33,16 +35,17 @@ export function lastReleaseDay(product: Product): number {
   return product.updates.reduce((day, u) => Math.max(day, u.day), product.releaseDay)
 }
 
-/** Interest in a product of `size` last released on `lastRelease`: full for a while, then fading until the next update. */
-export function interestSince(lastRelease: number, size: ProjectSize, day: number): number {
+/** Interest in a product of `size` last released on `lastRelease`: full for a while, then fading until the next update; slower for one that has had `updates`. */
+export function interestSince(lastRelease: number, size: ProjectSize, day: number, updates = 0): number {
   const life = PROJECT_SIZES[size].life
   const stale = day - lastRelease - FRESH_DAYS * life
-  return stale <= 0 ? 1 : Math.exp(-stale / (STALE_DAYS * life))
+  const maturity = 1 + MATURITY_PER_UPDATE * Math.min(updates, MATURITY_MAX_UPDATES)
+  return stale <= 0 ? 1 : Math.exp(-stale / (STALE_DAYS * life * maturity))
 }
 
 /** How interested users still are, 0..1: fully for a while after each release, then fading until the next update. */
 export function interest(product: Product, day: number): number {
-  return interestSince(lastReleaseDay(product), product.size, day)
+  return interestSince(lastReleaseDay(product), product.size, day, product.updates.length)
 }
 
 /** Features this era's users expect of the product that it doesn't have. */

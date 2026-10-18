@@ -11,7 +11,7 @@ import { createRivals, rivalsArrive } from './rivals'
 import { generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
 import { sampleNow } from './history'
 import { initialMarket } from './market'
-import { DISCIPLINES, PROJECT_SIZE_IDS, STATS, type GameState } from './types'
+import { DISCIPLINES, PROJECT_SIZE_IDS, STATS, TIERS, type GameState } from './types'
 
 /**
  * Version 2 replaced fading income with users and bugs, version 3 brought offices, version 4 moved bug
@@ -157,7 +157,8 @@ function validProduct(v: unknown): boolean {
     Array.isArray(v.updates) &&
     v.updates.every((u) => isObj(u) && isNum(u.day)) &&
     isNum(v.boostUntil) &&
-    isNum(v.boostUsers)
+    isNum(v.boostUsers) &&
+    (v.autoPromote === undefined || v.autoPromote === null || TIERS.some((t) => t === v.autoPromote))
   )
 }
 

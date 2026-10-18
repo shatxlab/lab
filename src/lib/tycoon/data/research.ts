@@ -163,6 +163,17 @@ export const RESEARCH: readonly ResearchNode[] = [
     effects: [{ stat: 'revenue', mult: 1.03 }],
   },
   {
+    id: 'marketing_automation',
+    name: 'Marketing automation',
+    branch: 'business',
+    description: 'Set a product to promote itself whenever the bank can spare it, so you stop clicking Promote every month.',
+    cost: 45000,
+    days: 50,
+    requires: ['brand_partnerships'],
+    effects: [],
+    ability: 'automatic promotion of a product',
+  },
+  {
     id: 'payroll_automation',
     name: 'Payroll automation',
     branch: 'business',

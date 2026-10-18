@@ -152,6 +152,8 @@ export interface Product {
   /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
   boostUntil: number
   boostUsers: number
+  /** Once Marketing automation is researched: promote this product by itself at this tier whenever the bank allows. */
+  autoPromote?: Tier | null
 }
 
 /** A bug-fixing job: a developer and a tester, from any office, working through a product's bugs together. */

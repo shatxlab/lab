@@ -10,8 +10,10 @@ import {
   BUG_TOLERANCE,
   FRESH_DAYS,
   MARKET_CAP,
+  MATURITY_MAX_UPDATES,
   OVERSHOOT_CAP,
   PROJECT_SIZES,
+  STALE_DAYS,
   USER_DECLINE,
 } from '@/lib/tycoon/sim/balance'
 import {
@@ -68,7 +70,7 @@ describe('users', () => {
     // Alone in its market, nothing holds it back but the market's size.
     expect(targetUsers(state, product)).toBeCloseTo(saturate('web_app', 10_000))
     expect(saturate('web_app', 10_000)).toBeGreaterThan(9_000)
-    expect(interest(product, FRESH_DAYS + 90)).toBeCloseTo(Math.exp(-1))
+    expect(interest(product, FRESH_DAYS + STALE_DAYS)).toBeCloseTo(Math.exp(-1))
     product.updates.push({ day: 200 })
     expect(interest(product, 250)).toBe(1) // an update makes it fresh again
 
@@ -76,6 +78,16 @@ describe('users', () => {
     state.day = 250
     expect(bugFactor(product)).toBeCloseTo(0.5)
     expect(targetUsers(state, product)).toBeCloseTo(saturate('web_app', 5_000))
+  })
+
+  it('fade slower the more updates a product has had, up to a limit', () => {
+    const fading = (updates: number) => {
+      const product = makeProduct({ releaseDay: 0, updates: Array.from({ length: updates }, () => ({ day: 0 })) })
+      return interest(product, FRESH_DAYS + STALE_DAYS)
+    }
+    expect(fading(0)).toBeCloseTo(Math.exp(-1))
+    expect(fading(2)).toBeGreaterThan(fading(0))
+    expect(fading(MATURITY_MAX_UPDATES + 5)).toBeCloseTo(fading(MATURITY_MAX_UPDATES))
   })
 
   it('pay their type\'s monthly price, a thirtieth each day', () => {

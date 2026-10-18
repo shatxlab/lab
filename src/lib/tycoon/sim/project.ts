@@ -10,6 +10,7 @@ import {
   HIT_MIN_QUALITY,
   HIT_REACH,
   HIT_REPUTATION,
+  MAINTENANCE_TARGET_SHARE,
   LAUNCH_ADOPTERS,
   MAX_FEATURES,
   PROJECT_SIZES,
@@ -68,7 +69,9 @@ export function projectTarget(
 ): Skills {
   const base = getProductType(productTypeId).baseTarget
   const target = emptySkills()
-  for (const d of DISCIPLINES) target[d] = kind === 'update' ? Math.round(base[d] * UPDATE_TARGET_SHARE) : base[d]
+  // An update with nothing new in it is a maintenance release: cheaper, and it still wins the interest back.
+  const share = UPDATE_TARGET_SHARE * (featureIds.length === 0 ? MAINTENANCE_TARGET_SHARE : 1)
+  for (const d of DISCIPLINES) target[d] = kind === 'update' ? Math.round(base[d] * share) : base[d]
   for (const id of featureIds) {
     const cost = getFeature(id).cost
     for (const d of DISCIPLINES) target[d] += cost[d]

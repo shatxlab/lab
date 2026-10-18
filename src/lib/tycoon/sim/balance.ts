@@ -73,9 +73,17 @@ export const USER_WORD_OF_MOUTH = 0.04
 /** Above its target, this share of the surplus leaves each day. */
 export const USER_DECLINE = 0.02
 /** A release or update keeps users interested this many days (times the size's life)... */
-export const FRESH_DAYS = 90
+export const FRESH_DAYS = 120
 /** ...after which the reach fades with this time constant (times the size's life) until the next update. */
-export const STALE_DAYS = 90
+export const STALE_DAYS = 180
+/** Every update a product has had makes it fade this much slower (an established product holds its people)... */
+export const MATURITY_PER_UPDATE = 0.25
+/** ...counting at most this many updates. */
+export const MATURITY_MAX_UPDATES = 4
+/** A maintenance release (an update with no new features) needs this share of an update's base work. */
+export const MAINTENANCE_TARGET_SHARE = 0.6
+/** Automatic promotion never spends the bank below this many days of what the studio burns. */
+export const AUTO_PROMOTE_RESERVE_DAYS = 60
 
 // Competition
 /**

@@ -161,7 +161,8 @@ export function NewProjectDialog({ updateOf, officeId }: { updateOf?: number; of
         {product && (
           <p className="muted">
             An update is a smaller project that brings {product.name}'s {type.userNoun} back to full interest, and its new
-            features let it reach more people. It ships a few new bugs of its own.
+            features let it reach more people. It ships a few new bugs of its own. With no features chosen it is a
+            maintenance release: cheaper, and it keeps the product fresh without growing it.
           </p>
         )}
         {!isUpdate && (
@@ -289,7 +290,7 @@ export function NewProjectDialog({ updateOf, officeId }: { updateOf?: number; of
         <div className="actions">
           <button onClick={() => store.closeDialog()}>Cancel</button>
           <button className="primary" onClick={start}>
-            {product ? 'Start update' : 'Start project'}
+            {product ? (selected.length === 0 ? 'Start maintenance' : 'Start update') : 'Start project'}
           </button>
         </div>
         </>

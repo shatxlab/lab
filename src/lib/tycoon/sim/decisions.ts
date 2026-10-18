@@ -58,6 +58,11 @@ export const decisions = {
     return ['promote', `Promoted ${product?.name ?? 'a product'} (${tier})`, product ? { cost: promotionCost(product, tier), users: Math.round(product.users) } : undefined]
   },
 
+  setAutoPromote(state: GameState, productId: number, tier: Tier | null): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    return ['promote.policy', `${product?.name ?? 'A product'}: automatic promotion ${tier ?? 'off'}`]
+  },
+
   sunset(state: GameState, productId: number): Decision {
     const product = state.products.find((p) => p.id === productId)
     if (!product) return ['product.end', 'Ended a product']

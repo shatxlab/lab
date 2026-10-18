@@ -3,10 +3,10 @@ import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { PROJECT_SIZES, PROMOTIONS } from '@/lib/tycoon/sim/balance'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
-import { promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { autoPromoteUnlocked, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, targetUsers } from '@/lib/tycoon/sim/products'
-import { TIERS, type GameState, type Product } from '@/lib/tycoon/sim/types'
+import { TIERS, type GameState, type Product, type Tier } from '@/lib/tycoon/sim/types'
 import { useGame, useOffice, useStore } from './context'
 import { FixPicker, OnCallPanel } from './FixControls'
 import { formatAge, formatCount, formatDateShort, formatMoney, TIER_NAME } from '@/lib/tycoon/format'
@@ -53,7 +53,7 @@ function ProductRow({ product }: { product: Product }) {
           {product.hit && <span title={state.signatureId === product.id ? 'Your signature hit' : 'A hit'}> 🚀</span>}
         </strong>
         <span className="muted">
-          {PROJECT_SIZES[product.size].name} {type.name} · quality {Math.round(product.quality)}
+          {PROJECT_SIZES[product.size].name} {type.name} · {productPhase(state, product)} · quality {Math.round(product.quality)}
           {updates > 0 && ` · ${updates} update${updates === 1 ? '' : 's'}`}
         </span>
       </div>
@@ -124,6 +124,23 @@ function ProductRow({ product }: { product: Product }) {
             {outcome === 'sold' ? 'Sell it' : 'Retire it'}
           </button>
         </div>
+      )}
+      {autoPromoteUnlocked(state) && (
+        <label className="auto-promote muted">
+          Promote automatically:{' '}
+          <select
+            value={product.autoPromote ?? ''}
+            onChange={(e) => store.setAutoPromote(product.id, e.target.value === '' ? null : (e.target.value as Tier))}
+          >
+            <option value="">Off</option>
+            {TIERS.map((tier) => (
+              <option key={tier} value={tier}>
+                {TIER_NAME[tier]} · {formatMoney(promotionCost(product, tier))}
+              </option>
+            ))}
+          </select>
+          <small> when the bank keeps two months of costs</small>
+        </label>
       )}
       {promoting && (
         <div className="tiers">

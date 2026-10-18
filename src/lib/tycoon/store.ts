@@ -5,7 +5,7 @@ import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
-import { promoteProduct } from '@/lib/tycoon/sim/lifecycle'
+import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
@@ -107,6 +107,8 @@ export interface Store {
   /** Walks away from an office's client job. */
   abandonContract(officeId?: number): Result
   promote(productId: number, tier: Tier): Result
+  /** Sets a product to promote itself at this tier, or turns that off (needs Marketing automation). */
+  setAutoPromote(productId: number, tier: Tier | null): Result
   /** Starts researching `id`; one thing at a time. */
   startResearch(id: string): Result
   /** Picks choice `index` of the pending random event. */
@@ -346,6 +348,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     promote(productId, tier) {
       return cue(changed(logged(() => decisions.promote(state, productId, tier), () => promoteProduct(state, productId, tier))), 'click')
+    },
+
+    setAutoPromote(productId, tier) {
+      return cue(changed(logged(() => decisions.setAutoPromote(state, productId, tier), () => setAutoPromote(state, productId, tier))), 'click')
     },
 
     shipProject(campaign, officeId) {

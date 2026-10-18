@@ -6,6 +6,7 @@ import { recordHistory } from './history'
 import { journalDay, journalMonth } from './journal'
 import { careerDay } from './careers'
 import { fixesDay } from './fixes'
+import { autoPromoteDay } from './lifecycle'
 import { refreshCandidates, salaryOf } from './hiring'
 import { updateMarket } from './market'
 import { checkMilestones } from './milestones'
@@ -39,6 +40,7 @@ export function advanceDay(state: GameState): void {
     rivalArrives(state, eraIndexAt(state.day))
   }
   costsDay(state)
+  autoPromoteDay(state)
   researchDay(state)
   trainingDay(state)
   moraleDay(state)

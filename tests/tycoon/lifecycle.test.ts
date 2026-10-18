@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CAMPAIGNS, LAUNCH_ADOPTERS, PROMOTIONS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from '@/lib/tycoon/sim/balance'
-import { campaignCost, estimateReach, promotionCost, promoteProduct, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { AUTO_PROMOTE_RESEARCH, autoPromoteDay, campaignCost, estimateReach, productPhase, promotionCost, promoteProduct, promotionReserve, setAutoPromote, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { bugProneness, productRevenue, productsDay, releaseBugs, revenueForUsers } from '@/lib/tycoon/sim/products'
 import { projectQuality, projectTarget, reachAfterUpdate, shipProject, startProject, startUpdate } from '@/lib/tycoon/sim/project'
 import { featureReach } from '@/lib/tycoon/sim/scoring'
@@ -354,5 +354,84 @@ describe('store', () => {
     expect(store.shipProject('small').ok).toBe(true)
     expect(state.money).toBeLessThan(money)
     expect(createInitialState(1).products).toEqual([])
+  })
+})
+
+describe('maintenance releases', () => {
+  it('are updates with no features, and need less work than an update that adds one', () => {
+    const maintenance = projectTarget('web_app', [], 'update', 'small')
+    const withFeature = projectTarget('web_app', ['accounts'], 'update', 'small')
+    const bare = projectTarget('web_app', [], 'new', 'small')
+    for (const d of DISCIPLINES) {
+      expect(maintenance[d]).toBeLessThan(withFeature[d])
+      expect(maintenance[d]).toBeLessThan(bare[d])
+    }
+    expect(startUpdate(studioWithProduct(), 50, []).ok).toBe(true)
+  })
+})
+
+describe('automatic promotion', () => {
+  const unlocked = () => {
+    const state = studioWithProduct()
+    state.research.done.push(AUTO_PROMOTE_RESEARCH)
+    return state
+  }
+
+  it('needs the research', () => {
+    const state = studioWithProduct()
+    expect(setAutoPromote(state, 50, 'small').ok).toBe(false)
+    state.research.done.push(AUTO_PROMOTE_RESEARCH)
+    expect(setAutoPromote(state, 50, 'small').ok).toBe(true)
+    expect(state.products[0].autoPromote).toBe('small')
+    expect(setAutoPromote(state, 50, null).ok).toBe(true)
+    expect(setAutoPromote(state, 999, 'small').ok).toBe(false)
+  })
+
+  it('promotes when the bank can spare it, and logs it', () => {
+    const state = unlocked()
+    state.money = 1_000_000
+    setAutoPromote(state, 50, 'small')
+    const cost = promotionCost(state.products[0], 'small')
+    autoPromoteDay(state)
+    expect(state.money).toBe(1_000_000 - cost)
+    expect(state.products[0].boostUntil).toBeGreaterThan(state.day)
+    expect(state.journal.some((e) => e.kind === 'promote.auto')).toBe(true)
+    // Already promoted: nothing more is spent.
+    autoPromoteDay(state)
+    expect(state.money).toBe(1_000_000 - cost)
+  })
+
+  it('never dips into the reserve, and does nothing when off', () => {
+    const state = unlocked()
+    const cost = promotionCost(state.products[0], 'small')
+    state.money = cost + promotionReserve(state) - 1
+    setAutoPromote(state, 50, 'small')
+    autoPromoteDay(state)
+    expect(state.products[0].boostUntil).toBeLessThanOrEqual(state.day)
+    state.money = 1_000_000
+    setAutoPromote(state, 50, null)
+    autoPromoteDay(state)
+    expect(state.money).toBe(1_000_000)
+  })
+
+  it('survives a save', () => {
+    const state = unlocked()
+    setAutoPromote(state, 50, 'medium')
+    expect(deserialize(serialize(state))?.products[0].autoPromote).toBe('medium')
+  })
+})
+
+describe('product phases', () => {
+  it('goes from launch through established to fading without an update', () => {
+    const state = studioWithProduct()
+    const product = state.products[0]
+    state.day = product.releaseDay + 10
+    expect(productPhase(state, product)).toBe('Launch')
+    product.users = 100_000
+    product.reach = 12_000
+    state.day = product.releaseDay + 200
+    expect(productPhase(state, product)).toBe('Established')
+    state.day = product.releaseDay + 5_000
+    expect(productPhase(state, product)).toBe('Fading')
   })
 })

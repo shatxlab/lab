@@ -6,6 +6,7 @@
 // Kept: storage access, autosave registration, new-game reset, save export/import (UI stage wires these).
 
 import { clearSave, importSave, migrateLegacySave, type Autosave, type KeyValueStorage } from '@/lib/tycoon/save'
+import { exportJournal } from '@/lib/tycoon/sim/journal'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { fail, type GameState, type Result } from '@/lib/tycoon/sim/types'
 
@@ -44,6 +45,17 @@ export function downloadSave(state: GameState): void {
   const link = document.createElement('a')
   link.href = url
   link.download = `lab-tycoon-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+/** Downloads the run's log: every decision and what came of it, to share and go through afterwards. */
+export function downloadJournal(state: GameState): void {
+  const blob = new Blob([exportJournal(state)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `lab-tycoon-run-${new Date().toISOString().slice(0, 10)}.json`
   link.click()
   URL.revokeObjectURL(url)
 }

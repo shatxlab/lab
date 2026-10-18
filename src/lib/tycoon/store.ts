@@ -13,6 +13,8 @@ import { shipProject, startProject, startUpdate, unlockedProductTypes } from '@/
 import { startResearch } from '@/lib/tycoon/sim/research'
 import { startTraining, teamOuting } from '@/lib/tycoon/sim/staff'
 import { isReady } from '@/lib/tycoon/sim/scoring'
+import { decisions, type Decision } from '@/lib/tycoon/sim/decisions'
+import { logEntry } from '@/lib/tycoon/sim/journal'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
 import type { Discipline, GameState, ProjectSize, Result, SimEvent, Tier } from '@/lib/tycoon/sim/types'
 
@@ -157,6 +159,20 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   }
   const running = () => speed.value > 0 && dialog.value === null && !state.gameOver
 
+  /** Describes a command from the state the player saw, runs it, and writes it to the run's log if it worked. */
+  const logged = <R extends Result>(describe: () => Decision, run: () => R): R => {
+    const [kind, text, data] = describe()
+    const result = run()
+    if (result.ok) logEntry(state, kind, text, data)
+    return result
+  }
+  /** Takes the events a command left behind, logging the notices among them. */
+  const drainLogged = (): SimEvent[] => {
+    const events = drainEvents(state)
+    for (const event of events) if (event.type === 'notice') logEntry(state, 'notice', event.text)
+    return events
+  }
+
   const notify = (text: string) => {
     const id = nextToastId++
     toasts.value = [...toasts.value, { id, text }]
@@ -255,7 +271,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     startProject(productTypeId, featureIds, size, officeId) {
-      const result = startProject(state, productTypeId, featureIds, size, officeFor(officeId))
+      const result = logged(() => decisions.startProject(state, productTypeId, featureIds, size, officeFor(officeId)), () => startProject(state, productTypeId, featureIds, size, officeFor(officeId)))
       if (!result.ok) return result
       dialog.value = null
       if (speed.value === 0) speed.value = 1
@@ -265,7 +281,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     startUpdate(productId, featureIds, officeId) {
-      const result = startUpdate(state, productId, featureIds, officeFor(officeId))
+      const result = logged(() => decisions.startUpdate(state, productId, featureIds, officeFor(officeId)), () => startUpdate(state, productId, featureIds, officeFor(officeId)))
       if (!result.ok) return result
       dialog.value = null
       if (speed.value === 0) speed.value = 1
@@ -275,7 +291,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     startFix(productId, developerId, testerId) {
-      const result = startFix(state, productId, developerId, testerId)
+      const result = logged(() => decisions.startFix(state, productId), () => startFix(state, productId, developerId, testerId))
       if (!result.ok) return result
       if (speed.value === 0) speed.value = 1
       bump()
@@ -293,7 +309,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     setOnCall(developerId, testerId) {
-      return cue(changed(setOnCall(state, developerId, testerId)), 'click')
+      return cue(changed(logged(() => decisions.setOnCall(), () => setOnCall(state, developerId, testerId))), 'click')
     },
 
     clearOnCall() {
@@ -301,16 +317,16 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     sunsetProduct(productId) {
-      const result = sunsetProduct(state, productId)
+      const result = logged(() => decisions.sunset(state, productId), () => sunsetProduct(state, productId))
       if (!result.ok) return result
-      handleEvents(drainEvents(state))
+      handleEvents(drainLogged())
       bump()
       sfx.play('click')
       return result
     },
 
     acceptContract(offerId, officeId) {
-      const result = acceptContract(state, offerId, officeFor(officeId))
+      const result = logged(() => decisions.acceptContract(state, offerId, officeFor(officeId)), () => acceptContract(state, offerId, officeFor(officeId)))
       if (!result.ok) return result
       dialog.value = null
       if (speed.value === 0) speed.value = 1
@@ -320,16 +336,16 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     abandonContract(officeId) {
-      const result = abandonContract(state, officeFor(officeId))
+      const result = logged(() => decisions.abandonContract(state, officeFor(officeId)), () => abandonContract(state, officeFor(officeId)))
       if (!result.ok) return result
-      handleEvents(drainEvents(state))
+      handleEvents(drainLogged())
       bump()
       sfx.play('bad')
       return result
     },
 
     promote(productId, tier) {
-      return cue(changed(promoteProduct(state, productId, tier)), 'click')
+      return cue(changed(logged(() => decisions.promote(state, productId, tier), () => promoteProduct(state, productId, tier))), 'click')
     },
 
     shipProject(campaign, officeId) {
@@ -337,14 +353,16 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       const early = project !== null && !isReady(project)
       const reputationBefore = state.reputation
       const unlockedBefore = new Set(unlockedProductTypes(state).map((t) => t.id))
-      const result = shipProject(state, campaign, officeFor(officeId))
+      const result = logged(() => decisions.shipProject(state, campaign, officeFor(officeId)), () => shipProject(state, campaign, officeFor(officeId)))
       if (!result.ok) return result
       const unlocked = unlockedProductTypes(state)
         .filter((t) => !unlockedBefore.has(t.id))
         .map((t) => t.name)
-      const events = drainEvents(state)
+      const events = drainLogged()
       for (const event of events) {
         if (event.type !== 'shipped') continue
+        const shipped = state.products.find((p) => p.id === event.productId)
+        logEntry(state, 'ship.result', `${shipped?.name ?? 'A product'} is out`, { quality: Math.round(event.quality), reach: Math.round(event.reach), bugs: Math.round(event.bugs), hit: shipped?.hit ?? false, update: event.update })
         dialog.value = {
           kind: 'result',
           productId: event.productId,
@@ -364,13 +382,13 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     startResearch(id) {
-      return cue(changed(startResearch(state, id)), 'click')
+      return cue(changed(logged(() => decisions.startResearch(state, id), () => startResearch(state, id))), 'click')
     },
 
     resolveEvent(index) {
-      const result = resolveRandomEvent(state, index)
+      const result = logged(() => decisions.resolveEvent(state, index), () => resolveRandomEvent(state, index))
       if (!result.ok) return result
-      handleEvents(drainEvents(state))
+      handleEvents(drainLogged())
       dialog.value = queue.shift() ?? null
       bump()
       sfx.play('click')
@@ -378,48 +396,48 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     hire(candidateId) {
-      return cue(changed(hire(state, candidateId, selectedOffice.value)), 'hire')
+      return cue(changed(logged(() => decisions.hire(state, candidateId, selectedOffice.value), () => hire(state, candidateId, selectedOffice.value))), 'hire')
     },
 
     promoteEmployee(employeeId) {
-      const result = promote(state, employeeId)
+      const result = logged(() => decisions.promoteEmployee(state, employeeId), () => promote(state, employeeId))
       if (!result.ok) return result
-      handleEvents(drainEvents(state))
+      handleEvents(drainLogged())
       bump()
       sfx.play('milestone')
       return result
     },
 
     train(employeeId, discipline) {
-      return cue(changed(startTraining(state, employeeId, discipline)), 'click')
+      return cue(changed(logged(() => decisions.train(state, employeeId, discipline), () => startTraining(state, employeeId, discipline))), 'click')
     },
 
     teamOuting() {
-      return cue(changed(teamOuting(state)), 'click')
+      return cue(changed(logged(() => decisions.teamOuting(state), () => teamOuting(state))), 'click')
     },
 
     fire(employeeId) {
-      return changed(fire(state, employeeId))
+      return changed(logged(() => decisions.fire(state, employeeId), () => fire(state, employeeId)))
     },
 
     moveOut() {
-      return cue(changed(moveOut(state)), 'upgrade')
+      return cue(changed(logged(() => decisions.moveOut(), () => moveOut(state))), 'upgrade')
     },
 
     openOffice() {
-      const result = openOffice(state)
+      const result = logged(() => decisions.openOffice(state), () => openOffice(state))
       if (result.ok) selectedOffice.value = state.offices[state.offices.length - 1].id
       return cue(changed(result), 'upgrade')
     },
 
     transfer(employeeId, officeId) {
-      return changed(transfer(state, employeeId, officeId))
+      return changed(logged(() => decisions.transfer(state, employeeId, officeId), () => transfer(state, employeeId, officeId)))
     },
 
     acquire(rivalId) {
-      const result = acquire(state, rivalId)
+      const result = logged(() => decisions.acquire(state, rivalId), () => acquire(state, rivalId))
       if (!result.ok) return result
-      handleEvents(drainEvents(state))
+      handleEvents(drainLogged())
       bump()
       return result
     },

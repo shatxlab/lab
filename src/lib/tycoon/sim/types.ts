@@ -377,10 +377,23 @@ export interface GameState {
   /** Monthly samples for the stats charts, oldest first, capped. */
   history: HistoryPoint[]
   gameOver: boolean
+  /** Everything the player decided and everything that happened, oldest first: exported to review a run. */
+  journal: JournalEntry[]
   /** Contributions from the most recent day, for the renderer's popups. */
   dayWork: DayWork[]
   /** Pending events for the UI; drained with `drainEvents`. */
   events: SimEvent[]
+}
+
+/** One line of the run's log: a decision the player made, or something that happened to the studio. */
+export interface JournalEntry {
+  day: number
+  /** Dotted category, e.g. `project.start`, `hire`, `month`. */
+  kind: string
+  text: string
+  /** Money in the bank at the time, so a decision can be read against what the player could afford. */
+  cash: number
+  data?: Record<string, string | number | boolean | string[]>
 }
 
 export type Result = { ok: true } | { ok: false; reason: string }

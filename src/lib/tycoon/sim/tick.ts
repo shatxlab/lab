@@ -3,6 +3,7 @@ import { contractsDay } from './contracts'
 import { checkBankruptcy, costsDay, revenueDay } from './economy'
 import { rollRandomEvent } from './events'
 import { recordHistory } from './history'
+import { journalDay, journalMonth } from './journal'
 import { careerDay } from './careers'
 import { fixesDay } from './fixes'
 import { refreshCandidates, salaryOf } from './hiring'
@@ -24,6 +25,7 @@ import { workDay } from './work'
  */
 export function advanceDay(state: GameState): void {
   if (state.gameOver) return
+  const eventsBefore = state.events.length
   state.day += 1
   state.dayWork = []
   fixesDay(state)
@@ -47,6 +49,7 @@ export function advanceDay(state: GameState): void {
     for (const employee of state.employees) employee.salary = salaryOf(employee, state.day)
     updateMarket(state)
     recordHistory(state)
+    journalMonth(state)
   }
   if (state.day % CANDIDATE_REFRESH_DAYS === 0) refreshCandidates(state)
   checkBankruptcy(state)
@@ -55,6 +58,7 @@ export function advanceDay(state: GameState): void {
     checkStage(state)
   }
   rollRandomEvent(state)
+  journalDay(state, eventsBefore)
 }
 
 export function advance(state: GameState, days: number): void {

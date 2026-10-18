@@ -1,4 +1,4 @@
-import { startNewGame } from '@/lib/tycoon/browser'
+import { downloadJournal, startNewGame } from '@/lib/tycoon/browser'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { ERAS } from '@/lib/tycoon/data/eras'
 import { getFeature } from '@/lib/tycoon/data/features'
@@ -133,6 +133,7 @@ export function GameOverDialog() {
         </div>
       </div>
       <div className="actions">
+        <button onClick={() => downloadJournal(state)}>Export run log</button>
         <button className="primary" onClick={startNewGame}>
           New game
         </button>

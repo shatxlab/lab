@@ -58,6 +58,7 @@ export function createInitialState(seed: number): GameState {
     lastOutingDay: -1000,
     milestones: [],
     history: [],
+    journal: [],
     gameOver: false,
     dayWork: [],
     events: [],
@@ -399,6 +400,7 @@ function markFounders(state: GameState): void {
 function dropRemovedContent(raw: unknown): unknown {
   if (!isObj(raw)) return raw
   const upgraded: Obj = { ...raw }
+  upgraded.journal = Array.isArray(raw.journal) ? raw.journal : []
   upgraded.market = { ...initialMarket(), ...(isObj(raw.market) ? raw.market : {}) }
   if (Array.isArray(raw.milestones)) upgraded.milestones = raw.milestones.filter((id) => typeof id === 'string' && getMilestone(id))
   // Research this build no longer knows is dropped; an active one that vanished is simply cancelled.

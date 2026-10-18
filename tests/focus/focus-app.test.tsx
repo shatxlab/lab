@@ -299,9 +299,9 @@ describe("FocusApp — failing the flow", () => {
     view.unmount();
   });
 
-  it("empties the office after six, and a new team can be hired", async () => {
+  it("empties the office after five misses in a row, and a new team can be hired", async () => {
     const view = await open();
-    for (let i = 0; i < HEADCOUNT; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       await click(button(tz("en", "start")));
       await click(button(tz("en", "giveUp")));
       await click(button(tz("en", "giveUpYes")));

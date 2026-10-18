@@ -155,17 +155,18 @@ export default function FocusApp() {
   const [firedAlert, setFiredAlert] = React.useState<string | null>(null);
   const firedBefore = React.useRef(0);
   React.useEffect(() => {
-    const fired = flow.missed;
+    const fired = flow.fired;
     if (fired <= firedBefore.current) {
       firedBefore.current = fired;
       return;
     }
+    const from = firedBefore.current;
     firedBefore.current = fired;
     const name = (id: number | undefined) => office?.roster.find((person) => person.id === id)?.name ?? "";
-    const gone = name(office?.fireOrder[fired - 1]);
+    const gone = office?.fireOrder.slice(from, fired).map(name).join(", ") ?? "";
     const next = fired < HEADCOUNT ? name(office?.fireOrder[fired]) : "";
     setFiredAlert(next ? tz(lang, "firedAlert", { name: gone, next }) : tz(lang, "firedAlertLast", { name: gone }));
-  }, [flow.missed, office, lang]);
+  }, [flow.fired, office, lang]);
   React.useEffect(() => {
     if (!firedAlert) return;
     const id = window.setTimeout(() => setFiredAlert(null), 5000);
@@ -261,7 +262,7 @@ export default function FocusApp() {
       <FocusScene
         lang={lang}
         office={office}
-        fired={flow.missed}
+        fired={flow.fired}
         working={flow.phase === "focus"}
         onBreak={onBreak}
         label={chipLabel}

@@ -3,7 +3,7 @@ import * as React from "react";
 import { Modal } from "@/components/apps/Modal";
 import { ActionButton, panelClass } from "@/components/tools/ui";
 import type { AppLang } from "@/lib/apps/lang";
-import { cycleDots, cycleResults, remainingMs, segmentMinutes, type FlowState } from "@/lib/focus/flow";
+import { cycleDots, cycleResults, firingsNext, remainingMs, segmentMinutes, type FlowState } from "@/lib/focus/flow";
 import { formatClock, tz } from "@/lib/focus/i18n";
 import type { Office } from "@/lib/focus/office";
 import { cn } from "@/lib/viewer/utils";
@@ -68,7 +68,10 @@ export function FlowPanel(props: FlowPanelProps) {
   const phaseLabel =
     flow.phase === "ready" ? tz(lang, "phaseReady") : flow.phase === "focus" ? tz(lang, "phaseFocus") : tz(lang, flow.long ? "phaseLong" : "phaseBreak");
   // Who would go next, so the warning can name them.
-  const nextToGo = office.roster.find((person) => person.id === office.fireOrder[flow.missed]);
+  const nextToGo = office.fireOrder
+    .slice(flow.fired, flow.fired + firingsNext(flow))
+    .map((id) => office.roster.find((person) => person.id === id)?.name ?? "")
+    .join(", ");
 
   return (
     <section className={cn(panelClass, "flex flex-col items-center gap-3")} aria-label={phaseLabel}>
@@ -100,7 +103,7 @@ export function FlowPanel(props: FlowPanelProps) {
       <Modal open={confirming} onClose={() => setConfirming(false)} label={tz(lang, "giveUpTitle")} className="lab-modal-md">
         <div className="flex flex-col gap-3 p-5">
           <h2 className="text-lg font-semibold">{tz(lang, "giveUpTitle")}</h2>
-          {nextToGo && <p className="text-sm">{tz(lang, "giveUpBody", { name: nextToGo.name })}</p>}
+          {nextToGo && <p className="text-sm">{tz(lang, "giveUpBody", { name: nextToGo })}</p>}
           <div className="flex flex-wrap gap-2">
             <ActionButton onClick={() => setConfirming(false)}>{tz(lang, "keepFocusing")}</ActionButton>
             <ActionButton

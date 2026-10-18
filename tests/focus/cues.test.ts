@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cueFor } from "@/lib/focus/cues";
-import { HEADCOUNT, abandon, createFlow, skipBreak, start, tick } from "@/lib/focus/flow";
+import { abandon, createFlow, skipBreak, start, tick } from "@/lib/focus/flow";
 import { focusRecipe, type FocusSound } from "@/lib/focus/sound";
 
 const MIN = 60_000;
@@ -25,7 +25,7 @@ describe("cueFor", () => {
     expect(cueFor(running, abandon(running))).toBe("walkout");
     let state = createFlow();
     let before = state;
-    for (let i = 0; i < HEADCOUNT; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       before = state;
       state = abandon(start(state, i));
     }

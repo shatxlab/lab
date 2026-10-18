@@ -23,7 +23,7 @@ function play(count: number, at = T0) {
 describe("the flow", () => {
   it("is 25 minutes of focus, 5 of rest and a long break after every fourth", () => {
     expect(FLOW).toEqual({ focusMin: 25, shortMin: 5, longMin: 15, longEvery: 4 });
-    expect(HEADCOUNT).toBe(6);
+    expect(HEADCOUNT).toBe(12);
   });
 
   it("starts ready, and Start begins a 25 minute focus", () => {
@@ -86,7 +86,7 @@ describe("the flow", () => {
   it("makes someone leave when a Pomodoro is given up, and waits for Start", () => {
     const running = start(createFlow(), T0);
     const gave = abandon(running);
-    expect(gave).toMatchObject({ phase: "ready", missed: 1, done: 0, results: ["missed"], endsAt: null });
+    expect(gave).toMatchObject({ phase: "ready", missed: 1, streak: 1, fired: 1, done: 0, results: ["missed"], endsAt: null });
     expect(isRunning(gave)).toBe(false);
     expect(start(gave, T0 + 99).phase).toBe("focus");
   });
@@ -98,13 +98,35 @@ describe("the flow", () => {
     expect(abandon(rest)).toBe(rest);
   });
 
+  it("fires one more person for every Pomodoro given up in a row", () => {
+    let state = createFlow();
+    const firedAfter: number[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      state = abandon(start(state, T0 + i));
+      firedAfter.push(state.fired);
+    }
+    expect(firedAfter).toEqual([1, 3, 6, 10]);
+  });
+
+  it("starts over at one after a Pomodoro is finished", () => {
+    let state = abandon(start(createFlow(), T0));
+    state = abandon(start(state, T0));
+    expect(state).toMatchObject({ streak: 2, fired: 3 });
+    state = start(state, T0);
+    state = tick(state, state.endsAt!);
+    expect(state.streak).toBe(0);
+    state = abandon(start(skipBreak(state, T0 + 26 * MIN), T0 + 26 * MIN));
+    expect(state).toMatchObject({ streak: 1, fired: 4, missed: 3, done: 1 });
+  });
+
   it("empties the office when the last person leaves", () => {
     let state = createFlow();
-    for (let i = 0; i < HEADCOUNT; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       expect(state.phase).toBe("ready");
       state = abandon(start(state, T0 + i));
     }
-    expect(state).toMatchObject({ phase: "empty", missed: HEADCOUNT });
+    // 1 + 2 + 3 + 4, then the last two.
+    expect(state).toMatchObject({ phase: "empty", missed: 5, fired: HEADCOUNT });
     expect(start(state, T0)).toBe(state);
     expect(remainingMs(state, T0)).toBe(0);
   });

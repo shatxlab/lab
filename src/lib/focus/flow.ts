@@ -6,13 +6,15 @@
  *
  * Start begins a focus. A finished focus is followed by a break (every fourth is
  * the long one); a finished break is followed by the next focus, by itself.
- * Giving a Pomodoro up costs one person their job and leaves the flow waiting for
- * Start; when the whole team has gone the office is empty until a new one is hired.
+ * Giving a Pomodoro up costs people their jobs and leaves the flow waiting for
+ * Start: one for the first miss, then one more each time in a row (1, 2, 3, ...),
+ * until a finished Pomodoro resets the streak. When the whole team has gone the
+ * office is empty until a new one is hired.
  */
 
 export const FLOW = { focusMin: 25, shortMin: 5, longMin: 15, longEvery: 4 } as const;
-/** The team at the start. One person leaves for every Pomodoro given up. */
-export const HEADCOUNT = 6;
+/** The team at the start. */
+export const HEADCOUNT = 12;
 
 export type Phase = "ready" | "focus" | "break" | "empty";
 
@@ -22,8 +24,12 @@ export interface FlowState {
   endsAt: number | null;
   /** Pomodoros finished. */
   done: number;
-  /** Pomodoros given up, which is how many people have left. */
+  /** Pomodoros given up. */
   missed: number;
+  /** Pomodoros given up in a row; a finished one resets it. */
+  streak: number;
+  /** People who have left, which is how far down the office's fire order we are. */
+  fired: number;
   focusedMs: number;
   /** One entry per resolved Pomodoro, in order. */
   results: ("done" | "missed")[];
@@ -38,6 +44,8 @@ export const createFlow = (): FlowState => ({
   endsAt: null,
   done: 0,
   missed: 0,
+  streak: 0,
+  fired: 0,
   focusedMs: 0,
   results: [],
   long: false,
@@ -91,6 +99,7 @@ export function tick(state: FlowState, now: number): FlowState {
       current = {
         ...current,
         done,
+        streak: 0,
         focusedMs: current.focusedMs + FLOW.focusMin * MINUTE,
         results: [...current.results, "done"],
       };
@@ -107,21 +116,23 @@ export function skipBreak(state: FlowState, now: number): FlowState {
   return state.phase === "break" ? beginFocus(state, now) : state;
 }
 
-/** Give up the Pomodoro in progress: someone leaves, and the flow waits for Start (or ends if nobody is left). */
+/** How many people the next given-up Pomodoro costs: one more than the streak so far, never more than are left. */
+export const firingsNext = (state: FlowState): number => Math.min(state.streak + 1, HEADCOUNT - state.fired);
+
+/** Give up the Pomodoro in progress: people leave, and the flow waits for Start (or ends if nobody is left). */
 export function abandon(state: FlowState): FlowState {
   if (state.phase !== "focus") return state;
-  const missed = state.missed + 1;
+  const fired = state.fired + firingsNext(state);
   return {
     ...state,
-    missed,
+    missed: state.missed + 1,
+    streak: state.streak + 1,
+    fired,
     results: [...state.results, "missed"],
-    phase: missed >= HEADCOUNT ? "empty" : "ready",
+    phase: fired >= HEADCOUNT ? "empty" : "ready",
     endsAt: null,
   };
 }
-
-/** Where the next person to leave stands in the team (how many have gone). */
-export const peopleLeft = (state: FlowState): number => state.missed;
 
 export type Dot = "done" | "missed" | "current" | "pending";
 

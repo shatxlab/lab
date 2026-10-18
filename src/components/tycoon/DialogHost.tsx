@@ -1,5 +1,5 @@
 import { useSignal, useStore } from './context'
-import { BreakoutDialog, EraDialog, GameOverDialog, ReadyDialog, ResultDialog, StageDialog } from './dialogs'
+import { BreakoutDialog, EraDialog, GameOverDialog, OfferDialog, ReadyDialog, ResultDialog, StageDialog } from './dialogs'
 import { EmployeeDialog } from './EmployeeDialog'
 import { EventDialog } from './EventDialog'
 import { MenuDialog } from './MenuDialog'
@@ -49,6 +49,8 @@ export function DialogHost() {
       return <ResearchDialog />
     case 'studio':
       return <StudioDialog tab={dialog.tab} />
+    case 'offer':
+      return <OfferDialog />
     case 'game-over':
       return <GameOverDialog />
     default:

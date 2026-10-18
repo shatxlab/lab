@@ -266,6 +266,8 @@ export type SimEvent =
   /** A new era began (an index into ERAS). */
   | { type: 'era'; era: number }
   | { type: 'randomEvent' }
+  /** A bigger company offered to buy the studio (see `GameState.exit`). */
+  | { type: 'offer' }
   /** Passive news for a toast; `sound` asks the UI to play a jingle with it. */
   | { type: 'notice'; text: string; sound?: NoticeSound }
 
@@ -379,12 +381,33 @@ export interface GameState {
   /** Monthly samples for the stats charts, oldest first, capped. */
   history: HistoryPoint[]
   gameOver: boolean
+  /** How the run ended, once `gameOver`; null while it goes on. */
+  ending: Ending | null
+  /** Offers to buy the studio: only made in the garage, and gone for good once the studio moves out. */
+  exit: ExitState
   /** Everything the player decided and everything that happened, oldest first: exported to review a run. */
   journal: JournalEntry[]
   /** Contributions from the most recent day, for the renderer's popups. */
   dayWork: DayWork[]
   /** Pending events for the UI; drained with `drainEvents`. */
   events: SimEvent[]
+}
+
+export interface Ending {
+  kind: 'bankrupt' | 'sold'
+  day: number
+  /** What a sale paid. */
+  price?: number
+  bidder?: string
+}
+
+export interface ExitState {
+  /** Offers turned down so far; each makes the next one better. */
+  declined: number
+  /** No offer before this day. */
+  nextDay: number
+  /** The offer waiting for an answer, if any. */
+  pending: { price: number; bidder: string } | null
 }
 
 /** One line of the run's log: a decision the player made, or something that happened to the studio. */

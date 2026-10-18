@@ -5,6 +5,7 @@ import { rollRandomEvent } from './events'
 import { recordHistory } from './history'
 import { journalDay, journalMonth } from './journal'
 import { careerDay } from './careers'
+import { exitDay } from './exit'
 import { fixesDay } from './fixes'
 import { autoPromoteDay } from './lifecycle'
 import { refreshCandidates, salaryOf } from './hiring'
@@ -55,6 +56,7 @@ export function advanceDay(state: GameState): void {
   }
   if (state.day % CANDIDATE_REFRESH_DAYS === 0) refreshCandidates(state)
   checkBankruptcy(state)
+  if (!state.gameOver) exitDay(state)
   if (!state.gameOver) {
     checkMilestones(state)
     checkStage(state)

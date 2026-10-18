@@ -51,6 +51,7 @@ export function checkBankruptcy(state: GameState): void {
   state.debtDays = state.money < 0 ? state.debtDays + 1 : 0
   if (state.debtDays >= BANKRUPT_AFTER_DEBT_DAYS && !state.gameOver) {
     state.gameOver = true
+    state.ending = { kind: 'bankrupt', day: state.day }
     state.events.push({ type: 'bankrupt' })
   }
 }

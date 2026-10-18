@@ -4,6 +4,7 @@ import { promote } from '@/lib/tycoon/sim/careers'
 import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
+import { acceptBuyout, declineBuyout } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
@@ -60,6 +61,8 @@ export type Dialog =
   | { kind: 'research' }
   | { kind: 'menu' }
   | { kind: 'game-over' }
+  /** A bigger company wants to buy the studio. */
+  | { kind: 'offer' }
 
 export interface Toast {
   id: number
@@ -129,6 +132,10 @@ export interface Store {
   transfer(employeeId: number, officeId: number): Result
   /** Buys a rival studio and its products. */
   acquire(rivalId: number): Result
+  /** Sells the studio to the company that made an offer: the run ends. */
+  acceptBuyout(): Result
+  /** Turns the offer down; a better one comes later. */
+  declineBuyout(): Result
 }
 
 export function createStore(state: GameState, initialSpeed: Speed = 1, options: { sfx?: SfxPlayer } = {}): Store {
@@ -136,7 +143,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   const version = signal(0)
   const speed = signal<Speed>(initialSpeed)
   // A game saved while an event was waiting resumes on that event.
-  const dialog = signal<Dialog>(state.pendingEvent ? { kind: 'event' } : null)
+  const dialog = signal<Dialog>(state.pendingEvent ? { kind: 'event' } : state.exit.pending ? { kind: 'offer' } : null)
   const toasts = signal<Toast[]>([])
   const selectedOffice = signal(state.offices[0].id)
   /** The office a command is for: the one named, or the one on screen. */
@@ -210,6 +217,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       dialogs.push({ kind: 'game-over' })
       sfx.play('bad')
     } else {
+      if (events.some((e) => e.type === 'offer')) dialogs.push({ kind: 'offer' })
       if (events.some((e) => e.type === 'randomEvent')) {
         dialogs.push({ kind: 'event' })
         sfx.play('event')
@@ -438,6 +446,21 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     transfer(employeeId, officeId) {
       return changed(logged(() => decisions.transfer(state, employeeId, officeId), () => transfer(state, employeeId, officeId)))
+    },
+
+    acceptBuyout() {
+      const result = acceptBuyout(state)
+      if (!result.ok) return result
+      dialog.value = { kind: 'game-over' }
+      bump()
+      sfx.play('milestone')
+      return result
+    },
+
+    declineBuyout() {
+      const result = declineBuyout(state)
+      if (result.ok) dialog.value = queue.shift() ?? null
+      return changed(result)
     },
 
     acquire(rivalId) {

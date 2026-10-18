@@ -38,6 +38,8 @@ function logSimEvent(state: GameState, event: SimEvent): void {
       logEntry(state, 'hit', `${product?.name ?? 'A product'} broke out`, { productId: event.productId })
       break
     }
+    case 'offer':
+      break
     case 'bankrupt':
       logEntry(state, 'end.bankrupt', 'The money ran out and stayed out')
       break

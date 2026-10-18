@@ -89,6 +89,7 @@ export function moveOut(state: GameState): Result {
   if (blocker) return fail(blocker)
   const garage = state.offices.find((o) => o.kind === 'garage')!
   state.money -= MOVE_OUT_COST
+  state.exit.pending = null
   garage.kind = 'office'
   adjustMorale(state, OFFICE_UPGRADE_MORALE)
   return OK

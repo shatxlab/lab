@@ -216,6 +216,18 @@ export const REPUTATION_MAX = 100
 export const REPUTATION_NEUTRAL_QUALITY = 50
 export const REPUTATION_DIVISOR = 15
 
+// Selling the studio: only possible from the garage
+/** The studio has to earn at least this much a day before anyone makes an offer. */
+export const EXIT_MIN_INCOME = 400
+/** Days before the next offer once one is turned down. */
+export const EXIT_GAP_DAYS = 90
+/** An offer is this many years of the studio's income, plus... */
+export const EXIT_BASE_MULTIPLE = 3
+/** ...this much more for every offer turned down, up to... */
+export const EXIT_RAISE_PER_DECLINE = 0.6
+/** ...this many times. */
+export const EXIT_MAX_RAISES = 6
+
 // Hiring
 export const CANDIDATE_REFRESH_DAYS = 30
 export const CANDIDATE_COUNT = 4

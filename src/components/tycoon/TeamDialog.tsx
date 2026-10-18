@@ -104,6 +104,7 @@ export function TeamDialog() {
   const store = useStore()
   const state = useGame()
   const [confirmFire, setConfirmFire] = useState<number | null>(null)
+  const [confirmMove, setConfirmMove] = useState(false)
   const [message, setMessage] = useState('')
 
   const selected = useOffice()
@@ -154,8 +155,13 @@ export function TeamDialog() {
               Move out of the garage: <strong>{OFFICE_KINDS.office.desks} desks</strong>, rent {formatMoney(OFFICE_KINDS.office.rent)}/mo
               {moveOut && moveOut !== 'Not enough money' && <small className="muted"> · {readiness(moveOut, 'an indie studio')}</small>}
             </span>
-            <button disabled={moveOut !== null} onClick={() => report(store.moveOut())}>
-              Move · {formatMoney(MOVE_OUT_COST)}
+            <button
+              disabled={moveOut !== null}
+              className={confirmMove ? 'danger' : ''}
+              onClick={() => (confirmMove ? report(store.moveOut()) : setConfirmMove(true))}
+              onBlur={() => setConfirmMove(false)}
+            >
+              {confirmMove ? 'Sure? Nobody will buy the studio after' : `Move · ${formatMoney(MOVE_OUT_COST)}`}
             </button>
           </div>
         ) : (

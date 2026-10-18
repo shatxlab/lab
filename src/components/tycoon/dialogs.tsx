@@ -115,9 +115,16 @@ export function ResultDialog({ productId, reputationDelta, early, unlocked, upda
 
 export function GameOverDialog() {
   const state = useGame()
+  const sold = state.ending?.kind === 'sold'
   return (
-    <Modal title="Bankrupt">
-      <p>The money ran out and stayed out. {formatDate(state.day)}.</p>
+    <Modal title={sold ? 'Sold' : 'Bankrupt'}>
+      {sold ? (
+        <p>
+          <strong>{state.ending?.bidder}</strong> bought the studio for <strong>{formatMoney(state.ending?.price ?? 0)}</strong>. {formatDate(state.day)}.
+        </p>
+      ) : (
+        <p>The money ran out and stayed out. {formatDate(state.day)}.</p>
+      )}
       <div className="result-grid">
         <div className="stat">
           <span className="label">Products shipped</span>
@@ -131,11 +138,42 @@ export function GameOverDialog() {
           <span className="label">Reputation</span>
           <span className="value">{Math.round(state.reputation)}</span>
         </div>
+        {sold && (
+          <div className="stat">
+            <span className="label">Offers turned down</span>
+            <span className="value">{state.exit.declined}</span>
+          </div>
+        )}
       </div>
       <div className="actions">
         <button onClick={() => downloadJournal(state)}>Export run log</button>
         <button className="primary" onClick={startNewGame}>
           New game
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+/** A bigger company wants the studio. Only the garage can be sold: moving out closes this for good. */
+export function OfferDialog() {
+  const store = useStore()
+  const state = useGame()
+  const offer = state.exit.pending
+  if (!offer) return null
+  return (
+    <Modal title="An offer for the studio">
+      <p>
+        <strong>{offer.bidder}</strong> wants to buy the studio for <strong>{formatMoney(offer.price)}</strong>.
+      </p>
+      <p className="muted">
+        Selling ends the run. If you say no, they will come back with a better offer
+        {state.exit.declined > 0 ? ` (you have turned down ${state.exit.declined})` : ''}, for as long as you stay in the garage. Once you move into an office, nobody will buy the studio any more.
+      </p>
+      <div className="actions">
+        <button onClick={() => store.declineBuyout()}>Not yet</button>
+        <button className="primary" onClick={() => store.acceptBuyout()}>
+          Sell for {formatMoney(offer.price)}
         </button>
       </div>
     </Modal>

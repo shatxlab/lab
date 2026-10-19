@@ -85,40 +85,85 @@ describe("CouplesGame flow", () => {
   it("remembers what was shown, so tomorrow's first cards are new ones", () => {
     const host = mount();
     startNorm(host);
-    const shown = [text(host, ".cp-prompt")];
-    for (let i = 0; i < 4; i += 1) {
-      click(host, ".cp-option", 0);
-      click(host, ".cp-pass .cp-primary");
-      click(host, ".cp-option", 0);
-      click(host, ".cp-play-footer .cp-primary");
+    const shown: string[] = [];
+    for (let card = 0; card < 10; card += 1) {
       shown.push(text(host, ".cp-prompt"));
+      click(host, ".cp-option", 0);
     }
     const seen = Object.keys(JSON.parse(localStorage.getItem("lab:couples:history:v1") ?? "{}").seen);
-    expect(seen).toHaveLength(5);
-    expect(new Set(shown).size).toBe(5);
+    expect(seen).toHaveLength(10);
+    expect(new Set(shown).size).toBe(10);
   });
 
-  it("plays a full match-mode game and scores 100%", () => {
+  it("plays a full match-mode game: the first partner answers every card, then the second answers the same cards", () => {
     const host = mount();
     expect(host.querySelectorAll(".cp-game-card")).toHaveLength(3);
 
     startNorm(host);
 
+    const firstRound: string[] = [];
+    let firstTurn = "";
     for (let card = 0; card < 10; card += 1) {
+      if (card === 0) firstTurn = text(host, ".cp-turn");
+      expect(text(host, ".cp-counter")).toContain(`${card + 1} / 10`);
+      firstRound.push(text(host, ".cp-prompt"));
       click(host, ".cp-option", 0);
-      expect(host.querySelector(".cp-pass")).not.toBeNull();
-      click(host, ".cp-pass .cp-primary");
-      click(host, ".cp-option", 0);
-      expect(text(host, ".cp-verdict")).toContain("Совпали");
-      click(host, ".cp-play-footer .cp-primary");
+      // No reveal between cards: the next card comes straight away.
+      expect(host.querySelector(".cp-reveal")).toBeNull();
     }
 
+    // The phone is handed over once, after the last card of the first partner.
+    expect(host.querySelector(".cp-pass")).not.toBeNull();
+    expect(host.querySelector(".cp-option")).toBeNull();
+    click(host, ".cp-pass .cp-primary");
+
+    const secondRound: string[] = [];
+    let secondTurn = "";
+    for (let card = 0; card < 10; card += 1) {
+      if (card === 0) secondTurn = text(host, ".cp-turn");
+      expect(text(host, ".cp-counter")).toContain(`${card + 1} / 10`);
+      secondRound.push(text(host, ".cp-prompt"));
+      click(host, ".cp-option", 0);
+    }
+
+    expect(firstTurn).toContain("Отвечает");
+    expect(secondTurn).not.toBe(firstTurn);
+    expect(secondRound).toEqual(firstRound);
     expect(host.querySelector(".cp-summary")).not.toBeNull();
     expect(host.textContent).toContain("100%");
     expect(host.textContent).toContain("10 / 10");
   });
 
-  it("plays together mode without a handoff or reveal step", () => {
+  it("summary lists both answers for every card with the match percentage", () => {
+    const host = mount();
+    startNorm(host);
+
+    for (let card = 0; card < 10; card += 1) click(host, ".cp-option", 0);
+    click(host, ".cp-pass .cp-primary");
+    // The second partner agrees on the even cards only.
+    for (let card = 0; card < 10; card += 1) click(host, ".cp-option", card % 2);
+
+    expect(host.querySelectorAll(".cp-result")).toHaveLength(10);
+    expect(host.querySelectorAll('.cp-result[data-match="true"]')).toHaveLength(5);
+    expect(host.textContent).toContain("50%");
+    expect(host.textContent).toContain("5 / 10");
+    expect(host.querySelector(".cp-discuss")?.textContent).toContain("Обсудите");
+    expect(host.querySelector(".cp-result-picks")?.textContent).toContain("Норм");
+  });
+
+  it("keeps a card the first partner answered for the rest of the run when it is hidden in the second turn", () => {
+    const host = mount();
+    startNorm(host);
+    for (let card = 0; card < 10; card += 1) click(host, ".cp-option", 0);
+    click(host, ".cp-pass .cp-primary");
+
+    const shown = text(host, ".cp-prompt");
+    click(host, ".cp-hide");
+    expect(text(host, ".cp-prompt")).toBe(shown);
+    expect(JSON.parse(localStorage.getItem("lab:couples:history:v1") ?? "{}").hidden).toHaveLength(1);
+  });
+
+  it("plays together mode without a handoff step", () => {
     const host = mount();
     click(host, ".cp-game-card", 0);
     // Switch the mode segmented control to «Вместе».
@@ -127,11 +172,10 @@ describe("CouplesGame flow", () => {
     click(host, ".cp-setup-footer .cp-primary");
 
     expect(text(host, ".cp-counter")).toContain("1 / 10");
-    // Each tap advances straight to the next card — no pass, no reveal.
+    // Each tap advances straight to the next card — no pass.
     for (let card = 0; card < 9; card += 1) {
       click(host, ".cp-option", 1);
       expect(host.querySelector(".cp-pass")).toBeNull();
-      expect(host.querySelector(".cp-reveal")).toBeNull();
       expect(text(host, ".cp-counter")).toContain(`${card + 2} / 10`);
     }
     // The last tap wraps up directly into the summary.
@@ -144,6 +188,8 @@ describe("CouplesGame flow", () => {
     const host = mount();
     startNorm(host);
 
+    for (let card = 0; card < 9; card += 1) click(host, ".cp-option", 0);
+    expect(host.querySelector(".cp-pass")).toBeNull();
     click(host, ".cp-option", 0);
     expect(host.querySelector(".cp-pass")).not.toBeNull();
     expect(host.querySelector(".cp-option")).toBeNull();
@@ -152,20 +198,24 @@ describe("CouplesGame flow", () => {
     expect(host.querySelector(".cp-option")).not.toBeNull();
   });
 
-  it("answers with the number keys", () => {
+  it("answers with the number keys and passes the phone with space", () => {
     const host = mount();
     startNorm(host);
+    const press = (key: string) =>
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
-    });
+    for (let card = 0; card < 10; card += 1) press("1");
     expect(host.querySelector(".cp-pass")).not.toBeNull();
 
-    click(host, ".cp-pass .cp-primary");
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "2", bubbles: true }));
-    });
-    expect(host.querySelector(".cp-reveal")).not.toBeNull();
+    press(" ");
+    expect(host.querySelector(".cp-option")).not.toBeNull();
+    expect(text(host, ".cp-counter")).toContain("1 / 10");
+    for (let card = 0; card < 9; card += 1) press("2");
+    expect(text(host, ".cp-counter")).toContain("10 / 10");
+    press("2");
+    expect(host.querySelector(".cp-summary")).not.toBeNull();
   });
 
   it("persists the setup between visits", () => {

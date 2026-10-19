@@ -25,6 +25,7 @@ function MatchSummary({ settings, results }: { settings: CouplesSettings; result
         <span className="cp-score-sub">{matchScore(matched, total)}</span>
       </div>
       <p className="cp-verdict">{verdictFor(settings.lang, total > 0 ? matched / total : 0)}</p>
+      {matched < total ? <p className="cp-discuss">{TXT.summaryDiscuss}</p> : null}
 
       <ul className="cp-results">
         {results.map((result, index) => {

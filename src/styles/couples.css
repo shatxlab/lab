@@ -668,15 +668,6 @@ body:has(.cp-shell) {
   max-width: 24rem;
 }
 
-.cp-reveal {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-  margin-top: 0.4rem;
-  width: 100%;
-  max-width: 34rem;
-}
-
 .cp-verdict {
   align-self: center;
   background: color-mix(in srgb, var(--warning) 16%, transparent);
@@ -687,47 +678,11 @@ body:has(.cp-shell) {
   padding: 0.35rem 0.9rem;
 }
 
-.cp-verdict.is-match {
-  background: color-mix(in srgb, var(--success) 16%, transparent);
-  color: var(--success);
-}
-
-.cp-picks {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.cp-pick-row {
-  align-items: center;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--cp-radius-sm);
-  display: flex;
-  gap: 0.7rem;
-  justify-content: space-between;
-  padding: 0.7rem 0.9rem;
-  text-align: left;
-}
-
-.cp-pick-row.is-accent {
-  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
-}
-
-.cp-pick-name {
+.cp-discuss {
   color: var(--muted-fg);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.cp-pick-value {
-  font-weight: 800;
-}
-
-.cp-reveal-note {
-  color: var(--muted-fg);
-  font-size: 0.82rem;
-  margin: 0;
+  font-size: 0.9rem;
+  margin: -0.4rem 0 0;
+  text-align: center;
 }
 
 .cp-play-footer {

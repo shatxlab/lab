@@ -55,12 +55,6 @@ type StringKey =
   | "chipNorm"
   | "chipCringe"
   | "followUpLabel"
-  | "revealMatch"
-  | "revealNoMatch"
-  | "revealMatchNote"
-  | "revealNoMatchNote"
-  | "next"
-  | "finish"
   | "exit"
   | "confirmExit"
   | "confirmExitBody"
@@ -82,6 +76,7 @@ type StringKey =
   | "summaryMatchOkay"
   | "summaryMatchLow"
   | "summaryMatched"
+  | "summaryDiscuss"
   | "summaryCards"
   | "summaryTopChoice"
   | "summaryPlayAgain"
@@ -113,7 +108,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     mode: "How to play",
     modeMatch: "On score",
     modeTogether: "Together",
-    modeMatchHint: "Answer in secret, passing the phone. At the end — your match percentage.",
+    modeMatchHint: "Each of you answers all the cards in secret: first one, then the other. At the end — one page with both answers and your match percentage.",
     modeTogetherHint: "Discuss out loud and pick one shared answer.",
     theme: "Theme",
     themeAll: "All themes",
@@ -132,25 +127,19 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     // Play
     turn: "Answering",
     passTitle: "Pass the phone",
-    passBody: "Now {name} answers. The other player should look away.",
+    passBody: "Now {name} answers every card. The other player should look away.",
     passButton: "I'm {name}, show it",
     question: "Question",
     chipNorm: "Normal",
     chipCringe: "Nah",
     followUpLabel: "Talk it over",
-    revealMatch: "Matched!",
-    revealNoMatch: "No match",
-    revealMatchNote: "You answered the same",
-    revealNoMatchNote: "You answered differently",
-    next: "Next",
-    finish: "To the results",
     exit: "Exit",
     confirmExit: "Leave the game?",
     confirmExitBody: "The current progress will be lost.",
     confirm: "Leave",
     cancel: "Cancel",
     close: "Close",
-    keyboardHint: "Keyboard: 1 and 2 — pick an answer · Space — next",
+    keyboardHint: "Keyboard: 1 and 2 — pick an answer",
     hideCard: "Never show this card again",
     hiddenCard: "Hidden for good",
     hiddenCount: "Hidden cards: {count}",
@@ -173,6 +162,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     summaryMenu: "To the menu",
     summaryNewQuestions: "New questions",
     summaryChose: "You picked",
+    summaryDiscuss: "Talk through the cards where you answered differently.",
   },
   ru: {
     appName: "Игры для пар",
@@ -195,7 +185,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     mode: "Как играем",
     modeMatch: "На счёт",
     modeTogether: "Вместе",
-    modeMatchHint: "Отвечаете тайно, передавая телефон. В конце — процент совпадений.",
+    modeMatchHint: "Каждый отвечает на все карточки тайно: сначала один, потом другой. В конце — одна страница с ответами обоих и процентом совпадений.",
     modeTogetherHint: "Обсуждаете вслух и выбираете один общий ответ.",
     theme: "Тема",
     themeAll: "Все темы",
@@ -214,25 +204,19 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     // Play
     turn: "Отвечает",
     passTitle: "Передайте телефон",
-    passBody: "Теперь отвечает {name}. Пусть второй игрок отвернётся.",
+    passBody: "Теперь {name} отвечает на все карточки. Второй игрок пусть отвернётся.",
     passButton: "Я {name}, показать",
     question: "Вопрос",
     chipNorm: "Норм",
     chipCringe: "Стрём",
     followUpLabel: "Обсудите",
-    revealMatch: "Совпали!",
-    revealNoMatch: "Не совпали",
-    revealMatchNote: "Вы ответили одинаково",
-    revealNoMatchNote: "Вы ответили по-разному",
-    next: "Дальше",
-    finish: "К итогам",
     exit: "Выйти",
     confirmExit: "Выйти из игры?",
     confirmExitBody: "Текущий прогресс не сохранится.",
     confirm: "Выйти",
     cancel: "Отмена",
     close: "Закрыть",
-    keyboardHint: "Клавиши: 1 и 2 — выбрать ответ · Пробел — дальше",
+    keyboardHint: "Клавиши: 1 и 2 — выбрать ответ",
     hideCard: "Больше не показывать эту карточку",
     hiddenCard: "Скрыта насовсем",
     hiddenCount: "Скрытых карточек: {count}",
@@ -255,6 +239,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     summaryMenu: "К меню",
     summaryNewQuestions: "Новые вопросы",
     summaryChose: "Выбрали",
+    summaryDiscuss: "Обсудите карточки, где вы ответили по-разному.",
   },
 };
 

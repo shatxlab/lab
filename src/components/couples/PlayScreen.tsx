@@ -10,34 +10,15 @@ interface PlayScreenProps {
   index: number;
   total: number;
   phase: PlayPhase;
-  votes: { a: number | null; b: number | null };
   soundOn: boolean;
   onVote(choice: number): void;
   onPass(): void;
-  onNext(): void;
   onExit(): void;
   onToggleSound(): void;
   /** Turn this card off for good. */
   onHide(): void;
   /** True once this card is already turned off. */
   hidden: boolean;
-}
-
-function PickRow({
-  name,
-  value,
-  accent,
-}: {
-  name: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className={`cp-pick-row${accent ? " is-accent" : ""}`}>
-      <span className="cp-pick-name">{name}</span>
-      <span className="cp-pick-value">{value}</span>
-    </div>
-  );
 }
 
 export function PlayScreen({
@@ -47,21 +28,17 @@ export function PlayScreen({
   index,
   total,
   phase,
-  votes,
   soundOn,
   onVote,
   onPass,
-  onNext,
   onExit,
   onToggleSound,
   onHide,
   hidden,
 }: PlayScreenProps) {
   const TXT = stringsFor(settings.lang);
-  const progress = total > 0 ? ((index + (phase === "reveal" ? 1 : 0)) / total) * 100 : 0;
+  const progress = total > 0 ? (index / total) * 100 : 0;
   const [nameA, nameB] = settings.names;
-  const isMatch = votes.a !== null && votes.b !== null && votes.a === votes.b;
-  const isLast = index + 1 >= total;
 
   return (
     <div className="cp-play">
@@ -107,52 +84,31 @@ export function PlayScreen({
             </p>
           ) : null}
 
-          {phase === "reveal" ? (
-            <div className="cp-reveal" aria-live="polite">
-              <span className={`cp-verdict${isMatch ? " is-match" : ""}`}>
-                {isMatch ? TXT.revealMatch : TXT.revealNoMatch}
-              </span>
-              <div className="cp-picks">
-                <PickRow name={nameA} value={options[votes.a ?? 0]} accent={isMatch} />
-                <PickRow name={nameB} value={options[votes.b ?? 0]} accent={isMatch} />
-              </div>
-              <p className="cp-reveal-note">
-                {isMatch ? TXT.revealMatchNote : TXT.revealNoMatchNote}
-              </p>
-            </div>
-          ) : (
-            <div className="cp-options">
-              {options.map((option, optionIndex) => (
-                <button
-                  key={option}
-                  type="button"
-                  className="cp-option"
-                  onClick={(event) => {
-                    // Drop focus so the previous answer never keeps an outline
-                    // when the next card renders in the same spot.
-                    event.currentTarget.blur();
-                    onVote(optionIndex);
-                  }}
-                >
-                  <span className="cp-option-key" aria-hidden="true">
-                    {optionIndex + 1}
-                  </span>
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="cp-options">
+            {options.map((option, optionIndex) => (
+              <button
+                key={option}
+                type="button"
+                className="cp-option"
+                onClick={(event) => {
+                  // Drop focus so the previous answer never keeps an outline
+                  // when the next card renders in the same spot.
+                  event.currentTarget.blur();
+                  onVote(optionIndex);
+                }}
+              >
+                <span className="cp-option-key" aria-hidden="true">
+                  {optionIndex + 1}
+                </span>
+                {option}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       <footer className="cp-play-footer">
-        {phase === "reveal" ? (
-          <button type="button" className="cp-primary cp-wide" onClick={onNext}>
-            {isLast ? TXT.finish : TXT.next}
-          </button>
-        ) : phase === "handoff" ? null : (
-          <p className="cp-hint">{TXT.keyboardHint}</p>
-        )}
+        {phase === "handoff" ? null : <p className="cp-hint">{TXT.keyboardHint}</p>}
         {phase !== "handoff" && (
           <button type="button" className="cp-hide" onClick={onHide} disabled={hidden} aria-pressed={hidden}>
             {hidden ? TXT.hiddenCard : TXT.hideCard}

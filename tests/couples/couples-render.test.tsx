@@ -58,11 +58,9 @@ describe("couples screens render", () => {
         index={0}
         total={10}
         phase="voteA"
-        votes={{ a: null, b: null }}
         soundOn
         onVote={() => undefined}
         onPass={() => undefined}
-        onNext={() => undefined}
         onExit={() => undefined}
         onToggleSound={() => undefined}
         onHide={() => undefined}
@@ -85,12 +83,10 @@ describe("couples screens render", () => {
           index={0}
           total={10}
           phase={phase}
-          votes={{ a: null, b: null }}
-          soundOn
+            soundOn
           onVote={() => undefined}
           onPass={() => undefined}
-          onNext={() => undefined}
-          onExit={() => undefined}
+            onExit={() => undefined}
           onToggleSound={() => undefined}
           onHide={() => undefined}
           hidden={false}
@@ -112,11 +108,9 @@ describe("couples screens render", () => {
         index={0}
         total={10}
         phase="handoff"
-        votes={{ a: 0, b: null }}
         soundOn
         onVote={() => undefined}
         onPass={() => undefined}
-        onNext={() => undefined}
         onExit={() => undefined}
         onToggleSound={() => undefined}
         onHide={() => undefined}
@@ -144,5 +138,7 @@ describe("couples screens render", () => {
     expect(html).toContain("50%");
     expect(html).toContain("1 / 2");
     expect(html).toContain("Ещё раз с новыми вопросами");
+    // One card was answered differently, so the summary asks them to talk it through.
+    expect(html).toContain("Обсудите карточки, где вы ответили по-разному.");
   });
 });

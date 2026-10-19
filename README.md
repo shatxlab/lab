@@ -165,11 +165,13 @@ by crossing the target first.
 
 ### Couples games
 
-The three games (`Норм или стрём`, `ИлиТо`, `Кто из нас`) share one loop: a
-card is shown, the first partner answers, the phone is passed under a cover,
-the second partner answers, and the reveal shows whether they agreed. In the
-`Вместе` mode there is no handoff — the couple discusses and casts one shared
-answer, and the summary recaps their joint picks.
+The three games (`Норм или стрём`, `ИлиТо`, `Кто из нас`) share one loop. In
+the `На счёт` (match) mode the first partner answers every card in turn, the
+phone is passed under a cover, and the second partner answers the same cards in
+the same order. The summary then shows every card with both answers side by
+side, the agreement percentage, and the cards to talk through. In the `Вместе`
+mode there is no handoff — the couple discusses and casts one shared answer, and
+the summary recaps their joint picks.
 
 Prompts come from two sources, chosen per theme by `lib/couples/questions.ts`.
 

@@ -1,7 +1,7 @@
 import type { GameDef, GameId, Lang, ThemeDef, ThemeId } from "./types";
 
 /**
- * The three games. Each one is the same «answer, pass the phone, reveal»
+ * The three games. Each one is the same «answer, pass the phone, compare»
  * loop; only the framing and the options change.
  */
 export const GAMES: readonly GameDef[] = [

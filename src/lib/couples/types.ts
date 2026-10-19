@@ -22,8 +22,9 @@ export type ThemeId =
 
 /**
  * Two ways to play every game:
- * - `match`  — partners answer in secret, one after the other, then see whether
- *              they agreed. The session is scored by agreement.
+ * - `match`  — partners answer in secret: the first one answers every card,
+ *              the phone is passed, then the second answers the same cards. The
+ *              summary shows both answers side by side and the agreement score.
  * - `together` — partners discuss out loud and cast one shared answer; the
  *                session ends with a recap of their joint picks.
  */
@@ -71,7 +72,8 @@ export interface CouplesQuestion {
 }
 
 /** Phases of a single card. */
-export type PlayPhase = "voteA" | "handoff" | "voteB" | "reveal" | "voteTogether";
+/** `voteA`/`voteB` answer the current card in match mode; `voteTogether` in together mode. */
+export type PlayPhase = "voteA" | "handoff" | "voteB" | "voteTogether";
 
 /** One finished card: the question plus each player's option index. */
 export interface RoundResult {

@@ -28,7 +28,7 @@ import {
 } from "@/lib/couples/storage";
 import { readAppLang, subscribeToAppLang } from "@/lib/apps/lang";
 import { useLangReady } from "@/lib/apps/use-app-lang";
-import type { CouplesQuestion, CouplesSettings, GameId, PlayPhase, RoundResult } from "@/lib/couples/types";
+import type { CouplesQuestion, CouplesSettings, GameId, Mode, PlayPhase, RoundResult } from "@/lib/couples/types";
 
 import { MenuScreen } from "./MenuScreen";
 import { SetupScreen } from "./SetupScreen";
@@ -38,6 +38,18 @@ import { SummaryScreen } from "./SummaryScreen";
 type Screen = "menu" | "setup" | "play" | "summary";
 
 const EMPTY_STATS: CouplesStats = { games: 0, cards: 0, matches: 0 };
+
+/** Where a fresh run starts: match mode opens with the first partner's card, together mode with the shared one. */
+function firstPhase(mode: Mode): PlayPhase {
+  return mode === "match" ? "voteA" : "voteTogether";
+}
+
+/** Writes `choice` at `position`, so a repeated tap can never shift the answers after it. */
+function withPick(picks: readonly number[], position: number, choice: number): number[] {
+  const next = picks.slice(0, position);
+  next[position] = choice;
+  return next;
+}
 
 export default function CouplesGame() {
   const readyRef = useLangReady<HTMLDivElement>();
@@ -49,7 +61,10 @@ export default function CouplesGame() {
   const [session, setSession] = useState<Session | null>(null);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<PlayPhase>("voteA");
-  const [votes, setVotes] = useState<{ a: number | null; b: number | null }>({ a: null, b: null });
+  // Match mode: each partner's option for every card, by card position. The first partner
+  // fills picksA for all cards, then the second partner fills picksB for the same cards.
+  const [picksA, setPicksA] = useState<number[]>([]);
+  const [picksB, setPicksB] = useState<number[]>([]);
   const [results, setResults] = useState<RoundResult[]>([]);
   const [confirmExit, setConfirmExit] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -125,6 +140,19 @@ export default function CouplesGame() {
     setSettings((current) => ({ ...current, ...partial }));
   }, []);
 
+  const startRun = useCallback(
+    (next: Session) => {
+      setSession(next);
+      setIndex(0);
+      setPicksA([]);
+      setPicksB([]);
+      setResults([]);
+      setPhase(firstPhase(settings.mode));
+      setScreen("play");
+    },
+    [settings.mode],
+  );
+
   const beginSession = useCallback(
     (source: CouplesQuestion[], resetSeen: boolean) => {
       soundRef.current?.resume();
@@ -132,14 +160,9 @@ export default function CouplesGame() {
       if (resetSeen) seenRef.current = new Set();
       const next = dealSession(source, settings.count, Math.random, rankOf(historyRef.current));
       for (const card of next.cards) seenRef.current.add(card.id);
-      setSession(next);
-      setIndex(0);
-      setVotes({ a: null, b: null });
-      setResults([]);
-      setPhase(settings.mode === "match" ? "voteA" : "voteTogether");
-      setScreen("play");
+      startRun(next);
     },
-    [settings.count, settings.mode],
+    [settings.count, startRun],
   );
 
   const startSession = useCallback(() => {
@@ -173,53 +196,56 @@ export default function CouplesGame() {
 
   const vote = useCallback(
     (choice: number) => {
-      if (!question) return;
+      if (!session || !question) return;
 
       if (phase === "voteA") {
         soundRef.current?.play("tap");
-        setVotes((current) => ({ ...current, a: choice }));
-        setPhase("handoff");
+        setPicksA((current) => withPick(current, index, choice));
+        if (index + 1 < session.cards.length) {
+          setIndex(index + 1);
+        } else {
+          // The first partner has answered every card: hand the phone over. The second one starts from the first card.
+          setIndex(0);
+          setPhase("handoff");
+        }
         return;
       }
 
       if (phase === "voteB") {
-        const a = votes.a ?? 0;
-        const match = a === choice;
-        soundRef.current?.play(match ? "match" : "miss");
-        setVotes((current) => ({ ...current, b: choice }));
-        setResults((current) => [...current, { question, picks: [a, choice], match }]);
-        setPhase("reveal");
+        soundRef.current?.play("tap");
+        const nextB = withPick(picksB, index, choice);
+        if (index + 1 < session.cards.length) {
+          setPicksB(nextB);
+          setIndex(index + 1);
+          return;
+        }
+        // Both partners have answered every card: the summary gets one row per card.
+        const finalResults: RoundResult[] = session.cards.map((card, position) => {
+          const a = picksA[position] ?? 0;
+          const b = nextB[position] ?? 0;
+          return { question: card, picks: [a, b], match: a === b };
+        });
+        setPicksB(nextB);
+        setResults(finalResults);
+        finish(finalResults);
         return;
       }
 
       if (phase === "voteTogether") {
         soundRef.current?.play("tap");
         const nextResults: RoundResult[] = [...results, { question, picks: [choice], match: true }];
-        setVotes({ a: choice, b: null });
         setResults(nextResults);
         // Together mode has nothing to reveal: the choice was just made on
         // screen, so advance immediately (or wrap up on the last card).
-        if (!session || index + 1 >= session.cards.length) {
+        if (index + 1 >= session.cards.length) {
           finish(nextResults);
         } else {
-          setIndex((current) => current + 1);
-          setVotes({ a: null, b: null });
+          setIndex(index + 1);
         }
       }
     },
-    [phase, question, votes.a, results, session, index, finish],
+    [phase, question, session, index, picksA, picksB, results, finish],
   );
-
-  const next = useCallback(() => {
-    if (!session) return;
-    if (index + 1 >= session.cards.length) {
-      finish();
-      return;
-    }
-    setIndex((current) => current + 1);
-    setVotes({ a: null, b: null });
-    setPhase(settings.mode === "match" ? "voteA" : "voteTogether");
-  }, [session, index, settings.mode, finish]);
 
   const playAgain = useCallback(() => {
     const nextSession = redealSession(pool, settings.count, seenRef.current, Math.random, rankOf(historyRef.current));
@@ -228,20 +254,16 @@ export default function CouplesGame() {
     for (const card of nextSession.cards) seenRef.current.add(card.id);
     soundRef.current?.resume();
     soundRef.current?.play("tap");
-    setSession(nextSession);
-    setIndex(0);
-    setVotes({ a: null, b: null });
-    setResults([]);
-    setPhase(settings.mode === "match" ? "voteA" : "voteTogether");
-    setScreen("play");
-  }, [pool, settings.count, settings.mode]);
+    startRun(nextSession);
+  }, [pool, settings.count, startRun]);
 
   const hideCurrent = useCallback(() => {
     if (!question || !session) return;
     soundRef.current?.play("tap");
     const key = cardKey(question);
     setHistory((current) => hideCard(current, key));
-    // Once answered, the card is just turned off for the future; before that it is swapped for a fresh one.
+    // Only a card nobody has answered yet can be swapped. Once the first partner has answered it, the card
+    // stays for the rest of this run and is just turned off for the future.
     if (phase !== "voteA" && phase !== "voteTogether") return;
     const inSession = new Set(session.cards.map((card) => card.id));
     const candidates = pool.filter((card) => !inSession.has(card.id) && cardKey(card) !== key);
@@ -253,8 +275,20 @@ export default function CouplesGame() {
     }
     const remaining = session.cards.filter((_, position) => position !== index);
     setSession({ ...session, cards: remaining });
-    if (index >= remaining.length) finish();
-  }, [question, session, phase, pool, index, finish]);
+    // A later card slid into this slot, so the run goes on as before.
+    if (index < remaining.length) return;
+    if (phase === "voteTogether") {
+      finish(results);
+      return;
+    }
+    // The first partner had nothing left to answer after this card: hand over, or wrap up if nothing is left.
+    if (remaining.length > 0) {
+      setIndex(0);
+      setPhase("handoff");
+      return;
+    }
+    finish([]);
+  }, [question, session, phase, pool, index, results, finish]);
 
   const pickGame = useCallback((game: GameId) => {
     setSettings((current) => ({ ...current, game }));
@@ -274,7 +308,7 @@ export default function CouplesGame() {
     setScreen("menu");
   }, []);
 
-  // Keyboard: 1/2 pick, Space/Enter advances.
+  // Keyboard: 1/2 pick an answer, Space/Enter passes the phone.
   useEffect(() => {
     if (screen !== "play") return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -288,16 +322,11 @@ export default function CouplesGame() {
           event.preventDefault();
           pass();
         }
-      } else if (phase === "reveal") {
-        if (event.key === " " || event.key === "Enter") {
-          event.preventDefault();
-          next();
-        }
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [screen, phase, vote, pass, next]);
+  }, [screen, phase, vote, pass]);
 
   const T = stringsFor(settings.lang);
   return (
@@ -325,11 +354,9 @@ export default function CouplesGame() {
           index={index}
           total={session?.cards.length ?? 0}
           phase={phase}
-          votes={votes}
           soundOn={settings.sound}
           onVote={vote}
           onPass={pass}
-          onNext={next}
           onExit={requestExit}
           onToggleSound={() => updateSettings({ sound: !settings.sound })}
           onHide={hideCurrent}

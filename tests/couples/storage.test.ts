@@ -7,6 +7,7 @@ import {
   normalizeCouplesState,
   readCouplesState,
   withSessionStats,
+  withLanguage,
   writeCouplesState,
   type CouplesStorage,
 } from "@/lib/couples/storage";
@@ -95,3 +96,24 @@ describe("couples storage", () => {
     expect(effectiveNames(["  ", "Борис"])).toEqual(["Игрок 1", "Борис"]);
   });
 });
+
+describe("withLanguage", () => {
+  it("moves default partner names to the new language", () => {
+    const en = defaultSettings("en");
+    const ru = withLanguage(en, "ru");
+    expect(ru.lang).toBe("ru");
+    expect(ru.names).toEqual([...DEFAULT_NAMES.ru]);
+    expect(withLanguage(ru, "en").names).toEqual([...DEFAULT_NAMES.en]);
+  });
+
+  it("keeps names the couple typed", () => {
+    const settings = { ...defaultSettings("en"), names: ["Anna", "Player 2"] as [string, string] };
+    expect(withLanguage(settings, "ru").names).toEqual(["Anna", DEFAULT_NAMES.ru[1]]);
+  });
+
+  it("returns the same settings when the language does not change", () => {
+    const settings = defaultSettings("ru");
+    expect(withLanguage(settings, "ru")).toBe(settings);
+  });
+});
+

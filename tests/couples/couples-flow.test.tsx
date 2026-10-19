@@ -218,6 +218,12 @@ describe("CouplesGame flow", () => {
     expect(host.querySelector(".cp-summary")).not.toBeNull();
   });
 
+  it("uses Russian partner names for a first-time Russian visitor", () => {
+    const host = mount();
+    startNorm(host);
+    expect(text(host, ".cp-turn")).toContain("Игрок 1");
+  });
+
   it("persists the setup between visits", () => {
     const first = mount();
     click(first, ".cp-game-card", 1); // ИлиТо

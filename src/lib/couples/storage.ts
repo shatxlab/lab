@@ -53,6 +53,21 @@ export function defaultSettings(lang: Lang = "ru"): CouplesSettings {
   };
 }
 
+/**
+ * Switch the settings to another language. Partner names still at the default
+ * of the old language follow the new one; names the couple typed stay as they are.
+ */
+export function withLanguage(settings: CouplesSettings, lang: Lang): CouplesSettings {
+  if (settings.lang === lang) return settings;
+  const from = DEFAULT_NAMES[settings.lang];
+  const to = DEFAULT_NAMES[lang];
+  const names: [string, string] = [
+    settings.names[0] === from[0] ? to[0] : settings.names[0],
+    settings.names[1] === from[1] ? to[1] : settings.names[1],
+  ];
+  return { ...settings, lang, names };
+}
+
 const GAME_IDS: readonly GameId[] = ["norm", "either", "who"];
 
 function isGame(value: unknown): value is GameId {

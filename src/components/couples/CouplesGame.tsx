@@ -22,6 +22,7 @@ import {
   defaultSettings,
   effectiveNames,
   readCouplesState,
+  withLanguage,
   withSessionStats,
   writeCouplesState,
   type CouplesStats,
@@ -82,11 +83,11 @@ export default function CouplesGame() {
     const lang = readAppLang();
     const stored = readCouplesState();
     if (stored) {
-      setSettings({ ...stored.settings, lang });
+      setSettings(withLanguage(stored.settings, lang));
       setStats(stored.stats);
       soundRef.current?.setEnabled(stored.settings.sound);
     } else {
-      setSettings((current) => ({ ...current, lang }));
+      setSettings((current) => withLanguage(current, lang));
     }
     setHistory(readHistory());
     setHydrated(true);
@@ -95,20 +96,7 @@ export default function CouplesGame() {
   // Follow the shared header language setting; default partner names follow it.
   useEffect(
     () =>
-      subscribeToAppLang((nextLang) => {
-        setSettings((current) => {
-          const previousLang = current.lang;
-          const swappedDefaults: [string, string] = [
-            current.names[0] === DEFAULT_NAMES[previousLang][0]
-              ? DEFAULT_NAMES[nextLang][0]
-              : current.names[0],
-            current.names[1] === DEFAULT_NAMES[previousLang][1]
-              ? DEFAULT_NAMES[nextLang][1]
-              : current.names[1],
-          ];
-          return { ...current, lang: nextLang, names: swappedDefaults };
-        });
-      }),
+      subscribeToAppLang((nextLang) => setSettings((current) => withLanguage(current, nextLang))),
     [],
   );
 

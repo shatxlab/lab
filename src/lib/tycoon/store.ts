@@ -4,7 +4,7 @@ import { promote } from '@/lib/tycoon/sim/careers'
 import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
-import { acceptBuyout, declineBuyout } from '@/lib/tycoon/sim/exit'
+import { acceptBuyout, declineBuyout, retireStudio } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
@@ -15,7 +15,7 @@ import { startResearch } from '@/lib/tycoon/sim/research'
 import { startTraining, teamOuting } from '@/lib/tycoon/sim/staff'
 import { isReady } from '@/lib/tycoon/sim/scoring'
 import { decisions, type Decision } from '@/lib/tycoon/sim/decisions'
-import { logEntry } from '@/lib/tycoon/sim/journal'
+import { logEntry, logSimEvent } from '@/lib/tycoon/sim/journal'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
 import type { Discipline, GameState, ProjectSize, Result, SimEvent, Tier } from '@/lib/tycoon/sim/types'
 
@@ -136,6 +136,8 @@ export interface Store {
   acceptBuyout(): Result
   /** Turns the offer down; a better one comes later. */
   declineBuyout(): Result
+  /** Ends the run by retiring: the studio is judged by what it is worth. */
+  retire(): Result
 }
 
 export function createStore(state: GameState, initialSpeed: Speed = 1, options: { sfx?: SfxPlayer } = {}): Store {
@@ -178,7 +180,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   /** Takes the events a command left behind, logging the notices among them. */
   const drainLogged = (): SimEvent[] => {
     const events = drainEvents(state)
-    for (const event of events) if (event.type === 'notice') logEntry(state, 'notice', event.text)
+    for (const event of events) logSimEvent(state, event)
     return events
   }
 
@@ -376,7 +378,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       for (const event of events) {
         if (event.type !== 'shipped') continue
         const shipped = state.products.find((p) => p.id === event.productId)
-        logEntry(state, 'ship.result', `${shipped?.name ?? 'A product'} is out`, { quality: Math.round(event.quality), reach: Math.round(event.reach), bugs: Math.round(event.bugs), hit: shipped?.hit ?? false, update: event.update })
+        logEntry(state, 'ship.result', `${shipped?.name ?? 'A product'} is out`, { quality: Math.round(event.quality), reach: Math.round(event.reach), bugs: Math.round(event.bugs), hit: !event.update && (shipped?.hit ?? false), update: event.update })
         dialog.value = {
           kind: 'result',
           productId: event.productId,
@@ -450,6 +452,15 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     acceptBuyout() {
       const result = acceptBuyout(state)
+      if (!result.ok) return result
+      dialog.value = { kind: 'game-over' }
+      bump()
+      sfx.play('milestone')
+      return result
+    },
+
+    retire() {
+      const result = retireStudio(state)
       if (!result.ok) return result
       dialog.value = { kind: 'game-over' }
       bump()

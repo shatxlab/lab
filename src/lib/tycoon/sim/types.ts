@@ -398,11 +398,13 @@ export interface GameState {
 }
 
 export interface Ending {
-  kind: 'bankrupt' | 'sold'
+  kind: 'bankrupt' | 'sold' | 'retired'
   day: number
   /** What a sale paid. */
   price?: number
   bidder?: string
+  /** What the studio was worth at the end: cash plus what a buyer would pay for what it earns. */
+  worth: number
 }
 
 export interface ExitState {
@@ -412,6 +414,10 @@ export interface ExitState {
   nextDay: number
   /** The offer waiting for an answer, if any. */
   pending: { price: number; bidder: string } | null
+  /** The day of the first offer; buyers lose interest `EXIT_WINDOW_DAYS` after it. Null before any offer. */
+  firstDay: number | null
+  /** True once buyers have lost interest for good. */
+  closed: boolean
 }
 
 /** One line of the run's log: a decision the player made, or something that happened to the studio. */

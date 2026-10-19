@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SALE_HIT_BONUS, SALE_HIT_REPUTATION_PENALTY, SALE_MIN_USERS, SALE_MORALE_PENALTY, SALE_REPUTATION_PENALTY } from '@/lib/tycoon/sim/balance'
+import { SALE_HIT_BONUS, SALE_HIT_REPUTATION_PENALTY, SALE_MIN_INCOME, SALE_MORALE_PENALTY, SALE_REPUTATION_PENALTY } from '@/lib/tycoon/sim/balance'
 import { startFix } from '@/lib/tycoon/sim/fixes'
 import { productRevenue } from '@/lib/tycoon/sim/products'
 import { startUpdate } from '@/lib/tycoon/sim/project'
@@ -28,8 +28,12 @@ describe('retiring and selling products', () => {
     const state = portfolio()
     expect(sunsetOutcome(state.products[1])).toBe('retired')
     expect(sunsetOutcome(state.products[0])).toBe('sold')
-    expect(sunsetOutcome(makeProduct({ users: SALE_MIN_USERS }))).toBe('sold')
-    expect(sunsetOutcome(makeProduct({ users: SALE_MIN_USERS - 1 }))).toBe('retired')
+    // By what it earns, not by its users: a few cloud customers pay more than many game players.
+    const enough = (SALE_MIN_INCOME * 30) / 9
+    expect(sunsetOutcome(makeProduct({ productTypeId: 'saas_platform', users: enough }))).toBe('sold')
+    expect(sunsetOutcome(makeProduct({ productTypeId: 'saas_platform', users: enough - 1 }))).toBe('retired')
+    expect(sunsetOutcome(makeProduct({ productTypeId: 'web_app', users: 100_000 }))).toBe('sold')
+    expect(sunsetOutcome(makeProduct({ productTypeId: 'game', users: 90_000 }))).toBe('retired')
   })
 
   it('retiring costs nothing: no money, no morale, no reputation', () => {

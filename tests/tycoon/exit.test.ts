@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { BANKRUPT_AFTER_DEBT_DAYS, EXIT_GAP_DAYS, EXIT_MIN_INCOME } from '@/lib/tycoon/sim/balance'
+import { BANKRUPT_AFTER_DEBT_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_WINDOW_DAYS } from '@/lib/tycoon/sim/balance'
 import { checkBankruptcy, dailyIncome } from '@/lib/tycoon/sim/economy'
-import { acceptBuyout, buyoutPrice, declineBuyout, exitDay } from '@/lib/tycoon/sim/exit'
+import { acceptBuyout, buyoutPrice, declineBuyout, exitDay, offerWindowLeft, retireStudio, studioWorth } from '@/lib/tycoon/sim/exit'
 import { moveOut } from '@/lib/tycoon/sim/offices'
 import { createInitialState, deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { drainEvents } from '@/lib/tycoon/sim/tick'
@@ -89,11 +89,52 @@ describe('selling the studio', () => {
     expect(store.dialog.value).toEqual({ kind: 'game-over' })
   })
 
+  it('stops coming once buyers lose interest, and a waiting game gains little', () => {
+    const state = garageWithHit()
+    exitDay(state)
+    const first = state.exit.pending!.price
+    expect(offerWindowLeft(state)).toBe(EXIT_WINDOW_DAYS)
+    let last = first
+    while (state.exit.pending && !state.exit.closed) {
+      last = state.exit.pending.price
+      declineBuyout(state)
+      state.day += EXIT_GAP_DAYS
+      exitDay(state)
+    }
+    expect(state.exit.closed).toBe(true)
+    expect(state.exit.pending).toBeNull()
+    expect(offerWindowLeft(state)).toBeNull()
+    // With the same income, the best offer is only a little better than the first.
+    expect(last / first).toBeLessThan(1.7)
+    expect(state.journal.some((e) => e.kind === 'exit.closed')).toBe(true)
+    state.day += 1000
+    exitDay(state)
+    expect(state.exit.pending).toBeNull()
+    expect(EXIT_MAX_RAISES).toBeGreaterThan(0)
+  })
+
+  it('values every ending the same way: cash plus what the income would fetch', () => {
+    const state = garageWithHit()
+    expect(studioWorth(state)).toBeGreaterThan(state.money)
+    const worth = studioWorth(state)
+    expect(retireStudio(state).ok).toBe(true)
+    expect(state.gameOver).toBe(true)
+    expect(state.ending).toMatchObject({ kind: 'retired', worth })
+    expect(retireStudio(state).ok).toBe(false)
+
+    const sold = garageWithHit()
+    exitDay(sold)
+    const price = sold.exit.pending!.price
+    const cash = sold.money
+    acceptBuyout(sold)
+    expect(sold.ending?.worth).toBe(Math.round(cash + price))
+  })
+
   it('records a bankruptcy as the ending', () => {
     const state = createInitialState(4)
     state.money = -1
     state.debtDays = BANKRUPT_AFTER_DEBT_DAYS
     checkBankruptcy(state)
-    expect(state.ending).toMatchObject({ kind: 'bankrupt' })
+    expect(state.ending).toMatchObject({ kind: 'bankrupt', worth: 0 })
   })
 })

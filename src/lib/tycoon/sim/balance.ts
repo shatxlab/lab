@@ -82,6 +82,12 @@ export const MATURITY_PER_UPDATE = 0.25
 export const MATURITY_MAX_UPDATES = 4
 /** A maintenance release (an update with no new features) needs this share of an update's base work. */
 export const MAINTENANCE_TARGET_SHARE = 0.6
+/** A promotion wears the audience out: right after one ends the next brings only this share of its users... */
+export const PROMO_MIN_EFFECT = 0.25
+/** ...recovering to its full effect over this many days. */
+export const PROMO_RECOVERY_DAYS = 180
+/** Automatic promotion waits until the next one would bring at least this share of its users: below it, it would not pay. */
+export const AUTO_PROMOTE_MIN_EFFECT = 0.8
 /** Automatic promotion never spends the bank below this many days of what the studio burns. */
 export const AUTO_PROMOTE_RESERVE_DAYS = 60
 
@@ -233,11 +239,13 @@ export const EXIT_MIN_INCOME = 400
 /** Days before the next offer once one is turned down. */
 export const EXIT_GAP_DAYS = 90
 /** An offer is this many years of the studio's income, plus... */
-export const EXIT_BASE_MULTIPLE = 3
+export const EXIT_BASE_MULTIPLE = 2
 /** ...this much more for every offer turned down, up to... */
-export const EXIT_RAISE_PER_DECLINE = 0.6
+export const EXIT_RAISE_PER_DECLINE = 0.2
 /** ...this many times. */
 export const EXIT_MAX_RAISES = 6
+/** Buyers lose interest this many days after the first offer: the garage has an end date. */
+export const EXIT_WINDOW_DAYS = 540
 
 // Hiring
 export const CANDIDATE_REFRESH_DAYS = 30
@@ -411,8 +419,8 @@ export const NEW_OFFICE_COST = 150000
 export const MAX_OFFICES = 4
 
 // Selling and retiring products
-/** A product with at least this many users is sold to a rival; with fewer it is only switched off. */
-export const SALE_MIN_USERS = 100_000
+/** A product earning at least this much a day is sold to a rival; one that earns less is only switched off. (What it earns, not its users: a cloud platform with a thousand users out-earns a game with a hundred thousand.) */
+export const SALE_MIN_INCOME = 500
 /** A sale pays this many months of what the product earns now. */
 export const SALE_MONTHS = 12
 /** A hit sells for this much more. */

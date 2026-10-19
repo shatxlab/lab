@@ -2,6 +2,8 @@ import { ERAS } from '@/lib/tycoon/data/eras'
 import { getStage } from '@/lib/tycoon/data/stages'
 import { DAYS_PER_MONTH } from './balance'
 import { dailyIncome, monthlyBurn } from './economy'
+import { productRevenue } from './products'
+import { statMultiplier } from './modifiers'
 import { playerRank } from './rivals'
 import { describePendingEvent } from './events'
 import type { GameState, JournalEntry, SimEvent } from './types'
@@ -22,7 +24,8 @@ export function journalDay(state: GameState, from: number): void {
   for (const event of state.events.slice(from)) logSimEvent(state, event)
 }
 
-function logSimEvent(state: GameState, event: SimEvent): void {
+/** Logs one thing the sim reported: also used for what a command leaves behind (a launch that broke out). */
+export function logSimEvent(state: GameState, event: SimEvent): void {
   switch (event.type) {
     case 'notice':
       logEntry(state, 'notice', event.text)
@@ -56,6 +59,7 @@ function logSimEvent(state: GameState, event: SimEvent): void {
 /** A monthly snapshot of where the studio stands, so the decisions between two of them can be read against the numbers. */
 export function journalMonth(state: GameState): void {
   const users = state.products.reduce((sum, p) => sum + p.users, 0)
+  const revenueMult = statMultiplier(state, 'revenue')
   logEntry(state, 'month', 'Month end', {
     income: Math.round(dailyIncome(state)),
     burn: Math.round(monthlyBurn(state) / DAYS_PER_MONTH),
@@ -68,8 +72,24 @@ export function journalMonth(state: GameState): void {
     users: Math.round(users),
     lifetimeRevenue: Math.round(state.lifetimeRevenue),
     research: state.research.done.length,
-    productList: state.products.map((p) => `${p.name} (${p.productTypeId}, ${Math.round(p.users)} users, quality ${Math.round(p.quality)})`),
+    productList: state.products.map((p) => {
+      const income = Math.round(productRevenue(p) * revenueMult)
+      return `${p.name} (${p.productTypeId}, ${p.size}, ${Math.round(p.users)} users, $${income}/day, quality ${Math.round(p.quality)}${p.autoPromote ? `, auto-promote ${p.autoPromote}` : ''})`
+    }),
   })
+}
+
+/** The most the studio ever earned in a day, from the monthly samples and today. */
+export function peakIncome(state: GameState): number {
+  return Math.round(Math.max(dailyIncome(state), ...state.history.map((h) => h.income)))
+}
+
+/** The people who have been here longest, as "Name (years)". */
+export function longestServing(state: GameState, count = 3): string[] {
+  return [...state.employees]
+    .sort((a, b) => a.hiredDay - b.hiredDay)
+    .slice(0, count)
+    .map((e) => `${e.name} (${Math.round(((state.day - e.hiredDay) / (12 * DAYS_PER_MONTH)) * 10) / 10} years)`)
 }
 
 /** The run in one place: where it ended and what the studio looked like. */
@@ -92,6 +112,8 @@ export function runSummary(state: GameState): Record<string, string | number | b
     productsShipped: state.shippedCount,
     hits: state.products.filter((p) => p.hit).length + state.retired.filter((p) => p.hit).length,
     bestProduct: best ? `${best.name} (${Math.round(best.users)} users)` : '',
+    peakIncome: peakIncome(state),
+    longestServing: longestServing(state),
     research: state.research.done,
   }
 }

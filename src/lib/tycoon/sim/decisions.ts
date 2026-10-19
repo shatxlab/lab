@@ -3,7 +3,7 @@ import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
 import { title } from './careers'
 import { describePendingEvent } from './events'
-import { nextSize, promotionCost } from './lifecycle'
+import { nextSize, promotionCost, promotionEffect } from './lifecycle'
 import { newOfficeCost, officeName, getOffice } from './offices'
 import { hitBreakdown, projectQuality } from './project'
 import { acquisitionPrice } from './rivals'
@@ -56,7 +56,7 @@ export const decisions = {
 
   promote(state: GameState, productId: number, tier: Tier): Decision {
     const product = state.products.find((p) => p.id === productId)
-    return ['promote', `Promoted ${product?.name ?? 'a product'} (${tier})`, product ? { cost: promotionCost(product, tier), users: Math.round(product.users) } : undefined]
+    return ['promote', `Promoted ${product?.name ?? 'a product'} (${tier})`, product ? { cost: promotionCost(product, tier), users: Math.round(product.users), effect: Math.round(promotionEffect(state, product) * 100) } : undefined]
   },
 
   setAutoPromote(state: GameState, productId: number, tier: Tier | null): Decision {

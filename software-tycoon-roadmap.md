@@ -57,9 +57,23 @@ with a few products it cares about, teams that own them, and a long run.
   automation** (Business research) lets a product promote itself at a chosen tier,
   never below `AUTO_PROMOTE_RESERVE_DAYS` of burn (`autoPromoteDay`).
 - **Garage buyout.** Once the garage has a hit earning `EXIT_MIN_INCOME`, a rival
-  offers 3 years of income; "Not yet" brings a better one 90 days later
-  (`sim/exit.ts`, `EXIT_*`). Selling ends the run (`GameState.ending`). Moving out
-  clears and closes it (the button asks twice).
+  offers 2 years of income (times a little for reputation); "Not yet" brings a
+  slightly better one (+0.2 years, up to 6 times) 90 days later, but buyers lose
+  interest `EXIT_WINDOW_DAYS` (540) after the first offer (`sim/exit.ts`, `EXIT_*`).
+  Selling ends the run (`GameState.ending`). Moving out clears and closes it (the
+  button asks twice). First run's log: the first version (3 years, +0.6 per "no", no
+  end date) made waiting in the garage free money (offers $12M to $39M, 89% of the
+  final worth), so the player never moved out; hence the flatter multiple and the window.
+- **Legacy.** Menu, "Retire and see your legacy" ends the run at any time. Every
+  ending (sold, retired, bankrupt) shows the same numbers and a *worth*: cash plus what
+  a buyer would pay at the base multiple (`studioWorth`), so runs compare.
+- **Promotions wear off** (`promotionEffect`): right after one ends the next brings
+  25% of its users, recovering to full over 180 days (`PROMO_*`); a launch campaign
+  counts as a promotion. Auto-promotion waits for 80% (`AUTO_PROMOTE_MIN_EFFECT`), so
+  about once per product every five months. Bot check: a bot that promotes only when
+  it pays reaches ~4.3k/day at year 20, against ~11k when it promoted every time it
+  could, so about 60% of that bot's income was promotion spam.
+- **Log** also records income per product per month, and logs a launch's breakout.
 - **Portfolio.** Outside the garage: 5 live products including ones being made
   (`PORTFOLIO_LIMIT`), one new product per `NEW_PRODUCT_GAP_DAYS` once there are 3.
   Updates and growth are not limited. **Growing** a product (Small, Medium, Large,
@@ -71,6 +85,18 @@ Balance note: with these caps the best bot reaches ~11k/day at year 20 (was ~26k
 stalls at Industry leader. The bots are cruder than a person (they do not auto-promote
 or tune), so retune from a human run and its log, not from the bots.
 
+### From the first logged run (sold from the garage at year 11)
+
+Two and a half years of contracts only before the first product; 500 days between
+products in years 4 to 7; cash with nothing to buy (875k at year 8, 4.8M at the sale,
+all 16 research done by year 10.8); 115 auto-promotions at Large cost $5.97M, half of
+the $12.0M lifetime revenue, and the player calls Marketing automation a cheat code
+that made income grow exponentially. The player did not know which features affect hit
+chance (audiences, below). Nothing in the log says whether a promotion paid back, so
+the monthly snapshot now has income per product. Open: tame auto-promotion (diminishing
+returns, a cap, or a cost that grows), a garage that has something to buy, and the
+tedium of the contract-only start.
+
 ### Agreed, not built
 
 - **Offices.** Keep 4: US garage, then a US office; Europe is the second office at a
@@ -81,9 +107,6 @@ or tune), so retune from a human run and its log, not from the bots.
   pre-orders, sponsorship).
 - **Client work in Act 2.** It fades by the first office; replace it with enterprise
   contracts and licensing tied to flagships.
-- **Long-game ending.** A legacy summary (years, peak income, hits, people who
-  stayed), reachable at any time, so the long run has something to compare. Selling
-  is garage-only.
 - **People and knowledge.** Per-product and per-type knowledge on each employee
   (an RPG element); manual team assignment (split EU/US allowed); a new **Analyst**
   (Junior to Senior) who can become **Product Manager** (Middle to Lead); laptop
@@ -209,7 +232,7 @@ played it yet; the numbers below are first guesses.
   1.5, so a polished product stays calm. Launch bugs are unchanged.
 
 **Sunset**
-- Under `SALE_MIN_USERS` (100,000) a product is *retired*: removed, free. At or
+- Under `SALE_MIN_INCOME` ($500 a day; it was 100,000 users, which ignored what a user pays) a product is *retired*: removed, free. At or
   above it, a rival buys it: price = 12 months of its income now (×1.25 for a hit,
   less while buggy), the product joins that rival with its users, everyone's
   morale −5 and reputation −3 (−6 for a hit). Blocked while an update is being

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CAMPAIGNS, LAUNCH_ADOPTERS, PROMOTIONS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from '@/lib/tycoon/sim/balance'
-import { AUTO_PROMOTE_RESEARCH, autoPromoteDay, campaignCost, estimateReach, productPhase, promotionCost, promoteProduct, promotionReserve, setAutoPromote, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { AUTO_PROMOTE_MIN_EFFECT, CAMPAIGNS, LAUNCH_ADOPTERS, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from '@/lib/tycoon/sim/balance'
+import { AUTO_PROMOTE_RESEARCH, autoPromoteDay, promotionEffect, campaignCost, estimateReach, productPhase, promotionCost, promoteProduct, promotionReserve, setAutoPromote, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { bugProneness, productRevenue, productsDay, releaseBugs, revenueForUsers } from '@/lib/tycoon/sim/products'
 import { projectQuality, projectTarget, reachAfterUpdate, shipProject, startProject, startUpdate } from '@/lib/tycoon/sim/project'
 import { featureReach } from '@/lib/tycoon/sim/scoring'
@@ -433,5 +433,55 @@ describe('product phases', () => {
     expect(productPhase(state, product)).toBe('Established')
     state.day = product.releaseDay + 5_000
     expect(productPhase(state, product)).toBe('Fading')
+  })
+})
+
+describe('promotions wear the audience out', () => {
+  it('bring fewer users the sooner they follow the last one, and recover over time', () => {
+    const state = studioWithProduct()
+    const product = state.products[0]
+    expect(promotionEffect(state, product)).toBe(1)
+    promoteProduct(state, 50, 'small')
+    state.day = product.boostUntil
+    expect(promotionEffect(state, product)).toBeCloseTo(PROMO_MIN_EFFECT)
+    state.day = product.boostUntil + PROMO_RECOVERY_DAYS / 2
+    const half = promotionEffect(state, product)
+    expect(half).toBeGreaterThan(PROMO_MIN_EFFECT)
+    expect(half).toBeLessThan(1)
+    state.day = product.boostUntil + PROMO_RECOVERY_DAYS
+    expect(promotionEffect(state, product)).toBe(1)
+  })
+
+  it('scale the users a promotion brings', () => {
+    const state = studioWithProduct()
+    const product = state.products[0]
+    state.money = 1_000_000
+    promoteProduct(state, 50, 'medium')
+    const fresh = product.boostUsers
+    state.day = product.boostUntil
+    promoteProduct(state, 50, 'medium')
+    expect(product.boostUsers).toBeCloseTo(fresh * PROMO_MIN_EFFECT)
+  })
+
+  it('make automatic promotion wait until it would pay, instead of every month', () => {
+    const state = studioWithProduct()
+    state.research.done.push(AUTO_PROMOTE_RESEARCH)
+    state.money = 10_000_000
+    const product = state.products[0]
+    setAutoPromote(state, 50, 'small')
+    let promotions = 0
+    let last = product.boostUntil
+    for (let i = 0; i < 720; i++) {
+      state.day += 1
+      autoPromoteDay(state)
+      if (product.boostUntil !== last) {
+        promotions += 1
+        last = product.boostUntil
+      }
+    }
+    // Two years: never back to back (every 40 days or so), but about every few months.
+    expect(promotions).toBeGreaterThan(2)
+    expect(promotions).toBeLessThan(6)
+    expect(AUTO_PROMOTE_MIN_EFFECT).toBeLessThan(1)
   })
 })

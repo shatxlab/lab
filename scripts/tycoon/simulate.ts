@@ -16,9 +16,9 @@ import { dailyIncome, monthlyBurn } from '../../src/lib/tycoon/sim/economy.ts'
 import { describePendingEvent, resolveRandomEvent } from '../../src/lib/tycoon/sim/events.ts'
 import { availableFixers, onCallUnlocked, setOnCall, startFix } from '../../src/lib/tycoon/sim/fixes.ts'
 import { hire, hireCost, ROLE_DISCIPLINE } from '../../src/lib/tycoon/sim/hiring.ts'
-import { campaignCost, growBlocker, newProductBlocker, nextSize, promoteProduct, promotionBlocker, promotionCost, updateBlocker } from '../../src/lib/tycoon/sim/lifecycle.ts'
+import { campaignCost, growBlocker, promotionEffect, newProductBlocker, nextSize, promoteProduct, promotionBlocker, promotionCost, updateBlocker } from '../../src/lib/tycoon/sim/lifecycle.ts'
 import { sunsetBlocker, sunsetProduct } from '../../src/lib/tycoon/sim/sunset.ts'
-import { PORTFOLIO_LIMIT } from '../../src/lib/tycoon/sim/balance.ts'
+import { AUTO_PROMOTE_MIN_EFFECT, PORTFOLIO_LIMIT } from '../../src/lib/tycoon/sim/balance.ts'
 import { marketDemand } from '../../src/lib/tycoon/sim/market.ts'
 import { freeDesks, moveOut, moveOutBlocker, newOfficeCost, openOffice, openOfficeBlocker, staffOf } from '../../src/lib/tycoon/sim/offices.ts'
 import { bugFactor, interest, marketWeights, missingFeatures, productRevenue } from '../../src/lib/tycoon/sim/products.ts'
@@ -213,7 +213,7 @@ function tryContract(state: GameState, office: Office): boolean {
 /** Promotes the best earner at a tier that is cheap next to the bank balance. */
 function promoteBest(state: GameState): void {
   const best = [...state.products].sort((a, b) => productRevenue(b) - productRevenue(a))[0]
-  if (!best || productRevenue(best) < 80) return
+  if (!best || productRevenue(best) < 80 || promotionEffect(state, best) < AUTO_PROMOTE_MIN_EFFECT) return
   const tiers: Tier[] = ['large', 'medium', 'small']
   const tier = tiers.find((t) => promotionBlocker(state, best, t) === null && promotionCost(best, t) * 6 < state.money)
   if (tier) promoteProduct(state, best.id, tier)

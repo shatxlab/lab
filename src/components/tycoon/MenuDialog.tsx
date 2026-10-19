@@ -10,6 +10,7 @@ export function MenuDialog() {
   const muted = useSignal(useStore().sfx.muted)
   const fileInput = useRef<HTMLInputElement>(null)
   const [confirmNew, setConfirmNew] = useState(false)
+  const [confirmRetire, setConfirmRetire] = useState(false)
   const [message, setMessage] = useState('')
 
   const onFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -40,6 +41,14 @@ export function MenuDialog() {
         <button onClick={() => downloadSave(state)}>Export save</button>
         <button onClick={() => downloadJournal(state)}>Export run log</button>
         <button onClick={() => fileInput.current?.click()}>Import save…</button>
+        <button
+          className={confirmRetire ? 'danger' : ''}
+          onClick={() => (confirmRetire ? store.retire() : setConfirmRetire(true))}
+          onBlur={() => setConfirmRetire(false)}
+          title="End the run and see what the studio is worth"
+        >
+          {confirmRetire ? 'Really retire and end the run?' : 'Retire and see your legacy'}
+        </button>
         <button
           className={confirmNew ? 'danger' : ''}
           onClick={() => (confirmNew ? startNewGame() : setConfirmNew(true))}

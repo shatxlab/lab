@@ -4,6 +4,8 @@ import { exportJournal, JOURNAL_LIMIT, logEntry } from '@/lib/tycoon/sim/journal
 import { createInitialState, deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { advance } from '@/lib/tycoon/sim/tick'
 import { DAYS_PER_MONTH } from '@/lib/tycoon/sim/balance'
+import { DISCIPLINES } from '@/lib/tycoon/sim/types'
+import { makeProduct } from './helpers'
 
 describe('the run log', () => {
   it('starts empty and gets a snapshot every month', () => {
@@ -33,6 +35,16 @@ describe('the run log', () => {
     expect(hired.data).toMatchObject({ salary: Math.round(candidate.salary) })
   })
 
+  it('lists each product with what it earns a day in the month snapshot', () => {
+    const state = createInitialState(5)
+    state.products.push(makeProduct({ id: 40, name: 'Atlas', users: 30_000, reach: 30_000 }))
+    advance(state, DAYS_PER_MONTH)
+    const month = state.journal.find((e) => e.kind === 'month')!
+    const line = (month.data?.productList as string[])[0]
+    expect(line).toMatch(/^Atlas \(web_app, small, \d+ users, \$\d+\/day, quality \d+/)
+    expect(Number(/\$(\d+)\/day/.exec(line)![1])).toBeGreaterThan(0)
+  })
+
   it('leaves a failed command out', () => {
     const state = createInitialState(5)
     const store = createStore(state)
@@ -55,5 +67,29 @@ describe('the run log', () => {
     const raw = JSON.parse(serialize(createInitialState(5)))
     delete raw.journal
     expect(deserialize(JSON.stringify(raw))?.journal).toEqual([])
+  })
+})
+
+describe('the run log and launches', () => {
+  it('logs a breakout that a launch caused, and flags only new launches as hits', () => {
+    let seen = false
+    for (let seed = 1; seed <= 60 && !seen; seed++) {
+      const state = createInitialState(seed)
+      state.launchesSinceHit = 100
+      const store = createStore(state)
+      expect(store.startProject('web_app', []).ok).toBe(true)
+      const project = state.offices[0].project!
+      for (const d of DISCIPLINES) project.progress[d] = project.target[d] * 1.5
+      expect(store.shipProject().ok).toBe(true)
+      const result = state.journal.find((e) => e.kind === 'ship.result')!
+      expect(result.data?.hit).toBe(state.products[0].hit)
+      if (state.products[0].hit) {
+        seen = true
+        expect(state.journal.some((e) => e.kind === 'hit')).toBe(true)
+      } else {
+        expect(state.journal.some((e) => e.kind === 'hit')).toBe(false)
+      }
+    }
+    expect(seen).toBe(true)
   })
 })

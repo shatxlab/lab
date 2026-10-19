@@ -1,4 +1,5 @@
 import {
+  AUTO_PROMOTE_MIN_EFFECT,
   AUTO_PROMOTE_RESERVE_DAYS,
   CAMPAIGNS,
   DAYS_PER_MONTH,
@@ -7,6 +8,8 @@ import {
   NEW_PRODUCT_FREE_COUNT,
   NEW_PRODUCT_GAP_DAYS,
   PORTFOLIO_LIMIT,
+  PROMO_MIN_EFFECT,
+  PROMO_RECOVERY_DAYS,
   PROJECT_SIZES,
   PROMOTIONS,
   UPDATE_MIN_AGE_DAYS,
@@ -45,10 +48,20 @@ export function promotionCost(product: Product, tier: Tier): number {
   return price(revenueForUsers(product.productTypeId, product.reach) * offer.costDays, offer.costFloor)
 }
 
-/** Starts a marketing push on a product: its new users arrive a little each day while it runs. */
-export function startBoost(product: Product, offer: MarketingOffer, day: number): void {
+/**
+ * How much of its users a promotion would bring right now, 0..1: full for a product that has not been pushed
+ * lately, and less the sooner it follows the last push (a launch campaign counts too).
+ */
+export function promotionEffect(state: GameState, product: Product): number {
+  if (product.boostUntil <= 0) return 1
+  const rested = Math.min(1, Math.max(0, state.day - product.boostUntil) / PROMO_RECOVERY_DAYS)
+  return PROMO_MIN_EFFECT + (1 - PROMO_MIN_EFFECT) * rested
+}
+
+/** Starts a marketing push on a product: its new users, scaled by `effect`, arrive a little each day while it runs. */
+export function startBoost(product: Product, offer: MarketingOffer, day: number, effect = 1): void {
   product.boostUntil = day + offer.days
-  product.boostUsers = (product.reach * offer.users) / offer.days
+  product.boostUsers = (product.reach * offer.users * effect) / offer.days
 }
 
 /** Why a product can't be promoted at this tier, or null when it can. */
@@ -64,7 +77,7 @@ export function promoteProduct(state: GameState, productId: number, tier: Tier):
   const blocker = promotionBlocker(state, product, tier)
   if (blocker) return fail(blocker)
   state.money -= promotionCost(product, tier)
-  startBoost(product, PROMOTIONS[tier], state.day)
+  startBoost(product, PROMOTIONS[tier], state.day, promotionEffect(state, product))
   return OK
 }
 
@@ -111,11 +124,13 @@ export function autoPromoteDay(state: GameState): void {
   for (const product of state.products) {
     const tier = product.autoPromote
     if (!tier || promotionBlocker(state, product, tier) !== null) continue
+    const effect = promotionEffect(state, product)
+    if (effect < AUTO_PROMOTE_MIN_EFFECT) continue
     const cost = promotionCost(product, tier)
     if (state.money - cost < promotionReserve(state)) continue
     state.money -= cost
-    startBoost(product, PROMOTIONS[tier], state.day)
-    logEntry(state, 'promote.auto', `${product.name} promoted itself (${tier})`, { cost, users: Math.round(product.users) })
+    startBoost(product, PROMOTIONS[tier], state.day, effect)
+    logEntry(state, 'promote.auto', `${product.name} promoted itself (${tier})`, { cost, users: Math.round(product.users), effect: Math.round(effect * 100) })
   }
 }
 

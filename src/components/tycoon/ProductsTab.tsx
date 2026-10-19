@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
-import { PORTFOLIO_LIMIT, PROJECT_SIZES, PROMOTIONS } from '@/lib/tycoon/sim/balance'
+import { PORTFOLIO_LIMIT, PROJECT_SIZES, SALE_MIN_INCOME, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS } from '@/lib/tycoon/sim/balance'
 import { inGarage } from '@/lib/tycoon/sim/offices'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
-import { autoPromoteUnlocked, growBlocker, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { autoPromoteUnlocked, growBlocker, promotionEffect, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, targetUsers } from '@/lib/tycoon/sim/products'
 import { TIERS, type GameState, type Product, type Tier } from '@/lib/tycoon/sim/types'
@@ -41,6 +41,7 @@ function ProductRow({ product }: { product: Product }) {
   const sunsetProblem = sunsetBlocker(state, product)
   const outcome = sunsetOutcome(product)
   const promoLeft = product.boostUntil - state.day
+  const effect = promotionEffect(state, product)
   const updates = product.updates.length
   const bugs = Math.floor(product.bugs)
   const stale = interest(product, state.day) < 1
@@ -123,7 +124,7 @@ function ProductRow({ product }: { product: Product }) {
             </small>
           ) : (
             <small>
-              Switch {product.name} off for good. It has too few {type.userNoun} to sell; nothing is lost beyond the product.
+              Switch {product.name} off for good. It earns too little to sell (under {formatMoney(SALE_MIN_INCOME)} a day); nothing is lost beyond the product.
             </small>
           )}
           <button
@@ -151,11 +152,17 @@ function ProductRow({ product }: { product: Product }) {
               </option>
             ))}
           </select>
-          <small> when the bank keeps two months of costs</small>
+          <small> when the audience has recovered and the bank keeps two months of costs</small>
         </label>
       )}
       {promoting && (
         <div className="tiers">
+          {promoLeft <= 0 && effect < 1 && (
+            <small className={effect < 0.5 ? 'bad' : 'warn'}>
+              People are tired of the ads: a promotion now brings {Math.round(effect * 100)}% of its users. Full effect in{' '}
+              {Math.ceil((1 - effect) / (1 - PROMO_MIN_EFFECT) * PROMO_RECOVERY_DAYS)} days.
+            </small>
+          )}
           {promoLeft > 0 ? (
             <small className="muted">Already promoted for {promoLeft} more day{promoLeft === 1 ? '' : 's'}.</small>
           ) : (
@@ -167,7 +174,7 @@ function ProductRow({ product }: { product: Product }) {
                     <strong>{TIER_NAME[tier]}</strong> {formatMoney(promotionCost(product, tier))}
                   </span>
                   <small className={reason ? 'bad' : 'muted'}>
-                    {reason ?? `+${formatCount(product.reach * PROMOTIONS[tier].users)} ${type.userNoun} over ${PROMOTIONS[tier].days} days`}
+                    {reason ?? `+${formatCount(product.reach * PROMOTIONS[tier].users * effect)} ${type.userNoun} over ${PROMOTIONS[tier].days} days`}
                   </small>
                 </button>
               )

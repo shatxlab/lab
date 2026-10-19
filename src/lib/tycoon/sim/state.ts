@@ -62,7 +62,7 @@ export function createInitialState(seed: number): GameState {
     lastNewProductDay: -10000,
     gameOver: false,
     ending: null,
-    exit: { declined: 0, nextDay: 0, pending: null },
+    exit: { declined: 0, nextDay: 0, pending: null, firstDay: null, closed: false },
     dayWork: [],
     events: [],
   }
@@ -406,9 +406,9 @@ function dropRemovedContent(raw: unknown): unknown {
   const upgraded: Obj = { ...raw }
   upgraded.journal = Array.isArray(raw.journal) ? raw.journal : []
   upgraded.lastNewProductDay = isNum(raw.lastNewProductDay) ? raw.lastNewProductDay : -10000
-  upgraded.ending = isObj(raw.ending) ? raw.ending : null
+  upgraded.ending = isObj(raw.ending) ? { worth: 0, ...raw.ending } : null
   const exit = isObj(raw.exit) ? raw.exit : {}
-  upgraded.exit = { declined: isNum(exit.declined) ? exit.declined : 0, nextDay: isNum(exit.nextDay) ? exit.nextDay : 0, pending: isObj(exit.pending) ? exit.pending : null }
+  upgraded.exit = { declined: isNum(exit.declined) ? exit.declined : 0, nextDay: isNum(exit.nextDay) ? exit.nextDay : 0, pending: isObj(exit.pending) ? exit.pending : null, firstDay: isNum(exit.firstDay) ? exit.firstDay : null, closed: exit.closed === true }
   upgraded.market = { ...initialMarket(), ...(isObj(raw.market) ? raw.market : {}) }
   if (Array.isArray(raw.milestones)) upgraded.milestones = raw.milestones.filter((id) => typeof id === 'string' && getMilestone(id))
   // Research this build no longer knows is dropped; an active one that vanished is simply cancelled.

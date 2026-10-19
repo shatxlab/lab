@@ -1,5 +1,5 @@
 import { formatMoney } from '../format'
-import { DAYS_PER_MONTH, REPUTATION_MAX, SALE_HIT_BONUS, SALE_HIT_REPUTATION_PENALTY, SALE_MIN_USERS, SALE_MONTHS, SALE_MORALE_PENALTY, SALE_REPUTATION_PENALTY } from './balance'
+import { DAYS_PER_MONTH, REPUTATION_MAX, SALE_HIT_BONUS, SALE_HIT_REPUTATION_PENALTY, SALE_MIN_INCOME, SALE_MONTHS, SALE_MORALE_PENALTY, SALE_REPUTATION_PENALTY } from './balance'
 import { productInWork } from './offices'
 import { bugFactor, productRevenue } from './products'
 import { adjustMorale } from './morale'
@@ -8,7 +8,7 @@ import { fail, OK, type GameState, type Product, type Result, type Rival } from 
 
 /** What happens to a product that is switched off: a big one is sold, a small one just retired. */
 export function sunsetOutcome(product: Product): 'sold' | 'retired' {
-  return product.users >= SALE_MIN_USERS ? 'sold' : 'retired'
+  return productRevenue(product) >= SALE_MIN_INCOME ? 'sold' : 'retired'
 }
 
 /** What a buyer would pay now: a year of its income, more for a hit, less while it is buggy. */

@@ -4,6 +4,8 @@ import { ERAS } from '@/lib/tycoon/data/eras'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getStage } from '@/lib/tycoon/data/stages'
 import { ERA_WAGE_GROWTH, HIT_REACH } from '@/lib/tycoon/sim/balance'
+import { offerWindowLeft } from '@/lib/tycoon/sim/exit'
+import { longestServing, runSummary } from '@/lib/tycoon/sim/journal'
 import { officeName } from '@/lib/tycoon/sim/offices'
 import { missingFeatures } from '@/lib/tycoon/sim/products'
 import { projectQuality } from '@/lib/tycoon/sim/project'
@@ -113,26 +115,52 @@ export function ResultDialog({ productId, reputationDelta, early, unlocked, upda
   )
 }
 
+/** How the run ended: bankrupt, sold from the garage, or retired. The same numbers for each, so runs can be compared. */
 export function GameOverDialog() {
   const state = useGame()
-  const sold = state.ending?.kind === 'sold'
+  const ending = state.ending
+  const sold = ending?.kind === 'sold'
+  const retired = ending?.kind === 'retired'
+  const summary = runSummary(state)
+  const years = Number(summary.years)
+  const serving = longestServing(state)
   return (
-    <Modal title={sold ? 'Sold' : 'Bankrupt'}>
+    <Modal title={sold ? 'Sold' : retired ? 'Your legacy' : 'Bankrupt'}>
       {sold ? (
         <p>
-          <strong>{state.ending?.bidder}</strong> bought the studio for <strong>{formatMoney(state.ending?.price ?? 0)}</strong>. {formatDate(state.day)}.
+          <strong>{ending?.bidder}</strong> bought the studio for <strong>{formatMoney(ending?.price ?? 0)}</strong>. {formatDate(state.day)}.
         </p>
+      ) : retired ? (
+        <p>You hand the company on. {formatDate(state.day)}.</p>
       ) : (
         <p>The money ran out and stayed out. {formatDate(state.day)}.</p>
       )}
       <div className="result-grid">
+        {ending && ending.kind !== 'bankrupt' && (
+          <div className="stat">
+            <span className="label">{sold ? 'Final worth' : 'Worth'}</span>
+            <span className="value">{formatMoney(ending.worth)}</span>
+          </div>
+        )}
+        <div className="stat">
+          <span className="label">Years</span>
+          <span className="value">{years.toFixed(1)}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Best day</span>
+          <span className="value">{formatMoney(Number(summary.peakIncome))}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Total revenue</span>
+          <span className="value">{formatMoney(state.lifetimeRevenue)}</span>
+        </div>
         <div className="stat">
           <span className="label">Products shipped</span>
           <span className="value">{state.shippedCount}</span>
         </div>
         <div className="stat">
-          <span className="label">Total revenue</span>
-          <span className="value">{formatMoney(state.lifetimeRevenue)}</span>
+          <span className="label">Hits</span>
+          <span className="value">{String(summary.hits)}</span>
         </div>
         <div className="stat">
           <span className="label">Reputation</span>
@@ -145,6 +173,11 @@ export function GameOverDialog() {
           </div>
         )}
       </div>
+      {serving.length > 0 && (
+        <p className="muted">
+          Longest with you: {serving.join(', ')}.
+        </p>
+      )}
       <div className="actions">
         <button onClick={() => downloadJournal(state)}>Export run log</button>
         <button className="primary" onClick={startNewGame}>
@@ -167,8 +200,8 @@ export function OfferDialog() {
         <strong>{offer.bidder}</strong> wants to buy the studio for <strong>{formatMoney(offer.price)}</strong>.
       </p>
       <p className="muted">
-        Selling ends the run. If you say no, they will come back with a better offer
-        {state.exit.declined > 0 ? ` (you have turned down ${state.exit.declined})` : ''}, for as long as you stay in the garage. Once you move into an office, nobody will buy the studio any more.
+        Selling ends the run. If you say no, they will come back with a slightly better offer
+        {state.exit.declined > 0 ? ` (you have turned down ${state.exit.declined})` : ''}, but only for about {offerWindowLeft(state) ?? 0} more days: then buyers move on. Once you move into an office, nobody will buy the studio any more.
       </p>
       <div className="actions">
         <button onClick={() => store.declineBuyout()}>Not yet</button>

@@ -1,4 +1,4 @@
-import { CLIENTS, JOBS, type Job } from '@/lib/tycoon/data/clients'
+import { CLIENTS, ENTERPRISE_CLIENTS, JOBS, type Job } from '@/lib/tycoon/data/clients'
 import { formatMoney } from '@/lib/tycoon/format'
 import {
   CONTRACT_ABANDON_REPUTATION,
@@ -17,11 +17,25 @@ import {
   CONTRACT_PAY_PER_POINT,
   CONTRACT_REPUTATION,
   CONTRACT_REPUTATION_PAY,
+  ENTERPRISE_BOARD,
+  ENTERPRISE_DUE_SLACK,
+  ENTERPRISE_GAP_MAX_DAYS,
+  ENTERPRISE_GAP_MIN_DAYS,
+  ENTERPRISE_LIFETIME_DAYS,
+  ENTERPRISE_MAX_DAYS,
+  ENTERPRISE_MIN_DAYS,
+  ENTERPRISE_MIN_SIZE,
+  ENTERPRISE_PAY_DAYS,
+  ENTERPRISE_PAY_MULT,
+  ENTERPRISE_REPUTATION,
   CONTRACT_SLACK,
   CONTRACT_SLACK_DAYS,
   REPUTATION_MAX,
 } from './balance'
-import { resolveOffice, teamOf } from './offices'
+import { productInWork, resolveOffice, teamOf } from './offices'
+import { productRevenue } from './products'
+import { isResearched } from './unlocks'
+import { PROJECT_SIZE_IDS, type Product } from './types'
 import { pick, randInt, randRange } from './rng'
 import { isReady } from './scoring'
 import { DISCIPLINES, emptySkills, fail, OK, type ContractOffer, type GameState, type Office, type Result, type Skills } from './types'
@@ -78,6 +92,58 @@ function makeOffer(state: GameState): ContractOffer {
   }
 }
 
+/** The research that puts enterprise contracts on the board. */
+export const ENTERPRISE_RESEARCH = 'enterprise_sales'
+
+/** True for a job that a big client wants done to one of the studio's products. */
+export const isEnterprise = (offer: { productId?: number }): boolean => offer.productId !== undefined
+
+/** Products big enough to interest an enterprise client, and not already being worked on or promised to one. */
+export function enterpriseCandidates(state: GameState): Product[] {
+  const smallest = PROJECT_SIZE_IDS.indexOf(ENTERPRISE_MIN_SIZE)
+  return state.products.filter(
+    (p) =>
+      PROJECT_SIZE_IDS.indexOf(p.size) >= smallest &&
+      !productInWork(state, p.id) &&
+      !state.contracts.some((c) => c.productId === p.id),
+  )
+}
+
+/** A big client wants one of the studio's big products bent to its needs: sized for the best office, and paid by what the product earns. */
+function makeEnterpriseOffer(state: GameState, product: Product): ContractOffer {
+  const rate = bestRate(state)
+  const split = { design: 0.25, engineering: 0.55, qa: 0.2 }
+  const perDay = capacity(rate, { title: '', split })
+  const days = randRange(state, ENTERPRISE_MIN_DAYS, ENTERPRISE_MAX_DAYS)
+  const points = perDay * days * CONTRACT_LOAD
+  const target = emptySkills()
+  for (const d of DISCIPLINES) target[d] = Math.round(points * split[d])
+  const byWork = points * payPerPoint(state) * ENTERPRISE_PAY_MULT
+  const byProduct = productRevenue(product) * ENTERPRISE_PAY_DAYS
+  const pay = Math.round((Math.max(byWork, byProduct) * randRange(state, 0.9, 1.1)) / 500) * 500
+  return {
+    id: state.nextId++,
+    client: pick(state, ENTERPRISE_CLIENTS),
+    title: `a custom ${product.name}`,
+    target,
+    pay,
+    days: Math.ceil(days * ENTERPRISE_DUE_SLACK + CONTRACT_SLACK_DAYS),
+    expiresDay: state.day + ENTERPRISE_LIFETIME_DAYS,
+    productId: product.id,
+  }
+}
+
+/** Once a while, with Enterprise sales researched, a big client asks for one of the big products. */
+function enterpriseDay(state: GameState): void {
+  if (!isResearched(state, ENTERPRISE_RESEARCH)) return
+  if (state.day < (state.nextEnterpriseDay ?? 0)) return
+  const open = state.contracts.filter(isEnterprise).length
+  const candidates = enterpriseCandidates(state)
+  if (open >= ENTERPRISE_BOARD || candidates.length === 0) return
+  state.contracts.push(makeEnterpriseOffer(state, pick(state, candidates)))
+  state.nextEnterpriseDay = state.day + randInt(state, ENTERPRISE_GAP_MIN_DAYS, ENTERPRISE_GAP_MAX_DAYS)
+}
+
 /** Puts the opening jobs on the board. */
 export function refreshContracts(state: GameState): void {
   state.contracts = Array.from({ length: CONTRACT_OFFERS }, () => makeOffer(state))
@@ -86,8 +152,13 @@ export function refreshContracts(state: GameState): void {
 
 /** Once a day: jobs the client took elsewhere leave the board, and a new one turns up now and then while there is room. */
 export function contractsDay(state: GameState): void {
-  state.contracts = state.contracts.filter((c) => c.expiresDay === undefined || c.expiresDay >= state.day)
-  if (state.contracts.length >= CONTRACT_BOARD || state.day < (state.nextOfferDay ?? 0)) return
+  // An offer for a product that has since been sold or retired goes with it.
+  state.contracts = state.contracts.filter(
+    (c) => (c.expiresDay === undefined || c.expiresDay >= state.day) && (c.productId === undefined || state.products.some((p) => p.id === c.productId)),
+  )
+  enterpriseDay(state)
+  // Enterprise offers have a board of their own.
+  if (state.contracts.filter((c) => !isEnterprise(c)).length >= CONTRACT_BOARD || state.day < (state.nextOfferDay ?? 0)) return
   state.contracts.push(makeOffer(state))
   state.nextOfferDay = state.day + randInt(state, CONTRACT_NEW_MIN_DAYS, CONTRACT_NEW_MAX_DAYS)
 }
@@ -107,6 +178,9 @@ export function acceptContract(state: GameState, offerId: number, officeId?: num
   if (!offer) return fail('That job is gone')
   const blocker = contractBlocker(state, office)
   if (blocker) return fail(blocker)
+  const product = offer.productId === undefined ? undefined : state.products.find((p) => p.id === offer.productId)
+  if (offer.productId !== undefined && !product) return fail('That product is gone')
+  if (product && productInWork(state, product.id)) return fail('Another team is working on it')
 
   state.contracts = state.contracts.filter((c) => c.id !== offerId)
   const deposit = Math.round(offer.pay * CONTRACT_DEPOSIT)
@@ -115,9 +189,9 @@ export function acceptContract(state: GameState, offerId: number, officeId?: num
     id: state.nextId++,
     name: `${offer.title[0].toUpperCase()}${offer.title.slice(1)} for ${offer.client}`,
     kind: 'contract',
-    parentId: null,
-    productTypeId: 'web_app',
-    size: 'small',
+    parentId: product?.id ?? null,
+    productTypeId: product?.productTypeId ?? 'web_app',
+    size: product?.size ?? 'small',
     featureIds: [],
     target: { ...offer.target },
     progress: emptySkills(),
@@ -126,7 +200,7 @@ export function acceptContract(state: GameState, offerId: number, officeId?: num
     hype: 1,
     alphaOffered: true,
     bugRisk: 1,
-    contract: { client: offer.client, pay: offer.pay, dueDay: state.day + offer.days, deposit },
+    contract: { client: offer.client, pay: offer.pay, dueDay: state.day + offer.days, deposit, ...(product ? { productId: product.id } : {}) },
   }
   return OK
 }
@@ -170,11 +244,14 @@ export function contractDay(state: GameState, office: Office): void {
   const pay = contractBalance(state, terms)
   state.money += pay
   state.contractsDone += 1
-  if (state.day <= terms.dueDay) addReputation(state, CONTRACT_REPUTATION)
+  const product = terms.productId === undefined ? undefined : state.products.find((p) => p.id === terms.productId)
+  if (state.day <= terms.dueDay) addReputation(state, product ? ENTERPRISE_REPUTATION : CONTRACT_REPUTATION)
+  // The client's changes are a release of the product itself: its users come back to full interest.
+  if (product) product.updates.push({ day: state.day })
   office.project = null
   state.events.push({
     type: 'notice',
-    text: `Delivered to ${terms.client}${state.day > terms.dueDay ? ', late' : ''}: +${formatMoney(pay)}${terms.deposit ? ` on top of the ${formatMoney(terms.deposit)} deposit` : ''}.`,
+    text: `Delivered to ${terms.client}${state.day > terms.dueDay ? ', late' : ''}: +${formatMoney(pay)}${terms.deposit ? ` on top of the ${formatMoney(terms.deposit)} deposit` : ''}.${product ? ` ${product.name} is fresh again.` : ''}`,
     sound: 'ship',
   })
 }

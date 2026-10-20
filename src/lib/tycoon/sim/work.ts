@@ -59,7 +59,8 @@ export function estimateDays(state: GameState, target: Skills, office: Office = 
 
 /** What a project is about, for what its team learns and brings to it; client work has no subject. */
 export function subjectOf(project: Project): Subject | null {
-  if (project.kind === 'contract') return null
+  // Client work teaches nothing, except a client's changes to one of your own products.
+  if (project.kind === 'contract') return project.parentId === null ? null : { typeId: project.productTypeId, productId: project.parentId }
   return { typeId: project.productTypeId, productId: project.kind === 'update' ? project.parentId : project.id }
 }
 

@@ -52,6 +52,7 @@ function ClientWork({ office }: { office: Office }) {
           return (
             <div key={offer.id} className="contract-offer">
               <div>
+                {offer.productId !== undefined && <span className="tag good" title="A big client wants one of your products customised. Delivering it counts as a release of that product.">enterprise</span>}{' '}
                 <strong>
                   {offer.title[0].toUpperCase()}
                   {offer.title.slice(1)}

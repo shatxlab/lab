@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { PORTFOLIO_LIMIT, PROJECT_SIZES, SALE_MIN_INCOME, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS } from '@/lib/tycoon/sim/balance'
 import { inGarage } from '@/lib/tycoon/sim/offices'
+import { licenseBlocker, licenseIncome, LICENSING_RESEARCH } from '@/lib/tycoon/sim/licensing'
+import { isResearched } from '@/lib/tycoon/sim/unlocks'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
 import { autoPromoteUnlocked, growBlocker, promotionEffect, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
@@ -152,6 +154,23 @@ function ProductRow({ product }: { product: Product }) {
           >
             {outcome === 'sold' ? 'Sell it' : 'Retire it'}
           </button>
+        </div>
+      )}
+      {isResearched(state, LICENSING_RESEARCH) && product.size === 'flagship' && (
+        <div className="auto-promote muted">
+          {product.licensed ? (
+            <>
+              Licensed: <strong>+{formatMoney(licenseIncome(state, product))}</strong>/day while it is fresh and free of bugs.{' '}
+              <button onClick={() => store.setLicensed(product.id, false)}>End the licence</button>
+            </>
+          ) : (
+            <>
+              <button disabled={licenseBlocker(state, product) !== null} title={licenseBlocker(state, product) ?? undefined} onClick={() => store.setLicensed(product.id, true)}>
+                License to other companies
+              </button>{' '}
+              <small>{licenseBlocker(state, product) ?? 'A steady fee on top of your own users, for as long as you keep it in shape.'}</small>
+            </>
+          )}
         </div>
       )}
       {autoPromoteUnlocked(state) && (

@@ -172,7 +172,8 @@ function validProduct(v: unknown): boolean {
     v.updates.every((u) => isObj(u) && isNum(u.day)) &&
     isNum(v.boostUntil) &&
     isNum(v.boostUsers) &&
-    (v.autoPromote === undefined || v.autoPromote === null || TIERS.some((t) => t === v.autoPromote))
+    (v.autoPromote === undefined || v.autoPromote === null || TIERS.some((t) => t === v.autoPromote)) &&
+    (v.licensed === undefined || typeof v.licensed === 'boolean')
   )
 }
 
@@ -199,7 +200,8 @@ function validProject(v: unknown): boolean {
         typeof v.contract.client === 'string' &&
         isNum(v.contract.pay) &&
         isNum(v.contract.dueDay) &&
-        (v.contract.deposit === undefined || isNum(v.contract.deposit))))
+        (v.contract.deposit === undefined || isNum(v.contract.deposit)) &&
+        (v.contract.productId === undefined || isNum(v.contract.productId))))
   )
 }
 
@@ -246,7 +248,8 @@ function validOffer(v: unknown): boolean {
     isSkills(v.target) &&
     isNum(v.pay) &&
     isNum(v.days) &&
-    (v.expiresDay === undefined || isNum(v.expiresDay))
+    (v.expiresDay === undefined || isNum(v.expiresDay)) &&
+    (v.productId === undefined || isNum(v.productId))
   )
 }
 
@@ -361,6 +364,7 @@ function validState(v: unknown): v is GameState {
     v.contracts.every(validOffer) &&
     isNum(v.contractsDone) &&
     (v.nextOfferDay === undefined || isNum(v.nextOfferDay)) &&
+    (v.nextEnterpriseDay === undefined || isNum(v.nextEnterpriseDay)) &&
     Array.isArray(v.rivals) &&
     v.rivals.every(validRival) &&
     Array.isArray(v.rivalProducts) &&

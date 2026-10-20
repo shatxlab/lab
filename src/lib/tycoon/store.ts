@@ -7,6 +7,7 @@ import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
 import { acceptBuyout, declineBuyout, retireStudio } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
+import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { acquire } from '@/lib/tycoon/sim/rivals'
@@ -113,6 +114,8 @@ export interface Store {
   promote(productId: number, tier: Tier): Result
   /** Sets a product to promote itself at this tier, or turns that off (needs Marketing automation). */
   setAutoPromote(productId: number, tier: Tier | null): Result
+  /** Licenses a Flagship to other companies for a steady fee, or ends the licence. */
+  setLicensed(productId: number, licensed: boolean): Result
   /** Starts researching `id`; one thing at a time. */
   startResearch(id: string, target?: string): Result
   /** Picks choice `index` of the pending random event. */
@@ -369,6 +372,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     setAutoPromote(productId, tier) {
       return cue(changed(logged(() => decisions.setAutoPromote(state, productId, tier), () => setAutoPromote(state, productId, tier))), 'click')
+    },
+
+    setLicensed(productId, licensed) {
+      return cue(changed(logged(() => decisions.setLicensed(state, productId, licensed), () => setLicensed(state, productId, licensed))), 'click')
     },
 
     shipProject(campaign, officeId) {

@@ -1,6 +1,7 @@
 import { BANKRUPT_AFTER_DEBT_DAYS, DAYS_PER_MONTH } from './balance'
 import { statMultiplier } from './modifiers'
 import { monthlyRent } from './offices'
+import { licenseIncome } from './licensing'
 import { productRevenue } from './products'
 import type { GameState } from './types'
 
@@ -15,7 +16,7 @@ export function monthlyBurn(state: GameState): number {
 
 /** Revenue the current products bring in on the current day, after active modifiers. */
 export function dailyIncome(state: GameState): number {
-  const base = state.products.reduce((sum, p) => sum + productRevenue(p), 0)
+  const base = state.products.reduce((sum, p) => sum + productRevenue(p) + licenseIncome(state, p), 0)
   return base * statMultiplier(state, 'revenue') + state.acquiredIncome
 }
 
@@ -33,7 +34,7 @@ export function cashRunwayDays(state: GameState): number | null {
 export function revenueDay(state: GameState): void {
   const mult = statMultiplier(state, 'revenue')
   for (const product of state.products) {
-    const revenue = productRevenue(product) * mult
+    const revenue = (productRevenue(product) + licenseIncome(state, product)) * mult
     product.totalRevenue += revenue
     state.money += revenue
     state.lifetimeRevenue += revenue

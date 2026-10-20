@@ -444,6 +444,29 @@ export const CONTRACT_REPUTATION = 0.5
 /** Walking away from a job costs this much reputation. */
 export const CONTRACT_ABANDON_REPUTATION = 2
 
+// Enterprise contracts and licensing (Act 2): big clients want the studio's big products
+/** Products at least this big attract enterprise clients. */
+export const ENTERPRISE_MIN_SIZE = 'large' as const
+/** Enterprise offers on the board at once, and the days between new ones... */
+export const ENTERPRISE_BOARD = 2
+export const ENTERPRISE_GAP_MIN_DAYS = 50
+export const ENTERPRISE_GAP_MAX_DAYS = 90
+/** ...how long one stays on the board, how long the team has once it takes it, and how large it is, in days of the best office's work. */
+export const ENTERPRISE_LIFETIME_DAYS = 100
+export const ENTERPRISE_DUE_SLACK = 1.5
+export const ENTERPRISE_MIN_DAYS = 35
+export const ENTERPRISE_MAX_DAYS = 70
+/** It pays at least this many days of what the product earns, and this much more per point of work than ordinary jobs. */
+export const ENTERPRISE_PAY_DAYS = 40
+export const ENTERPRISE_PAY_MULT = 2.5
+export const ENTERPRISE_REPUTATION = 1.5
+/** Delivering it keeps the product fresh, as a maintenance release would. */
+export const ENTERPRISE_REFRESH = true
+/** A licensed Flagship pays this share of its own income on top, scaled by how well it is kept (interest and bugs)... */
+export const LICENSE_SHARE = 0.35
+/** ...and a studio can license this many. */
+export const LICENSE_LIMIT = 2
+
 // Bankruptcy
 export const BANKRUPT_AFTER_DEBT_DAYS = 14
 

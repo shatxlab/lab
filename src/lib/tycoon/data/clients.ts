@@ -43,3 +43,19 @@ export const JOBS: readonly Job[] = [
   { title: 'an API integration', split: { design: 0.05, engineering: 0.7, qa: 0.25 } },
   { title: 'an accessibility audit', split: { design: 0.4, engineering: 0.15, qa: 0.45 } },
 ]
+
+/** Big companies that hire a studio to bend one of its products to their needs (enterprise contracts). */
+export const ENTERPRISE_CLIENTS: readonly string[] = [
+  'Meridian Bank',
+  'Halcyon Logistics',
+  'Northgate Airlines',
+  'Redwood Insurance',
+  'Continental Retail',
+  'Vanguard Health',
+  'Ironbridge Energy',
+  'Sterling Media Group',
+  'Pacific Freight',
+  'Orion Telecom',
+  'Granite Holdings',
+  'Eurocity Transit',
+]

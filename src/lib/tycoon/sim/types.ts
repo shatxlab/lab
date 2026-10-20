@@ -143,6 +143,8 @@ export interface ContractTerms {
   dueDay: number
   /** What the client advanced when the job was taken; it comes off the final payment. Absent in older saves. */
   deposit?: number
+  /** An enterprise contract: the live product the client wants customised. Delivering it counts as a release of that product. */
+  productId?: number
 }
 
 /** A job a client is offering: build this for that much, in about that long. */
@@ -157,6 +159,8 @@ export interface ContractOffer {
   days: number
   /** The last day it is on the board; absent in older saves, where it does not run out. */
   expiresDay?: number
+  /** An enterprise contract: the live product the client wants customised. */
+  productId?: number
 }
 
 export interface ProductUpdate {
@@ -192,6 +196,8 @@ export interface Product {
   boostUsers: number
   /** Once Marketing automation is researched: promote this product by itself at this tier whenever the bank allows. */
   autoPromote?: Tier | null
+  /** A Flagship licensed to other companies (needs the Licensing programme): it pays a fee on top, for as long as it is kept in shape. */
+  licensed?: boolean
 }
 
 /** A bug-fixing job: a developer and a tester, from any office, working through a product's bugs together. */
@@ -378,6 +384,8 @@ export interface GameState {
   contracts: ContractOffer[]
   /** The day the next job may join the board; absent in older saves. */
   nextOfferDay?: number
+  /** The day the next enterprise contract may be offered; absent until Enterprise sales is researched. */
+  nextEnterpriseDay?: number
   /** Contracts delivered, ever. */
   contractsDone: number
   rivals: Rival[]

@@ -63,6 +63,11 @@ export const decisions = {
     return ['promote', `Promoted ${product?.name ?? 'a product'} (${tier})`, product ? { cost: promotionCost(product, tier), users: Math.round(product.users), effect: Math.round(promotionEffect(state, product) * 100) } : undefined]
   },
 
+  setLicensed(state: GameState, productId: number, licensed: boolean): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    return [licensed ? 'license.start' : 'license.end', `${licensed ? 'Licensed' : 'Ended the licence of'} ${product?.name ?? 'a product'}`, product ? { users: Math.round(product.users) } : undefined]
+  },
+
   setAutoPromote(state: GameState, productId: number, tier: Tier | null): Decision {
     const product = state.products.find((p) => p.id === productId)
     return ['promote.policy', `${product?.name ?? 'A product'}: automatic promotion ${tier ?? 'off'}`]

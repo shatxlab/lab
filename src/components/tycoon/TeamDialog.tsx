@@ -16,7 +16,8 @@ import {
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { getTrait } from '@/lib/tycoon/data/traits'
-import { needsLead, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
+import { needsLead, pmBlocker, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
+import { hasAnalyst, insightRate } from '@/lib/tycoon/sim/insight'
 import { hireCost, hiringOffice, payShare, salaryFor } from '@/lib/tycoon/sim/hiring'
 import {
   deskCount,
@@ -28,9 +29,10 @@ import {
   officeSpec,
   openOfficeBlocker,
   staffOf,
+  teamOfficeId,
 } from '@/lib/tycoon/sim/offices'
 import { outingBlocker, outingCost } from '@/lib/tycoon/sim/staff'
-import { DISCIPLINES, type Employee, type Result } from '@/lib/tycoon/sim/types'
+import { DISCIPLINES, isBuilder, type Employee, type Result } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { useGame, useOffice, useStore } from './context'
 import { formatMoney } from '@/lib/tycoon/format'
@@ -56,6 +58,15 @@ const SLOWER = Math.round((1 - NO_LEAD_SPEED) * 100)
 const FASTER = Math.round((LEAD_SPEED - 1) * 100)
 
 function Skills({ employee }: { employee: Employee }) {
+  if (!isBuilder(employee)) {
+    return (
+      <span className="skills">
+        <span title="Reading users and markets" style={{ color: DISCIPLINE_COLORS.design }}>
+          <small>Analysis</small> {Math.round(employee.analysis ?? 0)}
+        </span>
+      </span>
+    )
+  }
   return (
     <span className="skills">
       {DISCIPLINES.map((d) => (
@@ -194,6 +205,11 @@ export function TeamDialog() {
             Promote a Senior when they are ready.
           </p>
         )}
+        {hasAnalyst(state) && (
+          <p className="muted">
+            Insight <strong>{Math.floor(state.insight)}</strong> · +{insightRate(state).toFixed(1)} a day. Spend it on studying an audience when you plan a product.
+          </p>
+        )}
         {state.employees.length > 0 && (
           <div className="outing">
             <span>
@@ -214,11 +230,33 @@ export function TeamDialog() {
                 {promotionBlocker(state, employee) === null && (
                   <button
                     className="primary"
-                    title={`Raise to ${formatMoney(salaryFor(employee.skills, employee.trait, employee.level + 1, state.day, payShare(employee)))}/mo`}
+                    title={`Raise to ${formatMoney(salaryFor(employee.skills, employee.trait, employee.level + 1, state.day, payShare(employee), employee.analysis ?? 0))}/mo`}
                     onClick={() => report(store.promoteEmployee(employee.id))}
                   >
                     Promote
                   </button>
+                )}
+                {pmBlocker(state, employee) === null && (
+                  <button className="primary" title="They take over the direction of their office's products" onClick={() => report(store.becomePm(employee.id))}>
+                    Make product manager
+                  </button>
+                )}
+                {many && isBuilder(employee) && (
+                  <select
+                    aria-label={`Team for ${employee.name}`}
+                    title="Whose project they work on (a little slower away from their own office)"
+                    value={teamOfficeId(state, employee)}
+                    onChange={(event) => {
+                      const id = Number((event.target as HTMLSelectElement).value)
+                      report(store.assignTeam(employee.id, id === employee.officeId ? null : id))
+                    }}
+                  >
+                    {state.offices.map((office) => (
+                      <option key={office.id} value={office.id}>
+                        Works on {officeName(state, office)}
+                      </option>
+                    ))}
+                  </select>
                 )}
                 {many && (
                   <select

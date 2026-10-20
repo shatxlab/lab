@@ -1,4 +1,5 @@
 import {
+  ANALYST_MAX_LEVEL,
   DAYS_PER_MONTH,
   LEAD_FREE_TEAM,
   LEAD_LEVEL,
@@ -10,24 +11,37 @@ import {
   NO_LEAD_SPEED,
   OVERLOOKED_MORALE,
   PROMOTION_MORALE,
+  PM_AFTER_DAYS,
+  PM_MIN_ANALYSIS,
   PROMOTION_PATIENCE_DAYS,
 } from './balance'
-import { salaryOf } from './hiring'
+import { PM_RESEARCH, salaryOf } from './hiring'
 import { adjustMorale } from './morale'
 import { staffOf } from './offices'
+import { isResearched } from './unlocks'
 import { rand } from './rng'
-import { fail, OK, type Discipline, type Employee, type GameState, type Office, type Result, type Role } from './types'
+import { fail, isBuilder, OK, type BuilderRole, type Discipline, type Employee, type GameState, type Office, type Result } from './types'
 
-const PRIMARY: Record<Role, Discipline> = { designer: 'design', developer: 'engineering', tester: 'qa' }
+const PRIMARY: Record<BuilderRole, Discipline> = { designer: 'design', developer: 'engineering', tester: 'qa' }
 
-/** Skill in the person's own discipline. */
+/** Skill in the person's own line of work: a discipline for a builder, analysis for an analyst or product manager. */
 export function primarySkill(employee: Employee): number {
-  return employee.skills[PRIMARY[employee.role]]
+  return isBuilder(employee) ? employee.skills[PRIMARY[employee.role as BuilderRole]] : (employee.analysis ?? 0)
 }
 
-/** "Senior developer", "Lead tester"... */
+/** What the person's main skill is called. */
+export function primarySkillName(employee: Employee): string {
+  return isBuilder(employee) ? PRIMARY[employee.role as BuilderRole] : 'analysis'
+}
+
+/** "developer", "analyst", "product manager". */
+export function roleName(employee: Employee): string {
+  return employee.role === 'pm' ? 'product manager' : employee.role
+}
+
+/** "Senior developer", "Lead tester", "Mid product manager"... */
 export function title(employee: Employee): string {
-  return `${LEVELS[employee.level].name} ${employee.role}`
+  return `${LEVELS[employee.level].name} ${roleName(employee)}`
 }
 
 /** The level someone with this primary skill is hired at, up to `max`. */
@@ -39,9 +53,10 @@ export function levelForSkill(skill: number, max: number): number {
 
 /** Why this person can't be promoted now, or null when they can. */
 export function promotionBlocker(state: GameState, employee: Employee): string | null {
+  if (employee.role === 'analyst' && employee.level >= ANALYST_MAX_LEVEL) return 'A senior analyst can become a product manager'
   const next = LEVELS[employee.level + 1]
   if (!next) return 'Already a Lead'
-  if (primarySkill(employee) < next.skill) return `Needs ${next.skill} ${PRIMARY[employee.role]} skill`
+  if (primarySkill(employee) < next.skill) return `Needs ${next.skill} ${primarySkillName(employee)} skill`
   const wait = next.days - (state.day - employee.levelDay)
   return wait > 0 ? `Ready in ${wait} day${wait === 1 ? '' : 's'}` : null
 }
@@ -61,20 +76,58 @@ export function promote(state: GameState, employeeId: number): Result {
   return OK
 }
 
-/** The office's Lead, if it has one. */
+/** The office's Lead, if it has one: a builder at the top level. */
 export function leadOf(state: GameState, office: Office): Employee | undefined {
-  return staffOf(state, office).find((e) => e.level >= LEAD_LEVEL)
+  return staffOf(state, office).find((e) => isBuilder(e) && e.level >= LEAD_LEVEL)
+}
+
+/** Builders who sit in this office, the people a Lead coordinates. */
+function buildersIn(state: GameState, office: Office): number {
+  return staffOf(state, office).filter(isBuilder).length
+}
+
+/** The office's product manager, if it has one. */
+export function pmOf(state: GameState, office: Office): Employee | undefined {
+  return staffOf(state, office).find((e) => e.role === 'pm')
+}
+
+/** Why this analyst can't become a product manager now, or null when they can. */
+export function pmBlocker(state: GameState, employee: Employee): string | null {
+  if (employee.role !== 'analyst') return 'Only an analyst can become a product manager'
+  if (!isResearched(state, PM_RESEARCH)) return 'Research Product management first'
+  if (employee.level < ANALYST_MAX_LEVEL) return 'They need to be a senior analyst first'
+  if ((employee.analysis ?? 0) < PM_MIN_ANALYSIS) return `Needs ${PM_MIN_ANALYSIS} analysis skill`
+  const wait = PM_AFTER_DAYS - (state.day - employee.levelDay)
+  if (wait > 0) return `Ready in ${wait} day${wait === 1 ? '' : 's'}`
+  const office = staffOf(state, state.offices.find((o) => o.id === employee.officeId) ?? state.offices[0])
+  return office.some((e) => e.role === 'pm') ? 'Their office already has a product manager' : null
+}
+
+/** A senior analyst takes over the direction of their office's products: a product manager, starting at Mid level. */
+export function becomePm(state: GameState, employeeId: number): Result {
+  const employee = state.employees.find((e) => e.id === employeeId)
+  if (!employee) return fail('Employee not found')
+  const blocker = pmBlocker(state, employee)
+  if (blocker) return fail(blocker)
+  employee.role = 'pm'
+  employee.level = 1
+  employee.levelDay = state.day
+  employee.readySince = null
+  employee.salary = salaryOf(employee, state.day)
+  adjustMorale(state, PROMOTION_MORALE, employee.id)
+  state.events.push({ type: 'notice', text: `${employee.name} is now the product manager.`, sound: 'milestone' })
+  return OK
 }
 
 /** Output multiplier for a whole office: a Lead speeds it up; a big team without one gets in its own way. */
 export function teamSpeed(state: GameState, office: Office): number {
   if (leadOf(state, office)) return LEAD_SPEED
-  return staffOf(state, office).length > LEAD_FREE_TEAM ? NO_LEAD_SPEED : 1
+  return buildersIn(state, office) > LEAD_FREE_TEAM ? NO_LEAD_SPEED : 1
 }
 
 /** True when an office is big enough to need a Lead and has none. */
 export function needsLead(state: GameState, office: Office): boolean {
-  return staffOf(state, office).length > LEAD_FREE_TEAM && !leadOf(state, office)
+  return buildersIn(state, office) > LEAD_FREE_TEAM && !leadOf(state, office)
 }
 
 /** How a person's career moves their morale: a Lead in their office helps; being passed over for too long hurts. */

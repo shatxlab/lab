@@ -279,6 +279,31 @@ export const KNOWLEDGE_TYPE_HALF = 360
 export const KNOWLEDGE_PRODUCT_MAX = 0.15
 export const KNOWLEDGE_PRODUCT_HALF = 200
 
+// Teams: people can work on another office's project, a little less well
+/** Output of someone working on a project run from an office other than their own. */
+export const REMOTE_SPEED = 0.9
+
+// Analysts and product managers
+/** Insight an analyst gathers a day, per point of analysis skill (a product manager gathers a share of that). */
+export const INSIGHT_PER_SKILL = 0.04
+export const PM_INSIGHT_SHARE = 0.5
+/** Insight a survey of one audience costs: afterwards its tastes show in the feature list. */
+export const SURVEY_COST = 40
+/** Analysis gained a day by working, scaled down toward 100. */
+export const ANALYSIS_GAIN = 0.012
+/** A Senior analyst can become a product manager with this much analysis, after this many days as a Senior. */
+export const PM_MIN_ANALYSIS = 70
+export const PM_AFTER_DAYS = 150
+/** The highest level an analyst reaches before becoming a product manager (Senior). */
+export const ANALYST_MAX_LEVEL = 2
+/** A product manager steers their office's products by level (Junior..Lead): hit chance and reach are multiplied by 1 plus these. */
+export const PM_HIT_BONUS: readonly number[] = [0, 0.08, 0.15, 0.25]
+export const PM_REACH_BONUS: readonly number[] = [0, 0.03, 0.06, 0.1]
+/** Feedback on a launch arrives over time, unless there is an analyst to read it: what they loved, shrugged at, wished for. */
+export const FEEDBACK_LOVED_DAYS = 20
+export const FEEDBACK_SHRUGGED_DAYS = 60
+export const FEEDBACK_MISSED_DAYS = 120
+
 // Staff: morale, training, outings
 /** Where morale settles for a content team that isn't shipping anything special. */
 export const MORALE_BASE = 68

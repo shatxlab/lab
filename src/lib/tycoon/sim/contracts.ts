@@ -21,7 +21,7 @@ import {
   CONTRACT_SLACK_DAYS,
   REPUTATION_MAX,
 } from './balance'
-import { resolveOffice, staffOf } from './offices'
+import { resolveOffice, teamOf } from './offices'
 import { pick, randInt, randRange } from './rng'
 import { isReady } from './scoring'
 import { DISCIPLINES, emptySkills, fail, OK, type ContractOffer, type GameState, type Office, type Result, type Skills } from './types'
@@ -95,7 +95,7 @@ export function contractsDay(state: GameState): void {
 /** Why `office` can't take this job now, or null when it can. */
 export function contractBlocker(state: GameState, office: Office): string | null {
   if (office.project) return 'A project is in progress'
-  return staffOf(state, office).length === 0 ? 'Hire someone first' : null
+  return teamOf(state, office).length === 0 ? 'Hire someone first' : null
 }
 
 /** Takes a job on in an office (the first by default). It pays when every bar is full. */

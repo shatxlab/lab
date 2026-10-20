@@ -112,7 +112,8 @@ export const workstationFor = (desk: number): WorkstationKind => DESK_PATTERN[de
 
 /** Everything on the desk of someone in `role`; a desk nobody has worked at yet gets the one computer of its pattern. */
 export function workstationsFor(role: Role | undefined, desk: number): readonly WorkstationKind[] {
-  if (role === 'developer') return ['laptop']
+  // Analysts and product managers work on a laptop, like the developers; there is no art of their own.
+  if (role === 'developer' || role === 'analyst' || role === 'pm') return ['laptop']
   if (role === 'designer') return ['pc']
   if (role === 'tester') return ['pc', 'laptopClosed']
   return [workstationFor(desk)]

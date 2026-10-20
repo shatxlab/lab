@@ -8,7 +8,7 @@ import { STAGES } from '@/lib/tycoon/data/stages'
 import { LEVELS, OFFICE_KINDS, START_MONEY } from './balance'
 import { refreshContracts } from './contracts'
 import { createRivals, rivalsArrive } from './rivals'
-import { generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
+import { ALL_ROLES, generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
 import { sampleNow } from './history'
 import { initialMarket } from './market'
 import { DISCIPLINES, PROJECT_SIZE_IDS, STATS, TIERS, type GameState } from './types'
@@ -46,6 +46,8 @@ export function createInitialState(seed: number): GameState {
     onCall: null,
     retired: [],
     bugsFixed: 0,
+    insight: 0,
+    surveyed: [],
     launchesSinceHit: 0,
     signatureId: null,
     debtDays: 0,
@@ -126,7 +128,9 @@ function validEmployee(v: unknown): boolean {
     isObj(v) &&
     isNum(v.id) &&
     typeof v.name === 'string' &&
-    ROLES.some((r) => r === v.role) &&
+    ALL_ROLES.some((r) => r === v.role) &&
+    (v.analysis === undefined || isNum(v.analysis)) &&
+    (v.teamId === undefined || isNum(v.teamId)) &&
     isSkills(v.skills) &&
     isNum(v.salary) &&
     isKnownTrait(v.trait) &&
@@ -306,6 +310,9 @@ function validState(v: unknown): v is GameState {
     isNum(v.lifetimeRevenue) &&
     isNum(v.shippedCount) &&
     isNum(v.bugsFixed) &&
+    isNum(v.insight) &&
+    Array.isArray(v.surveyed) &&
+    v.surveyed.every((id) => typeof id === 'string') &&
     isNum(v.launchesSinceHit) &&
     (v.signatureId === null || isNum(v.signatureId)) &&
     isNum(v.debtDays) &&
@@ -412,6 +419,8 @@ function dropRemovedContent(raw: unknown): unknown {
   if (!isObj(raw)) return raw
   const upgraded: Obj = { ...raw }
   upgraded.journal = Array.isArray(raw.journal) ? raw.journal : []
+  upgraded.insight = isNum(raw.insight) ? raw.insight : 0
+  upgraded.surveyed = Array.isArray(raw.surveyed) ? raw.surveyed : []
   upgraded.lastNewProductDay = isNum(raw.lastNewProductDay) ? raw.lastNewProductDay : -10000
   upgraded.ending = isObj(raw.ending) ? { worth: 0, ...raw.ending } : null
   const exit = isObj(raw.exit) ? raw.exit : {}

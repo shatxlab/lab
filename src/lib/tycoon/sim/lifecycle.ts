@@ -15,10 +15,11 @@ import {
   UPDATE_MIN_AGE_DAYS,
   type MarketingOffer,
 } from './balance'
+import { officeRunning, pmReachFactor } from './direction'
 import { monthlyBurn } from './economy'
 import { logEntry } from './journal'
 import { marketDemand } from './market'
-import { activeProjects, inGarage, productInWork, staffOf } from './offices'
+import { activeProjects, inGarage, productInWork, teamOf } from './offices'
 import { interest, lastReleaseDay, revenueForUsers, targetUsers } from './products'
 import { computeReach } from './scoring'
 import { sizeLock } from './unlocks'
@@ -30,7 +31,7 @@ const price = (amount: number, floor: number) => Math.max(floor, Math.round(amou
 /** Why `office` can't take on work on this product right now (an update or a fix), or null when it can. */
 export function productWorkBlocker(state: GameState, office: Office, product: Product): string | null {
   if (office.project) return 'A project is in progress'
-  if (staffOf(state, office).length === 0) return 'Hire someone first'
+  if (teamOf(state, office).length === 0) return 'Hire someone first'
   return productInWork(state, product.id) ? 'Another team is working on it' : null
 }
 
@@ -86,7 +87,7 @@ export function promoteProduct(state: GameState, productId: number, tier: Tier):
  * priced from this, so the price the player sees is the price they pay.
  */
 export function estimateReach(state: GameState, project: Project, quality: number): number {
-  return computeReach(project, quality, state.reputation, marketDemand(state, project.productTypeId))
+  return computeReach(project, quality, state.reputation, marketDemand(state, project.productTypeId)) * pmReachFactor(state, officeRunning(state, project))
 }
 
 /** A launch campaign is priced from what the product will earn per day once its users have arrived. */

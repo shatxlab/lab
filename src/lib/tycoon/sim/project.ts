@@ -31,10 +31,11 @@ import {
   WORK_SCALE,
 } from './balance'
 import { monthlyBurn } from './economy'
+import { officeRunning, pmHitFactor, pmReachFactor } from './direction'
 import { campaignCost, growBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
-import { inGarage, resolveOffice, staffOf } from './offices'
+import { inGarage, resolveOffice, teamOf } from './offices'
 import { bugProneness, releaseBugs } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
@@ -128,7 +129,7 @@ export function startProject(
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
   if (office.project) return fail('A project is already in progress')
-  if (staffOf(state, office).length === 0) return fail('Hire someone first')
+  if (teamOf(state, office).length === 0) return fail('Hire someone first')
   const type = PRODUCT_TYPES.find((t) => t.id === productTypeId)
   if (!type) return fail('Unknown product type')
   const typeLock = productTypeLock(state, type)
@@ -297,6 +298,8 @@ export interface HitBreakdown {
   buzz: number
   /** How well the features suit the audience: a little up when they love them, down when they do not care. */
   audience: number
+  /** A product manager in the office steers the product toward what people want. */
+  pm: number
   /** True when the chance was cut down to the highest it can be. */
   capped: boolean
 }
@@ -312,8 +315,9 @@ export function hitBreakdown(state: GameState, project: Project, quality: number
   const market = marketDemand(state, project.productTypeId)
   const buzz = project.hype * (campaign ? HIT_CAMPAIGN_BOOST[campaign] : 1)
   const audience = Math.min(HIT_AUDIENCE_MAX, Math.max(HIT_AUDIENCE_MIN, audienceFit(project.productTypeId, project.audienceId, project.featureIds)))
-  const raw = quality < HIT_MIN_QUALITY ? 0 : base * qualityFactor * market * buzz * audience
-  return { chance: Math.min(HIT_MAX_CHANCE, raw), base, misses, quality: qualityFactor, market, buzz, audience, capped: raw > HIT_MAX_CHANCE }
+  const pm = pmHitFactor(state, officeRunning(state, project))
+  const raw = quality < HIT_MIN_QUALITY ? 0 : base * qualityFactor * market * buzz * audience * pm
+  return { chance: Math.min(HIT_MAX_CHANCE, raw), base, misses, quality: qualityFactor, market, buzz, audience, pm, capped: raw > HIT_MAX_CHANCE }
 }
 
 export function hitChance(state: GameState, project: Project, quality: number, campaign?: Tier): number {
@@ -338,7 +342,7 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
   const cost = campaign ? campaignCost(state, project, quality, campaign) : 0
   if (campaign && cost > state.money) return fail('Not enough money for that campaign')
 
-  let reach = computeReach(project, quality, state.reputation, launchDemand(state, project.productTypeId))
+  let reach = computeReach(project, quality, state.reputation, launchDemand(state, project.productTypeId)) * pmReachFactor(state, office)
   const bugs = releaseBugs(project)
   const chance = hitChance(state, project, quality, campaign)
   const hit = chance > 0 && rand(state) < chance
@@ -386,7 +390,7 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   const bugs = releaseBugs(project) * bugProneness(product.quality)
   product.reach = reachAfterUpdate(product, project, quality)
   if (project.grows) {
-    product.reach *= PROJECT_SIZES[project.grows].reach / PROJECT_SIZES[product.size].reach
+    product.reach *= (PROJECT_SIZES[project.grows].reach / PROJECT_SIZES[product.size].reach) * pmReachFactor(state, office)
     state.events.push({ type: 'notice', text: `${product.name} grew into a ${PROJECT_SIZES[project.grows].name} product.`, sound: 'milestone' })
     product.size = project.grows
     // Growing a product is a second launch: it gets its own roll for a breakout.

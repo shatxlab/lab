@@ -111,6 +111,7 @@ export function ShipDialog({ officeId }: { officeId: number }) {
                   Audience fit: {hit.audience > 1.05 ? 'they will like these features' : hit.audience < 0.95 ? 'they will shrug at these features' : 'neither here nor there'} {factorLabel(hit.audience)}
                 </li>
               )}
+              {hit.pm > 1 && <li className="good">Product manager steering it {factorLabel(hit.pm)}</li>}
               <li className={hit.buzz > 1 ? 'good' : ''}>
                 Buzz: {campaign ? `${TIER_NAME[campaign]} campaign` : 'no campaign'} {factorLabel(hit.buzz)}
               </li>

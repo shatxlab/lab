@@ -1,13 +1,14 @@
 import { signal, type Signal } from './signals'
 import { silentSfx, type SfxPlayer } from '@/lib/tycoon/audio'
-import { promote } from '@/lib/tycoon/sim/careers'
+import { becomePm, promote } from '@/lib/tycoon/sim/careers'
+import { surveyAudience } from '@/lib/tycoon/sim/insight'
 import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
 import { acceptBuyout, declineBuyout, retireStudio } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
-import { getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
+import { assignTeam, getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
 import { shipProject, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
@@ -130,6 +131,12 @@ export interface Store {
   openOffice(): Result
   /** Moves someone to another office's team. */
   transfer(employeeId: number, officeId: number): Result
+  /** Puts someone on the team of another office's project, or back on their own office's with `null`. */
+  assignTeam(employeeId: number, officeId: number | null): Result
+  /** Makes a senior analyst the product manager of their office. */
+  becomePm(employeeId: number): Result
+  /** Spends insight to learn what an audience likes. */
+  survey(audienceId: string): Result
   /** Buys a rival studio and its products. */
   acquire(rivalId: number): Result
   /** Sells the studio to the company that made an offer: the run ends. */
@@ -448,6 +455,23 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     transfer(employeeId, officeId) {
       return changed(logged(() => decisions.transfer(state, employeeId, officeId), () => transfer(state, employeeId, officeId)))
+    },
+
+    assignTeam(employeeId, officeId) {
+      return changed(logged(() => decisions.assignTeam(state, employeeId, officeId), () => assignTeam(state, employeeId, officeId)))
+    },
+
+    becomePm(employeeId) {
+      const result = logged(() => decisions.becomePm(state, employeeId), () => becomePm(state, employeeId))
+      if (!result.ok) return result
+      handleEvents(drainLogged())
+      bump()
+      sfx.play('milestone')
+      return result
+    },
+
+    survey(audienceId) {
+      return cue(changed(logged(() => decisions.survey(state, audienceId), () => surveyAudience(state, audienceId))), 'click')
     },
 
     acceptBuyout() {

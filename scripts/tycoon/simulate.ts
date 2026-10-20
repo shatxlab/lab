@@ -29,7 +29,7 @@ import { createInitialState } from '../../src/lib/tycoon/sim/state.ts'
 import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
 import { featureLock, sizeLock } from '../../src/lib/tycoon/sim/unlocks.ts'
 import { estimateDays } from '../../src/lib/tycoon/sim/work.ts'
-import { DISCIPLINES, PROJECT_SIZE_IDS, type GameState, type Office, type ProjectSize, type Tier } from '../../src/lib/tycoon/sim/types.ts'
+import { DISCIPLINES, isBuilder, PROJECT_SIZE_IDS, type BuilderRole, type GameState, type Office, type ProjectSize, type Tier } from '../../src/lib/tycoon/sim/types.ts'
 
 interface Policy {
   name: string
@@ -266,7 +266,7 @@ function botStep(state: GameState, policy: Policy, firstHit: { day: number | nul
   for (const office of state.offices) {
     if (freeDesks(state, office) <= 0) continue
     const weakest = officeWeakness(state, office)
-    const pick = state.candidates.find((c) => ROLE_DISCIPLINE[c.role] === weakest)
+    const pick = state.candidates.find((c) => isBuilder(c) && ROLE_DISCIPLINE[c.role as BuilderRole] === weakest)
     if (pick && state.money > hireCost(pick) + reserve) hire(state, pick.id, office.id)
   }
 }

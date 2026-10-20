@@ -1,6 +1,6 @@
 import { MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, type OfficeSpec } from './balance'
 import { adjustMorale } from './morale'
-import { fail, OK, type Employee, type GameState, type Office, type Project, type Result } from './types'
+import { fail, isBuilder, OK, type Employee, type GameState, type Office, type Project, type Result } from './types'
 
 /** Journey stage at which the garage can be left behind, and at which more offices can open (indexes into STAGES). */
 export const MOVE_OUT_STAGE = 1
@@ -26,9 +26,19 @@ export function resolveOffice(state: GameState, id?: number): Office | undefined
   return id === undefined ? state.offices[0] : getOffice(state, id)
 }
 
-/** The people who work in this office. */
+/** The people who sit in this office. */
 export function staffOf(state: GameState, office: Office): Employee[] {
   return state.employees.filter((e) => e.officeId === office.id)
+}
+
+/** The office whose project this person works on: the one they sit in, unless they were put on another team. */
+export function teamOfficeId(state: GameState, employee: Employee): number {
+  return employee.teamId !== undefined && getOffice(state, employee.teamId) ? employee.teamId : employee.officeId
+}
+
+/** The builders on this office's team, wherever they sit; analysts and product managers do no project work. */
+export function teamOf(state: GameState, office: Office): Employee[] {
+  return state.employees.filter((e) => isBuilder(e) && teamOfficeId(state, e) === office.id)
 }
 
 /** Everyone who is off fixing bugs right now, whatever office they sit in. */
@@ -41,10 +51,24 @@ export function fixingIds(state: GameState): Set<number> {
   return ids
 }
 
-/** The people in this office who work on its project: those not away on a bug-fixing job. */
+/** The people on this office's team who work on its project: those not away on a bug-fixing job. */
 export function workersOf(state: GameState, office: Office): Employee[] {
   const away = fixingIds(state)
-  return staffOf(state, office).filter((e) => !away.has(e.id))
+  return teamOf(state, office).filter((e) => !away.has(e.id))
+}
+
+/** Puts someone on the team of another office's project (or back on their own office's with `null`). They keep their desk. */
+export function assignTeam(state: GameState, employeeId: number, officeId: number | null): Result {
+  const employee = state.employees.find((e) => e.id === employeeId)
+  if (!employee) return fail('Employee not found')
+  if (!isBuilder(employee)) return fail('They do not work on projects')
+  if (officeId === null || officeId === employee.officeId) {
+    delete employee.teamId
+    return OK
+  }
+  if (!getOffice(state, officeId)) return fail('Unknown office')
+  employee.teamId = officeId
+  return OK
 }
 
 /** Desks across every office. */
@@ -132,5 +156,7 @@ export function transfer(state: GameState, employeeId: number, officeId: number)
   if (employee.officeId === officeId) return fail('Already there')
   if (freeDesks(state, office) <= 0) return fail('No free desk there')
   employee.officeId = officeId
+  // A move is a fresh start: they join the team of the office they moved to.
+  delete employee.teamId
   return OK
 }

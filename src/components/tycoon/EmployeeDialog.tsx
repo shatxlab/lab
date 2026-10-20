@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { getTrait } from '@/lib/tycoon/data/traits'
-import { LEVELS, MORALE_UNHAPPY, PROMOTION_PATIENCE_DAYS, TRAINING_DAYS } from '@/lib/tycoon/sim/balance'
-import { promotionBlocker, title } from '@/lib/tycoon/sim/careers'
+import { ANALYST_MAX_LEVEL, LEVELS, MORALE_UNHAPPY, PROMOTION_PATIENCE_DAYS, TRAINING_DAYS } from '@/lib/tycoon/sim/balance'
+import { pmBlocker, primarySkillName, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
+import { insightOf } from '@/lib/tycoon/sim/insight'
 import { salaryFor } from '@/lib/tycoon/sim/hiring'
 import { moraleSpeed } from '@/lib/tycoon/sim/morale'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { KNOWLEDGE_PRODUCT_MAX, KNOWLEDGE_TYPE_MAX } from '@/lib/tycoon/sim/balance'
 import { knowledgeSpeed, topExpertise } from '@/lib/tycoon/sim/knowledge'
 import { moraleTarget, trainingBlocker, trainingCost, trainingGain } from '@/lib/tycoon/sim/staff'
-import { DISCIPLINES } from '@/lib/tycoon/sim/types'
+import { DISCIPLINES, isBuilder } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { useGame, useStore } from './context'
 import { formatAge, formatMoney } from '@/lib/tycoon/format'
@@ -38,7 +39,8 @@ export function EmployeeDialog({ id }: { id: number }) {
   const trait = getTrait(person.trait)
   const target = Math.round(moraleTarget(state, person))
   const daysLeft = person.training ? Math.max(0, person.training.finishDay - state.day) : null
-  const next = LEVELS[person.level + 1]
+  const topAnalyst = person.role === 'analyst' && person.level >= ANALYST_MAX_LEVEL
+  const next = topAnalyst ? undefined : LEVELS[person.level + 1]
   const promotion = promotionBlocker(state, person)
   const waiting = person.readySince === null ? 0 : state.day - person.readySince
 
@@ -75,7 +77,7 @@ export function EmployeeDialog({ id }: { id: number }) {
               <span className={waiting > PROMOTION_PATIENCE_DAYS ? 'bad' : ''}>
                 Ready to be a {next.name.toLowerCase()}
                 {waiting > PROMOTION_PATIENCE_DAYS ? ', and unhappy to be kept waiting' : ''}. New salary{' '}
-                {formatMoney(salaryFor(person.skills, person.trait, person.level + 1, state.day))}/mo.
+                {formatMoney(salaryFor(person.skills, person.trait, person.level + 1, state.day, 1, person.analysis ?? 0))}/mo.
               </span>
               <button className="primary" onClick={() => setMessage(store.promoteEmployee(person.id).ok ? '' : 'Could not promote them.')}>
                 Promote
@@ -87,8 +89,23 @@ export function EmployeeDialog({ id }: { id: number }) {
             </p>
           )
         ) : (
-          <p className="muted">A Lead: their office works faster and happier for having them.</p>
+          <p className="muted">
+            {topAnalyst
+              ? 'A senior analyst: the next step is product manager.'
+              : person.role === 'pm'
+                ? 'A Lead product manager: the products of their office reach the furthest and break out the most.'
+                : 'A Lead: their office works faster and happier for having them.'}
+          </p>
         )}
+        {person.role === 'analyst' && pmBlocker(state, person) === null && (
+          <div className="upgrade">
+            <span>Ready to take over the direction of their office's products as a product manager (back at Mid level).</span>
+            <button className="primary" onClick={() => setMessage(store.becomePm(person.id).ok ? '' : 'Could not make them a product manager.')}>
+              Make product manager
+            </button>
+          </div>
+        )}
+        {topAnalyst && pmBlocker(state, person) !== null && <p className="muted">Product manager: {pmBlocker(state, person)}.</p>}
       </section>
 
       <section className="section">
@@ -127,6 +144,26 @@ export function EmployeeDialog({ id }: { id: number }) {
         )}
       </section>
 
+      {!isBuilder(person) && (
+        <section className="section">
+          <div className="section-head">
+            <h3>Analysis</h3>
+            <span className="muted">
+              {person.role === 'pm' ? 'Gathers some insight between steering the products' : 'Gathers insight about users'}: +{insightOf(person).toFixed(1)} a day
+            </span>
+          </div>
+          <div className="skill-row" style={cssVars({ '--c': DISCIPLINE_COLORS.design })}>
+            <span className="skill-name">{primarySkillName(person)}</span>
+            <div className="track">
+              <div className="fill" style={{ width: `${person.analysis ?? 0}%` }} />
+            </div>
+            <strong className="skill-value">{Math.round(person.analysis ?? 0)}</strong>
+          </div>
+          <p className="muted">It grows a little with every day of work. They do no project work.</p>
+        </section>
+      )}
+
+      {isBuilder(person) && (
       <section className="section">
         <div className="section-head">
           <h3>Skills</h3>
@@ -153,6 +190,7 @@ export function EmployeeDialog({ id }: { id: number }) {
           )
         })}
       </section>
+      )}
 
       {message && <p className="bad">{message}</p>}
       <div className="actions">

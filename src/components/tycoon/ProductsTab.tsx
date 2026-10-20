@@ -6,7 +6,7 @@ import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
 import { autoPromoteUnlocked, growBlocker, promotionEffect, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { audienceFor } from '@/lib/tycoon/data/audiences'
-import { audienceFeedback } from '@/lib/tycoon/sim/scoring'
+import { feedbackFor } from '@/lib/tycoon/sim/insight'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, targetUsers } from '@/lib/tycoon/sim/products'
 import { TIERS, type GameState, type Product, type Tier } from '@/lib/tycoon/sim/types'
@@ -51,7 +51,7 @@ function ProductRow({ product }: { product: Product }) {
   const { arrow, tone } = trend(state, product)
   const missing = missingFeatures(product, state.day)
   const audience = audienceFor(product.productTypeId, product.audienceId)
-  const feedback = audienceFeedback(product.productTypeId, product.audienceId, product.featureIds)
+  const feedback = feedbackFor(state, product)
 
   return (
     <div className="product">
@@ -93,7 +93,7 @@ function ProductRow({ product }: { product: Product }) {
           </span>
         )}
       </div>
-      {audience.name !== 'Everyone' && (feedback.loved.length > 0 || feedback.shrugged.length > 0 || feedback.missed.length > 0) && (
+      {audience.name !== 'Everyone' && (feedback.loved.length > 0 || feedback.shrugged.length > 0 || feedback.missed.length > 0 || feedback.waiting) && (
         <div className="product-feedback">
           <small className="muted" title={`What ${audience.name.toLowerCase()} say about ${product.name}`}>
             {feedback.loved.length > 0 && (
@@ -101,6 +101,7 @@ function ProductRow({ product }: { product: Product }) {
             )}
             {feedback.shrugged.length > 0 && <span>Shrugged at: {feedback.shrugged.join(', ')}. </span>}
             {feedback.missed.length > 0 && <span className="warn">Wished for: {feedback.missed.join(', ')}.</span>}
+            {feedback.waiting && <span className="muted"> More feedback is still coming in.</span>}
           </small>
         </div>
       )}

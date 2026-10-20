@@ -17,7 +17,10 @@ export type Decision = [kind: string, text: string, data?: Record<string, string
 
 const featureNames = (ids: readonly string[]) => ids.map((id) => getFeature(id).name)
 const person = (e: Employee) => `${e.name} (${title(e)})`
-const skillsOf = (e: Employee) => `design ${Math.round(e.skills.design)}, engineering ${Math.round(e.skills.engineering)}, qa ${Math.round(e.skills.qa)}`
+const skillsOf = (e: Employee) =>
+  e.analysis !== undefined
+    ? `analysis ${Math.round(e.analysis)}`
+    : `design ${Math.round(e.skills.design)}, engineering ${Math.round(e.skills.engineering)}, qa ${Math.round(e.skills.qa)}`
 const officeLabel = (state: GameState, id: number | undefined) => {
   const office = id === undefined ? undefined : getOffice(state, id)
   return office ? officeName(state, office) : 'unknown office'
@@ -127,6 +130,20 @@ export const decisions = {
   transfer(state: GameState, employeeId: number, officeId: number): Decision {
     const e = state.employees.find((x) => x.id === employeeId)
     return ['employee.transfer', `${e ? person(e) : 'Someone'} moved to ${officeLabel(state, officeId)}`]
+  },
+
+  assignTeam(state: GameState, employeeId: number, officeId: number | null): Decision {
+    const e = state.employees.find((x) => x.id === employeeId)
+    return ['employee.team', `${e ? person(e) : 'Someone'} ${officeId === null ? 'went back to their own office’s team' : `joined ${officeLabel(state, officeId)}’s team`}`]
+  },
+
+  becomePm(state: GameState, employeeId: number): Decision {
+    const e = state.employees.find((x) => x.id === employeeId)
+    return ['employee.pm', `${e ? person(e) : 'An analyst'} became a product manager`, e ? { analysis: Math.round(e.analysis ?? 0), office: officeLabel(state, e.officeId) } : undefined]
+  },
+
+  survey(state: GameState, audienceId: string): Decision {
+    return ['survey', `Studied ${getAudience(audienceId).name}`, { insight: Math.round(state.insight), audience: audienceId }]
   },
 
   moveOut(): Decision {

@@ -24,6 +24,8 @@ export interface ResearchNode {
   requires: string[]
   /** Not possible before this era (an index into ERAS); the technology doesn't exist yet. */
   era?: number
+  /** Not worth starting before the studio reaches this stage of its journey (an index into STAGES). */
+  stage?: number
   /** Permanent multipliers, applied through `statMultiplier`. Content unlocks live on the features and types. */
   effects: { stat: Stat; mult: number }[]
   /** Something the game lets you do once it is done, named for the dialog (and checked in the sim by id). */
@@ -192,6 +194,30 @@ export const RESEARCH: readonly ResearchNode[] = [
     days: 20,
     requires: [],
     effects: [{ stat: 'candidateSkill', mult: 1.06 }],
+  },
+  {
+    id: 'user_research',
+    name: 'User research',
+    branch: 'business',
+    description: 'A desk for people who study users. Analysts gather insight that shows what an audience likes, and read launch feedback as it comes in.',
+    cost: 15000,
+    days: 30,
+    requires: ['marketing_dept'],
+    stage: 1,
+    effects: [],
+    ability: 'hiring analysts',
+  },
+  {
+    id: 'product_management',
+    name: 'Product management',
+    branch: 'business',
+    description: 'A senior analyst can become the product manager of an office: its products reach more people and break out more often.',
+    cost: 30000,
+    days: 45,
+    requires: ['user_research'],
+    stage: 2,
+    effects: [],
+    ability: 'product managers',
   },
   {
     id: 'platform_apis',

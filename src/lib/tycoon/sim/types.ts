@@ -3,7 +3,12 @@ export const DISCIPLINES: readonly Discipline[] = ['design', 'engineering', 'qa'
 
 export type Skills = Record<Discipline, number>
 
-export type Role = 'designer' | 'developer' | 'tester'
+/** The three who build things; analysts and product managers study the market and steer the products instead. */
+export type BuilderRole = 'designer' | 'developer' | 'tester'
+export type Role = BuilderRole | 'analyst' | 'pm'
+
+/** True for the people who add points to projects. */
+export const isBuilder = (employee: { role: Role }): boolean => employee.role !== 'analyst' && employee.role !== 'pm'
 
 export interface Employee {
   id: number
@@ -32,6 +37,10 @@ export interface Employee {
   founder?: boolean
   /** The day a counter-offer last kept them; a rival leaves them alone for a while after. */
   keptDay?: number
+  /** Skill at reading users and markets: analysts and product managers have it, and do no project work. */
+  analysis?: number
+  /** The office whose project they work on, when it is not the one they sit in. Absent means their own. */
+  teamId?: number
   /** What they have learned by doing the work: days spent on each product type and on each product. Absent until they have worked. */
   knowledge?: Knowledge
 }
@@ -384,6 +393,10 @@ export interface GameState {
   onCall: OnCall | null
   /** Products that were retired or sold, oldest first. */
   retired: RetiredProduct[]
+  /** Insight analysts have gathered and not spent yet; see `sim/insight.ts`. */
+  insight: number
+  /** Audiences the studio has studied: what they like is shown in full. */
+  surveyed: string[]
   /** Bugs fixed by fixing jobs, ever. */
   bugsFixed: number
   /** Good launches since the last breakout hit; each one makes the next hit likelier. */

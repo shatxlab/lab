@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react'
 import { audiencesOf } from '@/lib/tycoon/data/audiences'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
-import { CONTRACT_DEPOSIT, DAYS_PER_MONTH, GROW_MAX_FEATURES, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
+import { CONTRACT_DEPOSIT, DAYS_PER_MONTH, SURVEY_COST, GROW_MAX_FEATURES, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
 import { eraAt, expectedFeatures } from '@/lib/tycoon/data/eras'
 import { contractBlocker } from '@/lib/tycoon/sim/contracts'
 import { newProductBlocker, nextSize } from '@/lib/tycoon/sim/lifecycle'
 import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { marketDemand } from '@/lib/tycoon/sim/market'
-import { officeName, staffOf } from '@/lib/tycoon/sim/offices'
+import { officeName, teamOf } from '@/lib/tycoon/sim/offices'
 import { marketWeights } from '@/lib/tycoon/sim/products'
 import { budgetBlocker, estimateUpdateReach, growTarget, projectBudget, projectTarget, unlockedProductTypes } from '@/lib/tycoon/sim/project'
 import { featureLock, productTypeLock, sizeLock } from '@/lib/tycoon/sim/unlocks'
@@ -18,6 +18,8 @@ import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { useGame, useOffice, useStore } from './context'
 import { formatCount, formatDays, formatDemand, formatMoney } from '@/lib/tycoon/format'
 import { crowdLabel } from './IndustryTab'
+import { hasAnalyst, isSurveyed, surveyBlocker } from '@/lib/tycoon/sim/insight'
+import { audienceLikes, LOVED_AT, SHRUGGED_AT } from '@/lib/tycoon/sim/scoring'
 import { Modal } from './Modal'
 import { cssVars } from './style'
 
@@ -100,6 +102,8 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
   const [audienceId, setAudienceId] = useState(() => audiencesOf(typeId)[0]?.id)
   const [error, setError] = useState('')
 
+  /** Whose tastes the feature list shows, once studied: the product's own audience for an update. */
+  const tasteAudience = product ? product.audienceId : audienceId
   const type = getProductType(typeId)
   const expected = expectedFeatures(typeId, state.day)
   const weights = marketWeights(state)
@@ -118,7 +122,7 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
   const target = growsTo ? growTarget(typeId, selected, projectSize, growsTo) : projectTarget(typeId, selected, isUpdate ? 'update' : 'new', projectSize)
   const days = estimateDays(state, target, office, { typeId, productId: product?.id ?? null })
   // This office's share of the wages; rent is the studio's either way.
-  const officeWages = staffOf(state, office).reduce((sum, e) => sum + e.salary, 0)
+  const officeWages = teamOf(state, office).reduce((sum, e) => sum + e.salary, 0)
   const cost = (days * (officeWages || monthlyBurn(state))) / DAYS_PER_MONTH
   // Starting a product, or growing one, costs a budget on top of the wages; updates are free.
   const budget = isUpdate && !growsTo ? 0 : projectBudget(target)
@@ -219,7 +223,20 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
                 </button>
               ))}
             </div>
-            <p className="muted">{audiencesOf(typeId).find((a) => a.id === audienceId)?.blurb} Their favourite features show in feedback after launch.</p>
+            <p className="muted">
+              {audiencesOf(typeId).find((a) => a.id === audienceId)?.blurb}{' '}
+              {isSurveyed(state, audienceId) ? 'You have studied them: what they think of each feature is shown below.' : 'Their favourite features show in feedback after launch.'}
+            </p>
+            {!isSurveyed(state, audienceId) && (hasAnalyst(state) || state.insight > 0) && (
+              <div className="upgrade">
+                <span>
+                  Study this audience first: {SURVEY_COST} insight <small className="muted">(you have {Math.floor(state.insight)})</small>
+                </span>
+                <button disabled={surveyBlocker(state, audienceId) !== null} title={surveyBlocker(state, audienceId) ?? undefined} onClick={() => store.survey(audienceId)}>
+                  Study
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -274,6 +291,14 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
                   </span>
                 ) : (
                   <span className={`tag ${fits ? 'good' : 'bad'}`}>{fits ? 'fits' : 'off-type'}</span>
+                )}
+                {isSurveyed(state, tasteAudience) && fits && (
+                  <span
+                    className={`tag ${audienceLikes(typeId, tasteAudience, f.id) >= LOVED_AT ? 'good' : audienceLikes(typeId, tasteAudience, f.id) <= SHRUGGED_AT ? 'bad' : 'muted'}`}
+                    title="What your audience thinks of it"
+                  >
+                    {audienceLikes(typeId, tasteAudience, f.id) >= LOVED_AT ? 'loved' : audienceLikes(typeId, tasteAudience, f.id) <= SHRUGGED_AT ? 'shrug' : 'fine'}
+                  </span>
                 )}
                 <span className="stars" title={`Value ${f.value}`}>
                   {'★'.repeat(f.value)}

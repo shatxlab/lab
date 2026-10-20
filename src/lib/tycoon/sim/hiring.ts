@@ -15,15 +15,18 @@ import {
   SECONDARY_SKILL_RANGE,
 } from './balance'
 import { levelForSkill } from './careers'
+import { ANALYST_MAX_LEVEL } from './balance'
 import { freeDesks, getOffice } from './offices'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { statMultiplier } from './modifiers'
 import { pick, randRange } from './rng'
 import { pickTrait, startingMorale } from './staff'
+import { isResearched } from './unlocks'
 import {
   DISCIPLINES,
   fail,
   OK,
+  type BuilderRole,
   type Discipline,
   type Employee,
   type GameState,
@@ -32,17 +35,25 @@ import {
   type Skills,
 } from './types'
 
-export const ROLES: readonly Role[] = ['designer', 'developer', 'tester']
+/** The roles that build products: the ones a studio can always hire. */
+export const ROLES: readonly BuilderRole[] = ['designer', 'developer', 'tester']
 
-export const ROLE_DISCIPLINE: Record<Role, Discipline> = {
+/** Every role, for checking saves. */
+export const ALL_ROLES: readonly Role[] = [...ROLES, 'analyst', 'pm']
+
+/** The research that lets a studio hire analysts, and the one that lets an analyst become a product manager. */
+export const ANALYST_RESEARCH = 'user_research'
+export const PM_RESEARCH = 'product_management'
+
+export const ROLE_DISCIPLINE: Record<BuilderRole, Discipline> = {
   designer: 'design',
   developer: 'engineering',
   tester: 'qa',
 }
 
 /** Market rate for a skill set, trait and level (Mid by default) on `day`; employees are re-rated monthly. */
-export function salaryFor(skills: Skills, traitId = '', level = 1, day = 0, share = 1): number {
-  const total = DISCIPLINES.reduce((sum, d) => sum + skills[d], 0)
+export function salaryFor(skills: Skills, traitId = '', level = 1, day = 0, share = 1, analysis = 0): number {
+  const total = DISCIPLINES.reduce((sum, d) => sum + skills[d], 0) + ANALYSIS_PAY_WEIGHT * analysis
   const market = (SALARY_BASE + SALARY_PER_SKILL_POINT * total) * (1 + ERA_WAGE_GROWTH * eraIndexAt(day))
   return Math.round((market * (getTrait(traitId).salary ?? 1) * LEVELS[level].salary * share) / 50) * 50
 }
@@ -54,11 +65,42 @@ export function payShare(employee: Pick<Employee, 'founder'>): number {
 
 /** What this person is paid on `day`. */
 export function salaryOf(employee: Employee, day: number): number {
-  return salaryFor(employee.skills, employee.trait, employee.level, day, payShare(employee))
+  return salaryFor(employee.skills, employee.trait, employee.level, day, payShare(employee), employee.analysis ?? 0)
+}
+
+/** An analyst's skill counts for this many skill points of a builder's when they are paid. */
+const ANALYSIS_PAY_WEIGHT = 1.2
+
+/** A new analyst: they read users and markets rather than build, so their secondary skills are all they have of the rest. */
+export function generateAnalyst(state: GameState): Employee {
+  const reputationBonus = Math.min(state.reputation, 50) * REPUTATION_SKILL_BONUS
+  const analysis = Math.round(
+    Math.min(100, (PRIMARY_SKILL_MIN + randRange(state, 0, PRIMARY_SKILL_RANGE) + reputationBonus) * statMultiplier(state, 'candidateSkill')),
+  )
+  const skills = {} as Skills
+  for (const d of DISCIPLINES) skills[d] = Math.round(SECONDARY_SKILL_MIN + randRange(state, 0, SECONDARY_SKILL_RANGE))
+  const trait = pickTrait(state).id
+  const level = levelForSkill(analysis, ANALYST_MAX_LEVEL)
+  return {
+    id: state.nextId++,
+    name: `${pick(state, FIRST_NAMES)} ${pick(state, LAST_NAMES)}`,
+    role: 'analyst',
+    skills,
+    analysis,
+    salary: salaryFor(skills, trait, level, state.day, 1, analysis),
+    trait,
+    morale: startingMorale(state),
+    training: null,
+    officeId: 0,
+    level,
+    levelDay: state.day,
+    hiredDay: state.day,
+    readySince: null,
+  }
 }
 
 /** Creates a new person (not yet in any list) and consumes an id. */
-export function generateEmployee(state: GameState, role: Role): Employee {
+export function generateEmployee(state: GameState, role: BuilderRole): Employee {
   const primary = ROLE_DISCIPLINE[role]
   const reputationBonus = Math.min(state.reputation, 50) * REPUTATION_SKILL_BONUS
   const skills = {} as Skills
@@ -95,6 +137,11 @@ export function generateEmployee(state: GameState, role: Role): Employee {
 export function refreshCandidates(state: GameState): void {
   const candidates: Employee[] = []
   for (let i = 0; i < CANDIDATE_COUNT; i++) {
+    // Once the studio can use them, the last place in the pool goes to an analyst.
+    if (i === CANDIDATE_COUNT - 1 && isResearched(state, ANALYST_RESEARCH)) {
+      candidates.push(generateAnalyst(state))
+      continue
+    }
     const role = i < ROLES.length ? ROLES[i] : pick(state, ROLES)
     candidates.push(generateEmployee(state, role))
   }

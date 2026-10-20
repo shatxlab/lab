@@ -1,5 +1,7 @@
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
+import { STUDIO_HEADS, STUDIO_TAILS } from '@/lib/tycoon/data/names'
+import { ERAS } from '@/lib/tycoon/data/eras'
 import { NEWCOMERS, RIVALS, type RivalSeed } from '@/lib/tycoon/data/rivals'
 import {
   ACQUISITION_DAYS,
@@ -136,9 +138,42 @@ export function rivalsArrive(state: GameState, quiet = false): void {
   }
 }
 
+/** A studio name no rival (or seed, hand-written or not) already uses. */
+export function freshStudioName(state: GameState): string {
+  const taken = new Set([...state.rivals.map((r) => r.name), ...RIVALS.map((r) => r.name), ...Object.values(NEWCOMERS).map((r) => r!.name)])
+  for (let i = 0; i < 60; i++) {
+    const name = `${pick(state, STUDIO_HEADS)} ${pick(state, STUDIO_TAILS)}`
+    if (!taken.has(name)) return name
+  }
+  return `${pick(state, STUDIO_HEADS)} ${pick(state, STUDIO_TAILS)} ${taken.size}`
+}
+
+/** A newcomer for an era with no hand-written one: small, aimed at what the era's market wants most. */
+export function generatedNewcomer(state: GameState, era: number): RivalSeed {
+  const demand = ERAS[era]?.demand ?? {}
+  const open = PRODUCT_TYPES.filter((t) => t.era <= era).sort((a, b) => (demand[b.id] ?? 1) - (demand[a.id] ?? 1))
+  const focus = open.slice(0, 3).map((t) => t.id)
+  return {
+    name: freshStudioName(state),
+    skill: 56 + 2 * era,
+    reputation: 6 + 2 * era,
+    focus,
+    products: 0,
+    size: 'small',
+    business: 100 + 20 * era,
+    growth: 0.5,
+  }
+}
+
+/** The seed for the studio that starts up as this era begins: a hand-written one where there is one, otherwise a generated one. None in the first era. */
+export function newcomerFor(state: GameState, era: number): RivalSeed | null {
+  if (era <= 0) return null
+  return NEWCOMERS[era] ?? generatedNewcomer(state, era)
+}
+
 /** A new studio starts up as an era begins, if the market has room and it is not already here. */
 export function rivalArrives(state: GameState, era: number): void {
-  const seed = NEWCOMERS[era]
+  const seed = newcomerFor(state, era)
   if (!seed || state.rivals.some((r) => r.name === seed.name)) return
   const rival = addRival(state, seed, 0)
   state.events.push({ type: 'notice', text: `A new studio, ${rival.name}, is starting up in the ${seed.focus[0].replace('_', ' ')} market.` })

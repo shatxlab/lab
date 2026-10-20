@@ -45,3 +45,14 @@ export const PRODUCT_PREFIXES: readonly string[] = [
   'Electric', 'Paper', 'Stone', 'Glass', 'Iron', 'Velvet', 'Neon', 'Polar', 'Tidal', 'Wandering',
   'Midnight', 'Morning', 'Evening', 'Summer', 'Winter', 'Autumn', 'Spring', 'Distant', 'Hollow', 'Lucky',
 ]
+
+/** Studio names are a head and a tail ("Quiet" + "Forge Studios"), for newcomers no hand-written seed covers. */
+export const STUDIO_HEADS: readonly string[] = [
+  'Bright', 'Cinder', 'Copper', 'Driftwood', 'Evergreen', 'Fathom', 'Granite', 'Halcyon', 'Ironbark', 'Juniper',
+  'Kinetic', 'Lantern', 'Meridian', 'Northstar', 'Obsidian', 'Paper Kite', 'Quicksilver', 'Redwood', 'Silverleaf', 'Tallow',
+  'Upland', 'Vantage', 'Whitecap', 'Yellowfin', 'Zeroth', 'Amberline', 'Blue Heron', 'Coral', 'Delphi', 'Ember Gate',
+]
+
+export const STUDIO_TAILS: readonly string[] = [
+  'Studios', 'Labs', 'Works', 'Systems', 'Digital', 'Interactive', 'Software', 'Collective', 'Cloud', 'Foundry',
+]

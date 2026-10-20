@@ -94,8 +94,9 @@ describe('milestone data', () => {
 
   it('keeps cash rewards small next to what a studio earns', () => {
     const total = MILESTONES.reduce((sum, m) => sum + (m.reward.money ?? 0), 0)
-    expect(total).toBeLessThan(300_000)
-    const early = MILESTONES.filter((m) => ['first_ship', 'five_products', 'first_update', 'first_promotion', 'team_5'].includes(m.id))
+    // A run now lasts twenty years and more, with milestones for each part of it.
+    expect(total).toBeLessThan(400_000)
+    const early = MILESTONES.filter((m) => ['first_ship', 'five_products', 'first_update', 'first_promotion', 'team_4'].includes(m.id))
     expect(early.reduce((sum, m) => sum + (m.reward.money ?? 0), 0)).toBeLessThan(4000)
   })
 
@@ -106,7 +107,7 @@ describe('milestone data', () => {
     expect(achievedMilestones(state)).toContain('first_ship') // a first ship is a first ship
     expect(achievedMilestones(state)).not.toContain('five_products')
     expect(achievedMilestones(state)).not.toContain('ten_products')
-    expect(achievedMilestones(state)).not.toContain('twenty_five_products')
+    expect(achievedMilestones(state)).not.toContain('twenty_products')
   })
 })
 
@@ -158,7 +159,7 @@ describe('checkMilestones', () => {
     expect(reached((s) => (s.day = 1080))).toContain('survive_3')
     expect(reached((s) => s.products.push(makeProduct({ productTypeId: 'saas_platform' })))).toContain('ship_saas')
     expect(reached((s) => s.products.push(makeProduct({ productTypeId: 'cloud_platform' })))).toContain('frontier')
-    expect(reached((s) => (s.employees = Array.from({ length: 5 }, (_, i) => makeEmployee(i + 1))))).toContain('team_5')
+    expect(reached((s) => (s.employees = Array.from({ length: 4 }, (_, i) => makeEmployee(i + 1))))).toContain('team_4')
     expect(reached((s) => (s.research.done = RESEARCH.slice(0, 5).map((n) => n.id)))).toContain('research_5')
   })
 

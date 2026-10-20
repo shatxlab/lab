@@ -111,9 +111,14 @@ export const STAGES: readonly Stage[] = [
   {
     id: 'giant',
     name: 'Tech giant',
-    blurb: 'The top of the industry. Now stay there.',
+    blurb: 'The top of the industry. Now stay there: these are the marks of a company that lasts.',
     unlocks: [],
-    goals: [],
+    // Nothing comes after this stage, so these are goals to chase, not gates.
+    goals: [
+      { id: 'three_flagships', label: 'Have 3 Flagship products live', check: (s) => s.products.filter((p) => p.size === 'flagship').length >= 3, progress: (s) => upTo(s.products.filter((p) => p.size === 'flagship').length, 3) },
+      { id: 'decade_old', label: 'Keep a product over 10 years old earning $500 a day', check: (s) => s.products.some((p) => s.day - p.releaseDay >= 3600 && productRevenue(p) >= 500), progress: (s) => `${s.products.filter((p) => s.day - p.releaseDay >= 3600 && productRevenue(p) >= 500).length} / 1` },
+      { id: 'four_offices', label: 'Run 4 full offices: 48 people', check: (s) => realOffices(s) >= 4 && s.employees.length >= 48, progress: (s) => `${realOffices(s)} offices, ${s.employees.length} / 48 people` },
+    ],
   },
 ]
 

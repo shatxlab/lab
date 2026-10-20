@@ -13,6 +13,16 @@ export interface Era {
   expected: Partial<Record<string, readonly string[]>>
 }
 
+/** What users expect once the platform age has arrived; later eras add to it. */
+const PLATFORM_EXPECTED: Era['expected'] = {
+  web_app: ['accounts', 'cloud_sync', 'ai_assistant'],
+  mobile_app: ['notifications', 'cloud_sync', 'ai_assistant'],
+  saas_platform: ['accounts', 'sso', 'ai_assistant'],
+  dev_tool: ['ci_integration', 'ai_assistant'],
+  game: ['multiplayer'],
+  cloud_platform: ['api'],
+}
+
 export const ERAS: readonly Era[] = [
   {
     id: 'web',
@@ -71,7 +81,76 @@ export const ERAS: readonly Era[] = [
       cloud_platform: ['api'],
     },
   },
+  {
+    id: 'trust',
+    name: 'The trust years',
+    startYear: 11,
+    blurb: 'Customers and regulators ask who holds their data. Fintech and SaaS lead, and anything that keeps secrets is expected to encrypt them.',
+    demand: { fintech_app: 1.3, saas_platform: 1.15, data_platform: 1.1, game: 0.9, web_app: 0.8 },
+    expected: grow(PLATFORM_EXPECTED, {
+      saas_platform: ['encryption'],
+      cloud_platform: ['encryption'],
+      fintech_app: ['payments', 'encryption'],
+      data_platform: ['encryption'],
+    }),
+  },
+  {
+    id: 'agents',
+    name: 'The agent era',
+    startYear: 13,
+    blurb: 'Software that acts on its own is the new normal. AI products and developer tools lead, and users expect agents in everything they pay for.',
+    demand: { ai_product: 1.4, dev_tool: 1.25, saas_platform: 1.1, web_app: 0.75 },
+    expected: grow(PLATFORM_EXPECTED, {
+      saas_platform: ['encryption', 'agents'],
+      cloud_platform: ['encryption'],
+      fintech_app: ['payments', 'encryption'],
+      data_platform: ['encryption', 'agents'],
+      ai_product: ['agents'],
+      dev_tool: ['agents'],
+    }),
+  },
+  {
+    id: 'spatial',
+    name: 'The spatial years',
+    startYear: 15,
+    blurb: 'Headsets are in living rooms and offices. XR and games lead, and phones are expected to see the room around them.',
+    demand: { xr_experience: 1.5, game: 1.2, creative_suite: 1.15, mobile_app: 0.9 },
+    expected: grow(PLATFORM_EXPECTED, {
+      saas_platform: ['encryption', 'agents'],
+      cloud_platform: ['encryption'],
+      fintech_app: ['payments', 'encryption'],
+      data_platform: ['encryption', 'agents'],
+      ai_product: ['agents'],
+      dev_tool: ['agents'],
+      game: ['spatial'],
+      xr_experience: ['spatial', 'spatial_audio'],
+    }),
+  },
+  {
+    id: 'sovereign',
+    name: 'The sovereign cloud',
+    startYear: 17,
+    blurb: 'Every country wants its data at home. Cloud and data platforms lead, and anything enterprises buy has to say where it lives.',
+    demand: { data_platform: 1.4, cloud_platform: 1.25, fintech_app: 1.1, xr_experience: 1.1, ai_product: 0.95 },
+    expected: grow(PLATFORM_EXPECTED, {
+      saas_platform: ['encryption', 'agents', 'data_residency'],
+      cloud_platform: ['encryption', 'data_residency'],
+      fintech_app: ['payments', 'encryption', 'data_residency'],
+      data_platform: ['encryption', 'agents', 'pipelines', 'data_residency'],
+      ai_product: ['agents'],
+      dev_tool: ['agents'],
+      game: ['spatial'],
+      xr_experience: ['spatial', 'spatial_audio'],
+    }),
+  },
 ]
+
+/** The eras' own words for what is taken for granted: `base` plus what a later era adds to the lists, type by type. */
+function grow(base: Era['expected'], add: Era['expected']): Era['expected'] {
+  const merged: Partial<Record<string, readonly string[]>> = { ...base }
+  for (const [type, ids] of Object.entries(add)) merged[type] = [...new Set([...(base[type] ?? []), ...(ids ?? [])])]
+  return merged
+}
 
 /** The era's name in mid-sentence: "the AI wave", not "The AI wave" and not "the ai wave". */
 export function eraPhrase(era: Era): string {

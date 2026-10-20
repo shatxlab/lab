@@ -55,7 +55,7 @@ describe('research data', () => {
   })
 
   it('names an era in a sentence the way the player knows it', () => {
-    expect(ERAS.map(eraPhrase)).toEqual(['the web years', 'the app boom', 'the cloud years', 'the AI wave', 'the platform age'])
+    expect(ERAS.map(eraPhrase)).toEqual(['the web years', 'the app boom', 'the cloud years', 'the AI wave', 'the platform age', 'the trust years', 'the agent era', 'the spatial years', 'the sovereign cloud'])
   })
 
   it('gates content only on research that exists', () => {

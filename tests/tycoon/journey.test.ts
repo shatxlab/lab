@@ -359,8 +359,15 @@ describe('breakout hits', () => {
 describe('the journey', () => {
   it('starts in the garage and has goals for every stage but the last', () => {
     expect(makeState().stage).toBe(0)
-    for (const stage of STAGES.slice(0, -1)) expect(stage.goals.length, stage.id).toBeGreaterThan(0)
-    expect(STAGES.at(-1)!.goals).toEqual([])
+    for (const stage of STAGES) expect(stage.goals.length, stage.id).toBeGreaterThan(0)
+  })
+
+  it('never ends the last stage: its goals are marks to chase, not a gate', () => {
+    const state = makeState([makeEmployee(1)])
+    state.stage = STAGES.length - 1
+    state.products = Array.from({ length: 3 }, (_, i) => makeProduct({ id: i + 1, size: 'flagship' }))
+    expect(STAGES.at(-1)!.goals.some((g) => g.check(state))).toBe(true)
+    expect(stageComplete(state)).toBe(false)
   })
 
   it('moves on when every goal of the stage is met, once, and says so', () => {

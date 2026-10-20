@@ -37,7 +37,8 @@ describe('the competition', () => {
     const state = createInitialState(3)
     state.money = 1e12 // an idle studio would go bankrupt long before the last era
     advance(state, dayOfEra(ERAS.length - 1) + 5)
-    expect(state.rivals.length).toBe(RIVALS.length + Object.keys(NEWCOMERS).length)
+    // Hand-written newcomers for the early eras, generated ones for the rest: one for every era after the first.
+    expect(state.rivals.length).toBe(RIVALS.length + ERAS.length - 1)
   })
 
   it('studios move in as their year comes, and never twice', () => {

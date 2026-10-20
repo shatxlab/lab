@@ -4,6 +4,9 @@ import { LEVELS, MORALE_UNHAPPY, PROMOTION_PATIENCE_DAYS, TRAINING_DAYS } from '
 import { promotionBlocker, title } from '@/lib/tycoon/sim/careers'
 import { salaryFor } from '@/lib/tycoon/sim/hiring'
 import { moraleSpeed } from '@/lib/tycoon/sim/morale'
+import { getProductType } from '@/lib/tycoon/data/productTypes'
+import { KNOWLEDGE_PRODUCT_MAX, KNOWLEDGE_TYPE_MAX } from '@/lib/tycoon/sim/balance'
+import { knowledgeSpeed, topExpertise } from '@/lib/tycoon/sim/knowledge'
 import { moraleTarget, trainingBlocker, trainingCost, trainingGain } from '@/lib/tycoon/sim/staff'
 import { DISCIPLINES } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
@@ -104,6 +107,24 @@ export function EmployeeDialog({ id }: { id: number }) {
         </div>
         <MoraleBar morale={person.morale} />
         {person.morale < MORALE_UNHAPPY && <p className="bad">Unhappy: a team outing or a good release would help. Left too long, they may quit.</p>}
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h3>Experience</h3>
+          <span className="muted">Days of hands-on work. It makes them faster on that kind of product (up to +{Math.round(KNOWLEDGE_TYPE_MAX * 100)}%) and on that very product (up to +{Math.round(KNOWLEDGE_PRODUCT_MAX * 100)}%).</span>
+        </div>
+        {topExpertise(state, person).length === 0 ? (
+          <p className="muted">Nothing yet: it builds up as they work on products.</p>
+        ) : (
+          topExpertise(state, person).map((e) => (
+            <div key={`${e.kind}-${e.id}`} className="skill-row">
+              <span className="skill-name">{e.kind === 'type' ? getProductType(e.id).name : e.name}</span>
+              <strong className="skill-value">{e.days} days</strong>
+              <span className="muted">{e.kind === 'type' ? 'this kind of product' : `+${Math.round((knowledgeSpeed(person, { typeId: '', productId: Number(e.id) }) - 1) * 100)}% on it`}</span>
+            </div>
+          ))
+        )}
       </section>
 
       <section className="section">

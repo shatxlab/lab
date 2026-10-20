@@ -32,6 +32,14 @@ export interface Employee {
   founder?: boolean
   /** The day a counter-offer last kept them; a rival leaves them alone for a while after. */
   keptDay?: number
+  /** What they have learned by doing the work: days spent on each product type and on each product. Absent until they have worked. */
+  knowledge?: Knowledge
+}
+
+/** Days of hands-on work, by product type id and by product id (as a string): what a person brings to the next job. */
+export interface Knowledge {
+  types: Record<string, number>
+  products: Record<string, number>
 }
 
 export interface ProductType {

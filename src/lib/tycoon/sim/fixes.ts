@@ -1,5 +1,6 @@
 import { FIX_SPLIT, POINTS_PER_BUG, SKILL_GAIN } from './balance'
 import { fixingIds } from './offices'
+import { learn, type Subject } from './knowledge'
 import { dailyContribution, expectedContribution } from './work'
 import { statMultiplier } from './modifiers'
 import { bugDensity } from './products'
@@ -55,10 +56,11 @@ export function fixBlocker(state: GameState, product: Product): string | null {
 }
 
 /** Days a developer and a tester would need to fix `bugs` bugs together; Infinity if either has no output. */
-export function estimateFixDays(state: GameState, bugs: number, developer: Employee, tester: Employee): number {
+export function estimateFixDays(state: GameState, bugs: number, developer: Employee, tester: Employee, product?: Product): number {
   const target = fixTarget(bugs)
-  const engineering = expectedContribution(developer, state).engineering
-  const qa = expectedContribution(tester, state).qa
+  const subject = product ? { typeId: product.productTypeId, productId: product.id } : null
+  const engineering = expectedContribution(developer, state, subject).engineering
+  const qa = expectedContribution(tester, state, subject).qa
   if ((target.engineering > 0 && engineering <= 0) || (target.qa > 0 && qa <= 0)) return Infinity
   return Math.max(Math.ceil(target.engineering / (engineering || 1)), Math.ceil(target.qa / (qa || 1)))
 }
@@ -158,9 +160,10 @@ function autoFix(state: GameState): void {
 }
 
 /** One person's day on a fixing job: only their own discipline counts, and it adds to their skill. */
-function work(state: GameState, fix: Fix, person: Employee, discipline: 'engineering' | 'qa'): void {
+function work(state: GameState, fix: Fix, person: Employee, discipline: 'engineering' | 'qa', subject: Subject): void {
   const room = Math.max(fix.target[discipline] - fix.progress[discipline], 0)
-  const applied = Math.min(dailyContribution(person, state)[discipline], room)
+  const applied = Math.min(dailyContribution(person, state, subject)[discipline], room)
+  if (applied > 0) learn(person, subject)
   fix.progress[discipline] += applied
   const gain = SKILL_GAIN * statMultiplier(state, 'skillGain') * employeeSkillGain(state, person)
   person.skills[discipline] = Math.min(100, person.skills[discipline] + applied * gain * (1 - person.skills[discipline] / 100))
@@ -183,8 +186,9 @@ export function fixesDay(state: GameState): void {
       state.fixes = state.fixes.filter((f) => f !== fix)
       continue
     }
-    work(state, fix, developer, 'engineering')
-    work(state, fix, tester, 'qa')
+    const subject = { typeId: product.productTypeId, productId: product.id }
+    work(state, fix, developer, 'engineering', subject)
+    work(state, fix, tester, 'qa', subject)
 
     const done = isReady(fix)
     const fixed = done ? fix.bugs : Math.floor(fix.bugs * overallProgress(fix))

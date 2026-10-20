@@ -82,7 +82,7 @@ export function FixPicker({ product, onDone }: { product: Product; onDone: () =>
       label="Start fixing"
       developers={bestFirst(state, 'developer')}
       testers={bestFirst(state, 'tester')}
-      hint={(developer, tester) => formatDays(estimateFixDays(state, bugs, developer, tester))}
+      hint={(developer, tester) => formatDays(estimateFixDays(state, bugs, developer, tester, product))}
       onPick={(developer, tester) => {
         const result = store.startFix(product.id, developer.id, tester.id)
         if (result.ok) onDone()

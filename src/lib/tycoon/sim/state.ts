@@ -116,6 +116,11 @@ function validPendingEvent(v: unknown): boolean {
   return isObj(v) && typeof v.id === 'string' && isObj(v.data) && Object.values(v.data).every(isNum)
 }
 
+function validKnowledge(v: unknown): boolean {
+  const days = (r: unknown) => isObj(r) && Object.values(r).every(isNum)
+  return isObj(v) && days(v.types) && days(v.products)
+}
+
 function validEmployee(v: unknown): boolean {
   return (
     isObj(v) &&
@@ -135,6 +140,7 @@ function validEmployee(v: unknown): boolean {
     (v.readySince === null || isNum(v.readySince)) &&
     (v.founder === undefined || typeof v.founder === 'boolean') &&
     (v.keptDay === undefined || isNum(v.keptDay)) &&
+    (v.knowledge === undefined || validKnowledge(v.knowledge)) &&
     (v.training === null ||
       (isObj(v.training) && (DISCIPLINES as readonly string[]).includes(v.training.discipline as string) && isNum(v.training.finishDay)))
   )

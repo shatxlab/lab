@@ -269,6 +269,16 @@ export const SALARY_PER_SKILL_POINT = 18
 /** Wages rise this share with every era, as the industry grows and fights over people. */
 export const ERA_WAGE_GROWTH = 0.12
 
+// Knowledge: people get better at the products and kinds of product they have worked on
+/** Days of knowledge a working day adds, to the product's type and to the product itself. */
+export const KNOWLEDGE_PER_DAY = 1
+/** The most speed knowledge of a type adds, reached by degrees (half of it after `KNOWLEDGE_TYPE_HALF` days)... */
+export const KNOWLEDGE_TYPE_MAX = 0.12
+export const KNOWLEDGE_TYPE_HALF = 360
+/** ...and knowledge of the very product, which counts for a little more. */
+export const KNOWLEDGE_PRODUCT_MAX = 0.15
+export const KNOWLEDGE_PRODUCT_HALF = 200
+
 // Staff: morale, training, outings
 /** Where morale settles for a content team that isn't shipping anything special. */
 export const MORALE_BASE = 68

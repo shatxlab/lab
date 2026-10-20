@@ -116,7 +116,7 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
   const projectSize = product?.size ?? size
   const spec = PROJECT_SIZES[projectSize]
   const target = growsTo ? growTarget(typeId, selected, projectSize, growsTo) : projectTarget(typeId, selected, isUpdate ? 'update' : 'new', projectSize)
-  const days = estimateDays(state, target, office)
+  const days = estimateDays(state, target, office, { typeId, productId: product?.id ?? null })
   // This office's share of the wages; rent is the studio's either way.
   const officeWages = staffOf(state, office).reduce((sum, e) => sum + e.salary, 0)
   const cost = (days * (officeWages || monthlyBurn(state))) / DAYS_PER_MONTH

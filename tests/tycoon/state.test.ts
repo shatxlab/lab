@@ -5,6 +5,7 @@ import { advance } from '@/lib/tycoon/sim/tick'
 
 function play(seed: number) {
   const state = createInitialState(seed)
+  state.money = 100_000
   startProject(state, 'web_app', ['accounts'])
   advance(state, 40)
   return state
@@ -82,6 +83,7 @@ describe('upgrading a version 3 save', () => {
   /** What a version 3 save looks like: no fixing jobs, on-call pair, past products or hidden bugs, and a bug-fixing sprint holding the office. */
   function v3(): Record<string, any> {
     const state = createInitialState(4)
+    state.money = 100_000
     startProject(state, 'web_app', ['accounts'])
     state.products.push({
       id: 77, name: 'Old', productTypeId: 'web_app', size: 'small', featureIds: [], quality: 70, releaseDay: 1, reach: 1000, users: 500,

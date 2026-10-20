@@ -10,7 +10,7 @@ import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { marketDemand } from '@/lib/tycoon/sim/market'
 import { officeName, staffOf } from '@/lib/tycoon/sim/offices'
 import { marketWeights } from '@/lib/tycoon/sim/products'
-import { estimateUpdateReach, growTarget, projectTarget, unlockedProductTypes } from '@/lib/tycoon/sim/project'
+import { budgetBlocker, estimateUpdateReach, growTarget, projectBudget, projectTarget, unlockedProductTypes } from '@/lib/tycoon/sim/project'
 import { featureLock, productTypeLock, sizeLock } from '@/lib/tycoon/sim/unlocks'
 import { DISCIPLINES, PROJECT_SIZE_IDS, type ContractOffer, type Office, type ProjectSize } from '@/lib/tycoon/sim/types'
 import { estimateDays } from '@/lib/tycoon/sim/work'
@@ -120,6 +120,9 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
   // This office's share of the wages; rent is the studio's either way.
   const officeWages = staffOf(state, office).reduce((sum, e) => sum + e.salary, 0)
   const cost = (days * (officeWages || monthlyBurn(state))) / DAYS_PER_MONTH
+  // Starting a product, or growing one, costs a budget on top of the wages; updates are free.
+  const budget = isUpdate && !growsTo ? 0 : projectBudget(target)
+  const budgetProblem = budgetBlocker(state, budget)
   const full = selected.length >= maxFeatures
   const reach = product ? estimateUpdateReach(state, product.id, selected, growsTo !== null) : 0
   /** What each feature adds to this project's bars. */
@@ -299,6 +302,11 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
             {spec.name} {type.name}: about <b>{formatDays(days)}</b> with your team
             {Number.isFinite(cost) && <> · ~{formatMoney(cost)} in wages</>}
           </div>
+          {budget > 0 && (
+            <div className={budgetProblem ? 'bad' : 'muted'} title="Licences, servers, assets and freelancers. Client work is how a garage pays for it.">
+              Budget <b>{formatMoney(budget)}</b>, paid now{budgetProblem ? `. ${budgetProblem.replace(/^Not enough money: the budget is [^,]+, and /, 'Keep ')}` : ''}
+            </div>
+          )}
           {!product && projectSize !== 'small' && (
             <div className="muted">
               Reaches {spec.reach}× as many {type.userNoun}, who stay interested {spec.life}× as long as a Small one's.
@@ -312,11 +320,13 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
         </div>
 
         {portfolioProblem && <p className="bad">{portfolioProblem}</p>}
+        {budgetProblem && <p className="muted">Short of cash? Client work pays the bills and the budget.</p>}
         {error && <p className="bad">{error}</p>}
         <div className="actions">
           <button onClick={() => store.closeDialog()}>Cancel</button>
-          <button className="primary" disabled={portfolioProblem !== null} title={portfolioProblem ?? undefined} onClick={start}>
+          <button className="primary" disabled={portfolioProblem !== null || budgetProblem !== null} title={portfolioProblem ?? budgetProblem ?? undefined} onClick={start}>
             {growsTo ? 'Start growing' : product ? (selected.length === 0 ? 'Start maintenance' : 'Start update') : 'Start project'}
+            {budget > 0 && <small> · {formatMoney(budget)}</small>}
           </button>
         </div>
         </>

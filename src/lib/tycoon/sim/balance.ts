@@ -2,7 +2,7 @@
 
 import type { Skills } from './types'
 
-export const START_MONEY = 25000
+export const START_MONEY = 8000
 export const DAYS_PER_MONTH = 30
 
 // Work
@@ -18,6 +18,14 @@ export const OVERSHOOT_CAP = 1.5
 
 // Projects
 export const MAX_FEATURES = 5
+/**
+ * Starting a new product (or growing one into a bigger size) costs cash on top of the wages: licences, servers,
+ * assets, freelancers. It is this much per point of work, so a small product with a few features costs more than
+ * the garage starts with and client work is how the studio pays for its first real product. Updates are free.
+ */
+export const BUDGET_PER_POINT = 15
+/** A budget may not leave the bank with less than this many days of what the studio burns, so a project never starts the countdown to bankruptcy. */
+export const BUDGET_RESERVE_DAYS = 30
 
 export interface SizeSpec {
   name: string

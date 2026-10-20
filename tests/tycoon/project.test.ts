@@ -12,6 +12,7 @@ const strongTeam = () => [
 describe('startProject', () => {
   it('creates a project with base target plus feature costs', () => {
     const state = makeState(strongTeam())
+    state.money = 100_000
     expect(startProject(state, 'web_app', ['accounts', 'search']).ok).toBe(true)
     expect(state.offices[0].project?.target).toEqual(projectTarget('web_app', ['accounts', 'search']))
     expect(state.offices[0].project!.target.engineering).toBe((90 + 20 + 25) * WORK_SCALE)

@@ -61,6 +61,7 @@ describe('an audience', () => {
 
   it('moves the hit chance, within limits', () => {
     const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
+    state.money = 100_000
     startProject(state, 'web_app', ['payments', 'accounts', 'analytics'], 'small', undefined, 'web_business')
     const project = state.offices[0].project!
     const liked = hitBreakdown(state, project, 85)
@@ -74,6 +75,7 @@ describe('an audience', () => {
 
   it('passes from the project to the launched product', () => {
     const state = makeState([makeEmployee(1, { design: 60, engineering: 60, qa: 60 })])
+    state.money = 100_000
     startProject(state, 'web_app', ['payments'], 'small', undefined, 'web_business')
     for (const d of DISCIPLINES) state.offices[0].project!.progress[d] = state.offices[0].project!.target[d] * 1.2
     expect(projectQuality(state, state.offices[0].project!)).toBeGreaterThan(0)

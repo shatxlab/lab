@@ -113,6 +113,7 @@ describe('milestone data', () => {
 describe('checkMilestones', () => {
   it('awards a milestone once: pays the reward and posts a notice', () => {
     const state = makeState([makeEmployee(1)])
+    state.money = 1000
     state.shippedCount = 1
     const money = state.money
     checkMilestones(state)

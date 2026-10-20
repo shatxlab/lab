@@ -1,7 +1,11 @@
+import { formatMoney } from '@/lib/tycoon/format'
 import { audiencesOf } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import {
+  BUDGET_PER_POINT,
+  BUDGET_RESERVE_DAYS,
+  DAYS_PER_MONTH,
   CAMPAIGNS,
   DEMAND_NOISE,
   HIT_BASE_CHANCE,
@@ -26,6 +30,7 @@ import {
   UPDATE_TARGET_SHARE,
   WORK_SCALE,
 } from './balance'
+import { monthlyBurn } from './economy'
 import { campaignCost, growBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
@@ -96,6 +101,20 @@ export function growTarget(productTypeId: string, featureIds: readonly string[],
   return target
 }
 
+/** The cash a project with this much work to do costs to start, in tidy $50s. */
+export function projectBudget(target: Skills): number {
+  const points = DISCIPLINES.reduce((sum, d) => sum + target[d], 0)
+  return Math.round((points * BUDGET_PER_POINT) / 50) * 50
+}
+
+/** Why the studio can't pay a project's budget now, or null when it can: the bank has to cover it and a month of wages after. */
+export function budgetBlocker(state: GameState, budget: number): string | null {
+  if (budget <= 0) return null
+  const cushion = Math.round(((monthlyBurn(state) / DAYS_PER_MONTH) * BUDGET_RESERVE_DAYS) / 50) * 50
+  if (state.money >= budget + cushion) return null
+  return `Not enough money: the budget is ${formatMoney(budget)}, and ${formatMoney(cushion)} must stay for wages`
+}
+
 /** Starts a new product in an office (the first one unless `officeId` says otherwise). */
 export function startProject(
   state: GameState,
@@ -122,6 +141,11 @@ export function startProject(
   if (featureProblem) return fail(featureProblem)
   const portfolioProblem = newProductBlocker(state)
   if (portfolioProblem) return fail(portfolioProblem)
+  const target = projectTarget(productTypeId, featureIds, 'new', size)
+  const budget = projectBudget(target)
+  const budgetProblem = budgetBlocker(state, budget)
+  if (budgetProblem) return fail(budgetProblem)
+  state.money -= budget
   if (!inGarage(state)) state.lastNewProductDay = state.day
 
   office.project = {
@@ -133,7 +157,7 @@ export function startProject(
     audienceId: audienceId ?? audiencesOf(productTypeId)[0]?.id,
     size,
     featureIds: [...featureIds],
-    target: projectTarget(productTypeId, featureIds, 'new', size),
+    target,
     progress: emptySkills(),
     startDay: state.day,
     readyNotified: false,
@@ -176,6 +200,11 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
   if (problem) return fail(problem)
   const repeated = featureIds.find((id) => product.featureIds.includes(id))
   if (repeated) return fail(`${getFeature(repeated).name} is already in ${product.name}`)
+  const target = bigger ? growTarget(product.productTypeId, featureIds, product.size, bigger) : projectTarget(product.productTypeId, featureIds, 'update', product.size)
+  const budget = bigger ? projectBudget(target) : 0
+  const budgetProblem = budgetBlocker(state, budget)
+  if (budgetProblem) return fail(budgetProblem)
+  state.money -= budget
 
   office.project = {
     id: state.nextId++,
@@ -186,7 +215,7 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     audienceId: product.audienceId,
     size: product.size,
     featureIds: [...featureIds],
-    target: bigger ? growTarget(product.productTypeId, featureIds, product.size, bigger) : projectTarget(product.productTypeId, featureIds, 'update', product.size),
+    target,
     ...(bigger ? { grows: bigger } : {}),
     progress: emptySkills(),
     startDay: state.day,

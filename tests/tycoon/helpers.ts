@@ -53,12 +53,14 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
 }
 
 /**
- * A seeded state with the random starting staff replaced by `employees`, and no rivals, so a product's
+ * A seeded state with the random starting staff replaced by `employees`, money to start projects, and no rivals, so a product's
  * users depend on nothing but itself. Tests about competition add rivals back.
  */
 export function makeState(employees: Employee[] = [], seed = 1): GameState {
   const state = createInitialState(seed)
   state.employees = employees
+  // Starting a product costs a budget; tests about projects shouldn't have to find the money first.
+  state.money = 100_000
   state.rivals = []
   state.rivalProducts = []
   return state

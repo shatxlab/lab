@@ -260,6 +260,7 @@ describe('locked content', () => {
   it('startProject rejects locked features and types, and accepts them once researched', () => {
     const state = makeState([makeEmployee(1, { engineering: 50 })])
     state.reputation = 100
+    state.money = 1_000_000
     state.day = dayOfEra(3)
     expect(startProject(state, 'web_app', ['voice'])).toEqual({
       ok: false,

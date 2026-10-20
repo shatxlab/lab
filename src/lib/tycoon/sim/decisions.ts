@@ -6,11 +6,11 @@ import { title } from './careers'
 import { describePendingEvent } from './events'
 import { nextSize, promotionCost, promotionEffect } from './lifecycle'
 import { newOfficeCost, officeName, getOffice } from './offices'
-import { hitBreakdown, projectQuality } from './project'
+import { hitBreakdown, projectBudget, projectQuality, projectTarget } from './project'
 import { acquisitionPrice } from './rivals'
 import { salePrice, sunsetOutcome } from './sunset'
 import { trainingCost } from './staff'
-import type { Discipline, Employee, GameState, Tier } from './types'
+import type { Discipline, Employee, GameState, ProjectSize, Tier } from './types'
 
 /** What a decision looks like in the log: a category, a line to read, and the numbers behind it. */
 export type Decision = [kind: string, text: string, data?: Record<string, string | number | boolean | string[]>]
@@ -32,7 +32,7 @@ export const decisions = {
     return [
       'project.start',
       `Started a ${size ?? 'default-size'} ${getProductType(typeId).name}`,
-      { type: typeId, audience: audienceId ? getAudience(audienceId).name : '', size: size ?? '', features: featureNames(features), office: officeLabel(state, officeId), demand: Math.round((state.market[typeId] ?? 1) * 100) / 100 },
+      { type: typeId, audience: audienceId ? getAudience(audienceId).name : '', size: size ?? '', features: featureNames(features), office: officeLabel(state, officeId), demand: Math.round((state.market[typeId] ?? 1) * 100) / 100, budget: projectBudget(projectTarget(typeId, features, 'new', (size as ProjectSize | undefined) ?? 'small')) },
     ]
   },
 

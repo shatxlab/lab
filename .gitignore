@@ -2,3 +2,4 @@ node_modules/
 dist/
 .astro/
 assets/pdfjs/
+lab-tycoon-run-*.json

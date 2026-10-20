@@ -118,7 +118,7 @@ the monthly snapshot now has income per product. Since then: promotions wear off
 garage sale is flatter with an end date, and products sell by income (all in Built
 above). Still open: whether that tamed auto-promotion enough (check against a new log;
 otherwise diminishing returns, a cap, or a cost that grows), a garage that has
-something to buy, and the tedium of the contract-only start.
+something to buy (the budget now covers that). The contract-only start stays as it is.
 
 ### Built: the roadmap pass (2026-10-20)
 
@@ -181,15 +181,11 @@ still overexpand late (they hire up to the bank, never fire), so retune from a h
   the European office first and a place for the rival's region; price is its income times
   `ACQUISITION_DAYS` times its growth; its office opens as yours with 5 to 8 builders who know what it
   made; you keep the products you choose (they take portfolio places); the rest leave with it.
-- **Not built:** *Subsidiary* (independent studio sending a share of its income), regional
-  freshness (a release refreshes both markets) and EU-only rivals' products competing outside their
-  region beyond the `RIVAL_ABROAD` weight. Rivals' growth is unchanged (they still reach the cap
+- **Decided against:** a *Subsidiary* option for absorbed studios, and a non-contract way into
+  the garage (grants, pre-orders, sponsorship): contracts stay the garage's income.
+- **Not built:** regional freshness (a release refreshes both markets) and EU-only rivals'
+  products competing outside their region beyond the `RIVAL_ABROAD` weight. Rivals' growth is unchanged (they still reach the cap
   late); the player can buy early, from Established.
-
-### Agreed, not built
-
-- **Subsidiary.** An absorbed studio left independent, sending a share of its income.
-- **Garage hustle, later.** A non-contract way in (grants, pre-orders, sponsorship).
 
 ## First real playthrough (2026-10-15)
 

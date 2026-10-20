@@ -56,8 +56,8 @@ export const STAGES: readonly Stage[] = [
     blurb: 'People have started to notice. A real office would let the team grow.',
     unlocks: ['Moving out of the garage into a 12-desk office', 'Large projects, once you have moved'],
     goals: [
-      { id: 'moved_out', label: 'Move into an office', check: (s) => s.offices.every((o) => o.kind !== 'garage') },
       { id: 'hit', label: 'Have a breakout hit (good launches make one likelier each time)', check: (s) => s.signatureId !== null },
+      { id: 'moved_out', label: 'Move into an office (needs the hit)', check: (s) => s.offices.every((o) => o.kind !== 'garage') },
     ],
   },
   {

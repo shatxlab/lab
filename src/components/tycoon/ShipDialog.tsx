@@ -29,7 +29,8 @@ export function ShipDialog({ officeId }: { officeId: number }) {
   const bugs = Math.round(releaseBugs(project))
   const settled = settledUsers(state, project.productTypeId, project.featureIds, reach)
   const price = campaign ? campaignCost(state, project, quality, campaign) : 0
-  const hit = isUpdate ? null : hitBreakdown(state, project, quality, campaign ?? undefined)
+  const rolls = !isUpdate || (project.grows !== undefined && !product?.hit)
+  const hit = rolls ? hitBreakdown(state, project, quality, isUpdate ? undefined : campaign ?? undefined) : null
   const chance = hit?.chance ?? 0
 
   const confirm = () => {

@@ -203,6 +203,7 @@ describe('team commands', () => {
 
     store.state.money = 1_000_000
     store.state.stage = 3
+    store.state.signatureId = 1
     expect(store.moveOut().ok).toBe(true)
     expect(deskCount(store.state)).toBe(12)
     expect(store.openOffice().ok).toBe(true)

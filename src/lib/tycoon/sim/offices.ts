@@ -80,6 +80,7 @@ export function productInWork(state: GameState, productId: number): boolean {
 export function moveOutBlocker(state: GameState): string | null {
   if (!state.offices.some((o) => o.kind === 'garage')) return 'Already in an office'
   if (state.stage < MOVE_OUT_STAGE) return 'The studio is not ready yet'
+  if (state.signatureId === null) return 'Have a breakout hit first'
   return state.money < MOVE_OUT_COST ? 'Not enough money' : null
 }
 

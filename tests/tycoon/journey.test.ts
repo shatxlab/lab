@@ -55,6 +55,8 @@ describe('the garage and offices', () => {
     state.money = MOVE_OUT_COST
     expect(moveOutBlocker(state)).toBe('The studio is not ready yet')
     state.stage = 1
+    expect(moveOutBlocker(state)).toBe('Have a breakout hit first')
+    state.signatureId = 1
     expect(moveOut(state).ok).toBe(true)
     expect(state.money).toBe(0)
     expect(state.offices[0].kind).toBe('office')

@@ -285,6 +285,14 @@ function launchDemand(state: GameState, productTypeId: string): number {
   return marketDemand(state, productTypeId) * (1 + randRange(state, -DEMAND_NOISE, DEMAND_NOISE))
 }
 
+/** A product takes off: the odds reset, and the first one becomes the studio's signature. */
+function breakOut(state: GameState, product: Product): void {
+  state.launchesSinceHit = 0
+  state.signatureId ??= product.id
+  state.reputation = Math.min(REPUTATION_MAX, state.reputation + HIT_REPUTATION)
+  state.events.push({ type: 'breakout', productId: product.id })
+}
+
 function shipNewProduct(state: GameState, office: Office, project: Project, campaign: Tier | undefined): Result {
   const quality = projectQuality(state, project)
   const cost = campaign ? campaignCost(state, project, quality, campaign) : 0
@@ -319,14 +327,8 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
   state.products.push(product)
   state.shippedCount += 1
   reputationFromRelease(state, project, quality, 1)
-  if (hit) {
-    state.launchesSinceHit = 0
-    state.signatureId ??= product.id
-    state.reputation = Math.min(REPUTATION_MAX, state.reputation + HIT_REPUTATION)
-    state.events.push({ type: 'breakout', productId: product.id })
-  } else if (quality >= HIT_MIN_QUALITY) {
-    state.launchesSinceHit += 1
-  }
+  if (hit) breakOut(state, product)
+  else if (quality >= HIT_MIN_QUALITY) state.launchesSinceHit += 1
   moraleFromRelease(state, quality)
   office.project = null
   state.events.push({ type: 'shipped', productId: project.id, update: false, reach, bugs, quality })
@@ -346,6 +348,14 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
     product.reach *= PROJECT_SIZES[project.grows].reach / PROJECT_SIZES[product.size].reach
     state.events.push({ type: 'notice', text: `${product.name} grew into a ${PROJECT_SIZES[project.grows].name} product.`, sound: 'milestone' })
     product.size = project.grows
+    // Growing a product is a second launch: it gets its own roll for a breakout.
+    if (!product.hit && rand(state) < hitChance(state, project, quality)) {
+      product.hit = true
+      product.reach *= HIT_REACH[project.grows]
+      breakOut(state, product)
+    } else if (!product.hit && quality >= HIT_MIN_QUALITY) {
+      state.launchesSinceHit += 1
+    }
   }
   product.pendingBugs += bugs
   product.updates.push({ day: state.day })

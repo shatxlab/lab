@@ -98,6 +98,37 @@ describe('growing a product', () => {
     expect(product.reach).toBeGreaterThanOrEqual((reachBefore * PROJECT_SIZES.medium.reach) / PROJECT_SIZES.small.reach)
     expect(state.products).toHaveLength(1)
   })
+
+  it('rolls for a breakout, which makes the product the signature and resets the odds', () => {
+    for (let seed = 1; seed < 400; seed++) {
+      const state = officeWith(1)
+      state.rng = seed
+      state.launchesSinceHit = 20
+      const product = state.products[0]
+      product.size = 'small'
+      product.releaseDay = state.day - 400
+      startUpdate(state, product.id, [], 1, true)
+      const project = state.offices[0].project!
+      for (const d of DISCIPLINES) project.progress[d] = project.target[d] * 1.3
+      shipProject(state)
+      if (!product.hit) continue
+      expect(state.signatureId).toBe(product.id)
+      expect(state.launchesSinceHit).toBe(0)
+      return
+    }
+    throw new Error('no seed produced a breakout')
+  })
+
+  it('counts a miss, but a plain update never rolls', () => {
+    const state = officeWith(1)
+    state.launchesSinceHit = 0
+    const product = state.products[0]
+    startUpdate(state, product.id, [], 1)
+    for (const d of DISCIPLINES) state.offices[0].project!.progress[d] = state.offices[0].project!.target[d] * 1.3
+    shipProject(state)
+    expect(product.hit).toBe(false)
+    expect(state.launchesSinceHit).toBe(0)
+  })
 })
 
 const UPDATE_WAIT = 60

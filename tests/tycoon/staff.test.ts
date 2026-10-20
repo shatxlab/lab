@@ -267,6 +267,7 @@ describe('releases, outings and upgrades', () => {
     const state = makeState([withTrait(1, NO_TRAIT_ID)])
     state.money = 100_000
     state.stage = 1
+    state.signatureId = 1
     expect(moveOut(state).ok).toBe(true)
     expect(state.employees[0].morale).toBe(75 + OFFICE_UPGRADE_MORALE)
   })

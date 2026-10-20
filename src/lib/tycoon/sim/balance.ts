@@ -278,6 +278,8 @@ export const KNOWLEDGE_TYPE_HALF = 360
 /** ...and knowledge of the very product, which counts for a little more. */
 export const KNOWLEDGE_PRODUCT_MAX = 0.15
 export const KNOWLEDGE_PRODUCT_HALF = 200
+/** With a knowledge base, this share of what a leaver knew stays with their team. */
+export const KNOWLEDGE_HANDOVER = 0.4
 
 // Teams: people can work on another office's project, a little less well
 /** Output of someone working on a project run from an office other than their own. */

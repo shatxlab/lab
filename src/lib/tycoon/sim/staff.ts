@@ -31,6 +31,7 @@ import {
   TRAINING_MORALE,
 } from './balance'
 import { monthlySalaries } from './economy'
+import { depart } from './knowledge'
 import { adjustMorale, clampMorale, moraleSpeed } from './morale'
 import { careerMorale } from './careers'
 import { officeOf } from './offices'
@@ -114,7 +115,7 @@ export function moraleDay(state: GameState): void {
   }
 
   for (const employee of leaving) {
-    state.employees = state.employees.filter((e) => e.id !== employee.id)
+    depart(state, employee)
     state.events.push({ type: 'notice', text: `${employee.name} quit. Morale had been too low for too long.` })
     adjustMorale(state, -4)
   }

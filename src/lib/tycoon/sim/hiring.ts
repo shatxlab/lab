@@ -15,6 +15,7 @@ import {
   SECONDARY_SKILL_RANGE,
 } from './balance'
 import { levelForSkill } from './careers'
+import { depart } from './knowledge'
 import { ANALYST_MAX_LEVEL } from './balance'
 import { freeDesks, getOffice } from './offices'
 import { getTrait } from '@/lib/tycoon/data/traits'
@@ -181,6 +182,6 @@ export function fire(state: GameState, employeeId: number): Result {
   const index = state.employees.findIndex((e) => e.id === employeeId)
   if (index < 0) return fail('Employee not found')
   if (state.employees[index].founder) return fail('Founders stay: it is their studio too')
-  state.employees.splice(index, 1)
+  depart(state, state.employees[index])
   return OK
 }

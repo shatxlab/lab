@@ -1,11 +1,17 @@
 import {
+  KNOWLEDGE_HANDOVER,
   KNOWLEDGE_PER_DAY,
   KNOWLEDGE_PRODUCT_HALF,
   KNOWLEDGE_PRODUCT_MAX,
   KNOWLEDGE_TYPE_HALF,
   KNOWLEDGE_TYPE_MAX,
 } from './balance'
-import type { Employee, GameState } from './types'
+import { teamOfficeId } from './offices'
+import { isBuilder, type Employee, type GameState } from './types'
+import { isResearched } from './unlocks'
+
+/** The research that makes a team keep some of what a leaver knew. */
+export const KNOWLEDGE_BASE_RESEARCH = 'knowledge_base'
 
 /** What a piece of work is about: the kind of product, and the product itself once it has an id (null for client work). */
 export interface Subject {
@@ -64,4 +70,22 @@ export function topExpertise(state: GameState, employee: Employee, limit = 4): E
     rows.push({ kind: 'product', id, name: product?.name ?? 'a past product', days })
   }
   return rows.sort((a, b) => b.days - a.days).slice(0, limit)
+}
+
+/**
+ * Someone leaves the studio, for whatever reason. With a knowledge base the people on the same team keep a share of
+ * what they knew, split between them; without one it goes out of the door with them.
+ */
+export function depart(state: GameState, employee: Employee): void {
+  state.employees = state.employees.filter((e) => e.id !== employee.id)
+  const knowledge = employee.knowledge
+  if (!knowledge || !isResearched(state, KNOWLEDGE_BASE_RESEARCH)) return
+  const team = teamOfficeId(state, employee)
+  const heirs = state.employees.filter((e) => isBuilder(e) && teamOfficeId(state, e) === team)
+  if (heirs.length === 0) return
+  for (const heir of heirs) {
+    const mine = (heir.knowledge ??= { types: {}, products: {} })
+    for (const [id, days] of Object.entries(knowledge.types)) mine.types[id] = (mine.types[id] ?? 0) + (days * KNOWLEDGE_HANDOVER) / heirs.length
+    for (const [id, days] of Object.entries(knowledge.products)) mine.products[id] = (mine.products[id] ?? 0) + (days * KNOWLEDGE_HANDOVER) / heirs.length
+  }
 }

@@ -280,7 +280,8 @@ export interface ResearchState {
   /** Finished research ids. */
   done: string[]
   /** What is being researched now; one thing at a time. */
-  active: { id: string; finishDay: number } | null
+  /** `target` is what a repeatable study is about (an audience id). */
+  active: { id: string; finishDay: number; target?: string } | null
 }
 
 /** A random event waiting for the player's choice. `data` is whatever the event picked at roll time. */

@@ -114,7 +114,7 @@ export interface Store {
   /** Sets a product to promote itself at this tier, or turns that off (needs Marketing automation). */
   setAutoPromote(productId: number, tier: Tier | null): Result
   /** Starts researching `id`; one thing at a time. */
-  startResearch(id: string): Result
+  startResearch(id: string, target?: string): Result
   /** Picks choice `index` of the pending random event. */
   resolveEvent(index: number): Result
   /** Hires into the selected office, or the first with a free desk if it is full. */
@@ -404,8 +404,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return result
     },
 
-    startResearch(id) {
-      return cue(changed(logged(() => decisions.startResearch(state, id), () => startResearch(state, id))), 'click')
+    startResearch(id, target) {
+      return cue(changed(logged(() => decisions.startResearch(state, id, target), () => startResearch(state, id, target))), 'click')
     },
 
     resolveEvent(index) {

@@ -110,7 +110,7 @@ function validResearch(v: unknown): boolean {
     isObj(v) &&
     Array.isArray(v.done) &&
     v.done.every((id) => typeof id === 'string') &&
-    (v.active === null || (isObj(v.active) && typeof v.active.id === 'string' && isNum(v.active.finishDay)))
+    (v.active === null || (isObj(v.active) && typeof v.active.id === 'string' && isNum(v.active.finishDay) && (v.active.target === undefined || typeof v.active.target === 'string')))
   )
 }
 

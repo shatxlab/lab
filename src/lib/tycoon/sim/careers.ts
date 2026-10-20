@@ -16,6 +16,7 @@ import {
   PROMOTION_PATIENCE_DAYS,
 } from './balance'
 import { PM_RESEARCH, salaryOf } from './hiring'
+import { depart } from './knowledge'
 import { adjustMorale } from './morale'
 import { staffOf } from './offices'
 import { isResearched } from './unlocks'
@@ -156,7 +157,7 @@ export function careerDay(state: GameState): void {
     if (!employee.founder && years >= MOVE_ON_YEARS && rand(state) < MOVE_ON_CHANCE) leaving.push(employee)
   }
   for (const employee of leaving) {
-    state.employees = state.employees.filter((e) => e.id !== employee.id)
+    depart(state, employee)
     state.events.push({ type: 'notice', text: `After ${Math.floor((state.day - employee.hiredDay) / 360)} years, ${employee.name} is leaving to start something of their own. Good luck to them.` })
   }
 }

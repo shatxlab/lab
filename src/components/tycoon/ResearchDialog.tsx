@@ -1,5 +1,8 @@
+import { useState } from 'react'
+import { getAudience } from '@/lib/tycoon/data/audiences'
+import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { BRANCHES, RESEARCH, unlocksOf, type ResearchNode } from '@/lib/tycoon/data/research'
-import { researchBlocker, researchDaysLeft } from '@/lib/tycoon/sim/research'
+import { researchBlocker, researchDaysLeft, studyTargets } from '@/lib/tycoon/sim/research'
 import { isResearched } from '@/lib/tycoon/sim/unlocks'
 import { useGame, useStore } from './context'
 import { formatMoney } from '@/lib/tycoon/format'
@@ -13,6 +16,9 @@ function ResearchRow({ node }: { node: ResearchNode }) {
   const active = state.research.active?.id === node.id
   const blocker = researchBlocker(state, node)
   const { features, productTypes, abilities } = unlocksOf(node.id)
+  const targets = node.repeatable ? studyTargets(state) : []
+  const [target, setTarget] = useState('')
+  const chosen = targets.includes(target) ? target : targets[0]
 
   return (
     <div className={`research-node ${done ? 'done' : ''} ${active ? 'active' : ''}`}>
@@ -28,16 +34,27 @@ function ResearchRow({ node }: { node: ResearchNode }) {
           Unlocks: {[...productTypes.map((t) => `${t} (product)`), ...features, ...abilities].join(', ')}
         </p>
       )}
-      {done ? (
+      {done && !node.repeatable ? (
         <span className="good">✓ Done</span>
       ) : (
-        <button
-          className={blocker === null ? 'primary' : ''}
-          disabled={blocker !== null}
-          onClick={() => store.startResearch(node.id)}
-        >
-          {active ? 'In progress' : blocker ?? 'Research'}
-        </button>
+        <>
+          {node.repeatable && targets.length > 0 && (
+            <select aria-label="Audience to study" value={chosen} onChange={(event) => setTarget((event.target as HTMLSelectElement).value)}>
+              {targets.map((id) => (
+                <option key={id} value={id}>
+                  {getProductType(getAudience(id).productTypeId).name}: {getAudience(id).name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            className={blocker === null ? 'primary' : ''}
+            disabled={blocker !== null}
+            onClick={() => store.startResearch(node.id, node.repeatable ? chosen : undefined)}
+          >
+            {active ? 'In progress' : blocker ?? (node.repeatable ? 'Study' : 'Research')}
+          </button>
+        </>
       )}
     </div>
   )
@@ -55,7 +72,7 @@ export function ResearchDialog() {
       {activeNode && left !== null ? (
         <div className="research-active">
           <div className="research-head">
-            <strong>Researching: {activeNode.name}</strong>
+            <strong>Researching: {activeNode.name}{active?.target ? ` · ${getAudience(active.target).name}` : ''}</strong>
             <span className="muted">{left} days left</span>
           </div>
           <div className="track">

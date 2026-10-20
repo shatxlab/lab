@@ -89,8 +89,8 @@ export const decisions = {
     return ['contract.abandon', `Dropped the job for ${contract?.client ?? 'a client'}`, { pay: contract?.pay ?? 0 }]
   },
 
-  startResearch(_state: GameState, id: string): Decision {
-    return ['research.start', `Started researching ${getResearch(id)?.name ?? id}`, { id }]
+  startResearch(_state: GameState, id: string, target?: string): Decision {
+    return ['research.start', `Started researching ${getResearch(id)?.name ?? id}${target ? ` (${getAudience(target).name})` : ''}`, target ? { id, target } : { id }]
   },
 
   resolveEvent(state: GameState, index: number): Decision {

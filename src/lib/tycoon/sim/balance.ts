@@ -268,6 +268,9 @@ export const SALARY_BASE = 600
 export const SALARY_PER_SKILL_POINT = 18
 /** Wages rise this share with every era, as the industry grows and fights over people. */
 export const ERA_WAGE_GROWTH = 0.12
+/** The first eras raise wages that much each; later eras only this much (the industry has matured), so a twenty-year run is not priced out. */
+export const ERA_WAGE_FULL_ERAS = 4
+export const ERA_WAGE_LATE_GROWTH = 0.04
 
 // Knowledge: people get better at the products and kinds of product they have worked on
 /** Days of knowledge a working day adds, to the product's type and to the product itself. */

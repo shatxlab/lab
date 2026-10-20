@@ -2,7 +2,9 @@ import { FIRST_NAMES, LAST_NAMES } from '@/lib/tycoon/data/names'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import {
   CANDIDATE_COUNT,
+  ERA_WAGE_FULL_ERAS,
   ERA_WAGE_GROWTH,
+  ERA_WAGE_LATE_GROWTH,
   FOUNDER_PAY_SHARE,
   HIRE_MAX_LEVEL,
   LEVELS,
@@ -52,10 +54,16 @@ export const ROLE_DISCIPLINE: Record<BuilderRole, Discipline> = {
   tester: 'qa',
 }
 
+/** How much dearer people are on `day` than in the first era: a steep rise for the early eras, a gentle one after. */
+export function eraWageFactor(day: number): number {
+  const era = eraIndexAt(day)
+  return 1 + ERA_WAGE_GROWTH * Math.min(era, ERA_WAGE_FULL_ERAS) + ERA_WAGE_LATE_GROWTH * Math.max(0, era - ERA_WAGE_FULL_ERAS)
+}
+
 /** Market rate for a skill set, trait and level (Mid by default) on `day`; employees are re-rated monthly. */
 export function salaryFor(skills: Skills, traitId = '', level = 1, day = 0, share = 1, analysis = 0): number {
   const total = DISCIPLINES.reduce((sum, d) => sum + skills[d], 0) + ANALYSIS_PAY_WEIGHT * analysis
-  const market = (SALARY_BASE + SALARY_PER_SKILL_POINT * total) * (1 + ERA_WAGE_GROWTH * eraIndexAt(day))
+  const market = (SALARY_BASE + SALARY_PER_SKILL_POINT * total) * eraWageFactor(day)
   return Math.round((market * (getTrait(traitId).salary ?? 1) * LEVELS[level].salary * share) / 50) * 50
 }
 

@@ -34,3 +34,16 @@ describe('late-game content', () => {
     expect(PRODUCT_TYPES.length).toBeGreaterThanOrEqual(12)
   })
 })
+
+describe('wages across eras', () => {
+  it('rise steeply at first and gently in the late eras', async () => {
+    const { eraWageFactor } = await import('@/lib/tycoon/sim/hiring')
+    const { ERA_WAGE_FULL_ERAS, ERA_WAGE_GROWTH, ERA_WAGE_LATE_GROWTH } = await import('@/lib/tycoon/sim/balance')
+    const dayOf = (index: number) => (ERAS[index].startYear - 1) * 360
+    expect(eraWageFactor(0)).toBe(1)
+    expect(eraWageFactor(dayOf(1))).toBeCloseTo(1 + ERA_WAGE_GROWTH, 10)
+    expect(eraWageFactor(dayOf(ERA_WAGE_FULL_ERAS))).toBeCloseTo(1 + ERA_WAGE_GROWTH * ERA_WAGE_FULL_ERAS, 10)
+    expect(eraWageFactor(dayOf(ERA_WAGE_FULL_ERAS + 1))).toBeCloseTo(1 + ERA_WAGE_GROWTH * ERA_WAGE_FULL_ERAS + ERA_WAGE_LATE_GROWTH, 10)
+    expect(eraWageFactor(dayOf(ERAS.length - 1))).toBeLessThan(1 + ERA_WAGE_GROWTH * (ERAS.length - 1))
+  })
+})

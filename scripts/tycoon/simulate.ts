@@ -263,8 +263,10 @@ function botStep(state: GameState, policy: Policy, firstHit: { day: number | nul
   if (moveOutBlocker(state) === null && state.money > MOVE_OUT_COST + reserve) moveOut(state)
   const nearlyFull = state.offices.every((o) => o.kind === 'office' && freeDesks(state, o) <= 2)
   if (nearlyFull && openOfficeBlocker(state) === null && state.money > newOfficeCost(state) + reserve) openOffice(state)
+  // A careful studio does not take on people its products cannot pay for.
+  const affordable = dailyIncome(state) >= (0.6 * monthlyBurn(state)) / DAYS_PER_MONTH || state.money > 12 * monthlyBurn(state)
   for (const office of state.offices) {
-    if (freeDesks(state, office) <= 0) continue
+    if (!affordable || freeDesks(state, office) <= 0) continue
     const weakest = officeWeakness(state, office)
     const pick = state.candidates.find((c) => isBuilder(c) && ROLE_DISCIPLINE[c.role as BuilderRole] === weakest)
     if (pick && state.money > hireCost(pick) + reserve) hire(state, pick.id, office.id)
@@ -285,6 +287,8 @@ interface Outcome {
   firstHit: number | null
   /** The day each stage was reached. */
   stageDays: number[]
+  /** When a bankrupt run ended, with what it earned and burned a day then. */
+  end: { day: number; income: number; burn: number; products: number } | null
 }
 
 function play(policy: Policy, seed: number, years: number): Outcome {
@@ -310,6 +314,7 @@ function play(policy: Policy, seed: number, years: number): Outcome {
     shipped: state.shippedCount,
     firstHit: firstHit.day,
     stageDays,
+    end: state.gameOver ? { day: state.day, income: dailyIncome(state), burn: monthlyBurn(state) / DAYS_PER_MONTH, products: state.products.length } : null,
   }
 }
 
@@ -355,6 +360,7 @@ for (const policy of POLICIES.filter((p) => !only || p.name.includes(only))) {
   )
   if (only) {
     // Detail for the chosen policies: when each stage was reached, across the seeds.
+    for (const o of outcomes.filter((x) => x.end)) console.log(`  bankrupt in year ${yearsOf(o.end!.day)}: income ${fmt(o.end!.income)}/day, burn ${fmt(o.end!.burn)}/day, ${o.end!.products} products`)
     for (let s = 1; s < 6; s++) {
       const reached = outcomes.map((o) => o.stageDays[s]).filter((d) => d !== undefined)
       if (reached.length) console.log(`  ${getStage(s).name.padEnd(22)} reached by ${reached.length}/${seedCount}, median year ${yearsOf(median(reached))}`)

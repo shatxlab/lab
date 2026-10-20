@@ -18,7 +18,7 @@ import { monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { needsLead, pmBlocker, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
 import { hasAnalyst, insightRate } from '@/lib/tycoon/sim/insight'
-import { hireCost, hiringOffice, payShare, salaryFor } from '@/lib/tycoon/sim/hiring'
+import { eraWageFactor, hireCost, hiringOffice, payShare, salaryFor } from '@/lib/tycoon/sim/hiring'
 import {
   deskCount,
   freeDesks,
@@ -194,8 +194,8 @@ export function TeamDialog() {
         <div className="section-head">
           <h3>Your team</h3>
           <span className="muted">
-            Salaries follow skills and update monthly. Market wages also rise {Math.round(ERA_WAGE_GROWTH * 100)}% with every era
-            {eraIndexAt(state.day) > 0 && ` (+${Math.round(ERA_WAGE_GROWTH * eraIndexAt(state.day) * 100)}% so far)`}.
+            Salaries follow skills and update monthly. Market wages also rise {Math.round(ERA_WAGE_GROWTH * 100)}% with each early era, less later
+            {eraIndexAt(state.day) > 0 && ` (+${Math.round((eraWageFactor(state.day) - 1) * 100)}% so far)`}.
           </span>
         </div>
         {state.employees.length === 0 && <p className="muted">Nobody works here. Hire someone to start a project.</p>}

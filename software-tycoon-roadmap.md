@@ -8,10 +8,13 @@ blocking: the game builds, its tests pass and it ships.
 more offices; client contracts; users and bugs on every product; breakout hits;
 six journey stages; ten rival studios (and a newcomer at each new era) and an
 industry ranking; eras that shift demand and expectations; careers from Junior to
-Lead; bug fixing by a developer and tester pair; retiring and selling products.
-Saves are version 4 (`STATE_VERSION` in `src/lib/tycoon/sim/state.ts`); bump it
-and say so in the commit whenever the save shape changes. Version 3 saves are
-upgraded on load (`upgradeFromV3`).
+Lead; bug fixing by a developer and tester pair; retiring and selling products;
+a two-act shape (sell from the garage, or earn a hit and move out), a 5-product
+portfolio that products grow through, audiences, and an exportable run log.
+Saves are version 5 (`STATE_VERSION` in `src/lib/tycoon/sim/state.ts`); bump it
+and say so in the commit whenever the save shape changes. Version 3 and 4 saves are
+upgraded on load (`upgradeFromV3`, `upgradeFromV4`). Optional fields (such as
+`audienceId`) need no bump.
 
 Tools: `scripts/tycoon/simulate.ts [years] [seeds] [policy]` (bot players; with a
 policy name it also prints the year each stage was reached). It cannot run as
@@ -44,7 +47,7 @@ with a few products it cares about, teams that own them, and a long run.
   name in play, retired or on a rival's list, and falls back to two-word names.
 - **Offices.** The offer for a fifth office is hidden at the cap of 4.
 - **Hit chance** is explained in the launch dialog (`hitBreakdown`): streak,
-  quality, market, buzz, and whether it hit the cap.
+  quality, market, buzz, audience fit, and whether it hit the cap.
 - **Run log.** `GameState.journal` records every player decision with the cash and
   numbers at the time (`sim/decisions.ts`, written from the store), the sim's own
   events (stage, era, hit, event offered, notices) and a monthly snapshot
@@ -80,6 +83,15 @@ with a few products it cares about, teams that own them, and a long run.
   Flagship, in order, at least `GROW_MIN_AGE_DAYS` old, not fading) costs the
   difference between sizes and scales its reach (`growBlocker`, `growTarget`,
   `Project.grows`).
+- **Hit gate and growth rolls.** Moving out needs a breakout hit (`moveOutBlocker`:
+  `signatureId`), so the garage, which has no new-product limit, is where the hit is
+  hunted. Every grow gets its own breakout roll (`shipUpdate`, same `hitChance` as a
+  launch, no campaign; a hit multiplies reach by `HIT_REACH` of the new size and
+  skips products that already hit). A good grow that misses counts toward the streak.
+  The launch dialog shows the chance for grows too. Why: the second logged run
+  (office, 7 years) had 8 new-product shots at 2.4% to 29% and no hit (about a 1 in 4
+  streak), and a single shot a year felt like too few; growing is the act of caring for
+  a product, so it should be a chance for it to take off.
 
 Balance note: with these caps the best bot reaches ~11k/day at year 20 (was ~26k) and
 stalls at Industry leader. The bots are cruder than a person (they do not auto-promote
@@ -102,9 +114,11 @@ all 16 research done by year 10.8); 115 auto-promotions at Large cost $5.97M, ha
 the $12.0M lifetime revenue, and the player calls Marketing automation a cheat code
 that made income grow exponentially. The player did not know which features affect hit
 chance (audiences, below). Nothing in the log says whether a promotion paid back, so
-the monthly snapshot now has income per product. Open: tame auto-promotion (diminishing
-returns, a cap, or a cost that grows), a garage that has something to buy, and the
-tedium of the contract-only start.
+the monthly snapshot now has income per product. Since then: promotions wear off, the
+garage sale is flatter with an end date, and products sell by income (all in Built
+above). Still open: whether that tamed auto-promotion enough (check against a new log;
+otherwise diminishing returns, a cap, or a cost that grows), a garage that has
+something to buy, and the tedium of the contract-only start.
 
 ### Agreed, not built
 
@@ -122,12 +136,16 @@ tedium of the contract-only start.
   only, one PM per office. Analysts produce insights that reveal hidden facts; the PM
   owns a product's direction (bonus to feature fit and hit chance). Needs new
   character art, reusing existing characters.
-- **Competitors.** *Absorb* a rival: price from its income and growth; it leaves the
+- **Competitors.** Today's buyout (`acquire` in `sim/rivals.ts`: an industry leader,
+  stage `ACQUISITION_STAGE`, pays `ACQUISITION_DAYS` of the rival's income, and gets
+  its products and other business) gives little. Redesign as *Absorb* a rival: price
+  from its income and growth; it leaves the
   ranking; choose which of its products to keep (they take portfolio slots); generated
   staff with expertise in its focus types; its office, in its region, replaces
   building office 3 or 4. A *Subsidiary* option (independent, sends a share of its
   income) comes later. Rivals should grow so buying early is a bargain.
-- **Research** as mechanisms, like Incident management, gated by company stage.
+- **Research** as mechanisms, like Incident management and Marketing automation (both
+  built), gated by company stage; the rest of the 16 items are mostly plain bonuses.
 - **Rival names** from a generator, so later newcomers do not depend on a hand list.
 
 ## First real playthrough (2026-10-15)
@@ -258,13 +276,16 @@ played it yet; the numbers below are first guesses.
 To discuss and order. Themes: *attachment* (people, products, the office as home)
 and *cause and effect* (why a product worked, rivals and eras that matter).
 
-- **Living products.** A longer life per product: a roadmap of updates that keep
+- **Living products.** (Partly built: slower decay, maintenance releases, phases and
+  growing a product into the next size.) A longer life per product: a roadmap of updates that keep
   opening content, slower and more visible decline, a reason to care after the
   last update.
 - **People you care about.** Visible skill growth, tenure and promotion stories,
   retirement with a farewell, fewer pointless leavers.
-- **Why it worked.** A post-launch report that says what drove quality and users
-  (features, era fit, crowding), and eras that change what sells.
+- **Why it worked.** (Partly built: the product card says what the audience loved,
+  shrugged at and wished for, and the launch dialog explains the hit chance.) Still
+  missing: a post-launch report on what drove quality and users (era fit, crowding),
+  and eras that change what sells.
 - **Breathing room.** Slower pace and fewer demands per day (see "Play it, then
   retune"). A garage that is less frightening in the first two months.
 - **Late-game content.** More product types and research, server bills and
@@ -288,7 +309,9 @@ Balance so far comes mostly from bots, plus the one human run above.
 - **Money is tight all game for a human** (the opposite of the bots' millions by
   year 10–12). Rival buyouts, the late sink, were not reached. Re-check the
   bots' late money against real play before adding sinks.
-- **Hits:** `HIT_BASE_CHANCE`, `HIT_CHANCE_PER_MISS`, `HIT_MAX_CHANCE` put the
+- **Hits** (now legible: the launch dialog shows the streak, quality, market, buzz and
+  audience factors, and grows roll too; still to retune from a new log):
+  `HIT_BASE_CHANCE`, `HIT_CHANCE_PER_MISS`, `HIT_MAX_CHANCE` put the
   first hit at about year 3 for the best bot (range 1.4–8). The human's second
   product hit but "felt random". Decide whether to keep it luck-based or make it
   legible.
@@ -305,10 +328,12 @@ Balance so far comes mostly from bots, plus the one human run above.
 
 ## Test and check gaps
 
-- **No unit tests for rivals or eras:** `sim/rivals.ts` (launches, ranking,
-  buyouts, business growth), `data/eras.ts`, crowding, `saturate`,
-  expected-feature penalties and `settledUsers` are only exercised by the bot
-  runs. Add tests, including a save round trip with rivals and an acquisition.
+- **Rivals and eras are thinly tested.** `tests/tycoon/rivals.test.ts` covers the
+  roster, newcomers, arrival years and launch announcements. Still only exercised by
+  the bot runs: ranking (`standings`, `rankingDay`), business growth, `acquire`,
+  `data/eras.ts`, crowding, expected-feature penalties and `settledUsers`. Add tests,
+  including a save round trip with rivals and an acquisition (do this before building
+  Absorb).
 - **Browser checks do not cover** the breakout, era and stage dialogs, the
   buyout button, promoting a person, the Lead warning, or opening a second
   office from the Team dialog.
@@ -332,7 +357,7 @@ Balance so far comes mostly from bots, plus the one human run above.
 - **Tech giant has no goals.** The long game stays a journey; the redesign above
   adds a legacy summary and no IPO-style reset. Options still open: an endless mode
   with growing rivals; a legacy / new-studio start.
-- Research (14 items) is finished early; repeatable research (CI II, III…) is
+- Research (16 items) is finished early (by year 10.8 in the first logged run); repeatable research (CI II, III…) is
   not built.
 - Only 7 product types and 24 features; era "expected features" stop at the
   platform age. More product types are wanted.

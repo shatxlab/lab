@@ -1,4 +1,5 @@
 import { audienceFor } from '@/lib/tycoon/data/audiences'
+import { EU_LIKES } from '@/lib/tycoon/data/regions'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import {
@@ -12,7 +13,7 @@ import {
   QUALITY_POLISH,
   REPUTATION_REACH_BONUS,
 } from './balance'
-import { DISCIPLINES, type Discipline, type Project } from './types'
+import { DISCIPLINES, type Discipline, type Project, type Region } from './types'
 
 /** What the progress helpers need: a project, or a bug-fixing job. */
 type Work = Pick<Project, 'target' | 'progress'>
@@ -57,14 +58,14 @@ export function overallFit(productTypeId: string, featureIds: readonly string[])
 }
 
 /** What the audience makes of a feature: above 1 they love it, below 1 they shrug. */
-export function audienceLikes(productTypeId: string, audienceId: string | undefined, featureId: string): number {
-  return audienceFor(productTypeId, audienceId).likes[featureId] ?? 1
+export function audienceLikes(productTypeId: string, audienceId: string | undefined, featureId: string, region: Region = 'us'): number {
+  return (audienceFor(productTypeId, audienceId).likes[featureId] ?? 1) * (region === 'eu' ? (EU_LIKES[featureId] ?? 1) : 1)
 }
 
 /** Sum of (value × fit × what the audience thinks of it) across features; drives the revenue bonus. */
-export function featureScore(productTypeId: string, featureIds: readonly string[], audienceId?: string): number {
+export function featureScore(productTypeId: string, featureIds: readonly string[], audienceId?: string, region: Region = 'us'): number {
   let score = 0
-  for (const id of featureIds) score += getFeature(id).value * featureFit(productTypeId, id) * audienceLikes(productTypeId, audienceId, id)
+  for (const id of featureIds) score += getFeature(id).value * featureFit(productTypeId, id) * audienceLikes(productTypeId, audienceId, id, region)
   return score
 }
 
@@ -128,8 +129,8 @@ export function computeQuality(project: Project, bonus = 1): number {
 }
 
 /** Reach multiplier from the features: more valuable features that suit the type reach more people. */
-export function featureReach(productTypeId: string, featureIds: readonly string[], audienceId?: string): number {
-  return 1 + FEATURE_REACH_BONUS * featureScore(productTypeId, featureIds, audienceId)
+export function featureReach(productTypeId: string, featureIds: readonly string[], audienceId?: string, region: Region = 'us'): number {
+  return 1 + FEATURE_REACH_BONUS * featureScore(productTypeId, featureIds, audienceId, region)
 }
 
 /** Users a release of this project at `quality` can reach: the type's audience, scaled by everything about it. */

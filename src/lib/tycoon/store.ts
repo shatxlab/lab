@@ -12,14 +12,14 @@ import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
-import { shipProject, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
+import { shipProject, startLocalisation, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
 import { startResearch } from '@/lib/tycoon/sim/research'
 import { startTraining, teamOuting } from '@/lib/tycoon/sim/staff'
 import { isReady } from '@/lib/tycoon/sim/scoring'
 import { decisions, type Decision } from '@/lib/tycoon/sim/decisions'
 import { logEntry, logSimEvent } from '@/lib/tycoon/sim/journal'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
-import type { Discipline, GameState, ProjectSize, Result, SimEvent, Tier } from '@/lib/tycoon/sim/types'
+import type { Discipline, GameState, ProjectSize, Region, Result, SimEvent, Tier } from '@/lib/tycoon/sim/types'
 
 export type Speed = 0 | 1 | 2
 export const SPEEDS: readonly Speed[] = [0, 1, 2]
@@ -61,6 +61,8 @@ export type Dialog =
   /** One person's details: skills, trait, morale, training. */
   | { kind: 'employee'; id: number }
   | { kind: 'research' }
+  /** Absorbing a rival studio: choose which of its products to keep. */
+  | { kind: 'absorb'; rivalId: number }
   | { kind: 'menu' }
   | { kind: 'game-over' }
   /** A bigger company wants to buy the studio. */
@@ -98,6 +100,8 @@ export interface Store {
   /** Ships an office's project; `campaign` buys launch marketing for a new product. */
   shipProject(campaign?: Tier, officeId?: number): Result
   startUpdate(productId: number, featureIds: readonly string[], officeId?: number, grow?: boolean): Result
+  /** Starts localising a live product for Europe in an office: a maintenance-sized release that opens the market there. */
+  localise(productId: number, officeId?: number): Result
   /** Sends a developer and a tester to fix a live product's bugs. */
   startFix(productId: number, developerId: number, testerId: number): Result
   /** Ends a bug-fixing job early, keeping what it fixed. */
@@ -130,8 +134,8 @@ export interface Store {
   fire(employeeId: number): Result
   /** Leaves the garage for a real office. */
   moveOut(): Result
-  /** Opens another office and shows it. */
-  openOffice(): Result
+  /** Opens another office (in `region`, by default the first it could be in) and shows it. */
+  openOffice(region?: Region): Result
   /** Moves someone to another office's team. */
   transfer(employeeId: number, officeId: number): Result
   /** Puts someone on the team of another office's project, or back on their own office's with `null`. */
@@ -140,8 +144,8 @@ export interface Store {
   becomePm(employeeId: number): Result
   /** Spends insight to learn what an audience likes. */
   survey(audienceId: string): Result
-  /** Buys a rival studio and its products. */
-  acquire(rivalId: number): Result
+  /** Absorbs a rival studio: its office and people are yours, and so are the products listed (they take portfolio places). */
+  acquire(rivalId: number, keepProductIds?: readonly number[]): Result
   /** Sells the studio to the company that made an offer: the run ends. */
   acceptBuyout(): Result
   /** Turns the offer down; a better one comes later. */
@@ -312,6 +316,15 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return result
     },
 
+    localise(productId, officeId) {
+      const result = logged(() => decisions.localise(state, productId, officeFor(officeId)), () => startLocalisation(state, productId, officeFor(officeId)))
+      if (!result.ok) return result
+      if (speed.value === 0) speed.value = 1
+      bump()
+      sfx.play('click')
+      return result
+    },
+
     startFix(productId, developerId, testerId) {
       const result = logged(() => decisions.startFix(state, productId), () => startFix(state, productId, developerId, testerId))
       if (!result.ok) return result
@@ -454,8 +467,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return cue(changed(logged(() => decisions.moveOut(), () => moveOut(state))), 'upgrade')
     },
 
-    openOffice() {
-      const result = logged(() => decisions.openOffice(state), () => openOffice(state))
+    openOffice(region) {
+      const result = logged(() => decisions.openOffice(state, region), () => openOffice(state, region))
       if (result.ok) selectedOffice.value = state.offices[state.offices.length - 1].id
       return cue(changed(result), 'upgrade')
     },
@@ -505,8 +518,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return changed(result)
     },
 
-    acquire(rivalId) {
-      const result = logged(() => decisions.acquire(state, rivalId), () => acquire(state, rivalId))
+    acquire(rivalId, keepProductIds = []) {
+      const result = logged(() => decisions.acquire(state, rivalId, keepProductIds), () => acquire(state, rivalId, keepProductIds))
       if (!result.ok) return result
       handleEvents(drainLogged())
       bump()

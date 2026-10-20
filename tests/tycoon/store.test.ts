@@ -207,6 +207,7 @@ describe('team commands', () => {
     expect(store.moveOut().ok).toBe(true)
     expect(deskCount(store.state)).toBe(12)
     expect(store.openOffice().ok).toBe(true)
+    store.state.offices[1].region = 'us' // people only move within a region
     expect(deskCount(store.state)).toBe(24)
     expect(store.selectedOffice.value).toBe(store.state.offices[1].id)
 

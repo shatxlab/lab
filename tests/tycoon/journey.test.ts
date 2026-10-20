@@ -7,6 +7,7 @@ import {
   CONTRACT_LATE_PAY,
   CONTRACT_NEW_MAX_DAYS,
   CONTRACT_OFFERS,
+  EU_OFFICE_COST,
   HIT_MAX_CHANCE,
   HIT_REACH,
   MAX_OFFICES,
@@ -70,9 +71,12 @@ describe('the garage and offices', () => {
     state.stage = 2
     expect(openOfficeBlocker(state)).toBe('The studio is not ready yet')
     state.stage = 3
-    const first = newOfficeCost(state)
+    state.money = 5_000_000
+    expect(newOfficeCost(state)).toBe(EU_OFFICE_COST)
     expect(openOffice(state).ok).toBe(true)
-    expect(newOfficeCost(state)).toBeGreaterThan(first)
+    const third = newOfficeCost(state)
+    expect(openOffice(state).ok).toBe(true)
+    expect(newOfficeCost(state)).toBeGreaterThan(third)
     while (openOffice(state).ok);
     expect(state.offices).toHaveLength(MAX_OFFICES)
     expect(new Set(state.offices.map((o) => o.theme)).size).toBe(MAX_OFFICES)
@@ -86,6 +90,7 @@ describe('the garage and offices', () => {
   it('run a project per office at the same time, each with its own team', () => {
     const state = grownStudio()
     openOffice(state)
+    state.offices[1].region = 'us' // people can only move within a region
     const [hq, second] = state.offices
     expect(startProject(state, 'web_app', [], 'small', second.id)).toEqual({ ok: false, reason: 'Hire someone first' })
     expect(transfer(state, 2, second.id).ok).toBe(true)
@@ -109,6 +114,7 @@ describe('the garage and offices', () => {
   it('hire into the chosen office, or the first with room', () => {
     const state = grownStudio()
     openOffice(state)
+    state.offices[1].region = 'us'
     const second = state.offices[1]
     expect(hire(state, state.candidates[0].id, second.id).ok).toBe(true)
     expect(staffOf(state, second)).toHaveLength(1)
@@ -124,6 +130,7 @@ describe('the garage and offices', () => {
     state.stage = 3
     state.money = 1_000_000
     openOffice(state)
+    state.offices[1].region = 'us'
     state.offices[1].kind = 'garage'
     for (const id of [1, 2, 3, 4]) transfer(state, id, state.offices[1].id)
     state.employees.push({ ...makeEmployee(5), officeId: state.offices[0].id })

@@ -55,6 +55,8 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'first_promotion', name: 'Spread the word', description: 'Run a promotion.', reward: { money: 300 }, check: (s) => s.products.some((p) => p.boostUntil > 0) },
   { id: 'team_4', name: 'A real team', description: 'Have 4 people on the team: the garage is full.', reward: { money: 1000 }, check: (s) => s.employees.length >= 4 },
   { id: 'full_house', name: 'Full house', description: 'Fill an office: 12 people.', reward: { money: 10000 }, check: (s) => s.employees.length >= 12 },
+  { id: 'europe', name: 'Across the Atlantic', description: 'Open the European market for a product.', reward: { money: 10000, reputation: 1 }, check: (s) => s.products.some((p) => (p.euShare ?? 0) > 0) },
+  { id: 'both_markets', name: 'Both sides', description: 'Have 5,000 users on one product in each of the US and Europe.', reward: { money: 15000 }, check: (s) => s.products.some((p) => (p.euUsers ?? 0) >= 5000 && p.users - (p.euUsers ?? 0) >= 5000) },
   { id: 'know_audience', name: 'Know your audience', description: 'Study an audience: with an analyst or a commissioned study.', reward: { money: 1500 }, check: (s) => s.surveyed.length >= 1 },
   { id: 'old_hand', name: 'Old hand', description: 'Have someone who has spent 600 days working on one product.', reward: { money: 3000 }, check: (s) => mostKnown(s) >= 600 },
   { id: 'steering', name: 'Someone at the wheel', description: 'Have a product manager.', reward: { money: 3000 }, check: (s) => s.employees.some((e) => e.role === 'pm') },

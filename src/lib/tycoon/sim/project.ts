@@ -32,11 +32,11 @@ import {
 } from './balance'
 import { monthlyBurn } from './economy'
 import { officeRunning, pmHitFactor, pmReachFactor } from './direction'
-import { campaignCost, growBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
+import { campaignCost, growBlocker, localiseBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
 import { inGarage, resolveOffice, teamOf } from './offices'
-import { bugProneness, releaseBugs } from './products'
+import { bugProneness, euShareOf, regionScale, releaseBugs } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
 import { pick, rand, randRange } from './rng'
@@ -229,6 +229,49 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
   return OK
 }
 
+/** The share of its reach a product would gain in Europe if localised now: the market's size there, as its features and audience suit it. */
+export function euGain(product: Pick<Product, 'productTypeId' | 'featureIds' | 'audienceId'>): number {
+  const us = featureReach(product.productTypeId, product.featureIds, product.audienceId, 'us')
+  const eu = featureReach(product.productTypeId, product.featureIds, product.audienceId, 'eu')
+  return regionScale(product.productTypeId, 'eu') * (eu / us)
+}
+
+/** Starts localising a live product for Europe: a maintenance-sized release that opens the market there. It costs the budget of that work. */
+export function startLocalisation(state: GameState, productId: number, officeId?: number): Result {
+  if (state.gameOver) return fail('Game over')
+  const office = resolveOffice(state, officeId)
+  if (!office) return fail('Unknown office')
+  const product = state.products.find((p) => p.id === productId)
+  if (!product) return fail('Unknown product')
+  const blocker = localiseBlocker(state, office, product)
+  if (blocker) return fail(blocker)
+  const target = projectTarget(product.productTypeId, [], 'update', product.size)
+  const budget = projectBudget(target)
+  const budgetProblem = budgetBlocker(state, budget)
+  if (budgetProblem) return fail(budgetProblem)
+  state.money -= budget
+  office.project = {
+    id: state.nextId++,
+    name: product.name,
+    kind: 'update',
+    parentId: product.id,
+    productTypeId: product.productTypeId,
+    audienceId: product.audienceId,
+    size: product.size,
+    featureIds: [],
+    target,
+    localises: true,
+    progress: emptySkills(),
+    startDay: state.day,
+    readyNotified: false,
+    hype: 1,
+    alphaOffered: false,
+    bugRisk: 1,
+    contract: null,
+  }
+  return OK
+}
+
 /**
  * Ships an office's project at its current progress; early shipping just scores lower.
  * A new product may be launched with a paid marketing `campaign`.
@@ -401,6 +444,15 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
     } else if (!product.hit && quality >= HIT_MIN_QUALITY) {
       state.launchesSinceHit += 1
     }
+  }
+  if (project.localises && euShareOf(product) === 0) {
+    // Europe is a market of its own: the product gains reach there, and its first users arrive as a launch's do.
+    const gain = euGain(product)
+    product.reach *= 1 + gain
+    product.euShare = gain / (1 + gain)
+    product.euUsers = product.reach * product.euShare * LAUNCH_ADOPTERS
+    product.users += product.euUsers
+    state.events.push({ type: 'notice', text: `${product.name} is out in Europe.`, sound: 'milestone' })
   }
   product.pendingBugs += bugs
   product.updates.push({ day: state.day })

@@ -1,4 +1,5 @@
 import { audienceFor } from '@/lib/tycoon/data/audiences'
+import { EU_PAY, EU_TYPE_SIZE } from '@/lib/tycoon/data/regions'
 import { expectedFeatures } from '@/lib/tycoon/data/eras'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import {
@@ -23,13 +24,14 @@ import {
   MARKET_ROOM,
   PROJECT_SIZES,
   REPUTATION_MAX,
+  RIVAL_ABROAD,
   STALE_DAYS,
   USER_DECLINE,
   USER_DISCOVERY,
   USER_WORD_OF_MOUTH,
 } from './balance'
-import { coverage } from './scoring'
-import { DISCIPLINES, type GameState, type Product, type Project, type ProjectSize, type RivalProduct } from './types'
+import { coverage, featureReach } from './scoring'
+import { DISCIPLINES, REGIONS, type GameState, type Product, type Project, type ProjectSize, type Region, type RivalProduct } from './types'
 
 /** Day of the product's most recent release or update. */
 export function lastReleaseDay(product: Product): number {
@@ -59,51 +61,83 @@ export function expectationFactor(product: Product, day: number): number {
   return Math.max(EXPECTED_FEATURE_FLOOR, 1 - EXPECTED_FEATURE_PENALTY * missingFeatures(product, day).length)
 }
 
+/** How big a region's market for this product type is, next to the US one. */
+export function regionScale(productTypeId: string, region: Region): number {
+  return region === 'us' ? 1 : (EU_TYPE_SIZE[productTypeId] ?? 0.7)
+}
+
+/** The share of a product's reach that is in Europe: 0 until it is localised. */
+export const euShareOf = (product: Pick<Product, 'euShare'>): number => product.euShare ?? 0
+
+/** Users a product has in a region. */
+export function usersIn(product: Pick<Product, 'users' | 'euUsers'>, region: Region): number {
+  const eu = product.euUsers ?? 0
+  return region === 'eu' ? eu : product.users - eu
+}
+
+/** The part of a product's reach that is in a region. */
+export function reachIn(product: Pick<Product, 'reach' | 'euShare'>, region: Region): number {
+  return product.reach * (region === 'eu' ? euShareOf(product) : 1 - euShareOf(product))
+}
+
 /**
- * Users a product could hold, eased toward the market's cap: about `users` while that is small next to
- * the type's audience, never more than MARKET_CAP times it however big the reach.
+ * Users a product could hold in a region, eased toward the market's cap: about `users` while that is small
+ * next to the type's audience there, never more than MARKET_CAP times it however big the reach.
  */
-export function saturate(productTypeId: string, users: number): number {
-  const cap = getProductType(productTypeId).audience * MARKET_CAP
+export function saturate(productTypeId: string, users: number, region: Region = 'us'): number {
+  const cap = getProductType(productTypeId).audience * regionScale(productTypeId, region) * MARKET_CAP
   return cap * (1 - Math.exp(-users / cap))
 }
 
 /** How much of its market a product takes up: its reach while it holds people's interest, against the market's room. */
-function marketWeight(productTypeId: string, reach: number, interestNow: number): number {
-  return saturate(productTypeId, reach * interestNow) / (getProductType(productTypeId).audience * MARKET_ROOM)
+function marketWeight(productTypeId: string, reach: number, interestNow: number, region: Region): number {
+  return saturate(productTypeId, reach * interestNow, region) / (getProductType(productTypeId).audience * regionScale(productTypeId, region) * MARKET_ROOM)
 }
 
-const ownWeight = (product: Product, day: number) => marketWeight(product.productTypeId, product.reach, interest(product, day))
-const rivalWeight = (product: RivalProduct, day: number) =>
-  marketWeight(product.productTypeId, product.reach, interestSince(product.updatedDay, product.size, day))
+/** The key of one product type's market in one region. */
+export const marketKey = (productTypeId: string, region: Region): string => (region === 'us' ? productTypeId : `${productTypeId}@${region}`)
 
-/** Every market's total weight: all the live products of each type, yours and the rivals'. */
+const ownWeight = (product: Product, day: number, region: Region) =>
+  marketWeight(product.productTypeId, reachIn(product, region), interest(product, day), region)
+const rivalWeight = (product: RivalProduct, day: number, region: Region) =>
+  marketWeight(product.productTypeId, product.reach, interestSince(product.updatedDay, product.size, day), region)
+
+/** Where a rival is at home. */
+const homeOf = (state: GameState, rivalId: number): Region => state.rivals.find((r) => r.id === rivalId)?.region ?? 'us'
+
+/** Every market's total weight, a market for each product type in each region: all the live products of the type there, yours and the rivals' (a rival weighs in full at home and a little abroad). */
 export function marketWeights(state: GameState): Map<string, number> {
   const weights = new Map<string, number>()
-  const add = (type: string, weight: number) => weights.set(type, (weights.get(type) ?? 0) + weight)
-  for (const p of state.products) add(p.productTypeId, ownWeight(p, state.day))
-  for (const p of state.rivalProducts) add(p.productTypeId, rivalWeight(p, state.day))
+  const add = (type: string, region: Region, weight: number) => {
+    const key = marketKey(type, region)
+    weights.set(key, (weights.get(key) ?? 0) + weight)
+  }
+  for (const p of state.products) for (const region of REGIONS) if (reachIn(p, region) > 0) add(p.productTypeId, region, ownWeight(p, state.day, region))
+  for (const p of state.rivalProducts) {
+    const home = homeOf(state, p.rivalId)
+    for (const region of REGIONS) add(p.productTypeId, region, rivalWeight(p, state.day, region) * (region === home ? 1 : RIVAL_ABROAD))
+  }
   return weights
 }
 
 /** How crowded a product's market is by everyone else's products: 0 when it is alone. */
-function crowding(weights: Map<string, number>, productTypeId: string, own: number): number {
-  return Math.max(0, (weights.get(productTypeId) ?? 0) - own)
+function crowding(weights: Map<string, number>, productTypeId: string, own: number, region: Region): number {
+  return Math.max(0, (weights.get(marketKey(productTypeId, region)) ?? 0) - own)
 }
 
-/** How crowded the market for this product type is right now, for a product that isn't in it yet. */
-export function marketCrowding(state: GameState, productTypeId: string): number {
-  return crowding(marketWeights(state), productTypeId, 0)
+/** How crowded the market for this product type is right now in a region, for a product that isn't in it yet. */
+export function marketCrowding(state: GameState, productTypeId: string, region: Region = 'us'): number {
+  return crowding(marketWeights(state), productTypeId, 0, region)
 }
 
 /**
  * Users a product with this reach and these features can expect to settle at in today's market, fresh and
  * bug-free: less than its reach when it lacks what users expect, or when others already crowd the market.
  */
-export function settledUsers(state: GameState, productTypeId: string, featureIds: readonly string[], reach: number): number {
+export function settledUsers(state: GameState, productTypeId: string, featureIds: readonly string[], reach: number, region: Region = 'us'): number {
   const missing = expectedFeatures(productTypeId, state.day).filter((id) => !featureIds.includes(id)).length
   const expectation = Math.max(EXPECTED_FEATURE_FLOOR, 1 - EXPECTED_FEATURE_PENALTY * missing)
-  return saturate(productTypeId, reach * expectation) / (1 + marketCrowding(state, productTypeId))
+  return saturate(productTypeId, reach * expectation, region) / (1 + marketCrowding(state, productTypeId, region))
 }
 
 /** Bugs per unit of the size's work: how buggy it feels, whatever its size. */
@@ -120,26 +154,34 @@ export function bugFactor(product: Product): number {
  * Users the product is heading toward today: its reach, cut by staleness, bugs, features users now expect
  * that it lacks, and the other products competing for the same people.
  */
+export function targetUsersIn(state: GameState, product: Product, region: Region, weights = marketWeights(state)): number {
+  const reach = reachIn(product, region)
+  if (reach <= 0) return 0
+  const crowd = crowding(weights, product.productTypeId, ownWeight(product, state.day, region), region)
+  const users = reach * interest(product, state.day) * bugFactor(product) * expectationFactor(product, state.day)
+  return saturate(product.productTypeId, users, region) / (1 + crowd)
+}
+
+/** The users a product is heading toward in all its markets together. */
 export function targetUsers(state: GameState, product: Product, weights = marketWeights(state)): number {
-  const crowd = crowding(weights, product.productTypeId, ownWeight(product, state.day))
-  const users = product.reach * interest(product, state.day) * bugFactor(product) * expectationFactor(product, state.day)
-  return saturate(product.productTypeId, users) / (1 + crowd)
+  return REGIONS.reduce((sum, region) => sum + targetUsersIn(state, product, region, weights), 0)
 }
 
 /** The same for a rival's product, which keeps up with what users expect and has no bugs to speak of. */
 export function rivalTargetUsers(state: GameState, product: RivalProduct, weights = marketWeights(state)): number {
-  const crowd = crowding(weights, product.productTypeId, rivalWeight(product, state.day))
-  return saturate(product.productTypeId, product.reach * interestSince(product.updatedDay, product.size, state.day)) / (1 + crowd)
+  const home = homeOf(state, product.rivalId)
+  const crowd = crowding(weights, product.productTypeId, rivalWeight(product, state.day, home), home)
+  return saturate(product.productTypeId, product.reach * interestSince(product.updatedDay, product.size, state.day), home) / (1 + crowd)
 }
 
 /** Income per day from `users` of a product type, before studio-wide modifiers. */
-export function revenueForUsers(productTypeId: string, users: number, audienceId?: string): number {
-  return (users * getProductType(productTypeId).revenuePerUser * audienceFor(productTypeId, audienceId).pay) / DAYS_PER_MONTH
+export function revenueForUsers(productTypeId: string, users: number, audienceId?: string, region: Region = 'us'): number {
+  return (users * getProductType(productTypeId).revenuePerUser * audienceFor(productTypeId, audienceId).pay * (region === 'eu' ? EU_PAY : 1)) / DAYS_PER_MONTH
 }
 
-/** What the product earns per day right now, before studio-wide modifiers. */
+/** What the product earns per day right now, before studio-wide modifiers: its users in each region pay what people there pay. */
 export function productRevenue(product: Product): number {
-  return revenueForUsers(product.productTypeId, product.users, product.audienceId)
+  return REGIONS.reduce((sum, region) => sum + revenueForUsers(product.productTypeId, usersIn(product, region), product.audienceId, region), 0)
 }
 
 /** Bugs a release of `project` ships with: more work means more bugs, and QA catches them. */
@@ -188,8 +230,13 @@ export function productsDay(state: GameState): void {
   const weights = marketWeights(state)
   for (const product of state.rivalProducts) product.users = nextUsers(product.users, rivalTargetUsers(state, product, weights))
   for (const product of state.products) {
-    product.users = nextUsers(product.users, targetUsers(state, product, weights))
-    if (state.day < product.boostUntil) product.users += product.boostUsers
+    const share = euShareOf(product)
+    const us = nextUsers(usersIn(product, 'us'), targetUsersIn(state, product, 'us', weights))
+    const eu = share > 0 ? nextUsers(usersIn(product, 'eu'), targetUsersIn(state, product, 'eu', weights)) : 0
+    const boost = state.day < product.boostUntil ? product.boostUsers : 0
+    // A promotion reaches people in each market in proportion to the reach it has there.
+    product.users = us + eu + boost
+    if (share > 0) product.euUsers = eu + boost * share
 
     const before = bugDensity(product)
     surfaceBugs(product)

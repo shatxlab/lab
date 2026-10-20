@@ -33,6 +33,7 @@ function twoOffices(): GameState {
   state.stage = 3
   state.money = 1e7
   openOffice(state)
+  state.offices[1].region = 'us' // people move between offices of one region
   state.employees.push(builder(2, state.offices[1].id))
   state.research.done.push(ANALYST_RESEARCH, PM_RESEARCH)
   return state

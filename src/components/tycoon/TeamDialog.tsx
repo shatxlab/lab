@@ -14,6 +14,7 @@ import {
   OUTING_MORALE,
 } from '@/lib/tycoon/sim/balance'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
+import { REGION_NAME } from '@/lib/tycoon/data/regions'
 import { monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { needsLead, pmBlocker, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
@@ -27,12 +28,14 @@ import {
   newOfficeCost,
   officeName,
   officeSpec,
+  openableRegions,
   openOfficeBlocker,
+  regionOf,
   staffOf,
   teamOfficeId,
 } from '@/lib/tycoon/sim/offices'
 import { outingBlocker, outingCost } from '@/lib/tycoon/sim/staff'
-import { DISCIPLINES, isBuilder, type Employee, type Result } from '@/lib/tycoon/sim/types'
+import { DISCIPLINES, isBuilder, type Employee, type Region, type Result } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { useGame, useOffice, useStore } from './context'
 import { formatMoney } from '@/lib/tycoon/format'
@@ -120,11 +123,16 @@ export function TeamDialog() {
 
   const selected = useOffice()
   const desks = deskCount(state)
-  const hireInto = hiringOffice(state, selected.id)
+  const region = regionOf(selected)
+  const hireInto = hiringOffice(state, selected.id, region)
+  const pool = state.candidates.filter((c) => (c.region ?? 'us') === region)
   const many = state.offices.length > 1
   const garage = state.offices.find((o) => o.kind === 'garage')
   const moveOut = moveOutBlocker(state)
-  const openOffice = openOfficeBlocker(state)
+  const openRegions = openableRegions(state)
+  const [openRegion, setOpenRegion] = useState<Region | ''>('')
+  const openWhere: Region = openRegion !== '' && openRegions.includes(openRegion) ? openRegion : (openRegions[0] ?? 'us')
+  const openOffice = openOfficeBlocker(state, openWhere)
   const refreshIn = CANDIDATE_REFRESH_DAYS - (state.day % CANDIDATE_REFRESH_DAYS)
 
   const report = (result: Result) => setMessage(result.ok ? '' : result.reason)
@@ -153,7 +161,7 @@ export function TeamDialog() {
               <span>
                 <strong>{officeName(state, office)}</strong>{' '}
                 <span className="muted">
-                  {staffOf(state, office).length}/{officeSpec(office).desks} desks · rent {formatMoney(officeSpec(office).rent)}/mo
+                  {REGION_NAME[regionOf(office)]} · {staffOf(state, office).length}/{officeSpec(office).desks} desks · rent {formatMoney(officeSpec(office).rent)}/mo
                 </span>
               </span>
               {needsLead(state, office) && <small className="warn">needs a Lead · {SLOWER}% slower without one</small>}
@@ -179,11 +187,20 @@ export function TeamDialog() {
           state.offices.length < MAX_OFFICES && (
           <div className="upgrade">
             <span>
-              Open another office: <strong>{OFFICE_KINDS.office.desks} more desks</strong> and a team on its own project
+              Open another office: <strong>{OFFICE_KINDS.office.desks} more desks</strong> and a team on its own project{openWhere === 'eu' && !state.offices.some((o) => regionOf(o) === 'eu') ? ', and the European market for your products' : ''}
               {openOffice && openOffice !== 'Not enough money' && <small className="muted"> · {readiness(openOffice, 'an established company')}</small>}
             </span>
-            <button disabled={openOffice !== null} onClick={() => report(store.openOffice())}>
-              Open · {formatMoney(newOfficeCost(state))}
+            {openRegions.length > 1 && (
+              <select aria-label="Where to open the office" value={openWhere} onChange={(event) => setOpenRegion((event.target as HTMLSelectElement).value as Region)}>
+                {openRegions.map((r) => (
+                  <option key={r} value={r}>
+                    {REGION_NAME[r]}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button disabled={openOffice !== null} onClick={() => report(store.openOffice(openWhere))}>
+              Open in {REGION_NAME[openWhere]} · {formatMoney(newOfficeCost(state, openWhere))}
             </button>
           </div>
           )
@@ -292,11 +309,11 @@ export function TeamDialog() {
           <h3>Candidates</h3>
           <span className="muted">
             New faces in {refreshIn} days. Signing fee is one month's salary.
-            {many && hireInto && ` New hires join ${officeName(state, hireInto)}.`}
+            {many && hireInto && ` New hires join ${officeName(state, hireInto)}.`}{many && ` These are people from ${REGION_NAME[region]}${region === 'eu' ? ', paid a little less' : ''}.`}
           </span>
         </div>
-        {state.candidates.length === 0 && <p className="muted">No one is looking right now.</p>}
-        {state.candidates.map((candidate) => {
+        {pool.length === 0 && <p className="muted">No one is looking right now.</p>}
+        {pool.map((candidate) => {
           const cost = hireCost(candidate)
           const blocked = !hireInto ? 'No free desk' : state.money < cost ? 'Too expensive' : ''
           return (

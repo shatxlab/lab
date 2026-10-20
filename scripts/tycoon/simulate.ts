@@ -24,7 +24,7 @@ import { freeDesks, moveOut, moveOutBlocker, newOfficeCost, openOffice, openOffi
 import { bugFactor, interest, marketWeights, missingFeatures, productRevenue } from '../../src/lib/tycoon/sim/products.ts'
 import { projectQuality, projectTarget, shipProject, startProject, startUpdate, unlockedProductTypes } from '../../src/lib/tycoon/sim/project.ts'
 import { researchBlocker, startResearch } from '../../src/lib/tycoon/sim/research.ts'
-import { acquire, acquisitionBlocker, acquisitionPrice, playerRank } from '../../src/lib/tycoon/sim/rivals.ts'
+import { absorbSlots, acquire, acquisitionBlocker, acquisitionPrice, playerRank, rivalProductsOf } from '../../src/lib/tycoon/sim/rivals.ts'
 import { createInitialState } from '../../src/lib/tycoon/sim/state.ts'
 import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
 import { featureLock, sizeLock } from '../../src/lib/tycoon/sim/unlocks.ts'
@@ -258,7 +258,7 @@ function botStep(state: GameState, policy: Policy, firstHit: { day: number | nul
   const reserve = 4 * monthlyBurn(state)
   if (policy.buyout) {
     const target = state.rivals.find((r) => acquisitionBlocker(state, r) === null && state.money > acquisitionPrice(state, r) + reserve * 3)
-    if (target) acquire(state, target.id)
+    if (target) acquire(state, target.id, rivalProductsOf(state, target).slice(0, absorbSlots(state)).map((p) => p.id))
   }
   if (moveOutBlocker(state) === null && state.money > MOVE_OUT_COST + reserve) moveOut(state)
   const nearlyFull = state.offices.every((o) => o.kind === 'office' && freeDesks(state, o) <= 2)

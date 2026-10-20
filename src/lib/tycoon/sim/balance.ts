@@ -138,11 +138,30 @@ export const RIVAL_BUSINESS_CAP = 30
 export const ACQUISITION_DAYS = 600
 export const ACQUISITION_FLOOR = 250000
 export const ACQUISITION_REPUTATION = 3
-/** Journey stage (index into STAGES) from which rivals can be bought: an industry leader. */
-export const ACQUISITION_STAGE = 4
+/** Journey stage (index into STAGES) from which rivals can be absorbed: an established company, the same as for more offices. */
+export const ACQUISITION_STAGE = 3
+/** Journey stage from which days at the top of the ranking count: an industry leader. */
+export const LEADER_STAGE = 4
+/** An absorbed rival brings this many people, plus one for every this much reputation, up to the cap; each knows its kind of product and its products. */
+export const ABSORB_STAFF_BASE = 5
+export const ABSORB_STAFF_PER_REPUTATION = 25
+export const ABSORB_STAFF_MAX = 8
+export const ABSORB_TYPE_DAYS = 360
+export const ABSORB_PRODUCT_DAYS = 240
+/** Their skill is the rival's, give or take this much. */
+export const ABSORB_SKILL_SPREAD = 8
 
 /** Reputation a rival needs before taking on each size. */
 export const RIVAL_SIZE_REPUTATION: Record<'small' | 'medium' | 'large' | 'flagship', number> = { small: 0, medium: 35, large: 55, flagship: 80 }
+
+// Regions: the US and Europe are separate markets with room of their own
+/** A rival's products weigh this much in the market abroad (in its home market they weigh in full). */
+export const RIVAL_ABROAD = 0.35
+/** Wages in Europe next to the US, and what the first European office costs (offices after that cost as in the US). */
+export const EU_WAGE = 0.88
+export const EU_OFFICE_COST = 450000
+/** At most this many offices in a region, so the four offices split two and two. */
+export const REGION_OFFICE_LIMIT = 2
 
 // Bugs
 /** Bugs a release ships with per point of work when QA has just reached its target. */

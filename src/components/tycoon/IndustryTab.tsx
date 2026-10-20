@@ -1,8 +1,10 @@
 import { eraAt, eraIndexAt } from '@/lib/tycoon/data/eras'
+import { REGION_NAME } from '@/lib/tycoon/data/regions'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { MARKET_COLD, MARKET_HOT } from '@/lib/tycoon/sim/balance'
 import { marketDemand } from '@/lib/tycoon/sim/market'
-import { marketWeights } from '@/lib/tycoon/sim/products'
+import { hasEuropeOffice } from '@/lib/tycoon/sim/offices'
+import { marketKey, marketWeights } from '@/lib/tycoon/sim/products'
 import { acquisitionBlocker, acquisitionPrice, standings } from '@/lib/tycoon/sim/rivals'
 import { ACQUISITION_STAGE } from '@/lib/tycoon/sim/balance'
 import { useGame, useStore } from './context'
@@ -24,6 +26,7 @@ export function IndustryTab() {
   const canBuy = state.stage >= ACQUISITION_STAGE
   const weights = marketWeights(state)
   const era = eraAt(state.day)
+  const europe = hasEuropeOffice(state)
 
   return (
     <div className="industry">
@@ -46,7 +49,10 @@ export function IndustryTab() {
             {rows.map((row, index) => (
               <tr key={row.id} className={row.id === 0 ? 'you' : ''}>
                 <td>{index + 1}</td>
-                <td>{row.name}</td>
+                <td>
+                  {row.name}
+                  {row.id !== 0 && <small className="muted"> · {REGION_NAME[state.rivals.find((r) => r.id === row.id)?.region ?? 'us']}</small>}
+                </td>
                 <td className="num">{formatMoney(row.revenue)}</td>
                 <td className="num">{Math.round(row.reputation)}</td>
                 <td>{row.best ?? '—'}</td>
@@ -56,8 +62,8 @@ export function IndustryTab() {
                       const rival = state.rivals.find((r) => r.id === row.id)!
                       const blocker = acquisitionBlocker(state, rival)
                       return (
-                        <button disabled={blocker !== null} title={blocker ?? 'Its products become yours'} onClick={() => store.acquire(rival.id)}>
-                          Buy · {formatMoney(acquisitionPrice(state, rival))}
+                        <button disabled={blocker !== null} title={blocker ?? 'Its office, people and the products you choose become yours'} onClick={() => store.openDialog({ kind: 'absorb', rivalId: rival.id })}>
+                          Absorb · {formatMoney(acquisitionPrice(state, rival))}
                         </button>
                       )
                     })()}
@@ -78,7 +84,8 @@ export function IndustryTab() {
               <th className="num">Demand</th>
               <th className="num">Yours</th>
               <th className="num">Rivals'</th>
-              <th>Competition</th>
+              <th>Competition{europe ? ' · US' : ''}</th>
+              {europe && <th>Europe</th>}
             </tr>
           </thead>
           <tbody>
@@ -94,6 +101,9 @@ export function IndustryTab() {
                   <td className="num">{yours}</td>
                   <td className="num">{theirs}</td>
                   <td className={crowd.tone}>{crowd.text}</td>
+                  {europe && (
+                    <td className={crowdLabel(weights.get(marketKey(type.id, 'eu')) ?? 0).tone}>{crowdLabel(weights.get(marketKey(type.id, 'eu')) ?? 0).text}</td>
+                  )}
                 </tr>
               )
             })}
@@ -102,7 +112,7 @@ export function IndustryTab() {
       </div>
       <p className="muted">
         Every product competes with the others of its type, yours included, for the same people: the more reach a market
-        holds, the fewer users each product in it gets.
+        holds, the fewer users each product in it gets. The US and Europe are separate markets; a studio is at home in one and a little present in the other.
       </p>
     </div>
   )

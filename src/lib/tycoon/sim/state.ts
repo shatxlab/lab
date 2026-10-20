@@ -11,7 +11,7 @@ import { createRivals, rivalsArrive } from './rivals'
 import { ALL_ROLES, generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
 import { sampleNow } from './history'
 import { initialMarket } from './market'
-import { DISCIPLINES, PROJECT_SIZE_IDS, STATS, TIERS, type GameState } from './types'
+import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } from './types'
 
 /**
  * Version 2 replaced fading income with users and bugs, version 3 brought offices, version 4 moved bug
@@ -68,7 +68,7 @@ export function createInitialState(seed: number): GameState {
     dayWork: [],
     events: [],
   }
-  const garage = { id: state.nextId++, kind: 'garage' as const, theme: 0, project: null }
+  const garage = { id: state.nextId++, kind: 'garage' as const, theme: 0, region: 'us' as const, project: null }
   state.offices.push(garage)
   for (const role of ['developer', 'designer'] as const) {
     const person = { ...generateEmployee(state, role), officeId: garage.id, founder: true }
@@ -92,6 +92,7 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const isSkills = (v: unknown): boolean => isObj(v) && DISCIPLINES.every((d) => isNum(v[d]))
 const knownType = (v: unknown): boolean => PRODUCT_TYPES.some((t) => t.id === v)
 const knownFeature = (v: unknown): boolean => FEATURES.some((f) => f.id === v)
+const knownRegion = (v: unknown): boolean => REGIONS.some((r) => r === v)
 const knownSize = (v: unknown): boolean => PROJECT_SIZE_IDS.some((s) => s === v)
 
 function validModifier(v: unknown): boolean {
@@ -130,6 +131,7 @@ function validEmployee(v: unknown): boolean {
     typeof v.name === 'string' &&
     ALL_ROLES.some((r) => r === v.role) &&
     (v.analysis === undefined || isNum(v.analysis)) &&
+    (v.region === undefined || knownRegion(v.region)) &&
     (v.teamId === undefined || isNum(v.teamId)) &&
     isSkills(v.skills) &&
     isNum(v.salary) &&
@@ -173,7 +175,9 @@ function validProduct(v: unknown): boolean {
     isNum(v.boostUntil) &&
     isNum(v.boostUsers) &&
     (v.autoPromote === undefined || v.autoPromote === null || TIERS.some((t) => t === v.autoPromote)) &&
-    (v.licensed === undefined || typeof v.licensed === 'boolean')
+    (v.licensed === undefined || typeof v.licensed === 'boolean') &&
+    (v.euShare === undefined || isNum(v.euShare)) &&
+    (v.euUsers === undefined || isNum(v.euUsers))
   )
 }
 
@@ -194,6 +198,7 @@ function validProject(v: unknown): boolean {
     typeof v.readyNotified === 'boolean' &&
     isNum(v.hype) &&
     typeof v.alphaOffered === 'boolean' &&
+    (v.localises === undefined || typeof v.localises === 'boolean') &&
     isNum(v.bugRisk) &&
     (v.contract === null ||
       (isObj(v.contract) &&
@@ -215,6 +220,7 @@ function validRival(v: unknown): boolean {
     Array.isArray(v.focus) &&
     v.focus.every(knownType) &&
     knownSize(v.size) &&
+    (v.region === undefined || knownRegion(v.region)) &&
     isNum(v.nextLaunchDay) &&
     isNum(v.business) &&
     isNum(v.growth) &&
@@ -291,7 +297,7 @@ function validRetired(v: unknown): boolean {
 }
 
 function validOffice(v: unknown, products: unknown[]): boolean {
-  if (!isObj(v) || !isNum(v.id) || !Object.keys(OFFICE_KINDS).includes(v.kind as string) || !Number.isInteger(v.theme)) return false
+  if (!isObj(v) || !isNum(v.id) || !Object.keys(OFFICE_KINDS).includes(v.kind as string) || !Number.isInteger(v.theme) || (v.region !== undefined && !knownRegion(v.region))) return false
   const project = v.project
   if (project === null) return true
   if (!validProject(project) || !isObj(project)) return false

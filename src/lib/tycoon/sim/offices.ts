@@ -1,6 +1,7 @@
-import { MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, type OfficeSpec } from './balance'
+import { REGION_NAME } from '@/lib/tycoon/data/regions'
+import { EU_OFFICE_COST, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
 import { adjustMorale } from './morale'
-import { fail, isBuilder, OK, type Employee, type GameState, type Office, type Project, type Result } from './types'
+import { fail, isBuilder, OK, REGIONS, type Employee, type GameState, type Office, type Project, type Region, type Result } from './types'
 
 /** Journey stage at which the garage can be left behind, and at which more offices can open (indexes into STAGES). */
 export const MOVE_OUT_STAGE = 1
@@ -10,11 +11,26 @@ export function officeSpec(office: Office): OfficeSpec {
   return OFFICE_KINDS[office.kind]
 }
 
-/** "Garage", "HQ", "Office 2"...: the first real office is headquarters. */
+/** Where an office is. */
+export const regionOf = (office: Pick<Office, 'region'>): Region => office.region ?? 'us'
+
+/** The offices of a region. */
+export function officesIn(state: GameState, region: Region): Office[] {
+  return state.offices.filter((o) => regionOf(o) === region)
+}
+
+/** "Garage", "HQ", "Europe", "US 2"...: the first real office is headquarters; the others are named for where they are. */
 export function officeName(state: GameState, office: Office): string {
   if (office.kind === 'garage') return 'Garage'
-  const index = state.offices.indexOf(office)
-  return index <= 0 ? 'HQ' : `Office ${index + 1}`
+  const region = regionOf(office)
+  const index = officesIn(state, region).indexOf(office)
+  if (region === 'us') return index <= 0 ? 'HQ' : `US ${index + 1}`
+  return index <= 0 ? REGION_NAME.eu : `${REGION_NAME.eu} ${index + 1}`
+}
+
+/** True once the studio has an office in Europe: its market is open to localised products. */
+export function hasEuropeOffice(state: GameState): boolean {
+  return officesIn(state, 'eu').length > 0
 }
 
 export function getOffice(state: GameState, id: number): Office | undefined {
@@ -125,25 +141,36 @@ export function moveOut(state: GameState): Result {
   return OK
 }
 
-/** What the next office costs to open. */
-export function newOfficeCost(state: GameState): number {
-  return NEW_OFFICE_COST * state.offices.length
+/** The regions another office could open in: Europe is always the second office, and the last two split one and one. */
+export function openableRegions(state: GameState): Region[] {
+  if (state.offices.length === 1) return ['eu']
+  return REGIONS.filter((r) => officesIn(state, r).length < REGION_OFFICE_LIMIT)
 }
 
-/** Why another office can't open now, or null when it can. */
-export function openOfficeBlocker(state: GameState): string | null {
+/** What the next office costs to open there: the first in Europe costs much more than the others. */
+export function newOfficeCost(state: GameState, region: Region = openableRegions(state)[0] ?? 'us'): number {
+  return region === 'eu' && !hasEuropeOffice(state) ? EU_OFFICE_COST : NEW_OFFICE_COST * state.offices.length
+}
+
+/** Why another office can't open now (in `region`, by default the first it could), or null when it can. */
+export function openOfficeBlocker(state: GameState, region?: Region): string | null {
   if (state.offices.length >= MAX_OFFICES) return 'No more offices available'
   if (state.offices.some((o) => o.kind === 'garage')) return 'Move out of the garage first'
   if (state.stage < NEW_OFFICE_STAGE) return 'The studio is not ready yet'
-  return state.money < newOfficeCost(state) ? 'Not enough money' : null
+  const where = region ?? openableRegions(state)[0]
+  if (!where || !openableRegions(state).includes(where)) {
+    return state.offices.length === 1 ? 'Europe is the second office' : `No room for another office in ${REGION_NAME[where ?? 'us']}`
+  }
+  return state.money < newOfficeCost(state, where) ? 'Not enough money' : null
 }
 
 /** Opens another office, empty, with its own colours. Move people in or hire into it. */
-export function openOffice(state: GameState): Result {
-  const blocker = openOfficeBlocker(state)
+export function openOffice(state: GameState, region?: Region): Result {
+  const blocker = openOfficeBlocker(state, region)
   if (blocker) return fail(blocker)
-  state.money -= newOfficeCost(state)
-  state.offices.push({ id: state.nextId++, kind: 'office', theme: state.offices.length, project: null })
+  const where = region ?? openableRegions(state)[0]
+  state.money -= newOfficeCost(state, where)
+  state.offices.push({ id: state.nextId++, kind: 'office', theme: state.offices.length, region: where, project: null })
   return OK
 }
 
@@ -155,6 +182,9 @@ export function transfer(state: GameState, employeeId: number, officeId: number)
   if (!office) return fail('Unknown office')
   if (employee.officeId === officeId) return fail('Already there')
   if (freeDesks(state, office) <= 0) return fail('No free desk there')
+  if (regionOf(office) !== (getOffice(state, employee.officeId) ? regionOf(getOffice(state, employee.officeId)!) : 'us')) {
+    return fail('They live in the other region: put them on that office’s team instead')
+  }
   employee.officeId = officeId
   // A move is a fresh start: they join the team of the office they moved to.
   delete employee.teamId

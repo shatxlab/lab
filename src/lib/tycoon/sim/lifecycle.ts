@@ -19,8 +19,8 @@ import { officeRunning, pmReachFactor } from './direction'
 import { monthlyBurn } from './economy'
 import { logEntry } from './journal'
 import { marketDemand } from './market'
-import { activeProjects, inGarage, productInWork, teamOf } from './offices'
-import { interest, lastReleaseDay, revenueForUsers, targetUsers } from './products'
+import { activeProjects, hasEuropeOffice, inGarage, productInWork, teamOf } from './offices'
+import { euShareOf, interest, lastReleaseDay, revenueForUsers, targetUsers } from './products'
 import { computeReach } from './scoring'
 import { sizeLock } from './unlocks'
 import { fail, OK, PROJECT_SIZE_IDS, TIERS, type GameState, type Office, type Product, type Project, type ProjectSize, type Result, type Tier } from './types'
@@ -174,4 +174,11 @@ export function growBlocker(state: GameState, office: Office, product: Product):
   if (lock) return `${PROJECT_SIZES[next].name} projects need ${lock}`
   const phase = productPhase(state, product)
   return phase === 'Fading' ? 'Bring it back to life with an update first' : null
+}
+
+/** Why `office` can't start localising `product` for Europe right now, or null when it can. */
+export function localiseBlocker(state: GameState, office: Office, product: Product): string | null {
+  if (euShareOf(product) > 0) return 'Already in Europe'
+  if (!hasEuropeOffice(state)) return 'Needs an office in Europe'
+  return updateBlocker(state, office, product)
 }

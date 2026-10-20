@@ -263,7 +263,7 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
     id: 'freelancer',
     title: 'Senior freelancer',
     weight: 2,
-    when: (s) => hiringOffice(s) !== undefined && s.day >= 30,
+    when: (s) => hiringOffice(s, undefined, 'us') !== undefined && s.day >= 30,
     prepare: (s) => {
       const freelancer = generateEmployee(s, pick(s, ROLES))
       for (const d of DISCIPLINES) freelancer.skills[d] = Math.min(100, Math.round(freelancer.skills[d] + 12))
@@ -278,7 +278,7 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
     },
     choices: ({ state, data }) => {
       const person = state.candidates.find((c) => c.id === data.employeeId)
-      const office = hiringOffice(state)
+      const office = hiringOffice(state, undefined, 'us')
       return [
         choice(state, {
           label: 'Hire them',

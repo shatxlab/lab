@@ -157,25 +157,38 @@ Saves stay version 5: every new field is optional or defaulted on load (`dropRem
   generated (`generatedNewcomer`) for eras with no hand-written one.
 - **Tests** for the ranking, buyouts, eras, crowding and `settledUsers` (`competition.test.ts`).
 
-Open from this pass: the audience-weights reveal could also come from a PM automatically; bots
+Open from the first pass: the audience-weights reveal could also come from a PM automatically; bots
 still overexpand late (they hire up to the bank, never fire), so retune from a human run.
+
+### Built: regions, Europe and Absorb (2026-10-20)
+
+- **Two regions** (`Region`, `data/regions.ts`). Offices, rivals and employees have one; the
+  garage and first office are US. Each region is a market with **room of its own**: crowding,
+  saturation and market weight are per (type, region) (`marketKey`, `marketWeights`), Europe's market
+  for a type is `EU_TYPE_SIZE` of the US one, and users pay `EU_PAY` as much. A rival weighs in full
+  in its home market and `RIVAL_ABROAD` in the other.
+- **Subscribers per region.** `Product.users` stays the total; `euShare` (of reach) and `euUsers`
+  say how much of it is in Europe (`usersIn`, `reachIn`, `targetUsersIn`). Europe also has its own
+  tastes (`EU_LIKES` on top of an audience's).
+- **Localising** (`startLocalisation`, `Project.localises`): a maintenance-sized update per product,
+  needs an office in Europe and costs its budget; on shipping the product gains
+  `euGain` of reach there and a launch's first users. Products start US-only.
+- **Offices.** The second office is Europe (`EU_OFFICE_COST`); the third and fourth are one more in
+  each region (`REGION_OFFICE_LIMIT`, `openableRegions`). Hiring pools per region (candidates carry
+  a region; European pay is `EU_WAGE`); people only transfer within a region but can work on another
+  region's team.
+- **Absorb** (`acquire(state, rivalId, keepIds)`, `AbsorbDialog`): from Established company, needs
+  the European office first and a place for the rival's region; price is its income times
+  `ACQUISITION_DAYS` times its growth; its office opens as yours with 5 to 8 builders who know what it
+  made; you keep the products you choose (they take portfolio places); the rest leave with it.
+- **Not built:** *Subsidiary* (independent studio sending a share of its income), regional
+  freshness (a release refreshes both markets) and EU-only rivals' products competing outside their
+  region beyond the `RIVAL_ABROAD` weight. Rivals' growth is unchanged (they still reach the cap
+  late); the player can buy early, from Established.
 
 ### Agreed, not built
 
-- **Regions (US and Europe), planned with the player.** Market plus hiring pool: a product's
-  subscribers are tracked separately per region (`users` and `reach` split US/EU), so Act 2 is about
-  keeping the hit alive in both markets and tending up to 5 products at different stages in each.
-  Proposed: Europe office opens the EU market; reaching EU users also needs a localisation release
-  per product; each audience has an EU weight (size, pay, tastes); each region has its own candidate
-  pool and wage level; rivals get a home region; independent crowding per region. Not decided: how
-  much a localisation release costs, and whether the two regions share market room.
-- **Offices.** Keep 4: US garage, then a US office; Europe is the second office at a much higher
-  price and opens its market; offices 3 and 4 are one more in each region.
-- **Competitors.** Today's buyout (`acquire` in `sim/rivals.ts`) gives little. Redesign as *Absorb*
-  a rival: price from its income and growth; it leaves the ranking; choose which of its products to
-  keep (they take portfolio slots); generated staff with expertise in its focus types; its office, in
-  its region, replaces building office 3 or 4. A *Subsidiary* option (independent, sends a share of
-  its income) comes later. Rivals should grow so buying early is a bargain. Needs regions first.
+- **Subsidiary.** An absorbed studio left independent, sending a share of its income.
 - **Garage hustle, later.** A non-contract way in (grants, pre-orders, sponsorship).
 
 ## First real playthrough (2026-10-15)

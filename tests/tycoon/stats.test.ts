@@ -95,7 +95,7 @@ describe('milestone data', () => {
   it('keeps cash rewards small next to what a studio earns', () => {
     const total = MILESTONES.reduce((sum, m) => sum + (m.reward.money ?? 0), 0)
     // A run now lasts twenty years and more, with milestones for each part of it.
-    expect(total).toBeLessThan(400_000)
+    expect(total).toBeLessThan(450_000)
     const early = MILESTONES.filter((m) => ['first_ship', 'five_products', 'first_update', 'first_promotion', 'team_4'].includes(m.id))
     expect(early.reduce((sum, m) => sum + (m.reward.money ?? 0), 0)).toBeLessThan(4000)
   })

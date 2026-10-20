@@ -1,3 +1,4 @@
+import { AbsorbDialog } from './AbsorbDialog'
 import { useSignal, useStore } from './context'
 import { BreakoutDialog, EraDialog, GameOverDialog, OfferDialog, ReadyDialog, ResultDialog, StageDialog } from './dialogs'
 import { EmployeeDialog } from './EmployeeDialog'
@@ -49,6 +50,8 @@ export function DialogHost() {
       return <ResearchDialog />
     case 'studio':
       return <StudioDialog tab={dialog.tab} />
+    case 'absorb':
+      return <AbsorbDialog rivalId={dialog.rivalId} />
     case 'offer':
       return <OfferDialog />
     case 'game-over':

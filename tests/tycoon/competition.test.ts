@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { ERAS, eraAt, eraIndexAt, eraPhrase, expectedFeatures } from '@/lib/tycoon/data/eras'
 import { NEWCOMERS, RIVALS } from '@/lib/tycoon/data/rivals'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
-import { ACQUISITION_FLOOR, ACQUISITION_STAGE, MARKET_CAP } from '@/lib/tycoon/sim/balance'
+import { ABSORB_PRODUCT_DAYS, ABSORB_STAFF_BASE, ABSORB_STAFF_MAX, ABSORB_TYPE_DAYS, ACQUISITION_FLOOR, ACQUISITION_STAGE, LEADER_STAGE, MARKET_CAP, PORTFOLIO_LIMIT } from '@/lib/tycoon/sim/balance'
 import {
+  absorbSlots,
   acquire,
   acquisitionBlocker,
   acquisitionPrice,
@@ -12,11 +13,13 @@ import {
   newcomerFor,
   playerRank,
   rankingDay,
+  rivalProductsOf,
   standings,
 } from '@/lib/tycoon/sim/rivals'
 import { settledUsers, marketCrowding, marketWeights, saturate, targetUsers } from '@/lib/tycoon/sim/products'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { createInitialState } from '@/lib/tycoon/sim/state'
+import { openOffice } from '@/lib/tycoon/sim/offices'
 import { drainEvents } from '@/lib/tycoon/sim/tick'
 import { dayOfEra, makeProduct, makeState } from './helpers'
 
@@ -24,7 +27,9 @@ import { dayOfEra, makeProduct, makeState } from './helpers'
 function giantState(seed = 21) {
   const state = createInitialState(seed)
   state.stage = ACQUISITION_STAGE
+  state.offices[0].kind = 'office'
   state.money = 1e9
+  openOffice(state) // Europe, the second: an absorbed studio takes the place of the third or fourth
   return state
 }
 
@@ -63,6 +68,7 @@ describe('the industry ranking', () => {
 
   it('counts consecutive days at the top only from the industry leader stage, and resets when you slip', () => {
     const state = giantState()
+    state.stage = LEADER_STAGE
     state.acquiredIncome = 1e9
     rankingDay(state)
     rankingDay(state)
@@ -71,14 +77,17 @@ describe('the industry ranking', () => {
     rankingDay(state)
     expect(state.daysAtTop).toBe(0)
     state.acquiredIncome = 1e9
-    state.stage = ACQUISITION_STAGE - 1
+    state.stage = LEADER_STAGE - 1
     rankingDay(state)
     expect(state.daysAtTop).toBe(0)
   })
 })
 
-describe('buying a rival', () => {
-  it('costs many days of its income, never less than the floor', () => {
+describe('absorbing a rival', () => {
+  /** A US rival and an EU one, for the two offices a studio with a European one can still open. */
+  const rivalIn = (state: ReturnType<typeof giantState>, region: 'us' | 'eu') => state.rivals.find((r) => (r.region ?? 'us') === region)!
+
+  it('costs many days of its income, more for a growing studio, never less than the floor', () => {
     const state = giantState()
     const rival = state.rivals[0]
     expect(acquisitionPrice(state, rival)).toBeGreaterThanOrEqual(ACQUISITION_FLOOR)
@@ -86,64 +95,136 @@ describe('buying a rival', () => {
     state.rivalProducts = state.rivalProducts.filter((p) => p.rivalId !== rival.id)
     expect(acquisitionPrice(state, rival)).toBe(ACQUISITION_FLOOR)
     rival.business = 1e6
-    expect(acquisitionPrice(state, rival)).toBeGreaterThan(ACQUISITION_FLOOR)
+    rival.growth = 0
+    const flat = acquisitionPrice(state, rival)
+    rival.growth = 0.5
+    expect(acquisitionPrice(state, rival)).toBeGreaterThan(flat)
   })
 
-  it('needs the industry leader stage and the money', () => {
+  it('needs an established company, a real office, a place for its office, and the money', () => {
     const state = giantState()
-    const rival = state.rivals[0]
+    const rival = rivalIn(state, 'us')
     expect(acquisitionBlocker(state, rival)).toBeNull()
     state.money = 0
     expect(acquisitionBlocker(state, rival)).toBe('Not enough money')
     state.money = 1e9
     state.stage = ACQUISITION_STAGE - 1
-    expect(acquisitionBlocker(state, rival)).toBe('Only an industry leader can buy a rival')
-    const result = acquire(state, rival.id)
-    expect(result.ok).toBe(false)
+    expect(acquisitionBlocker(state, rival)).toBe('Only an established company can absorb a rival')
+    expect(acquire(state, rival.id).ok).toBe(false)
+    expect(state.rivals).toContain(rival)
+    state.stage = ACQUISITION_STAGE
+    state.offices[0].kind = 'garage'
+    expect(acquisitionBlocker(state, rival)).toBe('Move out of the garage first')
+  })
+
+  it('replaces the third or fourth office: not before the European one, not past the limit, not in a full region', () => {
+    const state = giantState()
+    const us = rivalIn(state, 'us')
+    const eu = rivalIn(state, 'eu')
+    state.offices.splice(1, 1)
+    expect(acquisitionBlocker(state, us)).toMatch(/European office first/)
+    openOffice(state) // Europe
+    expect(acquisitionBlocker(state, eu)).toBeNull()
+    openOffice(state, 'eu')
+    expect(acquisitionBlocker(state, eu)).toMatch(/no room for another office in Europe/)
+    expect(acquisitionBlocker(state, us)).toBeNull()
+    openOffice(state, 'us')
+    expect(acquisitionBlocker(state, us)).toMatch(/four offices/)
+  })
+
+  it('refuses a studio that does not exist, and products that are not its own', () => {
+    const state = giantState()
+    expect(acquire(state, 99_999)).toEqual({ ok: false, reason: 'Unknown studio' })
+    const rival = rivalIn(state, 'us')
+    const other = state.rivalProducts.find((p) => p.rivalId !== rival.id)!
+    expect(acquire(state, rival.id, [other.id])).toEqual({ ok: false, reason: 'Those products are not theirs' })
     expect(state.rivals).toContain(rival)
   })
 
-  it('refuses a studio that does not exist', () => {
+  it('takes the studio off the market, pays for it and keeps the products you choose, with their users', () => {
     const state = giantState()
-    const result = acquire(state, 99_999)
-    expect(result).toEqual({ ok: false, reason: 'Unknown studio' })
-  })
-
-  it('takes the studio off the market, pays for it and brings its products over with their users', () => {
-    const state = giantState()
-    const rival = state.rivals[0]
-    const theirs = state.rivalProducts.filter((p) => p.rivalId === rival.id)
-    expect(theirs.length).toBeGreaterThan(0)
+    const rival = rivalIn(state, 'us')
+    const theirs = rivalProductsOf(state, rival)
+    expect(theirs.length).toBeGreaterThan(1)
+    const keep = theirs.slice(0, 2)
     const price = acquisitionPrice(state, rival)
     const money = state.money
     const income = state.acquiredIncome
     const reputation = state.reputation
     const others = state.rivals.length - 1
-    expect(acquire(state, rival.id).ok).toBe(true)
+    expect(acquire(state, rival.id, keep.map((p) => p.id)).ok).toBe(true)
     expect(state.money).toBe(money - price)
     expect(state.rivals).toHaveLength(others)
     expect(state.rivalProducts.some((p) => p.rivalId === rival.id)).toBe(false)
     expect(state.acquiredIncome).toBe(income + rival.business)
     expect(state.reputation).toBeGreaterThan(reputation)
-    for (const p of theirs) {
+    expect(state.products).toHaveLength(2)
+    for (const p of keep) {
       const mine = state.products.find((q) => q.id === p.id)!
       expect(mine.name).toBe(p.name)
       expect(mine.users).toBe(p.users)
       expect(mine.reach).toBe(p.reach)
       expect(mine.hit).toBe(p.hit)
-      expect(mine.bugs).toBeGreaterThan(0)
+      expect(mine.euShare).toBeUndefined()
     }
     expect(drainEvents(state).some((e) => e.type === 'notice' && e.text.includes(rival.name))).toBe(true)
   })
 
-  it('survives a save round trip with the studio gone and its products yours', () => {
+  it('leaves the other products behind with the studio', () => {
     const state = giantState()
-    const rival = state.rivals[0]
-    acquire(state, rival.id)
+    const rival = rivalIn(state, 'us')
+    acquire(state, rival.id, [])
+    expect(state.products).toHaveLength(0)
+    expect(state.rivalProducts.every((p) => p.rivalId !== rival.id)).toBe(true)
+  })
+
+  it('keeps no more than the portfolio has places for', () => {
+    const state = giantState()
+    const rival = rivalIn(state, 'us')
+    const theirs = rivalProductsOf(state, rival)
+    state.products = Array.from({ length: PORTFOLIO_LIMIT - 1 }, (_, i) => makeProduct({ id: 800 + i }))
+    expect(absorbSlots(state)).toBe(1)
+    expect(acquire(state, rival.id, theirs.slice(0, 2).map((p) => p.id))).toEqual({ ok: false, reason: 'Your portfolio has room for 1 more' })
+    expect(acquire(state, rival.id, [theirs[0].id]).ok).toBe(true)
+  })
+
+  it('opens its office in its region, staffed by people who know what it made', () => {
+    const state = giantState()
+    const rival = rivalIn(state, 'eu')
+    const keep = rivalProductsOf(state, rival)[0]
+    const offices = state.offices.length
+    const staff = state.employees.length
+    acquire(state, rival.id, [keep.id])
+    expect(state.offices).toHaveLength(offices + 1)
+    const office = state.offices.at(-1)!
+    expect(office.region).toBe('eu')
+    expect(office.kind).toBe('office')
+    const people = state.employees.filter((e) => e.officeId === office.id)
+    expect(people.length).toBeGreaterThanOrEqual(ABSORB_STAFF_BASE)
+    expect(people.length).toBeLessThanOrEqual(ABSORB_STAFF_MAX)
+    expect(state.employees).toHaveLength(staff + people.length)
+    for (const person of people) {
+      expect(person.region).toBe('eu')
+      for (const type of rival.focus) expect(person.knowledge!.types[type]).toBeGreaterThanOrEqual(ABSORB_TYPE_DAYS)
+      expect(person.knowledge!.products[String(keep.id)]).toBe(ABSORB_PRODUCT_DAYS)
+      expect(person.salary).toBeGreaterThan(0)
+    }
+    expect(new Set(people.map((e) => e.role)).size).toBe(3)
+    // A European studio's products are European: all their users are there.
+    const mine = state.products.find((p) => p.id === keep.id)!
+    expect(mine.euShare).toBe(1)
+    expect(mine.euUsers).toBe(mine.users)
+  })
+
+  it('survives a save round trip with the studio gone, its office and its products yours', () => {
+    const state = giantState()
+    const rival = rivalIn(state, 'eu')
+    acquire(state, rival.id, rivalProductsOf(state, rival).slice(0, 1).map((p) => p.id))
     const loaded = deserialize(serialize(state))
     expect(loaded).not.toBeNull()
     expect(loaded!.rivals.some((r) => r.id === rival.id)).toBe(false)
     expect(loaded!.products.map((p) => p.id).sort()).toEqual(state.products.map((p) => p.id).sort())
+    expect(loaded!.offices.at(-1)!.region).toBe('eu')
     expect(loaded!.acquiredIncome).toBe(state.acquiredIncome)
   })
 

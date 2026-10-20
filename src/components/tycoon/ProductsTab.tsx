@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { PORTFOLIO_LIMIT, PROJECT_SIZES, SALE_MIN_INCOME, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS } from '@/lib/tycoon/sim/balance'
+import { REGION_NAME } from '@/lib/tycoon/data/regions'
 import { inGarage } from '@/lib/tycoon/sim/offices'
+import { localiseBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { projectBudget, projectTarget } from '@/lib/tycoon/sim/project'
+import { euShareOf, usersIn } from '@/lib/tycoon/sim/products'
 import { licenseBlocker, licenseIncome, LICENSING_RESEARCH } from '@/lib/tycoon/sim/licensing'
 import { isResearched } from '@/lib/tycoon/sim/unlocks'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
@@ -41,6 +45,8 @@ function ProductRow({ product }: { product: Product }) {
   const next = nextSize(product.size)
   const growProblem = next ? growBlocker(state, office, product) : null
   const fixProblem = fixBlocker(state, product)
+  const localiseProblem = localiseBlocker(state, office, product)
+  const inEurope = euShareOf(product) > 0
   const fixingNow = fixOf(state, product.id) !== undefined
   const sunsetProblem = sunsetBlocker(state, product)
   const outcome = sunsetOutcome(product)
@@ -70,6 +76,7 @@ function ProductRow({ product }: { product: Product }) {
       <div className="product-stats">
         <span>
           <strong>{formatCount(product.users)}</strong> {type.userNoun}
+          {inEurope && <small className="muted"> ({REGION_NAME.us} {formatCount(usersIn(product, 'us'))} · {REGION_NAME.eu} {formatCount(usersIn(product, 'eu'))})</small>}
           {arrow && <span className={tone}> {arrow}</span>} · <strong>{formatMoney(productRevenue(product))}</strong>/day
           {promoLeft > 0 && (
             <span className="good">
@@ -118,6 +125,15 @@ function ProductRow({ product }: { product: Product }) {
             onClick={() => store.openDialog({ kind: 'new-project', updateOf: product.id, officeId: office.id, grow: true })}
           >
             Grow to {PROJECT_SIZES[next].name}…
+          </button>
+        )}
+        {!inEurope && (
+          <button
+            disabled={localiseProblem !== null}
+            title={localiseProblem ?? `A maintenance-sized release that opens the European market (budget ${formatMoney(projectBudget(projectTarget(product.productTypeId, [], 'update', product.size)))})`}
+            onClick={() => store.localise(product.id, office.id)}
+          >
+            Localise for Europe
           </button>
         )}
         <button disabled={fixProblem !== null} aria-expanded={fixing} title={fixProblem ?? undefined} onClick={() => setFixing(!fixing)}>

@@ -1,3 +1,7 @@
+/** The two markets: where an office sits, where a rival is at home, and where a product's users live. */
+export type Region = 'us' | 'eu'
+export const REGIONS: readonly Region[] = ['us', 'eu']
+
 export type Discipline = 'design' | 'engineering' | 'qa'
 export const DISCIPLINES: readonly Discipline[] = ['design', 'engineering', 'qa']
 
@@ -37,6 +41,8 @@ export interface Employee {
   founder?: boolean
   /** The day a counter-offer last kept them; a rival leaves them alone for a while after. */
   keptDay?: number
+  /** The region they were hired in: sets the wages they draw. Absent means the US. */
+  region?: Region
   /** Skill at reading users and markets: analysts and product managers have it, and do no project work. */
   analysis?: number
   /** The office whose project they work on, when it is not the one they sit in. Absent means their own. */
@@ -133,6 +139,8 @@ export interface Project {
   bugRisk: number
   /** Growing a product: the bigger size it becomes when this update ships. */
   grows?: ProjectSize
+  /** Localising a product: opens the European market when this update ships. */
+  localises?: boolean
   /** Client work: who it is for, what it pays on delivery, and when it is due. Null for everything else. */
   contract: ContractTerms | null
 }
@@ -183,6 +191,9 @@ export interface Product {
   reach: number
   /** Users right now; they drift toward the reach that interest, bugs and promotions allow. */
   users: number
+  /** The share of its reach that is in Europe, 0 until it is localised. Its users there are `euUsers`, part of `users`. */
+  euShare?: number
+  euUsers?: number
   /** Open bugs. Fractional while users are still finding the next one. */
   bugs: number
   /** Bugs an update shipped that users have not found yet; they come to light over the next weeks. */
@@ -325,6 +336,8 @@ export interface Office {
   kind: OfficeKind
   /** Colour scheme of the room, so offices tell apart at a glance. */
   theme: number
+  /** Where it is: the garage and the first office are in the US. Absent in older saves, which are all US. */
+  region?: Region
   project: Project | null
 }
 
@@ -337,6 +350,8 @@ export interface Rival {
   reputation: number
   /** Product types it likes to build. */
   focus: string[]
+  /** Where it is at home: its products compete there in full and abroad only a little. Absent means the US. */
+  region?: Region
   /** The biggest projects it takes on now; it grows into bigger ones as its name does. */
   size: ProjectSize
   nextLaunchDay: number

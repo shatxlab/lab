@@ -2,6 +2,7 @@ import { FIRST_NAMES, LAST_NAMES } from '@/lib/tycoon/data/names'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import {
   CANDIDATE_COUNT,
+  EU_WAGE,
   ERA_WAGE_FULL_ERAS,
   ERA_WAGE_GROWTH,
   ERA_WAGE_LATE_GROWTH,
@@ -19,7 +20,7 @@ import {
 import { levelForSkill } from './careers'
 import { depart } from './knowledge'
 import { ANALYST_MAX_LEVEL } from './balance'
-import { freeDesks, getOffice } from './offices'
+import { freeDesks, getOffice, hasEuropeOffice } from './offices'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { statMultiplier } from './modifiers'
 import { pick, randRange } from './rng'
@@ -33,6 +34,7 @@ import {
   type Discipline,
   type Employee,
   type GameState,
+  type Region,
   type Result,
   type Role,
   type Skills,
@@ -61,10 +63,10 @@ export function eraWageFactor(day: number): number {
 }
 
 /** Market rate for a skill set, trait and level (Mid by default) on `day`; employees are re-rated monthly. */
-export function salaryFor(skills: Skills, traitId = '', level = 1, day = 0, share = 1, analysis = 0): number {
+export function salaryFor(skills: Skills, traitId = '', level = 1, day = 0, share = 1, analysis = 0, region: Region = 'us'): number {
   const total = DISCIPLINES.reduce((sum, d) => sum + skills[d], 0) + ANALYSIS_PAY_WEIGHT * analysis
   const market = (SALARY_BASE + SALARY_PER_SKILL_POINT * total) * eraWageFactor(day)
-  return Math.round((market * (getTrait(traitId).salary ?? 1) * LEVELS[level].salary * share) / 50) * 50
+  return Math.round((market * (getTrait(traitId).salary ?? 1) * LEVELS[level].salary * share * (region === 'eu' ? EU_WAGE : 1)) / 50) * 50
 }
 
 /** The share of the market rate this person draws: founders take less, and it moves with the market. */
@@ -74,14 +76,14 @@ export function payShare(employee: Pick<Employee, 'founder'>): number {
 
 /** What this person is paid on `day`. */
 export function salaryOf(employee: Employee, day: number): number {
-  return salaryFor(employee.skills, employee.trait, employee.level, day, payShare(employee), employee.analysis ?? 0)
+  return salaryFor(employee.skills, employee.trait, employee.level, day, payShare(employee), employee.analysis ?? 0, employee.region ?? 'us')
 }
 
 /** An analyst's skill counts for this many skill points of a builder's when they are paid. */
 const ANALYSIS_PAY_WEIGHT = 1.2
 
 /** A new analyst: they read users and markets rather than build, so their secondary skills are all they have of the rest. */
-export function generateAnalyst(state: GameState): Employee {
+export function generateAnalyst(state: GameState, region: Region = 'us'): Employee {
   const reputationBonus = Math.min(state.reputation, 50) * REPUTATION_SKILL_BONUS
   const analysis = Math.round(
     Math.min(100, (PRIMARY_SKILL_MIN + randRange(state, 0, PRIMARY_SKILL_RANGE) + reputationBonus) * statMultiplier(state, 'candidateSkill')),
@@ -96,7 +98,8 @@ export function generateAnalyst(state: GameState): Employee {
     role: 'analyst',
     skills,
     analysis,
-    salary: salaryFor(skills, trait, level, state.day, 1, analysis),
+    salary: salaryFor(skills, trait, level, state.day, 1, analysis, region),
+    ...(region === 'eu' ? { region } : {}),
     trait,
     morale: startingMorale(state),
     training: null,
@@ -109,7 +112,7 @@ export function generateAnalyst(state: GameState): Employee {
 }
 
 /** Creates a new person (not yet in any list) and consumes an id. */
-export function generateEmployee(state: GameState, role: BuilderRole): Employee {
+export function generateEmployee(state: GameState, role: BuilderRole, region: Region = 'us'): Employee {
   const primary = ROLE_DISCIPLINE[role]
   const reputationBonus = Math.min(state.reputation, 50) * REPUTATION_SKILL_BONUS
   const skills = {} as Skills
@@ -130,7 +133,8 @@ export function generateEmployee(state: GameState, role: BuilderRole): Employee 
     name: `${pick(state, FIRST_NAMES)} ${pick(state, LAST_NAMES)}`,
     role,
     skills,
-    salary: salaryFor(skills, trait, level, state.day),
+    salary: salaryFor(skills, trait, level, state.day, 1, 0, region),
+    ...(region === 'eu' ? { region } : {}),
     trait,
     morale: startingMorale(state),
     training: null,
@@ -142,19 +146,23 @@ export function generateEmployee(state: GameState, role: BuilderRole): Employee 
   }
 }
 
-/** Replaces the hire pool: one of each role, then random extras. */
-export function refreshCandidates(state: GameState): void {
+/** One region's hire pool: one of each role, then random extras, and an analyst once the studio can use one. */
+function poolFor(state: GameState, region: Region): Employee[] {
   const candidates: Employee[] = []
   for (let i = 0; i < CANDIDATE_COUNT; i++) {
-    // Once the studio can use them, the last place in the pool goes to an analyst.
     if (i === CANDIDATE_COUNT - 1 && isResearched(state, ANALYST_RESEARCH)) {
-      candidates.push(generateAnalyst(state))
+      candidates.push(generateAnalyst(state, region))
       continue
     }
     const role = i < ROLES.length ? ROLES[i] : pick(state, ROLES)
-    candidates.push(generateEmployee(state, role))
+    candidates.push(generateEmployee(state, role, region))
   }
-  state.candidates = candidates
+  return candidates
+}
+
+/** Replaces the hire pools: the US one, and a European one once there is an office there to hire into. */
+export function refreshCandidates(state: GameState): void {
+  state.candidates = [...poolFor(state, 'us'), ...(hasEuropeOffice(state) ? poolFor(state, 'eu') : [])]
 }
 
 /** Signing fee: one month's salary. */
@@ -163,19 +171,20 @@ export function hireCost(employee: Employee): number {
 }
 
 /** The office a new hire would join: `officeId` if it has a desk free, otherwise the first that does. */
-export function hiringOffice(state: GameState, officeId?: number) {
+export function hiringOffice(state: GameState, officeId?: number, region?: Region) {
   const wanted = officeId === undefined ? undefined : getOffice(state, officeId)
-  if (wanted && freeDesks(state, wanted) > 0) return wanted
-  return state.offices.find((o) => freeDesks(state, o) > 0)
+  const here = (o: { region?: Region }) => region === undefined || (o.region ?? 'us') === region
+  if (wanted && here(wanted) && freeDesks(state, wanted) > 0) return wanted
+  return state.offices.find((o) => here(o) && freeDesks(state, o) > 0)
 }
 
 /** Hires a candidate into `officeId`, or into the first office with a free desk if that one is full. */
 export function hire(state: GameState, candidateId: number, officeId?: number): Result {
   const index = state.candidates.findIndex((c) => c.id === candidateId)
   if (index < 0) return fail('Candidate not found')
-  const office = hiringOffice(state, officeId)
-  if (!office) return fail('No free desks')
   const candidate = state.candidates[index]
+  const office = hiringOffice(state, officeId, candidate.region ?? 'us')
+  if (!office) return fail('No free desks')
   if (state.money < hireCost(candidate)) return fail('Not enough money')
   state.money -= hireCost(candidate)
   candidate.officeId = office.id

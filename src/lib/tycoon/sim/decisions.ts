@@ -5,12 +5,12 @@ import { getResearch } from '@/lib/tycoon/data/research'
 import { title } from './careers'
 import { describePendingEvent } from './events'
 import { nextSize, promotionCost, promotionEffect } from './lifecycle'
-import { newOfficeCost, officeName, getOffice } from './offices'
+import { newOfficeCost, officeName, getOffice, openableRegions } from './offices'
 import { hitBreakdown, projectBudget, projectQuality, projectTarget } from './project'
 import { acquisitionPrice } from './rivals'
 import { salePrice, sunsetOutcome } from './sunset'
 import { trainingCost } from './staff'
-import type { Discipline, Employee, GameState, ProjectSize, Tier } from './types'
+import type { Discipline, Employee, GameState, ProjectSize, Region, Tier } from './types'
 
 /** What a decision looks like in the log: a category, a line to read, and the numbers behind it. */
 export type Decision = [kind: string, text: string, data?: Record<string, string | number | boolean | string[]>]
@@ -155,13 +155,20 @@ export const decisions = {
     return ['office.moveOut', 'Left the garage for an office']
   },
 
-  openOffice(state: GameState): Decision {
-    return ['office.open', `Opened office ${state.offices.length + 1}`, { cost: newOfficeCost(state) }]
+  openOffice(state: GameState, region?: Region): Decision {
+    const where = region ?? openableRegions(state)[0]
+    return ['office.open', `Opened office ${state.offices.length + 1} in ${where === 'eu' ? 'Europe' : 'the US'}`, { cost: newOfficeCost(state, where), region: where ?? 'us' }]
   },
 
-  acquire(state: GameState, rivalId: number): Decision {
+  acquire(state: GameState, rivalId: number, keepProductIds: readonly number[] = []): Decision {
     const rival = state.rivals.find((r) => r.id === rivalId)
-    return ['acquire', `Bought ${rival?.name ?? 'a rival'}`, rival ? { price: acquisitionPrice(state, rival) } : undefined]
+    const kept = state.rivalProducts.filter((p) => keepProductIds.includes(p.id)).map((p) => p.name)
+    return ['acquire', `Absorbed ${rival?.name ?? 'a rival'}`, rival ? { price: acquisitionPrice(state, rival), region: rival.region ?? 'us', kept } : undefined]
+  },
+
+  localise(state: GameState, productId: number, officeId: number): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    return ['project.localise', `Started localising ${product?.name ?? 'a product'} for Europe`, { users: Math.round(product?.users ?? 0), office: officeLabel(state, officeId) }]
   },
 
   startFix(state: GameState, productId: number): Decision {

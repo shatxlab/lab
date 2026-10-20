@@ -80,7 +80,7 @@ export const STAGES: readonly Stage[] = [
     id: 'established',
     name: 'Established company',
     blurb: 'A company with products people rely on, and the money to grow.',
-    unlocks: ['Opening more offices'],
+    unlocks: ['Opening more offices, in Europe too', 'Absorbing rival studios, with their office and people'],
     goals: [
       { id: 'two_offices', label: 'Run 2 full offices: 24 people', check: (s) => realOffices(s) >= 2 && s.employees.length >= 24, progress: (s) => `${realOffices(s)} offices, ${s.employees.length} / 24 people` },
       { id: 'top_3', label: 'Reach the top 3 of the industry ranking', check: (s) => playerRank(s) <= 3, progress: (s) => `#${playerRank(s)}` },
@@ -91,7 +91,7 @@ export const STAGES: readonly Stage[] = [
     id: 'leader',
     name: 'Industry leader',
     blurb: 'One of the names everyone in the business knows.',
-    unlocks: ['Buying out rival studios'],
+    unlocks: ['Being the one everyone else is measured against'],
     goals: [
       {
         id: 'number_one',
@@ -117,6 +117,7 @@ export const STAGES: readonly Stage[] = [
     goals: [
       { id: 'three_flagships', label: 'Have 3 Flagship products live', check: (s) => s.products.filter((p) => p.size === 'flagship').length >= 3, progress: (s) => upTo(s.products.filter((p) => p.size === 'flagship').length, 3) },
       { id: 'decade_old', label: 'Keep a product over 10 years old earning $500 a day', check: (s) => s.products.some((p) => s.day - p.releaseDay >= 3600 && productRevenue(p) >= 500), progress: (s) => `${s.products.filter((p) => s.day - p.releaseDay >= 3600 && productRevenue(p) >= 500).length} / 1` },
+      { id: 'both_markets', label: 'Have a product with 20,000 users in each of the US and Europe', check: (s) => s.products.some((p) => (p.euUsers ?? 0) >= 20_000 && p.users - (p.euUsers ?? 0) >= 20_000), progress: (s) => `${s.products.filter((p) => (p.euUsers ?? 0) >= 20_000 && p.users - (p.euUsers ?? 0) >= 20_000).length} / 1` },
       { id: 'four_offices', label: 'Run 4 full offices: 48 people', check: (s) => realOffices(s) >= 4 && s.employees.length >= 48, progress: (s) => `${realOffices(s)} offices, ${s.employees.length} / 48 people` },
     ],
   },

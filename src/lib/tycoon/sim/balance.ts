@@ -316,6 +316,9 @@ export const HIT_BASE_CHANCE = 0.01
 export const HIT_CHANCE_PER_MISS = 0.012
 /** ...but never more than this. */
 export const HIT_MAX_CHANCE = 0.35
+/** Features the audience loves raise the chance, up to this; ones they do not care about cut it, down to the other. */
+export const HIT_AUDIENCE_MAX = 1.5
+export const HIT_AUDIENCE_MIN = 0.6
 /** A launch campaign gets people talking: the chance is multiplied by this per tier. */
 export const HIT_CAMPAIGN_BOOST: Record<'small' | 'medium' | 'large', number> = { small: 1.2, medium: 1.4, large: 1.7 }
 /** A hit reaches this many times as many users, most for small products: a big launch was already aimed at most of its market... */

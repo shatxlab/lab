@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { audiencesOf } from '@/lib/tycoon/data/audiences'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { CONTRACT_DEPOSIT, DAYS_PER_MONTH, GROW_MAX_FEATURES, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
@@ -96,6 +97,7 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
   // The biggest size the office allows: growing into bigger projects is the point of a bigger office.
   const [size, setSize] = useState<ProjectSize>(() => PROJECT_SIZE_IDS.filter((s) => sizeLock(state, s, office) === null).at(-1) ?? 'small')
   const [selected, setSelected] = useState<string[]>([])
+  const [audienceId, setAudienceId] = useState(() => audiencesOf(typeId)[0]?.id)
   const [error, setError] = useState('')
 
   const type = getProductType(typeId)
@@ -125,6 +127,7 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
 
   const chooseType = (id: string) => {
     setTypeId(id)
+    setAudienceId(audiencesOf(id)[0]?.id)
     setSelected([])
     setError('')
   }
@@ -133,7 +136,7 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
       current.includes(id) ? current.filter((x) => x !== id) : current.length < maxFeatures ? [...current, id] : current,
     )
   const start = () => {
-    const result = product ? store.startUpdate(product.id, selected, office.id, growsTo !== null) : store.startProject(typeId, selected, size, office.id)
+    const result = product ? store.startUpdate(product.id, selected, office.id, growsTo !== null) : store.startProject(typeId, selected, size, office.id, audienceId)
     if (!result.ok) setError(result.reason)
   }
 
@@ -201,6 +204,20 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
               )
             })}
           </div>
+        )}
+
+        {!isUpdate && audienceId !== undefined && (
+          <>
+            <div className="chips" role="radiogroup" aria-label="Audience">
+              {audiencesOf(typeId).map((a) => (
+                <button key={a.id} role="radio" aria-checked={a.id === audienceId} className={`chip ${a.id === audienceId ? 'active' : ''}`} onClick={() => setAudienceId(a.id)}>
+                  {a.name}
+                  <small>{a.reach > 1.1 ? 'Wide' : a.reach < 0.9 ? 'Narrow' : 'Mid-size'} · {a.pay > 1.1 ? 'pays well' : a.pay < 0.9 ? 'pays little' : 'pays fairly'}</small>
+                </button>
+              ))}
+            </div>
+            <p className="muted">{audiencesOf(typeId).find((a) => a.id === audienceId)?.blurb} Their favourite features show in feedback after launch.</p>
+          </>
         )}
 
         {!isUpdate && (

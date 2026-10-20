@@ -1,3 +1,4 @@
+import { audienceFor } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import {
@@ -55,11 +56,54 @@ export function overallFit(productTypeId: string, featureIds: readonly string[])
   return weighted / total
 }
 
-/** Sum of (value × fit) across features; drives the revenue bonus. */
-export function featureScore(productTypeId: string, featureIds: readonly string[]): number {
+/** What the audience makes of a feature: above 1 they love it, below 1 they shrug. */
+export function audienceLikes(productTypeId: string, audienceId: string | undefined, featureId: string): number {
+  return audienceFor(productTypeId, audienceId).likes[featureId] ?? 1
+}
+
+/** Sum of (value × fit × what the audience thinks of it) across features; drives the revenue bonus. */
+export function featureScore(productTypeId: string, featureIds: readonly string[], audienceId?: string): number {
   let score = 0
-  for (const id of featureIds) score += getFeature(id).value * featureFit(productTypeId, id)
+  for (const id of featureIds) score += getFeature(id).value * featureFit(productTypeId, id) * audienceLikes(productTypeId, audienceId, id)
   return score
+}
+
+/** How well the features suit the audience, value-weighted: 1 when they are indifferent, up when they love them. */
+export function audienceFit(productTypeId: string, audienceId: string | undefined, featureIds: readonly string[]): number {
+  let total = 0
+  let weighted = 0
+  for (const id of featureIds) {
+    const value = getFeature(id).value
+    total += value
+    weighted += value * audienceLikes(productTypeId, audienceId, id)
+  }
+  return total > 0 ? weighted / total : 1
+}
+
+/** What the audience says after a launch: features they loved, features they shrugged at, and ones they wished for. */
+export interface Feedback {
+  loved: string[]
+  shrugged: string[]
+  missed: string[]
+}
+
+export const LOVED_AT = 1.4
+export const SHRUGGED_AT = 0.7
+
+export function audienceFeedback(productTypeId: string, audienceId: string | undefined, featureIds: readonly string[]): Feedback {
+  const likes = audienceFor(productTypeId, audienceId).likes
+  const names = (ids: string[]) => ids.map((id) => getFeature(id).name)
+  const built = new Set(featureIds)
+  const wished = Object.entries(likes)
+    .filter(([id, weight]) => weight >= LOVED_AT && !built.has(id) && getFeature(id).suits.includes(productTypeId))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => id)
+  return {
+    loved: names(featureIds.filter((id) => audienceLikes(productTypeId, audienceId, id) >= LOVED_AT)),
+    shrugged: names(featureIds.filter((id) => audienceLikes(productTypeId, audienceId, id) <= SHRUGGED_AT)),
+    missed: names(wished),
+  }
 }
 
 /**
@@ -84,8 +128,8 @@ export function computeQuality(project: Project, bonus = 1): number {
 }
 
 /** Reach multiplier from the features: more valuable features that suit the type reach more people. */
-export function featureReach(productTypeId: string, featureIds: readonly string[]): number {
-  return 1 + FEATURE_REACH_BONUS * featureScore(productTypeId, featureIds)
+export function featureReach(productTypeId: string, featureIds: readonly string[], audienceId?: string): number {
+  return 1 + FEATURE_REACH_BONUS * featureScore(productTypeId, featureIds, audienceId)
 }
 
 /** Users a release of this project at `quality` can reach: the type's audience, scaled by everything about it. */
@@ -93,5 +137,5 @@ export function computeReach(project: Project, quality: number, reputation: numb
   const type = getProductType(project.productTypeId)
   const reputationBonus = 1 + REPUTATION_REACH_BONUS * reputation
   const scale = PROJECT_SIZES[project.size].reach * project.hype
-  return type.audience * (quality / 100) ** 2 * demand * featureReach(project.productTypeId, project.featureIds) * reputationBonus * scale
+  return type.audience * (quality / 100) ** 2 * demand * featureReach(project.productTypeId, project.featureIds, project.audienceId) * audienceFor(project.productTypeId, project.audienceId).reach * reputationBonus * scale
 }

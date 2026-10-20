@@ -1,3 +1,4 @@
+import { audiencesOf } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import {
@@ -5,6 +6,8 @@ import {
   DEMAND_NOISE,
   HIT_BASE_CHANCE,
   HIT_CAMPAIGN_BOOST,
+  HIT_AUDIENCE_MAX,
+  HIT_AUDIENCE_MIN,
   HIT_CHANCE_PER_MISS,
   HIT_MAX_CHANCE,
   HIT_MIN_QUALITY,
@@ -31,7 +34,7 @@ import { bugProneness, releaseBugs } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
 import { pick, rand, randRange } from './rng'
-import { computeQuality, computeReach, featureReach } from './scoring'
+import { audienceFit, computeQuality, computeReach, featureReach } from './scoring'
 import { featureLock, productTypeLock, sizeLock } from './unlocks'
 import {
   DISCIPLINES,
@@ -100,6 +103,7 @@ export function startProject(
   featureIds: readonly string[],
   size: ProjectSize = 'small',
   officeId?: number,
+  audienceId?: string,
 ): Result {
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
@@ -110,6 +114,7 @@ export function startProject(
   if (!type) return fail('Unknown product type')
   const typeLock = productTypeLock(state, type)
   if (typeLock) return fail(`Product type is locked: ${typeLock}`)
+  if (audienceId !== undefined && !audiencesOf(productTypeId).some((a) => a.id === audienceId)) return fail('Unknown audience')
   if (!PROJECT_SIZES[size]) return fail('Unknown project size')
   const sizeProblem = sizeLock(state, size, office)
   if (sizeProblem) return fail(`${PROJECT_SIZES[size].name} projects need ${sizeProblem}`)
@@ -125,6 +130,7 @@ export function startProject(
     kind: 'new',
     parentId: null,
     productTypeId,
+    audienceId: audienceId ?? audiencesOf(productTypeId)[0]?.id,
     size,
     featureIds: [...featureIds],
     target: projectTarget(productTypeId, featureIds, 'new', size),
@@ -177,6 +183,7 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     kind: 'update',
     parentId: product.id,
     productTypeId: product.productTypeId,
+    audienceId: product.audienceId,
     size: product.size,
     featureIds: [...featureIds],
     target: bigger ? growTarget(product.productTypeId, featureIds, product.size, bigger) : projectTarget(product.productTypeId, featureIds, 'update', product.size),
@@ -209,7 +216,7 @@ export function reachAfterUpdate(product: Product, project: Project, quality: nu
   const newQuality = Math.max(product.quality, quality)
   const features = [...product.featureIds, ...project.featureIds]
   const growth =
-    (featureReach(product.productTypeId, features) / featureReach(product.productTypeId, product.featureIds)) *
+    (featureReach(product.productTypeId, features, product.audienceId) / featureReach(product.productTypeId, product.featureIds, product.audienceId)) *
     (newQuality / Math.max(product.quality, 1)) ** 2 *
     project.hype
   return product.reach * growth
@@ -227,6 +234,7 @@ export function estimateUpdateReach(state: GameState, productId: number, feature
     kind: 'update',
     parentId: product.id,
     productTypeId: product.productTypeId,
+    audienceId: product.audienceId,
     size: product.size,
     featureIds: [...featureIds],
     target,
@@ -258,6 +266,8 @@ export interface HitBreakdown {
   quality: number
   market: number
   buzz: number
+  /** How well the features suit the audience: a little up when they love them, down when they do not care. */
+  audience: number
   /** True when the chance was cut down to the highest it can be. */
   capped: boolean
 }
@@ -272,8 +282,9 @@ export function hitBreakdown(state: GameState, project: Project, quality: number
   const qualityFactor = 0.5 + (quality - HIT_MIN_QUALITY) / (100 - HIT_MIN_QUALITY)
   const market = marketDemand(state, project.productTypeId)
   const buzz = project.hype * (campaign ? HIT_CAMPAIGN_BOOST[campaign] : 1)
-  const raw = quality < HIT_MIN_QUALITY ? 0 : base * qualityFactor * market * buzz
-  return { chance: Math.min(HIT_MAX_CHANCE, raw), base, misses, quality: qualityFactor, market, buzz, capped: raw > HIT_MAX_CHANCE }
+  const audience = Math.min(HIT_AUDIENCE_MAX, Math.max(HIT_AUDIENCE_MIN, audienceFit(project.productTypeId, project.audienceId, project.featureIds)))
+  const raw = quality < HIT_MIN_QUALITY ? 0 : base * qualityFactor * market * buzz * audience
+  return { chance: Math.min(HIT_MAX_CHANCE, raw), base, misses, quality: qualityFactor, market, buzz, audience, capped: raw > HIT_MAX_CHANCE }
 }
 
 export function hitChance(state: GameState, project: Project, quality: number, campaign?: Tier): number {
@@ -309,6 +320,7 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
     id: project.id,
     name: project.name,
     productTypeId: project.productTypeId,
+    audienceId: project.audienceId,
     size: project.size,
     featureIds: [...project.featureIds],
     quality,

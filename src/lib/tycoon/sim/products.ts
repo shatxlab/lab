@@ -1,3 +1,4 @@
+import { audienceFor } from '@/lib/tycoon/data/audiences'
 import { expectedFeatures } from '@/lib/tycoon/data/eras'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import {
@@ -132,13 +133,13 @@ export function rivalTargetUsers(state: GameState, product: RivalProduct, weight
 }
 
 /** Income per day from `users` of a product type, before studio-wide modifiers. */
-export function revenueForUsers(productTypeId: string, users: number): number {
-  return (users * getProductType(productTypeId).revenuePerUser) / DAYS_PER_MONTH
+export function revenueForUsers(productTypeId: string, users: number, audienceId?: string): number {
+  return (users * getProductType(productTypeId).revenuePerUser * audienceFor(productTypeId, audienceId).pay) / DAYS_PER_MONTH
 }
 
 /** What the product earns per day right now, before studio-wide modifiers. */
 export function productRevenue(product: Product): number {
-  return revenueForUsers(product.productTypeId, product.users)
+  return revenueForUsers(product.productTypeId, product.users, product.audienceId)
 }
 
 /** Bugs a release of `project` ships with: more work means more bugs, and QA catches them. */

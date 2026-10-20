@@ -146,6 +146,7 @@ function validProduct(v: unknown): boolean {
     isNum(v.id) &&
     typeof v.name === 'string' &&
     knownType(v.productTypeId) &&
+    (v.audienceId === undefined || typeof v.audienceId === 'string') &&
     knownSize(v.size) &&
     Array.isArray(v.featureIds) &&
     v.featureIds.every(knownFeature) &&

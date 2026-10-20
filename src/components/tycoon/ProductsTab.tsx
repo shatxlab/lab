@@ -5,6 +5,8 @@ import { inGarage } from '@/lib/tycoon/sim/offices'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
 import { autoPromoteUnlocked, growBlocker, promotionEffect, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { audienceFor } from '@/lib/tycoon/data/audiences'
+import { audienceFeedback } from '@/lib/tycoon/sim/scoring'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, targetUsers } from '@/lib/tycoon/sim/products'
 import { TIERS, type GameState, type Product, type Tier } from '@/lib/tycoon/sim/types'
@@ -48,6 +50,8 @@ function ProductRow({ product }: { product: Product }) {
   const sinceRelease = formatAge(state.day - lastReleaseDay(product))
   const { arrow, tone } = trend(state, product)
   const missing = missingFeatures(product, state.day)
+  const audience = audienceFor(product.productTypeId, product.audienceId)
+  const feedback = audienceFeedback(product.productTypeId, product.audienceId, product.featureIds)
 
   return (
     <div className="product">
@@ -57,7 +61,7 @@ function ProductRow({ product }: { product: Product }) {
           {product.hit && <span title={state.signatureId === product.id ? 'Your signature hit' : 'A hit'}> 🚀</span>}
         </strong>
         <span className="muted">
-          {PROJECT_SIZES[product.size].name} {type.name} · {productPhase(state, product)} · quality {Math.round(product.quality)}
+          {PROJECT_SIZES[product.size].name} {type.name}{audience.name !== 'Everyone' && ` for ${audience.name.toLowerCase()}`} · {productPhase(state, product)} · quality {Math.round(product.quality)}
           {updates > 0 && ` · ${updates} update${updates === 1 ? '' : 's'}`}
         </span>
       </div>
@@ -89,6 +93,17 @@ function ProductRow({ product }: { product: Product }) {
           </span>
         )}
       </div>
+      {audience.name !== 'Everyone' && (feedback.loved.length > 0 || feedback.shrugged.length > 0 || feedback.missed.length > 0) && (
+        <div className="product-feedback">
+          <small className="muted" title={`What ${audience.name.toLowerCase()} say about ${product.name}`}>
+            {feedback.loved.length > 0 && (
+              <span className="good">Loved: {feedback.loved.join(', ')}. </span>
+            )}
+            {feedback.shrugged.length > 0 && <span>Shrugged at: {feedback.shrugged.join(', ')}. </span>}
+            {feedback.missed.length > 0 && <span className="warn">Wished for: {feedback.missed.join(', ')}.</span>}
+          </small>
+        </div>
+      )}
       <div className="product-actions">
         <button disabled={blocker !== null} onClick={() => store.openDialog({ kind: 'new-project', updateOf: product.id, officeId: office.id })}>
           Update

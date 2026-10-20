@@ -114,7 +114,7 @@ describe('project sizes', () => {
     const quality = projectQuality(state, state.offices[0].project!)
     const reach = estimateReach(state, state.offices[0].project!, quality)
     const price = campaignCost(state, state.offices[0].project!, quality, 'large')
-    expect(price).toBeCloseTo(revenueForUsers('web_app', reach) * CAMPAIGNS.large.costDays, -2)
+    expect(price).toBeCloseTo(revenueForUsers('web_app', reach, state.offices[0].project!.audienceId) * CAMPAIGNS.large.costDays, -2)
     const money = state.money
     shipProject(state, 'large')
     expect(money - state.money).toBe(price)

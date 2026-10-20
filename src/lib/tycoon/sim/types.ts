@@ -68,6 +68,21 @@ export interface Feature {
   suits: string[]
 }
 
+/** Who a product is for. Picked when it is started; what they value is hidden until feedback shows it. */
+export interface Audience {
+  id: string
+  productTypeId: string
+  name: string
+  /** A hint about what they care about, without naming features. */
+  blurb: string
+  /** Multiplies the users the type can reach: wide audiences are big... */
+  reach: number
+  /** ...and multiplies what each pays: ...and niche ones pay more. */
+  pay: number
+  /** How much this audience values a feature, by feature id; unlisted features count 1. */
+  likes: Record<string, number>
+}
+
 /** How big a product (or an update to it) is; see PROJECT_SIZES in balance.ts. */
 export type ProjectSize = 'small' | 'medium' | 'large' | 'flagship'
 export const PROJECT_SIZE_IDS: readonly ProjectSize[] = ['small', 'medium', 'large', 'flagship']
@@ -83,6 +98,8 @@ export interface Project {
   kind: 'new' | 'update' | 'contract'
   parentId: number | null
   productTypeId: string
+  /** Who it is for (an update has its product's); absent means the type's first audience. */
+  audienceId?: string
   /** An update is always the size of the product it updates. */
   size: ProjectSize
   featureIds: string[]
@@ -133,6 +150,8 @@ export interface Product {
   id: number
   name: string
   productTypeId: string
+  /** Who it is for; absent means the type's first audience. */
+  audienceId?: string
   /** Sets how long users stay interested, how many bugs it can carry, and the size of its updates. */
   size: ProjectSize
   /** Every feature shipped so far, including through updates. */

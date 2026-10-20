@@ -999,6 +999,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.tycoon-root .product-feedback {
+  font-size: 13px;
+}
+
 .tycoon-root .product-health {
   font-size: 13px;
 }

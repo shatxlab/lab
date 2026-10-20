@@ -92,7 +92,7 @@ export interface Store {
   /** Shows another office. */
   selectOffice(officeId: number): void
   /** Starts a new product of `size` (Small if left out). Like the commands below, in the selected office unless told otherwise. */
-  startProject(productTypeId: string, featureIds: readonly string[], size?: ProjectSize, officeId?: number): Result
+  startProject(productTypeId: string, featureIds: readonly string[], size?: ProjectSize, officeId?: number, audienceId?: string): Result
   /** Ships an office's project; `campaign` buys launch marketing for a new product. */
   shipProject(campaign?: Tier, officeId?: number): Result
   startUpdate(productId: number, featureIds: readonly string[], officeId?: number, grow?: boolean): Result
@@ -282,8 +282,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       if (getOffice(state, officeId)) selectedOffice.value = officeId
     },
 
-    startProject(productTypeId, featureIds, size, officeId) {
-      const result = logged(() => decisions.startProject(state, productTypeId, featureIds, size, officeFor(officeId)), () => startProject(state, productTypeId, featureIds, size, officeFor(officeId)))
+    startProject(productTypeId, featureIds, size, officeId, audienceId) {
+      const result = logged(() => decisions.startProject(state, productTypeId, featureIds, size, officeFor(officeId), audienceId), () => startProject(state, productTypeId, featureIds, size, officeFor(officeId), audienceId))
       if (!result.ok) return result
       dialog.value = null
       if (speed.value === 0) speed.value = 1

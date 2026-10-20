@@ -84,7 +84,7 @@ export function ShipDialog({ officeId }: { officeId: number }) {
         ) : (
           <>
             It could reach about {formatCount(reach)} {type.userNoun}. Against the competition, expect about{' '}
-            <strong>{formatCount(settled)}</strong>, earning about <strong>{formatMoney(revenueForUsers(project.productTypeId, settled))}</strong>{' '}
+            <strong>{formatCount(settled)}</strong>, earning about <strong>{formatMoney(revenueForUsers(project.productTypeId, settled, project.audienceId))}</strong>{' '}
             per day once they have signed up.
           </>
         )}
@@ -106,6 +106,11 @@ export function ShipDialog({ officeId }: { officeId: number }) {
               <li className={hit.market >= 1 ? 'good' : 'warn'}>
                 {type.name} market: {hit.market >= 1.05 ? 'hot' : hit.market <= 0.95 ? 'cold' : 'steady'} {factorLabel(hit.market)}
               </li>
+              {project.featureIds.length > 0 && (
+                <li className={hit.audience > 1.05 ? 'good' : hit.audience < 0.95 ? 'warn' : ''}>
+                  Audience fit: {hit.audience > 1.05 ? 'they will like these features' : hit.audience < 0.95 ? 'they will shrug at these features' : 'neither here nor there'} {factorLabel(hit.audience)}
+                </li>
+              )}
               <li className={hit.buzz > 1 ? 'good' : ''}>
                 Buzz: {campaign ? `${TIER_NAME[campaign]} campaign` : 'no campaign'} {factorLabel(hit.buzz)}
               </li>

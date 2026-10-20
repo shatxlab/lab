@@ -45,7 +45,7 @@ export function updateBlocker(state: GameState, office: Office, product: Product
 /** What a promotion costs: a few days of what the product earns at its full reach, more for a bigger push. */
 export function promotionCost(product: Product, tier: Tier): number {
   const offer = PROMOTIONS[tier]
-  return price(revenueForUsers(product.productTypeId, product.reach) * offer.costDays, offer.costFloor)
+  return price(revenueForUsers(product.productTypeId, product.reach, product.audienceId) * offer.costDays, offer.costFloor)
 }
 
 /**
@@ -92,7 +92,7 @@ export function estimateReach(state: GameState, project: Project, quality: numbe
 /** A launch campaign is priced from what the product will earn per day once its users have arrived. */
 export function campaignCost(state: GameState, project: Project, quality: number, tier: Tier): number {
   const offer = CAMPAIGNS[tier]
-  const daily = revenueForUsers(project.productTypeId, estimateReach(state, project, quality))
+  const daily = revenueForUsers(project.productTypeId, estimateReach(state, project, quality), project.audienceId)
   return price(daily * offer.costDays, offer.costFloor)
 }
 

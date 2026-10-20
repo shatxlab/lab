@@ -250,7 +250,7 @@ describe('launch campaigns', () => {
     const [small, medium, large] = TIERS.map((t) => campaignCost(state, project, quality, t))
     expect(small).toBeLessThan(medium)
     expect(medium).toBeLessThan(large)
-    expect(medium).toBeCloseTo(revenueForUsers('web_app', estimateReach(state, project, quality)) * CAMPAIGNS.medium.costDays, -2)
+    expect(medium).toBeCloseTo(revenueForUsers('web_app', estimateReach(state, project, quality), project.audienceId) * CAMPAIGNS.medium.costDays, -2)
     expect(campaignCost(state, project, 1, 'small')).toBe(CAMPAIGNS.small.costFloor)
   })
 

@@ -85,6 +85,15 @@ Balance note: with these caps the best bot reaches ~11k/day at year 20 (was ~26k
 stalls at Industry leader. The bots are cruder than a person (they do not auto-promote
 or tune), so retune from a human run and its log, not from the bots.
 
+- **Audiences and feature fit** (`data/audiences.ts`). Each product type has 2-3
+  audiences, picked when a product is started and kept for its life. A wide audience
+  reaches more people and pays less, a narrow one the reverse. Each values features
+  differently (`likes`, default 1): that moves reach (`featureScore`), revenue per user,
+  and a new `audience` factor in the hit chance (`HIT_AUDIENCE_MIN/MAX`). The picker
+  shows only a hint; after launch the product card says what they loved, shrugged at
+  and wished for (`audienceFeedback`). Open: analysts revealing the weights before
+  launch, feedback over time, and audience-specific research.
+
 ### From the first logged run (sold from the garage at year 11)
 
 Two and a half years of contracts only before the first product; 500 days between
@@ -113,9 +122,6 @@ tedium of the contract-only start.
   only, one PM per office. Analysts produce insights that reveal hidden facts; the PM
   owns a product's direction (bonus to feature fit and hit chance). Needs new
   character art, reusing existing characters.
-- **Audiences and feature fit.** Each product type has 2-3 audiences, picked at
-  creation; feature value depends on the audience and is hidden until feedback or an
-  analyst reveals it. Post-release feedback says what users loved or missed.
 - **Competitors.** *Absorb* a rival: price from its income and growth; it leaves the
   ranking; choose which of its products to keep (they take portfolio slots); generated
   staff with expertise in its focus types; its office, in its region, replaces

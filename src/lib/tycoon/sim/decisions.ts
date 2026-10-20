@@ -1,3 +1,4 @@
+import { getAudience } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
@@ -27,11 +28,11 @@ const officeLabel = (state: GameState, id: number | undefined) => {
  * runs, so costs, candidates and the pending event are still what was on screen.
  */
 export const decisions = {
-  startProject(state: GameState, typeId: string, features: readonly string[], size: string | undefined, officeId: number): Decision {
+  startProject(state: GameState, typeId: string, features: readonly string[], size: string | undefined, officeId: number, audienceId?: string): Decision {
     return [
       'project.start',
       `Started a ${size ?? 'default-size'} ${getProductType(typeId).name}`,
-      { type: typeId, size: size ?? '', features: featureNames(features), office: officeLabel(state, officeId), demand: Math.round((state.market[typeId] ?? 1) * 100) / 100 },
+      { type: typeId, audience: audienceId ? getAudience(audienceId).name : '', size: size ?? '', features: featureNames(features), office: officeLabel(state, officeId), demand: Math.round((state.market[typeId] ?? 1) * 100) / 100 },
     ]
   },
 

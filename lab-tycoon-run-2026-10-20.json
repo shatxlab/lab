@@ -1,0 +1,7033 @@
+{
+ "game": "software-tycoon",
+ "version": 5,
+ "exportedAt": "2026-10-20T05:04:35.801Z",
+ "summary": {
+  "day": 2528,
+  "years": 7,
+  "ended": false,
+  "stage": "Indie studio",
+  "money": 456114,
+  "income": 1731,
+  "lifetimeRevenue": 2234406,
+  "reputation": 100,
+  "rank": 8,
+  "employees": 12,
+  "offices": 1,
+  "productsLive": 5,
+  "productsRetired": 3,
+  "productsShipped": 8,
+  "hits": 0,
+  "bestProduct": "Harvest (89100 users)",
+  "peakIncome": 2487,
+  "longestServing": [
+   "Mateo Silva (7 years)",
+   "Ines Costa (7 years)",
+   "Noor Petrov (6.7 years)"
+  ],
+  "research": [
+   "ci_pipeline",
+   "code_review",
+   "test_automation",
+   "incident_management",
+   "marketing_dept",
+   "brand_partnerships",
+   "marketing_automation"
+  ]
+ },
+ "journal": [
+  {
+   "day": 0,
+   "kind": "contract.accept",
+   "text": "Took a job for Riverbend Council: a website",
+   "cash": 26775,
+   "data": {
+    "pay": 3550,
+    "days": 34,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 17,
+   "kind": "notice",
+   "text": "Delivered to Riverbend Council: +$1,775 on top of the $1,775 deposit.",
+   "cash": 27247
+  },
+  {
+   "day": 17,
+   "kind": "contract.accept",
+   "text": "Took a job for Rosa's Bakery: a booking system",
+   "cash": 29347,
+   "data": {
+    "pay": 4200,
+    "days": 55,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 30,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 28350,
+   "data": {
+    "income": 0,
+    "burn": 77,
+    "reputation": 1,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 2,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 30,
+   "kind": "notice",
+   "text": "Web App demand is surging: +42%.",
+   "cash": 28350
+  },
+  {
+   "day": 46,
+   "kind": "notice",
+   "text": "Delivered to Rosa's Bakery: +$2,100 on top of the $2,100 deposit.",
+   "cash": 29223
+  },
+  {
+   "day": 46,
+   "kind": "contract.accept",
+   "text": "Took a job for Lakeside Clinic: a booking system",
+   "cash": 31448,
+   "data": {
+    "pay": 4450,
+    "days": 55,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 49,
+   "kind": "hire",
+   "text": "Hired Luca Fischer (Mid tester)",
+   "cash": 29318,
+   "data": {
+    "role": "tester",
+    "trait": "perfectionist",
+    "skills": "design 16, engineering 9, qa 48",
+    "salary": 1900,
+    "office": "Garage",
+    "team": 2
+   }
+  },
+  {
+   "day": 60,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 27778,
+   "data": {
+    "income": 0,
+    "burn": 142,
+    "reputation": 1,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 3,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 71,
+   "kind": "notice",
+   "text": "Delivered to Lakeside Clinic: +$2,225 on top of the $2,225 deposit.",
+   "cash": 28445
+  },
+  {
+   "day": 71,
+   "kind": "contract.accept",
+   "text": "Took a job for Maple Street School: a mobile app",
+   "cash": 31345,
+   "data": {
+    "pay": 5800,
+    "days": 50,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 90,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 28653,
+   "data": {
+    "income": 0,
+    "burn": 142,
+    "reputation": 2,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 3,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 97,
+   "kind": "notice",
+   "text": "Delivered to Maple Street School: +$2,900 on top of the $2,900 deposit.",
+   "cash": 30562
+  },
+  {
+   "day": 98,
+   "kind": "contract.accept",
+   "text": "Took a job for Riverbend Council: a test suite for their old system",
+   "cash": 32645,
+   "data": {
+    "pay": 4450,
+    "days": 51,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 120,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 29528,
+   "data": {
+    "income": 0,
+    "burn": 143,
+    "reputation": 2,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 3,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 125,
+   "kind": "notice",
+   "text": "Delivered to Riverbend Council: +$2,225 on top of the $2,225 deposit.",
+   "cash": 31037
+  },
+  {
+   "day": 126,
+   "kind": "event.offered",
+   "text": "Job offer",
+   "cash": 30893,
+   "data": {
+    "text": "Luca Fischer has an offer from Quanta and is thinking about leaving.",
+    "choices": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 126,
+   "kind": "event.choice",
+   "text": "Job offer: Let them go",
+   "cash": 30893,
+   "data": {
+    "options": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 126,
+   "kind": "notice",
+   "text": "Luca Fischer left for Quanta.",
+   "cash": 30893
+  },
+  {
+   "day": 128,
+   "kind": "contract.accept",
+   "text": "Took a job for City Library: a data migration",
+   "cash": 32787,
+   "data": {
+    "pay": 4100,
+    "days": 59,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 134,
+   "kind": "hire",
+   "text": "Hired Noor Petrov (Junior tester)",
+   "cash": 31117,
+   "data": {
+    "role": "tester",
+    "trait": "creative",
+    "skills": "design 7, engineering 6, qa 29",
+    "salary": 1200,
+    "office": "Garage",
+    "team": 2
+   }
+  },
+  {
+   "day": 150,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 29223,
+   "data": {
+    "income": 0,
+    "burn": 118,
+    "reputation": 3,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 3,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 160,
+   "kind": "notice",
+   "text": "Delivered to City Library: +$2,050 on top of the $2,050 deposit.",
+   "cash": 30090
+  },
+  {
+   "day": 160,
+   "kind": "contract.accept",
+   "text": "Took a job for Maple Street School: a website",
+   "cash": 31965,
+   "data": {
+    "pay": 3750,
+    "days": 37,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 177,
+   "kind": "notice",
+   "text": "Delivered to Maple Street School: +$1,875 on top of the $1,875 deposit.",
+   "cash": 31828
+  },
+  {
+   "day": 177,
+   "kind": "contract.accept",
+   "text": "Took a job for Greenleaf Dental: an online shop",
+   "cash": 34153,
+   "data": {
+    "pay": 4650,
+    "days": 51,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 179,
+   "kind": "event.offered",
+   "text": "Senior freelancer",
+   "cash": 33917,
+   "data": {
+    "text": "Mateo Costa is strong across the board and free this week only, at half the usual signing fee.",
+    "choices": [
+     "Hire them",
+     "Pass"
+    ]
+   }
+  },
+  {
+   "day": 179,
+   "kind": "event.choice",
+   "text": "Senior freelancer: Hire them",
+   "cash": 32742,
+   "data": {
+    "options": [
+     "Hire them",
+     "Pass"
+    ]
+   }
+  },
+  {
+   "day": 179,
+   "kind": "notice",
+   "text": "Mateo Costa joined the team.",
+   "cash": 32742
+  },
+  {
+   "day": 180,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 32545,
+   "data": {
+    "income": 0,
+    "burn": 198,
+    "reputation": 4,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 4,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 197,
+   "kind": "notice",
+   "text": "Delivered to Greenleaf Dental: +$2,325 on top of the $2,325 deposit.",
+   "cash": 31498
+  },
+  {
+   "day": 197,
+   "kind": "contract.accept",
+   "text": "Took a job for Atlas Insurance: a booking system",
+   "cash": 34923,
+   "data": {
+    "pay": 6850,
+    "days": 44,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 210,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 32345,
+   "data": {
+    "income": 0,
+    "burn": 198,
+    "reputation": 4,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 4,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 219,
+   "kind": "notice",
+   "text": "Delivered to Atlas Insurance: +$3,425 on top of the $3,425 deposit.",
+   "cash": 33985
+  },
+  {
+   "day": 219,
+   "kind": "contract.accept",
+   "text": "Took a job for The Vinyl Vault: a website",
+   "cash": 37635,
+   "data": {
+    "pay": 7300,
+    "days": 51,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 226,
+   "kind": "event.offered",
+   "text": "Open-source help",
+   "cash": 36247,
+   "data": {
+    "text": "Open-source contributors have sent patches for A website for The Vinyl Vault.",
+    "choices": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 226,
+   "kind": "event.choice",
+   "text": "Open-source help: Review them properly",
+   "cash": 35847,
+   "data": {
+    "options": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 226,
+   "kind": "notice",
+   "text": "A careful review turned the patches into real progress.",
+   "cash": 35847
+  },
+  {
+   "day": 240,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 33070,
+   "data": {
+    "income": 0,
+    "burn": 198,
+    "reputation": 5,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 4,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 241,
+   "kind": "notice",
+   "text": "Delivered to The Vinyl Vault: +$3,650 on top of the $3,650 deposit.",
+   "cash": 36522
+  },
+  {
+   "day": 242,
+   "kind": "project.start",
+   "text": "Started a small Web App",
+   "cash": 36323,
+   "data": {
+    "type": "web_app",
+    "size": "small",
+    "features": [
+     "AI assistant",
+     "Enterprise SSO"
+    ],
+    "office": "Garage",
+    "demand": 1.06
+   }
+  },
+  {
+   "day": 270,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 30770,
+   "data": {
+    "income": 0,
+    "burn": 200,
+    "reputation": 5,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 4,
+    "offices": 1,
+    "products": 0,
+    "users": 0,
+    "lifetimeRevenue": 0,
+    "research": 0,
+    "productList": []
+   }
+  },
+  {
+   "day": 275,
+   "kind": "event.offered",
+   "text": "Tax audit",
+   "cash": 29770,
+   "data": {
+    "text": "The tax office wants to take a closer look at your books.",
+    "choices": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 275,
+   "kind": "event.choice",
+   "text": "Tax audit: Contest it",
+   "cash": 29770,
+   "data": {
+    "options": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 275,
+   "kind": "notice",
+   "text": "The audit found nothing.",
+   "cash": 29770
+  },
+  {
+   "day": 295,
+   "kind": "ship",
+   "text": "Shipped Birch",
+   "cash": 23020,
+   "data": {
+    "quality": 94,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 2.4
+   }
+  },
+  {
+   "day": 295,
+   "kind": "ship.result",
+   "text": "Birch is out",
+   "cash": 23020,
+   "data": {
+    "quality": 94,
+    "reach": 22914,
+    "bugs": 3,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 296,
+   "kind": "notice",
+   "text": "Milestone: Hello, world. Ship your first product. +$500.",
+   "cash": 23634
+  },
+  {
+   "day": 296,
+   "kind": "notice",
+   "text": "Milestone: Masterpiece. Ship a product with quality 90 or more. +2 reputation.",
+   "cash": 23634
+  },
+  {
+   "day": 296,
+   "kind": "notice",
+   "text": "Milestone: Spread the word. Run a promotion. +$300.",
+   "cash": 23634
+  },
+  {
+   "day": 296,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 23634,
+   "data": {
+    "bugs": 3
+   }
+  },
+  {
+   "day": 298,
+   "kind": "notice",
+   "text": "Birch: 3 bugs fixed.",
+   "cash": 23271
+  },
+  {
+   "day": 300,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 22920,
+   "data": {
+    "income": 26,
+    "burn": 200,
+    "reputation": 10,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 4,
+    "offices": 1,
+    "products": 1,
+    "users": 2585,
+    "lifetimeRevenue": 100,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 2585 users, $26/day, quality 94)"
+    ]
+   }
+  },
+  {
+   "day": 301,
+   "kind": "contract.accept",
+   "text": "Took a job for Pine & Co. Law: a mobile app",
+   "cash": 27099,
+   "data": {
+    "pay": 8700,
+    "days": 55,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 329,
+   "kind": "notice",
+   "text": "Delivered to Pine & Co. Law: +$4,350 on top of the $4,350 deposit.",
+   "cash": 27780
+  },
+  {
+   "day": 330,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 27680,
+   "data": {
+    "income": 100,
+    "burn": 202,
+    "reputation": 10,
+    "stage": "Garage startup",
+    "rank": 6,
+    "employees": 4,
+    "offices": 1,
+    "products": 1,
+    "users": 10027,
+    "lifetimeRevenue": 2160,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 10027 users, $100/day, quality 94)"
+    ]
+   }
+  },
+  {
+   "day": 330,
+   "kind": "notice",
+   "text": "Milestone: Ten thousand strong. Have 10,000 users on one product. +$2,000.",
+   "cash": 29680
+  },
+  {
+   "day": 330,
+   "kind": "project.update",
+   "text": "Started an update to Birch",
+   "cash": 29680,
+   "data": {
+    "features": [
+     "Analytics dashboard",
+     "Cloud sync"
+    ],
+    "users": 10027,
+    "ageDays": 35,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 358,
+   "kind": "ship",
+   "text": "Shipped Birch",
+   "cash": 26862,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 358,
+   "kind": "ship.result",
+   "text": "Birch is out",
+   "cash": 26862,
+   "data": {
+    "quality": 100,
+    "reach": 33588,
+    "bugs": 0,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 359,
+   "kind": "notice",
+   "text": "Milestone: Version 1.1. Release an update for a live product. +$500.",
+   "cash": 27257
+  },
+  {
+   "day": 359,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 27257,
+   "data": {
+    "bugs": 2
+   }
+  },
+  {
+   "day": 360,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 27152,
+   "data": {
+    "income": 97,
+    "burn": 202,
+    "reputation": 12,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 1,
+    "users": 9653,
+    "lifetimeRevenue": 5182,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 9653 users, $97/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 360,
+   "kind": "notice",
+   "text": "Birch: 1 bug fixed.",
+   "cash": 27152
+  },
+  {
+   "day": 360,
+   "kind": "notice",
+   "text": "Tidewater Digital has moved into the market.",
+   "cash": 27152
+  },
+  {
+   "day": 361,
+   "kind": "contract.accept",
+   "text": "Took a job for Blue Harbor Hotel: a mobile app",
+   "cash": 32397,
+   "data": {
+    "pay": 10700,
+    "days": 59,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 367,
+   "kind": "event.offered",
+   "text": "Crunch time",
+   "cash": 31778,
+   "data": {
+    "text": "The team offers to put in long hours to get A mobile app for Blue Harbor Hotel done sooner.",
+    "choices": [
+     "Crunch for two weeks",
+     "Keep a sane pace"
+    ]
+   }
+  },
+  {
+   "day": 367,
+   "kind": "event.choice",
+   "text": "Crunch time: Crunch for two weeks",
+   "cash": 31778,
+   "data": {
+    "options": [
+     "Crunch for two weeks",
+     "Keep a sane pace"
+    ]
+   }
+  },
+  {
+   "day": 367,
+   "kind": "notice",
+   "text": "The lights stay on late. Progress speeds up; smiles fade.",
+   "cash": 31778
+  },
+  {
+   "day": 379,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Ledger, a small web app (quality 61).",
+   "cash": 30572
+  },
+  {
+   "day": 389,
+   "kind": "notice",
+   "text": "Delivered to Blue Harbor Hotel: +$5,350 on top of the $5,350 deposit.",
+   "cash": 34930
+  },
+  {
+   "day": 389,
+   "kind": "contract.accept",
+   "text": "Took a job for Rosa's Bakery: an online shop",
+   "cash": 40480,
+   "data": {
+    "pay": 11100,
+    "days": 61,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 390,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 40381,
+   "data": {
+    "income": 102,
+    "burn": 202,
+    "reputation": 13,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 1,
+    "users": 10243,
+    "lifetimeRevenue": 8211,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 10243 users, $102/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 411,
+   "kind": "notice",
+   "text": "Quanta launched Otter, a small web app (quality 54).",
+   "cash": 38294
+  },
+  {
+   "day": 420,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 37394,
+   "data": {
+    "income": 101,
+    "burn": 203,
+    "reputation": 13,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 1,
+    "users": 10147,
+    "lifetimeRevenue": 11274,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 10147 users, $101/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 422,
+   "kind": "notice",
+   "text": "Delivered to Rosa's Bakery: +$5,550 on top of the $5,550 deposit.",
+   "cash": 42740
+  },
+  {
+   "day": 422,
+   "kind": "project.start",
+   "text": "Started a small Mobile App",
+   "cash": 42740,
+   "data": {
+    "type": "mobile_app",
+    "size": "small",
+    "features": [],
+    "office": "Garage",
+    "demand": 0.97
+   }
+  },
+  {
+   "day": 441,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Quiver, a small web app (quality 70).",
+   "cash": 40792
+  },
+  {
+   "day": 444,
+   "kind": "event.offered",
+   "text": "Rival announcement",
+   "cash": 40482,
+   "data": {
+    "text": "Tidewater Digital just announced a mobile app a lot like Jasper.",
+    "choices": [
+     "Make ours stand out",
+     "Ignore them"
+    ]
+   }
+  },
+  {
+   "day": 444,
+   "kind": "event.choice",
+   "text": "Rival announcement: Make ours stand out",
+   "cash": 40482,
+   "data": {
+    "options": [
+     "Make ours stand out",
+     "Ignore them"
+    ]
+   }
+  },
+  {
+   "day": 444,
+   "kind": "notice",
+   "text": "Back to the drawing board for a few distinctive touches.",
+   "cash": 40482
+  },
+  {
+   "day": 450,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 39858,
+   "data": {
+    "income": 99,
+    "burn": 205,
+    "reputation": 13,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 1,
+    "users": 9912,
+    "lifetimeRevenue": 14288,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 9912 users, $99/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 457,
+   "kind": "ship",
+   "text": "Shipped Jasper",
+   "cash": 36564,
+   "data": {
+    "quality": 100,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 5.4
+   }
+  },
+  {
+   "day": 457,
+   "kind": "ship.result",
+   "text": "Jasper is out",
+   "cash": 36564,
+   "data": {
+    "quality": 100,
+    "reach": 41617,
+    "bugs": 3,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 459,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 36379,
+   "data": {
+    "bugs": 4
+   }
+  },
+  {
+   "day": 461,
+   "kind": "notice",
+   "text": "Birch: 3 bugs fixed.",
+   "cash": 36204
+  },
+  {
+   "day": 461,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Jasper",
+   "cash": 36204,
+   "data": {
+    "bugs": 3
+   }
+  },
+  {
+   "day": 463,
+   "kind": "notice",
+   "text": "Jasper: 2 bugs fixed.",
+   "cash": 36041
+  },
+  {
+   "day": 463,
+   "kind": "project.update",
+   "text": "Started an update to Birch",
+   "cash": 36041,
+   "data": {
+    "features": [
+     "Guided onboarding",
+     "In-app payments"
+    ],
+    "users": 9803,
+    "ageDays": 168,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 480,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 35110,
+   "data": {
+    "income": 172,
+    "burn": 205,
+    "reputation": 16,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 24594,
+    "lifetimeRevenue": 18240,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 9779 users, $98/day, quality 100)",
+     "Jasper (mobile_app, small, 14814 users, $74/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 484,
+   "kind": "ship",
+   "text": "Shipped Birch",
+   "cash": 35001,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 484,
+   "kind": "ship.result",
+   "text": "Birch is out",
+   "cash": 35001,
+   "data": {
+    "quality": 100,
+    "reach": 41099,
+    "bugs": 0,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 485,
+   "kind": "project.update",
+   "text": "Started an update to Jasper",
+   "cash": 34979,
+   "data": {
+    "features": [
+     "AI assistant",
+     "Plugin system"
+    ],
+    "users": 17033,
+    "ageDays": 28,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 510,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 34957,
+   "data": {
+    "income": 210,
+    "burn": 205,
+    "reputation": 18,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 31015,
+    "lifetimeRevenue": 24237,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 10916 users, $109/day, quality 100)",
+     "Jasper (mobile_app, small, 20099 users, $100/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 512,
+   "kind": "event.offered",
+   "text": "Going viral",
+   "cash": 34967,
+   "data": {
+    "text": "A post about Jasper is going viral.",
+    "choices": [
+     "Ride the wave",
+     "Boost it with ads"
+    ]
+   }
+  },
+  {
+   "day": 512,
+   "kind": "event.choice",
+   "text": "Going viral: Boost it with ads",
+   "cash": 33717,
+   "data": {
+    "options": [
+     "Ride the wave",
+     "Boost it with ads"
+    ]
+   }
+  },
+  {
+   "day": 512,
+   "kind": "notice",
+   "text": "The ad spend paid off: sign-ups are through the roof.",
+   "cash": 33717
+  },
+  {
+   "day": 524,
+   "kind": "ship",
+   "text": "Shipped Jasper",
+   "cash": 35536,
+   "data": {
+    "quality": 92,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 524,
+   "kind": "ship.result",
+   "text": "Jasper is out",
+   "cash": 35536,
+   "data": {
+    "quality": 92,
+    "reach": 60345,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 525,
+   "kind": "project.update",
+   "text": "Started an update to Birch",
+   "cash": 35690,
+   "data": {
+    "features": [
+     "Dark mode",
+     "Full-text search"
+    ],
+    "users": 11266,
+    "ageDays": 230,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 531,
+   "kind": "notice",
+   "text": "Quanta launched Kindle, a small web app (quality 62).",
+   "cash": 36650
+  },
+  {
+   "day": 540,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 37558,
+   "data": {
+    "income": 223,
+    "burn": 205,
+    "reputation": 19,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 33246,
+    "lifetimeRevenue": 34238,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 11360 users, $114/day, quality 100)",
+     "Jasper (mobile_app, small, 21886 users, $109/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 545,
+   "kind": "ship",
+   "text": "Shipped Birch",
+   "cash": 37655,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 545,
+   "kind": "ship.result",
+   "text": "Birch is out",
+   "cash": 37655,
+   "data": {
+    "quality": 100,
+    "reach": 44836,
+    "bugs": 0,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 546,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 37676,
+   "data": {
+    "bugs": 3
+   }
+  },
+  {
+   "day": 548,
+   "kind": "notice",
+   "text": "Birch: 3 bugs fixed.",
+   "cash": 37719
+  },
+  {
+   "day": 548,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Jasper",
+   "cash": 37719,
+   "data": {
+    "bugs": 3
+   }
+  },
+  {
+   "day": 550,
+   "kind": "notice",
+   "text": "Jasper: 2 bugs fixed.",
+   "cash": 37765
+  },
+  {
+   "day": 550,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Stoat, a medium mobile app (quality 75).",
+   "cash": 37765
+  },
+  {
+   "day": 550,
+   "kind": "project.update",
+   "text": "Started an update to Jasper",
+   "cash": 37765,
+   "data": {
+    "features": [
+     "Cloud sync",
+     "Guided onboarding"
+    ],
+    "users": 22621,
+    "ageDays": 93,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 558,
+   "kind": "event.offered",
+   "text": "Job offer",
+   "cash": 37961,
+   "data": {
+    "text": "Noor Petrov has an offer from Northwind Software and is thinking about leaving.",
+    "choices": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 558,
+   "kind": "event.choice",
+   "text": "Job offer: Make a counter-offer",
+   "cash": 34211,
+   "data": {
+    "options": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 558,
+   "kind": "notice",
+   "text": "Noor Petrov decided to stay.",
+   "cash": 34211
+  },
+  {
+   "day": 570,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 34530,
+   "data": {
+    "income": 232,
+    "burn": 205,
+    "reputation": 21,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 34499,
+    "lifetimeRevenue": 41110,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 11990 users, $120/day, quality 100)",
+     "Jasper (mobile_app, small, 22508 users, $113/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 574,
+   "kind": "ship",
+   "text": "Shipped Jasper",
+   "cash": 34641,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 574,
+   "kind": "ship.result",
+   "text": "Jasper is out",
+   "cash": 34641,
+   "data": {
+    "quality": 100,
+    "reach": 76992,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 576,
+   "kind": "project.grow",
+   "text": "Started growing Birch into a medium product",
+   "cash": 34699,
+   "data": {
+    "features": [
+     "Multiplayer",
+     "Plugin system"
+    ],
+    "users": 12068,
+    "ageDays": 281,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 600,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 35641,
+   "data": {
+    "income": 250,
+    "burn": 205,
+    "reputation": 23,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 37820,
+    "lifetimeRevenue": 48371,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 12145 users, $121/day, quality 100)",
+     "Jasper (mobile_app, small, 25675 users, $128/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 601,
+   "kind": "notice",
+   "text": "Northwind Software launched Nectar, a small web app (quality 65).",
+   "cash": 35686
+  },
+  {
+   "day": 628,
+   "kind": "event.offered",
+   "text": "Conference invite",
+   "cash": 36930,
+   "data": {
+    "text": "A big developer conference has a speaking slot and a booth available.",
+    "choices": [
+     "Send the team",
+     "Skip it"
+    ]
+   }
+  },
+  {
+   "day": 628,
+   "kind": "event.choice",
+   "text": "Conference invite: Send the team",
+   "cash": 34830,
+   "data": {
+    "options": [
+     "Send the team",
+     "Skip it"
+    ]
+   }
+  },
+  {
+   "day": 628,
+   "kind": "notice",
+   "text": "The talk went down well. People know your name now.",
+   "cash": 34830
+  },
+  {
+   "day": 630,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 34920,
+   "data": {
+    "income": 250,
+    "burn": 207,
+    "reputation": 27,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 38307,
+    "lifetimeRevenue": 55900,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, small, 11732 users, $117/day, quality 100)",
+     "Jasper (mobile_app, small, 26576 users, $133/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 656,
+   "kind": "ship",
+   "text": "Shipped Birch",
+   "cash": 36016,
+   "data": {
+    "quality": 84,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 656,
+   "kind": "notice",
+   "text": "Birch grew into a Medium product.",
+   "cash": 36016
+  },
+  {
+   "day": 656,
+   "kind": "ship.result",
+   "text": "Birch is out",
+   "cash": 36016,
+   "data": {
+    "quality": 84,
+    "reach": 85748,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 658,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Jasper",
+   "cash": 36103,
+   "data": {
+    "bugs": 4
+   }
+  },
+  {
+   "day": 659,
+   "kind": "notice",
+   "text": "Northwind Software launched Vole, a medium web app (quality 76).",
+   "cash": 36150
+  },
+  {
+   "day": 660,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 36198,
+   "data": {
+    "income": 255,
+    "burn": 208,
+    "reputation": 28,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 38800,
+    "lifetimeRevenue": 63378,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 12132 users, $121/day, quality 100)",
+     "Jasper (mobile_app, small, 26668 users, $133/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 661,
+   "kind": "notice",
+   "text": "Jasper: 4 bugs fixed.",
+   "cash": 36246
+  },
+  {
+   "day": 661,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 36246,
+   "data": {
+    "bugs": 4
+   }
+  },
+  {
+   "day": 663,
+   "kind": "notice",
+   "text": "Birch: 3 bugs fixed.",
+   "cash": 36347
+  },
+  {
+   "day": 666,
+   "kind": "promote",
+   "text": "Promoted Birch (large)",
+   "cash": 27061,
+   "data": {
+    "cost": 9450,
+    "users": 12968,
+    "effect": 100
+   }
+  },
+  {
+   "day": 666,
+   "kind": "promote",
+   "text": "Promoted Jasper (large)",
+   "cash": 22811,
+   "data": {
+    "cost": 4250,
+    "users": 26981,
+    "effect": 95
+   }
+  },
+  {
+   "day": 670,
+   "kind": "contract.accept",
+   "text": "Took a job for Atlas Insurance: a mobile app",
+   "cash": 28954,
+   "data": {
+    "pay": 11600,
+    "days": 58,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 684,
+   "kind": "notice",
+   "text": "Pixelforge launched Estuary, a large mobile app (quality 70).",
+   "cash": 31415
+  },
+  {
+   "day": 690,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 32968,
+   "data": {
+    "income": 485,
+    "burn": 208,
+    "reputation": 28,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 68139,
+    "lifetimeRevenue": 74298,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 28851 users, $289/day, quality 100)",
+     "Jasper (mobile_app, small, 39287 users, $196/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 701,
+   "kind": "notice",
+   "text": "Delivered to Atlas Insurance: +$5,800 on top of the $5,800 deposit.",
+   "cash": 42229
+  },
+  {
+   "day": 702,
+   "kind": "project.start",
+   "text": "Started a medium Developer Tool",
+   "cash": 42578,
+   "data": {
+    "type": "dev_tool",
+    "size": "medium",
+    "features": [
+     "Plugin system",
+     "AI assistant",
+     "Command-line interface"
+    ],
+    "office": "Garage",
+    "demand": 1.11
+   }
+  },
+  {
+   "day": 705,
+   "kind": "notice",
+   "text": "Quanta launched Gust, a small web app (quality 69).",
+   "cash": 43657
+  },
+  {
+   "day": 710,
+   "kind": "event.offered",
+   "text": "Tax audit",
+   "cash": 45395,
+   "data": {
+    "text": "The tax office wants to take a closer look at your books.",
+    "choices": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 710,
+   "kind": "event.choice",
+   "text": "Tax audit: Contest it",
+   "cash": 42695,
+   "data": {
+    "options": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 710,
+   "kind": "notice",
+   "text": "You lost the dispute and paid $2,700.",
+   "cash": 42695
+  },
+  {
+   "day": 713,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Mango, a medium web app (quality 64).",
+   "cash": 43672
+  },
+  {
+   "day": 719,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Radish, a small mobile app (quality 63).",
+   "cash": 45488
+  },
+  {
+   "day": 720,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 45773,
+   "data": {
+    "income": 493,
+    "burn": 233,
+    "reputation": 28,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 68489,
+    "lifetimeRevenue": 90253,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 30193 users, $302/day, quality 100)",
+     "Jasper (mobile_app, small, 38296 users, $191/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 720,
+   "kind": "notice",
+   "text": "Basement Games has moved into the market.",
+   "cash": 45773
+  },
+  {
+   "day": 720,
+   "kind": "era",
+   "text": "A new era began: The app boom",
+   "cash": 45773,
+   "data": {
+    "era": 1
+   }
+  },
+  {
+   "day": 720,
+   "kind": "notice",
+   "text": "A new studio, Pocketwave, is starting up in the mobile app market.",
+   "cash": 45773
+  },
+  {
+   "day": 733,
+   "kind": "event.offered",
+   "text": "Alpha build",
+   "cash": 48711,
+   "data": {
+    "text": "Lyric is halfway done, and the alpha build runs. What do you do with it?",
+    "choices": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 733,
+   "kind": "event.choice",
+   "text": "Alpha build: Preview it to the press",
+   "cash": 45111,
+   "data": {
+    "options": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 733,
+   "kind": "notice",
+   "text": "The preview got people talking: +15% users at launch.",
+   "cash": 45111
+  },
+  {
+   "day": 750,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 47929,
+   "data": {
+    "income": 373,
+    "burn": 233,
+    "reputation": 28,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 51765,
+    "lifetimeRevenue": 103009,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 22739 users, $227/day, quality 100)",
+     "Jasper (mobile_app, small, 29026 users, $145/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 773,
+   "kind": "notice",
+   "text": "Basement Games launched Meridian, a small mobile app (quality 46).",
+   "cash": 50398
+  },
+  {
+   "day": 780,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 50916,
+   "data": {
+    "income": 302,
+    "burn": 233,
+    "reputation": 28,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 41656,
+    "lifetimeRevenue": 112996,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 18691 users, $187/day, quality 100)",
+     "Jasper (mobile_app, small, 22965 users, $115/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 780,
+   "kind": "notice",
+   "text": "Mobile App demand is surging: +23%.",
+   "cash": 50916
+  },
+  {
+   "day": 786,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Marten, a small mobile app (quality 72).",
+   "cash": 51290
+  },
+  {
+   "day": 790,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Reverie, a medium web app (quality 67).",
+   "cash": 51506
+  },
+  {
+   "day": 810,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 52202,
+   "data": {
+    "income": 255,
+    "burn": 233,
+    "reputation": 28,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 34708,
+    "lifetimeRevenue": 121282,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 16254 users, $163/day, quality 100)",
+     "Jasper (mobile_app, small, 18455 users, $92/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 829,
+   "kind": "event.offered",
+   "text": "Vulnerability report",
+   "cash": 52395,
+   "data": {
+    "text": "A security researcher reports a vulnerability in one of your products.",
+    "choices": [
+     "Patch it now",
+     "Ignore it"
+    ]
+   }
+  },
+  {
+   "day": 829,
+   "kind": "event.choice",
+   "text": "Vulnerability report: Patch it now",
+   "cash": 51695,
+   "data": {
+    "options": [
+     "Patch it now",
+     "Ignore it"
+    ]
+   }
+  },
+  {
+   "day": 829,
+   "kind": "notice",
+   "text": "Patched, and the researcher praised your response.",
+   "cash": 51695
+  },
+  {
+   "day": 834,
+   "kind": "notice",
+   "text": "Pocketwave launched Nettle, a small mobile app (quality 51).",
+   "cash": 51686
+  },
+  {
+   "day": 840,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 51647,
+   "data": {
+    "income": 225,
+    "burn": 237,
+    "reputation": 30,
+    "stage": "Garage startup",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 2,
+    "users": 30168,
+    "lifetimeRevenue": 128427,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14788 users, $148/day, quality 100)",
+     "Jasper (mobile_app, small, 15380 users, $77/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 840,
+   "kind": "notice",
+   "text": "Mobile App demand is surging: +24%.",
+   "cash": 51647
+  },
+  {
+   "day": 849,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 40456,
+   "data": {
+    "quality": 100,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 10
+   }
+  },
+  {
+   "day": 849,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 40456,
+   "data": {
+    "quality": 100,
+    "reach": 18785,
+    "bugs": 10,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 850,
+   "kind": "stage",
+   "text": "Reached Indie studio",
+   "cash": 40495,
+   "data": {
+    "stage": 1
+   }
+  },
+  {
+   "day": 852,
+   "kind": "project.update",
+   "text": "Started an update to Birch",
+   "cash": 40606,
+   "data": {
+    "features": [
+     "User accounts"
+    ],
+    "users": 14397,
+    "ageDays": 557,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 870,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 43692,
+   "data": {
+    "income": 502,
+    "burn": 238,
+    "reputation": 36,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 33027,
+    "lifetimeRevenue": 138622,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 13880 users, $139/day, quality 100)",
+     "Jasper (mobile_app, small, 13197 users, $66/day, quality 100)",
+     "Lyric (dev_tool, medium, 5950 users, $298/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 881,
+   "kind": "ship",
+   "text": "Shipped Birch",
+   "cash": 47140,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 881,
+   "kind": "ship.result",
+   "text": "Birch is out",
+   "cash": 47140,
+   "data": {
+    "quality": 100,
+    "reach": 88924,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 883,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Lyric",
+   "cash": 47863,
+   "data": {
+    "bugs": 12
+   }
+  },
+  {
+   "day": 886,
+   "kind": "notice",
+   "text": "Milestone: Bug squasher. Fix 25 bugs. +$1,000.",
+   "cash": 50002
+  },
+  {
+   "day": 887,
+   "kind": "notice",
+   "text": "Pocketwave launched Ivory, a small mobile app (quality 55).",
+   "cash": 50396
+  },
+  {
+   "day": 890,
+   "kind": "notice",
+   "text": "Lyric: 11 bugs fixed.",
+   "cash": 51595
+  },
+  {
+   "day": 890,
+   "kind": "event.offered",
+   "text": "In the press",
+   "cash": 51595,
+   "data": {
+    "text": "A tech blog wrote a glowing piece about your studio.",
+    "choices": [
+     "Nice!"
+    ]
+   }
+  },
+  {
+   "day": 890,
+   "kind": "event.choice",
+   "text": "In the press: Nice!",
+   "cash": 51595,
+   "data": {
+    "options": [
+     "Nice!"
+    ]
+   }
+  },
+  {
+   "day": 890,
+   "kind": "notice",
+   "text": "Your inbox is full of congratulations.",
+   "cash": 51595
+  },
+  {
+   "day": 891,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 51991,
+   "data": {
+    "bugs": 14
+   }
+  },
+  {
+   "day": 899,
+   "kind": "notice",
+   "text": "Birch: 13 bugs fixed.",
+   "cash": 55126
+  },
+  {
+   "day": 900,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 55514,
+   "data": {
+    "income": 626,
+    "burn": 238,
+    "reputation": 42,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 34687,
+    "lifetimeRevenue": 156594,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14854 users, $149/day, quality 100)",
+     "Jasper (mobile_app, small, 11421 users, $57/day, quality 100)",
+     "Lyric (dev_tool, medium, 8411 users, $421/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 900,
+   "kind": "notice",
+   "text": "Developer Tool demand is surging: +30%.",
+   "cash": 55514
+  },
+  {
+   "day": 900,
+   "kind": "project.update",
+   "text": "Started an update to Jasper",
+   "cash": 55514,
+   "data": {
+    "features": [
+     "Push notifications"
+    ],
+    "users": 11421,
+    "ageDays": 443,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 904,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Falcon, a small mobile app (quality 68).",
+   "cash": 57058
+  },
+  {
+   "day": 915,
+   "kind": "ship",
+   "text": "Shipped Jasper",
+   "cash": 61235,
+   "data": {
+    "quality": 99,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 915,
+   "kind": "ship.result",
+   "text": "Jasper is out",
+   "cash": 61235,
+   "data": {
+    "quality": 99,
+    "reach": 81153,
+    "bugs": 0,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 916,
+   "kind": "notice",
+   "text": "Quanta launched Pinnacle, a small mobile app (quality 61).",
+   "cash": 61611
+  },
+  {
+   "day": 917,
+   "kind": "project.update",
+   "text": "Started an update to Lyric",
+   "cash": 61988,
+   "data": {
+    "features": [
+     "Enterprise SSO",
+     "Public API"
+    ],
+    "users": 8035,
+    "ageDays": 68,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 919,
+   "kind": "notice",
+   "text": "Bluebird Labs's new saas platform Summit is taking off. Expect a crowded market.",
+   "cash": 62744
+  },
+  {
+   "day": 920,
+   "kind": "notice",
+   "text": "Pixelforge launched Whisper, a small web app (quality 72).",
+   "cash": 63122
+  },
+  {
+   "day": 930,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 66929,
+   "data": {
+    "income": 621,
+    "burn": 238,
+    "reputation": 44,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 37741,
+    "lifetimeRevenue": 175159,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 16007 users, $160/day, quality 100)",
+     "Jasper (mobile_app, small, 13915 users, $70/day, quality 100)",
+     "Lyric (dev_tool, medium, 7819 users, $391/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 933,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Vector, a medium mobile app (quality 71).",
+   "cash": 68078
+  },
+  {
+   "day": 941,
+   "kind": "notice",
+   "text": "Basement Games launched Radiant, a small developer tool (quality 62).",
+   "cash": 71144
+  },
+  {
+   "day": 942,
+   "kind": "notice",
+   "text": "Northwind Software launched Aegis, a medium web app (quality 80).",
+   "cash": 71526
+  },
+  {
+   "day": 950,
+   "kind": "event.offered",
+   "text": "Tech debt",
+   "cash": 74563,
+   "data": {
+    "text": "Shortcuts taken early in Lyric are starting to slow everyone down.",
+    "choices": [
+     "Refactor now",
+     "Push through"
+    ]
+   }
+  },
+  {
+   "day": 950,
+   "kind": "event.choice",
+   "text": "Tech debt: Refactor now",
+   "cash": 74563,
+   "data": {
+    "options": [
+     "Refactor now",
+     "Push through"
+    ]
+   }
+  },
+  {
+   "day": 950,
+   "kind": "notice",
+   "text": "A week of cleanup. The code is better for it.",
+   "cash": 74563
+  },
+  {
+   "day": 957,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Comet, a small developer tool (quality 65).",
+   "cash": 77185
+  },
+  {
+   "day": 960,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 78296,
+   "data": {
+    "income": 608,
+    "burn": 238,
+    "reputation": 44,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 40067,
+    "lifetimeRevenue": 193676,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 15790 users, $158/day, quality 100)",
+     "Jasper (mobile_app, small, 16980 users, $85/day, quality 100)",
+     "Lyric (dev_tool, medium, 7297 users, $365/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 960,
+   "kind": "notice",
+   "text": "Game demand is surging: +21%.",
+   "cash": 78296
+  },
+  {
+   "day": 969,
+   "kind": "notice",
+   "text": "Mateo Silva is ready to be promoted to senior. Don't keep them waiting too long.",
+   "cash": 81579
+  },
+  {
+   "day": 976,
+   "kind": "notice",
+   "text": "Pixelforge launched Quill, a medium web app (quality 86).",
+   "cash": 84086
+  },
+  {
+   "day": 990,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 88973,
+   "data": {
+    "income": 582,
+    "burn": 238,
+    "reputation": 44,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 40066,
+    "lifetimeRevenue": 211503,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 15251 users, $153/day, quality 100)",
+     "Jasper (mobile_app, small, 18025 users, $90/day, quality 100)",
+     "Lyric (dev_tool, medium, 6789 users, $339/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 992,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 89658,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 992,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 89658,
+   "data": {
+    "quality": 100,
+    "reach": 23439,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 993,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Jasper",
+   "cash": 90001,
+   "data": {
+    "bugs": 7
+   }
+  },
+  {
+   "day": 998,
+   "kind": "notice",
+   "text": "Jasper: 7 bugs fixed.",
+   "cash": 91728
+  },
+  {
+   "day": 998,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Lyric",
+   "cash": 91728,
+   "data": {
+    "bugs": 7
+   }
+  },
+  {
+   "day": 1002,
+   "kind": "notice",
+   "text": "Lyric: 7 bugs fixed.",
+   "cash": 93127
+  },
+  {
+   "day": 1003,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 93481,
+   "data": {
+    "bugs": 6
+   }
+  },
+  {
+   "day": 1005,
+   "kind": "notice",
+   "text": "Basement Games launched Glow, a small mobile app (quality 52).",
+   "cash": 94190
+  },
+  {
+   "day": 1006,
+   "kind": "notice",
+   "text": "Birch: 5 bugs fixed.",
+   "cash": 94547
+  },
+  {
+   "day": 1007,
+   "kind": "project.update",
+   "text": "Started an update to Lyric",
+   "cash": 94905,
+   "data": {
+    "features": [
+     "Analytics dashboard",
+     "Offline mode"
+    ],
+    "users": 7038,
+    "ageDays": 158,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 1008,
+   "kind": "notice",
+   "text": "Quanta launched Jubilee, a small developer tool (quality 68).",
+   "cash": 95263
+  },
+  {
+   "day": 1009,
+   "kind": "event.offered",
+   "text": "Job offer",
+   "cash": 95621,
+   "data": {
+    "text": "Mateo Costa has an offer from Pocketwave and is thinking about leaving.",
+    "choices": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 1009,
+   "kind": "event.choice",
+   "text": "Job offer: Let them go",
+   "cash": 95621,
+   "data": {
+    "options": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 1009,
+   "kind": "notice",
+   "text": "Mateo Costa left for Pocketwave.",
+   "cash": 95621
+  },
+  {
+   "day": 1012,
+   "kind": "employee.promote",
+   "text": "Promoted Mateo Silva (Mid developer)",
+   "cash": 96980,
+   "data": {
+    "from": "Mid developer",
+    "skills": "design 26, engineering 65, qa 17"
+   }
+  },
+  {
+   "day": 1012,
+   "kind": "notice",
+   "text": "Mateo Silva is now a senior developer.",
+   "cash": 96980
+  },
+  {
+   "day": 1012,
+   "kind": "hire",
+   "text": "Hired Morgan Petrov (Mid developer)",
+   "cash": 94830,
+   "data": {
+    "role": "developer",
+    "trait": "fast_learner",
+    "skills": "design 21, engineering 46, qa 7",
+    "salary": 2150,
+    "office": "Garage",
+    "team": 3
+   }
+  },
+  {
+   "day": 1015,
+   "kind": "notice",
+   "text": "Northwind Software launched Robin, a small web app (quality 64).",
+   "cash": 95951
+  },
+  {
+   "day": 1020,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 97821,
+   "data": {
+    "income": 597,
+    "burn": 223,
+    "reputation": 47,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 41208,
+    "lifetimeRevenue": 229246,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14881 users, $149/day, quality 100)",
+     "Jasper (mobile_app, small, 19281 users, $96/day, quality 100)",
+     "Lyric (dev_tool, medium, 7046 users, $352/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1020,
+   "kind": "notice",
+   "text": "Developer Tool demand is surging: +38%.",
+   "cash": 97821
+  },
+  {
+   "day": 1020,
+   "kind": "notice",
+   "text": "Game demand is surging: +21%.",
+   "cash": 97821
+  },
+  {
+   "day": 1026,
+   "kind": "notice",
+   "text": "Milestone: Six figures. Hold $100,000. +$5,000.",
+   "cash": 105069
+  },
+  {
+   "day": 1027,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Elm, a small web app (quality 61).",
+   "cash": 105443
+  },
+  {
+   "day": 1050,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 114034,
+   "data": {
+    "income": 595,
+    "burn": 225,
+    "reputation": 47,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 41307,
+    "lifetimeRevenue": 247159,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14584 users, $146/day, quality 100)",
+     "Jasper (mobile_app, small, 19707 users, $99/day, quality 100)",
+     "Lyric (dev_tool, medium, 7016 users, $351/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1067,
+   "kind": "event.offered",
+   "text": "Tax audit",
+   "cash": 120300,
+   "data": {
+    "text": "The tax office wants to take a closer look at your books.",
+    "choices": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 1067,
+   "kind": "event.choice",
+   "text": "Tax audit: Contest it",
+   "cash": 113100,
+   "data": {
+    "options": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 1067,
+   "kind": "notice",
+   "text": "You lost the dispute and paid $7,200.",
+   "cash": 113100
+  },
+  {
+   "day": 1070,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 114200,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1070,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 114200,
+   "data": {
+    "quality": 100,
+    "reach": 27904,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1071,
+   "kind": "notice",
+   "text": "Pixelforge launched Walrus, a medium mobile app (quality 72).",
+   "cash": 114568
+  },
+  {
+   "day": 1071,
+   "kind": "promote",
+   "text": "Promoted Lyric (large)",
+   "cash": 99218,
+   "data": {
+    "cost": 15350,
+    "users": 7042,
+    "effect": 100
+   }
+  },
+  {
+   "day": 1071,
+   "kind": "project.maintenance",
+   "text": "Started maintenance on Birch",
+   "cash": 99218,
+   "data": {
+    "features": [],
+    "users": 14364,
+    "ageDays": 776,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 1079,
+   "kind": "ship",
+   "text": "Shipped Birch",
+   "cash": 102608,
+   "data": {
+    "quality": 91,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1079,
+   "kind": "ship.result",
+   "text": "Birch is out",
+   "cash": 102608,
+   "data": {
+    "quality": 91,
+    "reach": 88924,
+    "bugs": 0,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1080,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 103083,
+   "data": {
+    "income": 700,
+    "burn": 227,
+    "reputation": 52,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 42551,
+    "lifetimeRevenue": 265508,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14292 users, $143/day, quality 100)",
+     "Jasper (mobile_app, small, 19025 users, $95/day, quality 100)",
+     "Lyric (dev_tool, medium, 9233 users, $462/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1080,
+   "kind": "notice",
+   "text": "Sparkwise has moved into the market.",
+   "cash": 118083
+  },
+  {
+   "day": 1080,
+   "kind": "notice",
+   "text": "Milestone: Making a name. Reach reputation 50. +$5,000.",
+   "cash": 118083
+  },
+  {
+   "day": 1080,
+   "kind": "notice",
+   "text": "Milestone: Still standing. Keep the studio going for 3 years. +$10,000.",
+   "cash": 118083
+  },
+  {
+   "day": 1081,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Zodiac, a small web app (quality 64).",
+   "cash": 118567
+  },
+  {
+   "day": 1081,
+   "kind": "project.grow",
+   "text": "Started growing Jasper into a medium product",
+   "cash": 118567,
+   "data": {
+    "features": [
+     "Dark mode"
+    ],
+    "users": 18980,
+    "ageDays": 624,
+    "office": "Garage"
+   }
+  },
+  {
+   "day": 1085,
+   "kind": "notice",
+   "text": "Quanta launched Willow, a small web app (quality 68).",
+   "cash": 120602
+  },
+  {
+   "day": 1106,
+   "kind": "notice",
+   "text": "Northwind Software launched Bolt, a small developer tool (quality 67).",
+   "cash": 133525
+  },
+  {
+   "day": 1110,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 136325,
+   "data": {
+    "income": 935,
+    "burn": 227,
+    "reputation": 52,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 45860,
+    "lifetimeRevenue": 290550,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14023 users, $140/day, quality 100)",
+     "Jasper (mobile_app, small, 17723 users, $89/day, quality 100)",
+     "Lyric (dev_tool, medium, 14115 users, $706/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1113,
+   "kind": "ship",
+   "text": "Shipped Jasper",
+   "cash": 138406,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1113,
+   "kind": "notice",
+   "text": "Jasper grew into a Medium product.",
+   "cash": 138406
+  },
+  {
+   "day": 1113,
+   "kind": "ship.result",
+   "text": "Jasper is out",
+   "cash": 138406,
+   "data": {
+    "quality": 100,
+    "reach": 145036,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1114,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Birch",
+   "cash": 139088,
+   "data": {
+    "bugs": 6
+   }
+  },
+  {
+   "day": 1119,
+   "kind": "notice",
+   "text": "Birch: 5 bugs fixed.",
+   "cash": 142432
+  },
+  {
+   "day": 1119,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Jasper",
+   "cash": 142432,
+   "data": {
+    "bugs": 3
+   }
+  },
+  {
+   "day": 1122,
+   "kind": "notice",
+   "text": "Jasper: 3 bugs fixed.",
+   "cash": 144387
+  },
+  {
+   "day": 1122,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Lyric",
+   "cash": 144387,
+   "data": {
+    "bugs": 10
+   }
+  },
+  {
+   "day": 1130,
+   "kind": "notice",
+   "text": "Lyric: 9 bugs fixed.",
+   "cash": 149447
+  },
+  {
+   "day": 1130,
+   "kind": "project.start",
+   "text": "Started a medium Developer Tool",
+   "cash": 149447,
+   "data": {
+    "type": "dev_tool",
+    "size": "medium",
+    "features": [
+     "Command-line interface",
+     "Dark mode",
+     "Full-text search",
+     "Cloud sync",
+     "Plugin system"
+    ],
+    "office": "Garage",
+    "demand": 1.27
+   }
+  },
+  {
+   "day": 1137,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Fjord, a small web app (quality 60).",
+   "cash": 153721
+  },
+  {
+   "day": 1140,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 155513,
+   "data": {
+    "income": 821,
+    "burn": 227,
+    "reputation": 54,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 4,
+    "offices": 1,
+    "products": 3,
+    "users": 51351,
+    "lifetimeRevenue": 316538,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14365 users, $144/day, quality 100)",
+     "Jasper (mobile_app, medium, 26036 users, $130/day, quality 100)",
+     "Lyric (dev_tool, medium, 10950 users, $548/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1140,
+   "kind": "notice",
+   "text": "Web App demand is surging: +29%.",
+   "cash": 155513
+  },
+  {
+   "day": 1144,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Xerus, a medium mobile app (quality 79).",
+   "cash": 157866
+  },
+  {
+   "day": 1146,
+   "kind": "office.moveOut",
+   "text": "Left the garage for an office",
+   "cash": 119025
+  },
+  {
+   "day": 1146,
+   "kind": "hire",
+   "text": "Hired Zara Yilmaz (Mid developer)",
+   "cash": 116225,
+   "data": {
+    "role": "developer",
+    "trait": "perfectionist",
+    "skills": "design 22, engineering 60, qa 23",
+    "salary": 2800,
+    "office": "HQ",
+    "team": 4
+   }
+  },
+  {
+   "day": 1146,
+   "kind": "hire",
+   "text": "Hired Ravi Moreau (Senior tester)",
+   "cash": 113025,
+   "data": {
+    "role": "tester",
+    "trait": "team_player",
+    "skills": "design 13, engineering 15, qa 70",
+    "salary": 3200,
+    "office": "HQ",
+    "team": 5
+   }
+  },
+  {
+   "day": 1146,
+   "kind": "hire",
+   "text": "Hired Luca Kowalski (Mid designer)",
+   "cash": 110425,
+   "data": {
+    "role": "designer",
+    "trait": "fast_learner",
+    "skills": "design 57, engineering 17, qa 21",
+    "salary": 2600,
+    "office": "HQ",
+    "team": 6
+   }
+  },
+  {
+   "day": 1147,
+   "kind": "notice",
+   "text": "Milestone: A real team. Have 5 people on the team. +$1,000.",
+   "cash": 111639
+  },
+  {
+   "day": 1147,
+   "kind": "event.offered",
+   "text": "Open-source help",
+   "cash": 111639,
+   "data": {
+    "text": "Open-source contributors have sent patches for Xenon.",
+    "choices": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 1147,
+   "kind": "event.choice",
+   "text": "Open-source help: Review them properly",
+   "cash": 110439,
+   "data": {
+    "options": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 1147,
+   "kind": "notice",
+   "text": "A careful review turned the patches into real progress.",
+   "cash": 110439
+  },
+  {
+   "day": 1151,
+   "kind": "notice",
+   "text": "Quanta launched Lotus, a small web app (quality 60).",
+   "cash": 111267
+  },
+  {
+   "day": 1151,
+   "kind": "event.offered",
+   "text": "Alpha build",
+   "cash": 111267,
+   "data": {
+    "text": "Xenon is halfway done, and the alpha build runs. What do you do with it?",
+    "choices": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 1151,
+   "kind": "event.choice",
+   "text": "Alpha build: Preview it to the press",
+   "cash": 107567,
+   "data": {
+    "options": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 1151,
+   "kind": "notice",
+   "text": "The preview got people talking: +15% users at launch.",
+   "cash": 107567
+  },
+  {
+   "day": 1170,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 110976,
+   "data": {
+    "income": 750,
+    "burn": 590,
+    "reputation": 54,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 7,
+    "offices": 1,
+    "products": 3,
+    "users": 52573,
+    "lifetimeRevenue": 339981,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14521 users, $145/day, quality 100)",
+     "Jasper (mobile_app, medium, 28846 users, $144/day, quality 100)",
+     "Lyric (dev_tool, medium, 9207 users, $460/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1180,
+   "kind": "notice",
+   "text": "Pocketwave launched Quartet, a small mobile app (quality 57).",
+   "cash": 112489
+  },
+  {
+   "day": 1200,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 115133,
+   "data": {
+    "income": 712,
+    "burn": 592,
+    "reputation": 54,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 7,
+    "offices": 1,
+    "products": 3,
+    "users": 53106,
+    "lifetimeRevenue": 361838,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 15035 users, $150/day, quality 100)",
+     "Jasper (mobile_app, medium, 29812 users, $149/day, quality 100)",
+     "Lyric (dev_tool, medium, 8259 users, $413/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1208,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Meadow, a medium web app (quality 69).",
+   "cash": 116067
+  },
+  {
+   "day": 1217,
+   "kind": "notice",
+   "text": "Quanta launched Plume, a small developer tool (quality 56).",
+   "cash": 117048
+  },
+  {
+   "day": 1222,
+   "kind": "event.offered",
+   "text": "Senior freelancer",
+   "cash": 117557,
+   "data": {
+    "text": "Jamie Petrov is strong across the board and free this week only, at half the usual signing fee.",
+    "choices": [
+     "Hire them",
+     "Pass"
+    ]
+   }
+  },
+  {
+   "day": 1222,
+   "kind": "event.choice",
+   "text": "Senior freelancer: Hire them",
+   "cash": 115507,
+   "data": {
+    "options": [
+     "Hire them",
+     "Pass"
+    ]
+   }
+  },
+  {
+   "day": 1222,
+   "kind": "notice",
+   "text": "Jamie Petrov joined the team.",
+   "cash": 115507
+  },
+  {
+   "day": 1223,
+   "kind": "ship",
+   "text": "Shipped Xenon",
+   "cash": 102869,
+   "data": {
+    "quality": 96,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 14.7
+   }
+  },
+  {
+   "day": 1223,
+   "kind": "ship.result",
+   "text": "Xenon is out",
+   "cash": 102869,
+   "data": {
+    "quality": 96,
+    "reach": 21608,
+    "bugs": 11,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 1227,
+   "kind": "project.grow",
+   "text": "Started growing Lyric into a large product",
+   "cash": 103036,
+   "data": {
+    "features": [],
+    "users": 7618,
+    "ageDays": 378,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1230,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 103269,
+   "data": {
+    "income": 817,
+    "burn": 730,
+    "reputation": 60,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 8,
+    "offices": 1,
+    "products": 4,
+    "users": 55522,
+    "lifetimeRevenue": 383468,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 15120 users, $151/day, quality 100)",
+     "Jasper (mobile_app, medium, 30103 users, $151/day, quality 100)",
+     "Lyric (dev_tool, medium, 7501 users, $375/day, quality 100)",
+     "Xenon (dev_tool, medium, 2798 users, $140/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1238,
+   "kind": "notice",
+   "text": "Sparkwise launched Zeal, a medium developer tool (quality 56).",
+   "cash": 104313
+  },
+  {
+   "day": 1260,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 109489,
+   "data": {
+    "income": 1024,
+    "burn": 730,
+    "reputation": 60,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 8,
+    "offices": 1,
+    "products": 4,
+    "users": 59988,
+    "lifetimeRevenue": 411587,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 15205 users, $152/day, quality 100)",
+     "Jasper (mobile_app, medium, 30382 users, $152/day, quality 100)",
+     "Lyric (dev_tool, medium, 6473 users, $324/day, quality 100)",
+     "Xenon (dev_tool, medium, 7929 users, $396/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1260,
+   "kind": "notice",
+   "text": "Web App demand is cooling: -28%.",
+   "cash": 109489
+  },
+  {
+   "day": 1268,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 111814,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1268,
+   "kind": "notice",
+   "text": "Lyric grew into a Large product.",
+   "cash": 111814
+  },
+  {
+   "day": 1268,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 111814,
+   "data": {
+    "quality": 100,
+    "reach": 45959,
+    "bugs": 2,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1270,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Xenon",
+   "cash": 112360,
+   "data": {
+    "bugs": 13
+   }
+  },
+  {
+   "day": 1278,
+   "kind": "notice",
+   "text": "Xenon: 13 bugs fixed.",
+   "cash": 114463
+  },
+  {
+   "day": 1278,
+   "kind": "project.grow",
+   "text": "Started growing Jasper into a large product",
+   "cash": 114463,
+   "data": {
+    "features": [
+     "In-app payments",
+     "User accounts"
+    ],
+    "users": 30490,
+    "ageDays": 821,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1283,
+   "kind": "notice",
+   "text": "Quanta launched Xylem, a small web app (quality 57).",
+   "cash": 115719
+  },
+  {
+   "day": 1287,
+   "kind": "event.offered",
+   "text": "Vulnerability report",
+   "cash": 116692,
+   "data": {
+    "text": "A security researcher reports a vulnerability in one of your products.",
+    "choices": [
+     "Patch it now",
+     "Ignore it"
+    ]
+   }
+  },
+  {
+   "day": 1287,
+   "kind": "event.choice",
+   "text": "Vulnerability report: Patch it now",
+   "cash": 114492,
+   "data": {
+    "options": [
+     "Patch it now",
+     "Ignore it"
+    ]
+   }
+  },
+  {
+   "day": 1287,
+   "kind": "notice",
+   "text": "Patched, and the researcher praised your response.",
+   "cash": 114492
+  },
+  {
+   "day": 1288,
+   "kind": "notice",
+   "text": "Basement Games launched Ensign, a small mobile app (quality 51).",
+   "cash": 114731
+  },
+  {
+   "day": 1290,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 115204,
+   "data": {
+    "income": 966,
+    "burn": 733,
+    "reputation": 65,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 8,
+    "offices": 1,
+    "products": 4,
+    "users": 58779,
+    "lifetimeRevenue": 441402,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 15138 users, $151/day, quality 100)",
+     "Jasper (mobile_app, medium, 30395 users, $152/day, quality 100)",
+     "Lyric (dev_tool, large, 6691 users, $335/day, quality 100)",
+     "Xenon (dev_tool, medium, 6554 users, $328/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1316,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Jukebox, a medium mobile app (quality 73).",
+   "cash": 120699
+  },
+  {
+   "day": 1320,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 121452,
+   "data": {
+    "income": 919,
+    "burn": 735,
+    "reputation": 65,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 8,
+    "offices": 1,
+    "products": 4,
+    "users": 56869,
+    "lifetimeRevenue": 469650,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14974 users, $150/day, quality 100)",
+     "Jasper (mobile_app, medium, 29446 users, $147/day, quality 100)",
+     "Lyric (dev_tool, large, 6856 users, $343/day, quality 100)",
+     "Xenon (dev_tool, medium, 5593 users, $280/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1324,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Banyan, a small mobile app (quality 82).",
+   "cash": 122175
+  },
+  {
+   "day": 1332,
+   "kind": "ship",
+   "text": "Shipped Jasper",
+   "cash": 123555,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1332,
+   "kind": "notice",
+   "text": "Jasper grew into a Large product.",
+   "cash": 123555
+  },
+  {
+   "day": 1332,
+   "kind": "ship.result",
+   "text": "Jasper is out",
+   "cash": 123555,
+   "data": {
+    "quality": 100,
+    "reach": 273841,
+    "bugs": 2,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1334,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Lyric",
+   "cash": 123895,
+   "data": {
+    "bugs": 16
+   }
+  },
+  {
+   "day": 1338,
+   "kind": "notice",
+   "text": "Northwind Software's new web app Gravity is taking off. Expect a crowded market.",
+   "cash": 124590
+  },
+  {
+   "day": 1344,
+   "kind": "notice",
+   "text": "Lyric: 16 bugs fixed.",
+   "cash": 125657
+  },
+  {
+   "day": 1345,
+   "kind": "project.start",
+   "text": "Started a large SaaS Platform",
+   "cash": 125837,
+   "data": {
+    "type": "saas_platform",
+    "size": "large",
+    "features": [
+     "AI assistant",
+     "Plugin system",
+     "Cloud sync",
+     "Enterprise SSO",
+     "User accounts"
+    ],
+    "office": "HQ",
+    "demand": 1.24
+   }
+  },
+  {
+   "day": 1349,
+   "kind": "event.offered",
+   "text": "Conference invite",
+   "cash": 126567,
+   "data": {
+    "text": "A big developer conference has a speaking slot and a booth available.",
+    "choices": [
+     "Send the team",
+     "Skip it"
+    ]
+   }
+  },
+  {
+   "day": 1349,
+   "kind": "event.choice",
+   "text": "Conference invite: Send the team",
+   "cash": 119667,
+   "data": {
+    "options": [
+     "Send the team",
+     "Skip it"
+    ]
+   }
+  },
+  {
+   "day": 1349,
+   "kind": "notice",
+   "text": "The talk went down well. People know your name now.",
+   "cash": 119667
+  },
+  {
+   "day": 1350,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 119851,
+   "data": {
+    "income": 919,
+    "burn": 738,
+    "reputation": 72,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 8,
+    "offices": 1,
+    "products": 4,
+    "users": 61222,
+    "lifetimeRevenue": 496999,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 14208 users, $142/day, quality 100)",
+     "Jasper (mobile_app, large, 34970 users, $175/day, quality 100)",
+     "Lyric (dev_tool, large, 6986 users, $349/day, quality 100)",
+     "Xenon (dev_tool, medium, 5058 users, $253/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1352,
+   "kind": "notice",
+   "text": "Sparkwise launched Pebble, a small web app (quality 57).",
+   "cash": 120214
+  },
+  {
+   "day": 1354,
+   "kind": "hire",
+   "text": "Hired Tariq Moreau (Mid developer)",
+   "cash": 118030,
+   "data": {
+    "role": "developer",
+    "trait": "coder",
+    "skills": "design 18, engineering 50, qa 24",
+    "salary": 2550,
+    "office": "HQ",
+    "team": 8
+   }
+  },
+  {
+   "day": 1354,
+   "kind": "employee.train",
+   "text": "Mateo Silva (Senior developer) went on a engineering course",
+   "cash": 115580,
+   "data": {
+    "cost": 2450
+   }
+  },
+  {
+   "day": 1354,
+   "kind": "outing",
+   "text": "Took the team out",
+   "cash": 111130
+  },
+  {
+   "day": 1364,
+   "kind": "notice",
+   "text": "Mateo Silva finished training: engineering +3.1.",
+   "cash": 112135
+  },
+  {
+   "day": 1378,
+   "kind": "notice",
+   "text": "Basement Games launched Delta, a small mobile app (quality 63).",
+   "cash": 113561
+  },
+  {
+   "day": 1380,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 113763,
+   "data": {
+    "income": 924,
+    "burn": 825,
+    "reputation": 72,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 64987,
+    "lifetimeRevenue": 524722,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 12994 users, $130/day, quality 100)",
+     "Jasper (mobile_app, large, 40121 users, $201/day, quality 100)",
+     "Lyric (dev_tool, large, 7113 users, $356/day, quality 100)",
+     "Xenon (dev_tool, medium, 4759 users, $238/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1385,
+   "kind": "notice",
+   "text": "Pocketwave launched Condor, a small developer tool (quality 64).",
+   "cash": 114253
+  },
+  {
+   "day": 1394,
+   "kind": "event.offered",
+   "text": "Alpha build",
+   "cash": 115087,
+   "data": {
+    "text": "Kaleido is halfway done, and the alpha build runs. What do you do with it?",
+    "choices": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 1394,
+   "kind": "event.choice",
+   "text": "Alpha build: Preview it to the press",
+   "cash": 93037,
+   "data": {
+    "options": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 1394,
+   "kind": "notice",
+   "text": "The preview got people talking: +15% users at launch.",
+   "cash": 93037
+  },
+  {
+   "day": 1403,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Zucchini, a small mobile app (quality 67).",
+   "cash": 93810
+  },
+  {
+   "day": 1405,
+   "kind": "notice",
+   "text": "Quanta launched Quokka, a small web app (quality 62).",
+   "cash": 93973
+  },
+  {
+   "day": 1410,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 94364,
+   "data": {
+    "income": 902,
+    "burn": 830,
+    "reputation": 72,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 64475,
+    "lifetimeRevenue": 552123,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 12150 users, $121/day, quality 100)",
+     "Jasper (mobile_app, large, 40804 users, $204/day, quality 100)",
+     "Lyric (dev_tool, large, 7103 users, $355/day, quality 100)",
+     "Xenon (dev_tool, medium, 4419 users, $221/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1412,
+   "kind": "notice",
+   "text": "Pixelforge launched Quasar, a large mobile app (quality 84).",
+   "cash": 94505
+  },
+  {
+   "day": 1418,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Olive, a medium mobile app (quality 61).",
+   "cash": 94900
+  },
+  {
+   "day": 1422,
+   "kind": "notice",
+   "text": "Bluebird Labs's new web app Velvet is taking off. Expect a crowded market.",
+   "cash": 95141
+  },
+  {
+   "day": 1422,
+   "kind": "notice",
+   "text": "Sparkwise launched Saffron, a small web app (quality 56).",
+   "cash": 95141
+  },
+  {
+   "day": 1440,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 95994,
+   "data": {
+    "income": 868,
+    "burn": 915,
+    "reputation": 72,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 60465,
+    "lifetimeRevenue": 578653,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 10859 users, $109/day, quality 100)",
+     "Jasper (mobile_app, large, 38251 users, $191/day, quality 100)",
+     "Lyric (dev_tool, large, 7268 users, $363/day, quality 100)",
+     "Xenon (dev_tool, medium, 4088 users, $204/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1440,
+   "kind": "notice",
+   "text": "Lumen Interactive has moved into the market.",
+   "cash": 95994
+  },
+  {
+   "day": 1440,
+   "kind": "era",
+   "text": "A new era began: The cloud years",
+   "cash": 95994,
+   "data": {
+    "era": 2
+   }
+  },
+  {
+   "day": 1440,
+   "kind": "notice",
+   "text": "A new studio, Stratus Works, is starting up in the cloud platform market.",
+   "cash": 95994
+  },
+  {
+   "day": 1446,
+   "kind": "event.offered",
+   "text": "Open-source help",
+   "cash": 95669,
+   "data": {
+    "text": "Open-source contributors have sent patches for Kaleido.",
+    "choices": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 1446,
+   "kind": "event.choice",
+   "text": "Open-source help: Review them properly",
+   "cash": 93819,
+   "data": {
+    "options": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 1446,
+   "kind": "notice",
+   "text": "A careful review turned the patches into real progress.",
+   "cash": 93819
+  },
+  {
+   "day": 1455,
+   "kind": "notice",
+   "text": "Quanta launched Gleam, a small web app (quality 65).",
+   "cash": 93210
+  },
+  {
+   "day": 1470,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 91926,
+   "data": {
+    "income": 820,
+    "burn": 918,
+    "reputation": 72,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 57567,
+    "lifetimeRevenue": 603884,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 9629 users, $96/day, quality 100)",
+     "Jasper (mobile_app, large, 37186 users, $186/day, quality 100)",
+     "Lyric (dev_tool, large, 7161 users, $358/day, quality 100)",
+     "Xenon (dev_tool, medium, 3590 users, $180/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1476,
+   "kind": "notice",
+   "text": "Sparkwise launched Dash, a small developer tool (quality 56).",
+   "cash": 91307
+  },
+  {
+   "day": 1494,
+   "kind": "notice",
+   "text": "Stratus Works launched Cairn, a small mobile app (quality 50).",
+   "cash": 89126
+  },
+  {
+   "day": 1500,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 88299,
+   "data": {
+    "income": 777,
+    "burn": 918,
+    "reputation": 72,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 56192,
+    "lifetimeRevenue": 627808,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 8830 users, $88/day, quality 100)",
+     "Jasper (mobile_app, large, 37311 users, $187/day, quality 100)",
+     "Lyric (dev_tool, large, 6921 users, $346/day, quality 100)",
+     "Xenon (dev_tool, medium, 3130 users, $156/day, quality 96)"
+    ]
+   }
+  },
+  {
+   "day": 1500,
+   "kind": "notice",
+   "text": "SaaS Platform demand is surging: +22%.",
+   "cash": 88299
+  },
+  {
+   "day": 1507,
+   "kind": "ship",
+   "text": "Shipped Kaleido",
+   "cash": 26682,
+   "data": {
+    "quality": 100,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 20.5
+   }
+  },
+  {
+   "day": 1507,
+   "kind": "ship.result",
+   "text": "Kaleido is out",
+   "cash": 26682,
+   "data": {
+    "quality": 100,
+    "reach": 16857,
+    "bugs": 39,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 1508,
+   "kind": "notice",
+   "text": "Bluebird Labs launched Quiver, a large web app (quality 85).",
+   "cash": 32836
+  },
+  {
+   "day": 1508,
+   "kind": "notice",
+   "text": "Milestone: Getting the hang of it. Ship 5 good products (quality 60+). +$1,000.",
+   "cash": 32836
+  },
+  {
+   "day": 1508,
+   "kind": "notice",
+   "text": "Milestone: Software as a service. Ship a SaaS Platform. +$5,000.",
+   "cash": 32836
+  },
+  {
+   "day": 1509,
+   "kind": "notice",
+   "text": "Lumen Interactive launched Yuzu, a small mobile app (quality 64).",
+   "cash": 33040
+  },
+  {
+   "day": 1516,
+   "kind": "project.update",
+   "text": "Started an update to Lyric",
+   "cash": 35779,
+   "data": {
+    "features": [
+     "CI integration"
+    ],
+    "users": 6821,
+    "ageDays": 667,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1526,
+   "kind": "notice",
+   "text": "Quanta launched Equinox, a small web app (quality 65).",
+   "cash": 43119
+  },
+  {
+   "day": 1528,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Quest, a medium mobile app (quality 68).",
+   "cash": 45011
+  },
+  {
+   "day": 1530,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 47032,
+   "data": {
+    "income": 1944,
+    "burn": 918,
+    "reputation": 83,
+    "stage": "Indie studio",
+    "rank": 5,
+    "employees": 9,
+    "offices": 1,
+    "products": 5,
+    "users": 59179,
+    "lifetimeRevenue": 668690,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 8030 users, $80/day, quality 100)",
+     "Jasper (mobile_app, large, 37628 users, $188/day, quality 100)",
+     "Lyric (dev_tool, large, 6758 users, $338/day, quality 100)",
+     "Xenon (dev_tool, medium, 2764 users, $138/day, quality 96)",
+     "Kaleido (saas_platform, large, 3999 users, $1200/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1536,
+   "kind": "event.offered",
+   "text": "Equipment trouble",
+   "cash": 53811,
+   "data": {
+    "text": "Half the office laptops are dying, and the air conditioning has given up too.",
+    "choices": [
+     "Buy replacements",
+     "Make do"
+    ]
+   }
+  },
+  {
+   "day": 1536,
+   "kind": "event.choice",
+   "text": "Equipment trouble: Buy replacements",
+   "cash": 50661,
+   "data": {
+    "options": [
+     "Buy replacements",
+     "Make do"
+    ]
+   }
+  },
+  {
+   "day": 1536,
+   "kind": "notice",
+   "text": "New gear all round. Everyone is happy.",
+   "cash": 50661
+  },
+  {
+   "day": 1537,
+   "kind": "notice",
+   "text": "Sparkwise launched Nova, a small web app (quality 59).",
+   "cash": 51889
+  },
+  {
+   "day": 1547,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 65510,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1547,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 65510,
+   "data": {
+    "quality": 100,
+    "reach": 47797,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1548,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Kaleido",
+   "cash": 66919,
+   "data": {
+    "bugs": 43
+   }
+  },
+  {
+   "day": 1550,
+   "kind": "notice",
+   "text": "Pocketwave launched Krypton, a small saas platform (quality 70).",
+   "cash": 69679
+  },
+  {
+   "day": 1560,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 82430,
+   "data": {
+    "income": 2119,
+    "burn": 920,
+    "reputation": 89,
+    "stage": "Indie studio",
+    "rank": 4,
+    "employees": 9,
+    "offices": 1,
+    "products": 5,
+    "users": 58935,
+    "lifetimeRevenue": 734788,
+    "research": 0,
+    "productList": [
+     "Birch (web_app, medium, 7431 users, $74/day, quality 100)",
+     "Jasper (mobile_app, large, 37319 users, $187/day, quality 100)",
+     "Lyric (dev_tool, large, 7135 users, $357/day, quality 100)",
+     "Xenon (dev_tool, medium, 2454 users, $123/day, quality 96)",
+     "Kaleido (saas_platform, large, 4596 users, $1379/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1560,
+   "kind": "notice",
+   "text": "Northwind Software's new saas platform Vertex is taking off. Expect a crowded market.",
+   "cash": 82430
+  },
+  {
+   "day": 1560,
+   "kind": "notice",
+   "text": "Developer Tool demand is surging: +44%.",
+   "cash": 82430
+  },
+  {
+   "day": 1568,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Lattice, a medium saas platform (quality 74).",
+   "cash": 91450
+  },
+  {
+   "day": 1570,
+   "kind": "notice",
+   "text": "Kaleido: 42 bugs fixed.",
+   "cash": 93555
+  },
+  {
+   "day": 1573,
+   "kind": "product.retired",
+   "text": "Retired Birch",
+   "cash": 96607,
+   "data": {
+    "users": 7261,
+    "ageDays": 1278,
+    "revenue": 177989,
+    "hit": false,
+    "price": 0
+   }
+  },
+  {
+   "day": 1573,
+   "kind": "notice",
+   "text": "Birch was retired.",
+   "cash": 96607
+  },
+  {
+   "day": 1577,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Lyric",
+   "cash": 100203,
+   "data": {
+    "bugs": 22
+   }
+  },
+  {
+   "day": 1578,
+   "kind": "notice",
+   "text": "Stratus Works launched Needle, a small saas platform (quality 62).",
+   "cash": 101071
+  },
+  {
+   "day": 1589,
+   "kind": "notice",
+   "text": "Lyric: 21 bugs fixed.",
+   "cash": 109891
+  },
+  {
+   "day": 1590,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 110634,
+   "data": {
+    "income": 1662,
+    "burn": 920,
+    "reputation": 89,
+    "stage": "Indie studio",
+    "rank": 6,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 51210,
+    "lifetimeRevenue": 790592,
+    "research": 0,
+    "productList": [
+     "Jasper (mobile_app, large, 37996 users, $190/day, quality 100)",
+     "Lyric (dev_tool, large, 7787 users, $389/day, quality 100)",
+     "Xenon (dev_tool, medium, 2181 users, $109/day, quality 96)",
+     "Kaleido (saas_platform, large, 3247 users, $974/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1590,
+   "kind": "notice",
+   "text": "Web App demand is surging: +25%.",
+   "cash": 110634
+  },
+  {
+   "day": 1590,
+   "kind": "notice",
+   "text": "Mobile App demand is cooling: -16%.",
+   "cash": 110634
+  },
+  {
+   "day": 1592,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Jasper",
+   "cash": 112092,
+   "data": {
+    "bugs": 29
+   }
+  },
+  {
+   "day": 1597,
+   "kind": "notice",
+   "text": "Pixelforge launched Impulse, a small mobile app (quality 77).",
+   "cash": 115593
+  },
+  {
+   "day": 1599,
+   "kind": "event.offered",
+   "text": "Job offer",
+   "cash": 116939,
+   "data": {
+    "text": "Jamie Petrov has an offer from Bluebird Labs and is thinking about leaving.",
+    "choices": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 1599,
+   "kind": "event.choice",
+   "text": "Job offer: Make a counter-offer",
+   "cash": 102989,
+   "data": {
+    "options": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 1599,
+   "kind": "notice",
+   "text": "Jamie Petrov decided to stay.",
+   "cash": 102989
+  },
+  {
+   "day": 1608,
+   "kind": "notice",
+   "text": "Jasper: 28 bugs fixed.",
+   "cash": 108699
+  },
+  {
+   "day": 1608,
+   "kind": "project.update",
+   "text": "Started an update to Xenon",
+   "cash": 108699,
+   "data": {
+    "features": [
+     "CI integration",
+     "Enterprise SSO"
+    ],
+    "users": 2039,
+    "ageDays": 385,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1620,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 115585,
+   "data": {
+    "income": 1466,
+    "burn": 923,
+    "reputation": 89,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 52438,
+    "lifetimeRevenue": 837094,
+    "research": 0,
+    "productList": [
+     "Jasper (mobile_app, large, 39672 users, $198/day, quality 100)",
+     "Lyric (dev_tool, large, 8295 users, $415/day, quality 100)",
+     "Xenon (dev_tool, medium, 1951 users, $98/day, quality 96)",
+     "Kaleido (saas_platform, large, 2519 users, $756/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1629,
+   "kind": "ship",
+   "text": "Shipped Xenon",
+   "cash": 120278,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1629,
+   "kind": "ship.result",
+   "text": "Xenon is out",
+   "cash": 120278,
+   "data": {
+    "quality": 100,
+    "reach": 27322,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1631,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Xenon",
+   "cash": 121285,
+   "data": {
+    "bugs": 15
+   }
+  },
+  {
+   "day": 1638,
+   "kind": "notice",
+   "text": "Xenon: 14 bugs fixed.",
+   "cash": 124777
+  },
+  {
+   "day": 1640,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Kaleido",
+   "cash": 125770,
+   "data": {
+    "bugs": 10
+   }
+  },
+  {
+   "day": 1645,
+   "kind": "notice",
+   "text": "Kaleido: 9 bugs fixed.",
+   "cash": 128255
+  },
+  {
+   "day": 1645,
+   "kind": "project.update",
+   "text": "Started an update to Lyric",
+   "cash": 128255,
+   "data": {
+    "features": [
+     "Multiplayer"
+    ],
+    "users": 8172,
+    "ageDays": 796,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1650,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 130750,
+   "data": {
+    "income": 1424,
+    "burn": 927,
+    "reputation": 91,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 54633,
+    "lifetimeRevenue": 879958,
+    "research": 0,
+    "productList": [
+     "Jasper (mobile_app, large, 41041 users, $205/day, quality 100)",
+     "Lyric (dev_tool, large, 8116 users, $406/day, quality 100)",
+     "Xenon (dev_tool, medium, 3321 users, $166/day, quality 100)",
+     "Kaleido (saas_platform, large, 2155 users, $646/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1656,
+   "kind": "notice",
+   "text": "Hexagon Apps's new game Yonder is taking off. Expect a crowded market.",
+   "cash": 133748
+  },
+  {
+   "day": 1658,
+   "kind": "event.offered",
+   "text": "Scope creep",
+   "cash": 134754,
+   "data": {
+    "text": "Someone has a great idea for Lyric, and it isn't in the plan.",
+    "choices": [
+     "Add it",
+     "Stick to the plan"
+    ]
+   }
+  },
+  {
+   "day": 1658,
+   "kind": "event.choice",
+   "text": "Scope creep: Add it",
+   "cash": 134754,
+   "data": {
+    "options": [
+     "Add it",
+     "Stick to the plan"
+    ]
+   }
+  },
+  {
+   "day": 1658,
+   "kind": "notice",
+   "text": "The idea is in. More to build, and more to sell.",
+   "cash": 134754
+  },
+  {
+   "day": 1659,
+   "kind": "notice",
+   "text": "Stratus Works launched Hazel, a small saas platform (quality 60).",
+   "cash": 135258
+  },
+  {
+   "day": 1672,
+   "kind": "notice",
+   "text": "Northwind Software launched Wharf, a large developer tool (quality 70).",
+   "cash": 141872
+  },
+  {
+   "day": 1680,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 145900,
+   "data": {
+    "income": 1425,
+    "burn": 927,
+    "reputation": 91,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 56594,
+    "lifetimeRevenue": 922908,
+    "research": 0,
+    "productList": [
+     "Jasper (mobile_app, large, 42247 users, $211/day, quality 100)",
+     "Lyric (dev_tool, large, 7744 users, $387/day, quality 100)",
+     "Xenon (dev_tool, medium, 4618 users, $231/day, quality 100)",
+     "Kaleido (saas_platform, large, 1986 users, $596/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1686,
+   "kind": "research.start",
+   "text": "Started researching CI pipeline",
+   "cash": 142862,
+   "data": {
+    "id": "ci_pipeline"
+   }
+  },
+  {
+   "day": 1691,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 145298,
+   "data": {
+    "quality": 84,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1691,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 145298,
+   "data": {
+    "quality": 84,
+    "reach": 56621,
+    "bugs": 2,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1695,
+   "kind": "notice",
+   "text": "Quanta launched Fennel, a small developer tool (quality 67).",
+   "cash": 147227
+  },
+  {
+   "day": 1700,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Nectar, a medium saas platform (quality 70).",
+   "cash": 149609
+  },
+  {
+   "day": 1700,
+   "kind": "notice",
+   "text": "Sparkwise's new mobile app Cedar is taking off. Expect a crowded market.",
+   "cash": 149609
+  },
+  {
+   "day": 1706,
+   "kind": "notice",
+   "text": "Research complete: CI pipeline. Engineering work is 8% faster.",
+   "cash": 152395
+  },
+  {
+   "day": 1706,
+   "kind": "project.start",
+   "text": "Started a large Developer Tool",
+   "cash": 152395,
+   "data": {
+    "type": "dev_tool",
+    "size": "large",
+    "features": [
+     "CI integration",
+     "AI assistant",
+     "Plugin system",
+     "Analytics dashboard",
+     "Enterprise SSO"
+    ],
+    "office": "HQ",
+    "demand": 1.29
+   }
+  },
+  {
+   "day": 1710,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 154208,
+   "data": {
+    "income": 1377,
+    "burn": 927,
+    "reputation": 95,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 55546,
+    "lifetimeRevenue": 965016,
+    "research": 1,
+    "productList": [
+     "Jasper (mobile_app, large, 41666 users, $208/day, quality 100)",
+     "Lyric (dev_tool, large, 7279 users, $364/day, quality 100)",
+     "Xenon (dev_tool, medium, 4703 users, $235/day, quality 100)",
+     "Kaleido (saas_platform, large, 1898 users, $569/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1710,
+   "kind": "notice",
+   "text": "Game demand is cooling: -16%.",
+   "cash": 154208
+  },
+  {
+   "day": 1734,
+   "kind": "notice",
+   "text": "Pocketwave launched Newt, a small mobile app (quality 63).",
+   "cash": 164491
+  },
+  {
+   "day": 1734,
+   "kind": "event.offered",
+   "text": "Tax audit",
+   "cash": 164491,
+   "data": {
+    "text": "The tax office wants to take a closer look at your books.",
+    "choices": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 1734,
+   "kind": "event.choice",
+   "text": "Tax audit: Contest it",
+   "cash": 154591,
+   "data": {
+    "options": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 1734,
+   "kind": "notice",
+   "text": "You lost the dispute and paid $9,900.",
+   "cash": 154591
+  },
+  {
+   "day": 1735,
+   "kind": "event.offered",
+   "text": "Alpha build",
+   "cash": 155002,
+   "data": {
+    "text": "Quartz is halfway done, and the alpha build runs. What do you do with it?",
+    "choices": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 1735,
+   "kind": "event.choice",
+   "text": "Alpha build: Preview it to the press",
+   "cash": 144352,
+   "data": {
+    "options": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 1735,
+   "kind": "notice",
+   "text": "The preview got people talking: +15% users at launch.",
+   "cash": 144352
+  },
+  {
+   "day": 1740,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 146388,
+   "data": {
+    "income": 1332,
+    "burn": 932,
+    "reputation": 95,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 9,
+    "offices": 1,
+    "products": 4,
+    "users": 53156,
+    "lifetimeRevenue": 1005546,
+    "research": 1,
+    "productList": [
+     "Jasper (mobile_app, large, 39665 users, $198/day, quality 100)",
+     "Lyric (dev_tool, large, 7004 users, $350/day, quality 100)",
+     "Xenon (dev_tool, medium, 4651 users, $233/day, quality 100)",
+     "Kaleido (saas_platform, large, 1836 users, $551/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1740,
+   "kind": "notice",
+   "text": "Web App demand is cooling: -23%.",
+   "cash": 146388
+  },
+  {
+   "day": 1748,
+   "kind": "hire",
+   "text": "Hired Tariq Moreau (Mid developer)",
+   "cash": 146756,
+   "data": {
+    "role": "developer",
+    "trait": "fast_learner",
+    "skills": "design 10, engineering 63, qa 20",
+    "salary": 2800,
+    "office": "HQ",
+    "team": 9
+   }
+  },
+  {
+   "day": 1748,
+   "kind": "hire",
+   "text": "Hired Sofia Adeyemi (Senior tester)",
+   "cash": 143856,
+   "data": {
+    "role": "tester",
+    "trait": "frugal",
+    "skills": "design 12, engineering 9, qa 66",
+    "salary": 2900,
+    "office": "HQ",
+    "team": 10
+   }
+  },
+  {
+   "day": 1748,
+   "kind": "hire",
+   "text": "Hired Zara Costa (Mid designer)",
+   "cash": 141256,
+   "data": {
+    "role": "designer",
+    "trait": "creative",
+    "skills": "design 61, engineering 8, qa 15",
+    "salary": 2600,
+    "office": "HQ",
+    "team": 11
+   }
+  },
+  {
+   "day": 1748,
+   "kind": "outing",
+   "text": "Took the team out",
+   "cash": 134506
+  },
+  {
+   "day": 1748,
+   "kind": "employee.train",
+   "text": "Mateo Silva (Senior developer) went on a engineering course",
+   "cash": 131906,
+   "data": {
+    "cost": 2600
+   }
+  },
+  {
+   "day": 1749,
+   "kind": "notice",
+   "text": "Milestone: Full house. Fill all 12 desks. +$10,000.",
+   "cash": 142022
+  },
+  {
+   "day": 1758,
+   "kind": "notice",
+   "text": "Mateo Silva finished training: engineering +2.6.",
+   "cash": 143034
+  },
+  {
+   "day": 1760,
+   "kind": "notice",
+   "text": "Sparkwise launched Oasis, a small mobile app (quality 60).",
+   "cash": 143252
+  },
+  {
+   "day": 1761,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Umbral, a large saas platform (quality 73).",
+   "cash": 143359
+  },
+  {
+   "day": 1764,
+   "kind": "employee.train",
+   "text": "Mateo Silva (Senior developer) went on a engineering course",
+   "cash": 140971,
+   "data": {
+    "cost": 2700
+   }
+  },
+  {
+   "day": 1767,
+   "kind": "notice",
+   "text": "Stratus Works launched Orchard, a small saas platform (quality 62).",
+   "cash": 141270
+  },
+  {
+   "day": 1770,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 141553,
+   "data": {
+    "income": 1301,
+    "burn": 1217,
+    "reputation": 95,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 51601,
+    "lifetimeRevenue": 1045098,
+    "research": 1,
+    "productList": [
+     "Jasper (mobile_app, large, 38320 users, $192/day, quality 100)",
+     "Lyric (dev_tool, large, 6872 users, $344/day, quality 100)",
+     "Xenon (dev_tool, medium, 4627 users, $231/day, quality 100)",
+     "Kaleido (saas_platform, large, 1782 users, $535/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1774,
+   "kind": "notice",
+   "text": "Mateo Silva finished training: engineering +2.4.",
+   "cash": 141875
+  },
+  {
+   "day": 1777,
+   "kind": "employee.train",
+   "text": "Mateo Silva (Senior developer) went on a engineering course",
+   "cash": 139350,
+   "data": {
+    "cost": 2750
+   }
+  },
+  {
+   "day": 1778,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Canyon, a medium mobile app (quality 77).",
+   "cash": 139421
+  },
+  {
+   "day": 1787,
+   "kind": "notice",
+   "text": "Mateo Silva finished training: engineering +2.3.",
+   "cash": 139992
+  },
+  {
+   "day": 1787,
+   "kind": "notice",
+   "text": "Mateo Silva is ready to be promoted to lead. Don't keep them waiting too long.",
+   "cash": 139992
+  },
+  {
+   "day": 1790,
+   "kind": "notice",
+   "text": "Basement Games launched Vector, a small mobile app (quality 58).",
+   "cash": 140154
+  },
+  {
+   "day": 1792,
+   "kind": "employee.promote",
+   "text": "Promoted Mateo Silva (Senior developer)",
+   "cash": 140254,
+   "data": {
+    "from": "Senior developer",
+    "skills": "design 29, engineering 81, qa 20"
+   }
+  },
+  {
+   "day": 1792,
+   "kind": "notice",
+   "text": "Mateo Silva is now a lead developer.",
+   "cash": 140254
+  },
+  {
+   "day": 1800,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 140493,
+   "data": {
+    "income": 1255,
+    "burn": 1233,
+    "reputation": 95,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 48883,
+    "lifetimeRevenue": 1083395,
+    "research": 1,
+    "productList": [
+     "Jasper (mobile_app, large, 35801 users, $179/day, quality 100)",
+     "Lyric (dev_tool, large, 6820 users, $341/day, quality 100)",
+     "Xenon (dev_tool, medium, 4574 users, $229/day, quality 100)",
+     "Kaleido (saas_platform, large, 1687 users, $506/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1800,
+   "kind": "notice",
+   "text": "Ironclad Systems has moved into the market.",
+   "cash": 165493
+  },
+  {
+   "day": 1800,
+   "kind": "notice",
+   "text": "Milestone: Veteran. Keep the studio going for 5 years. +$25,000.",
+   "cash": 165493
+  },
+  {
+   "day": 1802,
+   "kind": "research.start",
+   "text": "Started researching Code review culture",
+   "cash": 153532,
+   "data": {
+    "id": "code_review"
+   }
+  },
+  {
+   "day": 1810,
+   "kind": "ship",
+   "text": "Shipped Quartz",
+   "cash": 127728,
+   "data": {
+    "quality": 100,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 21.2
+   }
+  },
+  {
+   "day": 1810,
+   "kind": "ship.result",
+   "text": "Quartz is out",
+   "cash": 127728,
+   "data": {
+    "quality": 100,
+    "reach": 43619,
+    "bugs": 25,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 1811,
+   "kind": "notice",
+   "text": "Milestone: Household name. Reach reputation 100. +$20,000.",
+   "cash": 147863
+  },
+  {
+   "day": 1815,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Quartz",
+   "cash": 148592,
+   "data": {
+    "bugs": 25
+   }
+  },
+  {
+   "day": 1817,
+   "kind": "notice",
+   "text": "Stratus Works launched Alder, a small developer tool (quality 62).",
+   "cash": 149064
+  },
+  {
+   "day": 1825,
+   "kind": "notice",
+   "text": "Quartz: 25 bugs fixed.",
+   "cash": 151563
+  },
+  {
+   "day": 1825,
+   "kind": "notice",
+   "text": "Sparkwise launched Zenith, a small saas platform (quality 64).",
+   "cash": 151563
+  },
+  {
+   "day": 1827,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Jasper",
+   "cash": 152328,
+   "data": {
+    "bugs": 17
+   }
+  },
+  {
+   "day": 1828,
+   "kind": "notice",
+   "text": "Milestone: Exterminator. Fix 250 bugs. +$8,000.",
+   "cash": 160729
+  },
+  {
+   "day": 1830,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 161571,
+   "data": {
+    "income": 1660,
+    "burn": 1233,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 55775,
+    "lifetimeRevenue": 1126372,
+    "research": 1,
+    "productList": [
+     "Jasper (mobile_app, large, 33979 users, $170/day, quality 100)",
+     "Lyric (dev_tool, large, 6431 users, $322/day, quality 100)",
+     "Xenon (dev_tool, medium, 4184 users, $209/day, quality 100)",
+     "Kaleido (saas_platform, large, 1602 users, $481/day, quality 100)",
+     "Quartz (dev_tool, large, 9580 users, $479/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1832,
+   "kind": "notice",
+   "text": "Research complete: Code review culture. People learn from each other: skills grow 20% faster.",
+   "cash": 162461
+  },
+  {
+   "day": 1833,
+   "kind": "notice",
+   "text": "Jasper: 16 bugs fixed.",
+   "cash": 162924
+  },
+  {
+   "day": 1837,
+   "kind": "research.start",
+   "text": "Started researching Test automation",
+   "cash": 158890,
+   "data": {
+    "id": "test_automation"
+   }
+  },
+  {
+   "day": 1841,
+   "kind": "project.update",
+   "text": "Started an update to Quartz",
+   "cash": 161028,
+   "data": {
+    "features": [
+     "Public API",
+     "Command-line interface"
+    ],
+    "users": 12520,
+    "ageDays": 31,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1842,
+   "kind": "event.offered",
+   "text": "Vulnerability report",
+   "cash": 161587,
+   "data": {
+    "text": "A security researcher reports a vulnerability in one of your products.",
+    "choices": [
+     "Patch it now",
+     "Ignore it"
+    ]
+   }
+  },
+  {
+   "day": 1842,
+   "kind": "event.choice",
+   "text": "Vulnerability report: Patch it now",
+   "cash": 157887,
+   "data": {
+    "options": [
+     "Patch it now",
+     "Ignore it"
+    ]
+   }
+  },
+  {
+   "day": 1842,
+   "kind": "notice",
+   "text": "Patched, and the researcher praised your response.",
+   "cash": 157887
+  },
+  {
+   "day": 1844,
+   "kind": "notice",
+   "text": "Ironclad Systems launched Dynamo, a large developer tool (quality 76).",
+   "cash": 159034
+  },
+  {
+   "day": 1857,
+   "kind": "notice",
+   "text": "Research complete: Test automation. QA work is 10% faster.",
+   "cash": 166561
+  },
+  {
+   "day": 1860,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 168086,
+   "data": {
+    "income": 1732,
+    "burn": 1235,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 57217,
+    "lifetimeRevenue": 1179588,
+    "research": 3,
+    "productList": [
+     "Jasper (mobile_app, large, 33660 users, $168/day, quality 100)",
+     "Lyric (dev_tool, large, 5949 users, $297/day, quality 100)",
+     "Xenon (dev_tool, medium, 3693 users, $185/day, quality 100)",
+     "Kaleido (saas_platform, large, 1543 users, $463/day, quality 100)",
+     "Quartz (dev_tool, large, 12372 users, $619/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1860,
+   "kind": "notice",
+   "text": "Developer Tool demand is cooling: -27%.",
+   "cash": 168086
+  },
+  {
+   "day": 1862,
+   "kind": "research.start",
+   "text": "Started researching Incident management",
+   "cash": 139052,
+   "data": {
+    "id": "incident_management"
+   }
+  },
+  {
+   "day": 1869,
+   "kind": "ship",
+   "text": "Shipped Quartz",
+   "cash": 142157,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1869,
+   "kind": "ship.result",
+   "text": "Quartz is out",
+   "cash": 142157,
+   "data": {
+    "quality": 100,
+    "reach": 50035,
+    "bugs": 2,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1873,
+   "kind": "notice",
+   "text": "Quanta launched Nocturne, a small mobile app (quality 65).",
+   "cash": 143757
+  },
+  {
+   "day": 1876,
+   "kind": "fix.start",
+   "text": "Started fixing bugs in Quartz",
+   "cash": 144882,
+   "data": {
+    "bugs": 7
+   }
+  },
+  {
+   "day": 1879,
+   "kind": "notice",
+   "text": "Quartz: 7 bugs fixed.",
+   "cash": 145946
+  },
+  {
+   "day": 1880,
+   "kind": "project.update",
+   "text": "Started an update to Kaleido",
+   "cash": 146288,
+   "data": {
+    "features": [
+     "Public API"
+    ],
+    "users": 1514,
+    "ageDays": 373,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1890,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 149389,
+   "data": {
+    "income": 1521,
+    "burn": 1243,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 52680,
+    "lifetimeRevenue": 1227941,
+    "research": 3,
+    "productList": [
+     "Jasper (mobile_app, large, 33077 users, $165/day, quality 100)",
+     "Lyric (dev_tool, large, 5673 users, $284/day, quality 100)",
+     "Xenon (dev_tool, medium, 3305 users, $165/day, quality 100)",
+     "Kaleido (saas_platform, large, 1501 users, $450/day, quality 100)",
+     "Quartz (dev_tool, large, 9125 users, $456/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1890,
+   "kind": "notice",
+   "text": "Web App demand is cooling: -38%.",
+   "cash": 149389
+  },
+  {
+   "day": 1902,
+   "kind": "notice",
+   "text": "Research complete: Incident management. Put a developer and a tester on call: every bug that is reported is picked up and fixed as it comes, and they work on their office's project when nothing is open.",
+   "cash": 152358
+  },
+  {
+   "day": 1903,
+   "kind": "notice",
+   "text": "Stratus Works launched Crest, a small saas platform (quality 51).",
+   "cash": 152578
+  },
+  {
+   "day": 1903,
+   "kind": "notice",
+   "text": "Zara Yilmaz is ready to be promoted to senior. Don't keep them waiting too long.",
+   "cash": 152578
+  },
+  {
+   "day": 1909,
+   "kind": "event.offered",
+   "text": "Job offer",
+   "cash": 153817,
+   "data": {
+    "text": "Morgan Petrov has an offer from Ironclad Systems and is thinking about leaving.",
+    "choices": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 1909,
+   "kind": "event.choice",
+   "text": "Job offer: Make a counter-offer",
+   "cash": 145567,
+   "data": {
+    "options": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 1909,
+   "kind": "notice",
+   "text": "Morgan Petrov decided to stay.",
+   "cash": 145567
+  },
+  {
+   "day": 1912,
+   "kind": "ship",
+   "text": "Shipped Kaleido",
+   "cash": 146137,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1912,
+   "kind": "ship.result",
+   "text": "Kaleido is out",
+   "cash": 146137,
+   "data": {
+    "quality": 100,
+    "reach": 18625,
+    "bugs": 3,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1914,
+   "kind": "fix.onCall",
+   "text": "Put a pair on call",
+   "cash": 146522
+  },
+  {
+   "day": 1920,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 147760,
+   "data": {
+    "income": 1459,
+    "burn": 1247,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 50271,
+    "lifetimeRevenue": 1271862,
+    "research": 4,
+    "productList": [
+     "Jasper (mobile_app, large, 32510 users, $163/day, quality 100)",
+     "Lyric (dev_tool, large, 5603 users, $280/day, quality 100)",
+     "Xenon (dev_tool, medium, 3031 users, $152/day, quality 100)",
+     "Kaleido (saas_platform, large, 1632 users, $490/day, quality 100)",
+     "Quartz (dev_tool, large, 7494 users, $375/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1923,
+   "kind": "project.grow",
+   "text": "Started growing Xenon into a large product",
+   "cash": 148417,
+   "data": {
+    "features": [
+     "AI assistant",
+     "Public API"
+    ],
+    "users": 3008,
+    "ageDays": 700,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1936,
+   "kind": "notice",
+   "text": "Tidewater Digital's new mobile app Utopia is taking off. Expect a crowded market.",
+   "cash": 151625
+  },
+  {
+   "day": 1940,
+   "kind": "notice",
+   "text": "Sparkwise launched Forge, a small mobile app (quality 59).",
+   "cash": 152721
+  },
+  {
+   "day": 1943,
+   "kind": "notice",
+   "text": "Bluebird Labs launched Tapir, a flagship saas platform (quality 92).",
+   "cash": 153568
+  },
+  {
+   "day": 1944,
+   "kind": "notice",
+   "text": "Quanta launched Overture, a small saas platform (quality 66).",
+   "cash": 153848
+  },
+  {
+   "day": 1950,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 155494,
+   "data": {
+    "income": 1517,
+    "burn": 1248,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 47988,
+    "lifetimeRevenue": 1316996,
+    "research": 4,
+    "productList": [
+     "Jasper (mobile_app, large, 30540 users, $153/day, quality 100)",
+     "Lyric (dev_tool, large, 5836 users, $292/day, quality 100)",
+     "Xenon (dev_tool, medium, 2914 users, $146/day, quality 100)",
+     "Kaleido (saas_platform, large, 1969 users, $591/day, quality 100)",
+     "Quartz (dev_tool, large, 6730 users, $336/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1953,
+   "kind": "notice",
+   "text": "Pocketwave launched Quince, a small mobile app (quality 59).",
+   "cash": 156295
+  },
+  {
+   "day": 1965,
+   "kind": "ship",
+   "text": "Shipped Xenon",
+   "cash": 159403,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1965,
+   "kind": "notice",
+   "text": "Xenon grew into a Large product.",
+   "cash": 159403
+  },
+  {
+   "day": 1965,
+   "kind": "ship.result",
+   "text": "Xenon is out",
+   "cash": 159403,
+   "data": {
+    "quality": 100,
+    "reach": 56789,
+    "bugs": 3,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1967,
+   "kind": "project.maintenance",
+   "text": "Started maintenance on Jasper",
+   "cash": 159918,
+   "data": {
+    "features": [],
+    "users": 28951,
+    "ageDays": 1510,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1973,
+   "kind": "ship",
+   "text": "Shipped Jasper",
+   "cash": 161509,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1973,
+   "kind": "ship.result",
+   "text": "Jasper is out",
+   "cash": 161509,
+   "data": {
+    "quality": 100,
+    "reach": 273841,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1975,
+   "kind": "project.maintenance",
+   "text": "Started maintenance on Lyric",
+   "cash": 162064,
+   "data": {
+    "features": [],
+    "users": 5873,
+    "ageDays": 1126,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 1978,
+   "kind": "notice",
+   "text": "Northwind Software's new developer tool Iridium is taking off. Expect a crowded market.",
+   "cash": 162929
+  },
+  {
+   "day": 1980,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 163516,
+   "data": {
+    "income": 1543,
+    "burn": 1255,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 49039,
+    "lifetimeRevenue": 1362468,
+    "research": 4,
+    "productList": [
+     "Jasper (mobile_app, large, 31164 users, $156/day, quality 100)",
+     "Lyric (dev_tool, large, 5792 users, $290/day, quality 100)",
+     "Xenon (dev_tool, large, 3847 users, $192/day, quality 100)",
+     "Kaleido (saas_platform, large, 1974 users, $592/day, quality 100)",
+     "Quartz (dev_tool, large, 6261 users, $313/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 1980,
+   "kind": "notice",
+   "text": "SaaS Platform demand is surging: +23%.",
+   "cash": 163516
+  },
+  {
+   "day": 1984,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 164690,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 1984,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 164690,
+   "data": {
+    "quality": 100,
+    "reach": 56621,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 1986,
+   "kind": "product.retired",
+   "text": "Retired Jasper",
+   "cash": 165289,
+   "data": {
+    "users": 33168,
+    "ageDays": 1529,
+    "revenue": 224039,
+    "hit": false,
+    "price": 0
+   }
+  },
+  {
+   "day": 1986,
+   "kind": "notice",
+   "text": "Jasper was retired.",
+   "cash": 165289
+  },
+  {
+   "day": 1992,
+   "kind": "notice",
+   "text": "Ironclad Systems launched Yacht, a medium saas platform (quality 63).",
+   "cash": 166109
+  },
+  {
+   "day": 1993,
+   "kind": "contract.accept",
+   "text": "Took a job for Atlas Insurance: a mobile app",
+   "cash": 202696,
+   "data": {
+    "pay": 72900,
+    "days": 52,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2010,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 204968,
+   "data": {
+    "income": 1387,
+    "burn": 1262,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 17736,
+    "lifetimeRevenue": 1405120,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 5436 users, $272/day, quality 100)",
+     "Xenon (dev_tool, large, 4690 users, $234/day, quality 100)",
+     "Kaleido (saas_platform, large, 2002 users, $601/day, quality 100)",
+     "Quartz (dev_tool, large, 5608 users, $280/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2019,
+   "kind": "event.offered",
+   "text": "Crunch time",
+   "cash": 206104,
+   "data": {
+    "text": "The team offers to put in long hours to get A mobile app for Atlas Insurance done sooner.",
+    "choices": [
+     "Crunch for two weeks",
+     "Keep a sane pace"
+    ]
+   }
+  },
+  {
+   "day": 2019,
+   "kind": "event.choice",
+   "text": "Crunch time: Keep a sane pace",
+   "cash": 206104,
+   "data": {
+    "options": [
+     "Crunch for two weeks",
+     "Keep a sane pace"
+    ]
+   }
+  },
+  {
+   "day": 2019,
+   "kind": "notice",
+   "text": "Everyone goes home on time, and appreciates it.",
+   "cash": 206104
+  },
+  {
+   "day": 2020,
+   "kind": "notice",
+   "text": "Delivered to Atlas Insurance: +$36,450 on top of the $36,450 deposit.",
+   "cash": 242682
+  },
+  {
+   "day": 2039,
+   "kind": "contract.accept",
+   "text": "Took a job for Pine & Co. Law: an API integration",
+   "cash": 272198,
+   "data": {
+    "pay": 54000,
+    "days": 57,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2040,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 272337,
+   "data": {
+    "income": 1401,
+    "burn": 1263,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 17743,
+    "lifetimeRevenue": 1446889,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 5319 users, $266/day, quality 100)",
+     "Xenon (dev_tool, large, 5057 users, $253/day, quality 100)",
+     "Kaleido (saas_platform, large, 2055 users, $616/day, quality 100)",
+     "Quartz (dev_tool, large, 5312 users, $266/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2046,
+   "kind": "notice",
+   "text": "Pixelforge launched Sable, a flagship developer tool (quality 84).",
+   "cash": 273180
+  },
+  {
+   "day": 2048,
+   "kind": "notice",
+   "text": "Tariq Moreau is ready to be promoted to senior. Don't keep them waiting too long.",
+   "cash": 273460
+  },
+  {
+   "day": 2065,
+   "kind": "notice",
+   "text": "Northwind Software launched Boulder, a large saas platform (quality 77).",
+   "cash": 275720
+  },
+  {
+   "day": 2069,
+   "kind": "notice",
+   "text": "Delivered to Pine & Co. Law: +$27,000 on top of the $27,000 deposit.",
+   "cash": 303210
+  },
+  {
+   "day": 2070,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 303327,
+   "data": {
+    "income": 1381,
+    "burn": 1265,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 17113,
+    "lifetimeRevenue": 1488779,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 5079 users, $254/day, quality 100)",
+     "Xenon (dev_tool, large, 4953 users, $248/day, quality 100)",
+     "Kaleido (saas_platform, large, 2102 users, $631/day, quality 100)",
+     "Quartz (dev_tool, large, 4979 users, $249/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2070,
+   "kind": "notice",
+   "text": "Game demand is surging: +21%.",
+   "cash": 303327
+  },
+  {
+   "day": 2070,
+   "kind": "project.start",
+   "text": "Started a large Developer Tool",
+   "cash": 303327,
+   "data": {
+    "type": "dev_tool",
+    "size": "large",
+    "features": [
+     "Multiplayer",
+     "Command-line interface",
+     "Public API",
+     "Enterprise SSO",
+     "CI integration"
+    ],
+    "office": "HQ",
+    "demand": 1.03
+   }
+  },
+  {
+   "day": 2087,
+   "kind": "event.offered",
+   "text": "Alpha build",
+   "cash": 305090,
+   "data": {
+    "text": "Heron is halfway done, and the alpha build runs. What do you do with it?",
+    "choices": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 2087,
+   "kind": "event.choice",
+   "text": "Alpha build: Preview it to the press",
+   "cash": 298040,
+   "data": {
+    "options": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 2087,
+   "kind": "notice",
+   "text": "The preview got people talking: +15% users at launch.",
+   "cash": 298040
+  },
+  {
+   "day": 2100,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 299219,
+   "data": {
+    "income": 1353,
+    "burn": 1275,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 16718,
+    "lifetimeRevenue": 1529670,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 4975 users, $249/day, quality 100)",
+     "Xenon (dev_tool, large, 4908 users, $245/day, quality 100)",
+     "Kaleido (saas_platform, large, 2068 users, $620/day, quality 100)",
+     "Quartz (dev_tool, large, 4767 users, $238/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2109,
+   "kind": "notice",
+   "text": "Ironclad Systems launched Kite, a medium developer tool (quality 70).",
+   "cash": 299913
+  },
+  {
+   "day": 2130,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 301414,
+   "data": {
+    "income": 1344,
+    "burn": 1278,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 16424,
+    "lifetimeRevenue": 1570116,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 4901 users, $245/day, quality 100)",
+     "Xenon (dev_tool, large, 4869 users, $243/day, quality 100)",
+     "Kaleido (saas_platform, large, 2090 users, $627/day, quality 100)",
+     "Quartz (dev_tool, large, 4564 users, $228/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2137,
+   "kind": "notice",
+   "text": "Stratus Works launched Osprey, a small saas platform (quality 66).",
+   "cash": 301869
+  },
+  {
+   "day": 2144,
+   "kind": "event.offered",
+   "text": "Tax audit",
+   "cash": 302299,
+   "data": {
+    "text": "The tax office wants to take a closer look at your books.",
+    "choices": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 2144,
+   "kind": "event.choice",
+   "text": "Tax audit: Contest it",
+   "cash": 302299,
+   "data": {
+    "options": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 2144,
+   "kind": "notice",
+   "text": "The audit found nothing.",
+   "cash": 302299
+  },
+  {
+   "day": 2146,
+   "kind": "notice",
+   "text": "Quanta launched Octave, a small developer tool (quality 62).",
+   "cash": 302417
+  },
+  {
+   "day": 2146,
+   "kind": "ship",
+   "text": "Shipped Heron",
+   "cash": 284367,
+   "data": {
+    "quality": 95,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 20.2
+   }
+  },
+  {
+   "day": 2146,
+   "kind": "ship.result",
+   "text": "Heron is out",
+   "cash": 284367,
+   "data": {
+    "quality": 95,
+    "reach": 31298,
+    "bugs": 24,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 2151,
+   "kind": "project.maintenance",
+   "text": "Started maintenance on Kaleido",
+   "cash": 285248,
+   "data": {
+    "features": [],
+    "users": 2081,
+    "ageDays": 644,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2160,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 287575,
+   "data": {
+    "income": 1579,
+    "burn": 1398,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 21210,
+    "lifetimeRevenue": 1612677,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 4739 users, $237/day, quality 100)",
+     "Xenon (dev_tool, large, 4726 users, $236/day, quality 100)",
+     "Kaleido (saas_platform, large, 2075 users, $623/day, quality 100)",
+     "Quartz (dev_tool, large, 4277 users, $214/day, quality 100)",
+     "Heron (dev_tool, large, 5392 users, $270/day, quality 95)"
+    ]
+   }
+  },
+  {
+   "day": 2160,
+   "kind": "era",
+   "text": "A new era began: The AI wave",
+   "cash": 287575,
+   "data": {
+    "era": 3
+   }
+  },
+  {
+   "day": 2160,
+   "kind": "notice",
+   "text": "A new studio, Neuron Foundry, is starting up in the ai product market.",
+   "cash": 287575
+  },
+  {
+   "day": 2166,
+   "kind": "ship",
+   "text": "Shipped Kaleido",
+   "cash": 288859,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 2166,
+   "kind": "ship.result",
+   "text": "Kaleido is out",
+   "cash": 288859,
+   "data": {
+    "quality": 100,
+    "reach": 18625,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 2167,
+   "kind": "project.update",
+   "text": "Started an update to Heron",
+   "cash": 289106,
+   "data": {
+    "features": [
+     "AI assistant"
+    ],
+    "users": 6887,
+    "ageDays": 21,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2181,
+   "kind": "notice",
+   "text": "Hexagon Apps launched Marble, a medium saas platform (quality 72).",
+   "cash": 293532
+  },
+  {
+   "day": 2190,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 296918,
+   "data": {
+    "income": 1753,
+    "burn": 1407,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 24453,
+    "lifetimeRevenue": 1663970,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 4568 users, $228/day, quality 100)",
+     "Xenon (dev_tool, large, 4537 users, $227/day, quality 100)",
+     "Kaleido (saas_platform, large, 2122 users, $637/day, quality 100)",
+     "Quartz (dev_tool, large, 3983 users, $199/day, quality 100)",
+     "Heron (dev_tool, large, 9243 users, $462/day, quality 95)"
+    ]
+   }
+  },
+  {
+   "day": 2190,
+   "kind": "ship",
+   "text": "Shipped Heron",
+   "cash": 296918,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 2190,
+   "kind": "ship.result",
+   "text": "Heron is out",
+   "cash": 296918,
+   "data": {
+    "quality": 100,
+    "reach": 40705,
+    "bugs": 2,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 2191,
+   "kind": "project.maintenance",
+   "text": "Started maintenance on Lyric",
+   "cash": 297258,
+   "data": {
+    "features": [],
+    "users": 4563,
+    "ageDays": 1342,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2193,
+   "kind": "event.offered",
+   "text": "In the press",
+   "cash": 297919,
+   "data": {
+    "text": "A tech blog wrote a glowing piece about your studio.",
+    "choices": [
+     "Nice!"
+    ]
+   }
+  },
+  {
+   "day": 2193,
+   "kind": "event.choice",
+   "text": "In the press: Nice!",
+   "cash": 297919,
+   "data": {
+    "options": [
+     "Nice!"
+    ]
+   }
+  },
+  {
+   "day": 2193,
+   "kind": "notice",
+   "text": "Your inbox is full of congratulations.",
+   "cash": 297919
+  },
+  {
+   "day": 2194,
+   "kind": "notice",
+   "text": "Sparkwise launched Meadow, a small developer tool (quality 72).",
+   "cash": 298240
+  },
+  {
+   "day": 2199,
+   "kind": "notice",
+   "text": "Ironclad Systems launched Mistral, a medium developer tool (quality 61).",
+   "cash": 299750
+  },
+  {
+   "day": 2199,
+   "kind": "ship",
+   "text": "Shipped Lyric",
+   "cash": 299750,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 2199,
+   "kind": "ship.result",
+   "text": "Lyric is out",
+   "cash": 299750,
+   "data": {
+    "quality": 100,
+    "reach": 56621,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 2200,
+   "kind": "project.maintenance",
+   "text": "Started maintenance on Quartz",
+   "cash": 300034,
+   "data": {
+    "features": [],
+    "users": 3885,
+    "ageDays": 390,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2208,
+   "kind": "ship",
+   "text": "Shipped Quartz",
+   "cash": 302101,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 2208,
+   "kind": "ship.result",
+   "text": "Quartz is out",
+   "cash": 302101,
+   "data": {
+    "quality": 100,
+    "reach": 50035,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 2209,
+   "kind": "project.maintenance",
+   "text": "Started maintenance on Xenon",
+   "cash": 302337,
+   "data": {
+    "features": [],
+    "users": 4386,
+    "ageDays": 986,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2214,
+   "kind": "notice",
+   "text": "Quanta launched Nimbus, a small developer tool (quality 65).",
+   "cash": 303456
+  },
+  {
+   "day": 2215,
+   "kind": "notice",
+   "text": "Stratus Works launched Zebu, a small developer tool (quality 67).",
+   "cash": 303668
+  },
+  {
+   "day": 2216,
+   "kind": "ship",
+   "text": "Shipped Xenon",
+   "cash": 303875,
+   "data": {
+    "quality": 94,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 2216,
+   "kind": "ship.result",
+   "text": "Xenon is out",
+   "cash": 303875,
+   "data": {
+    "quality": 94,
+    "reach": 56789,
+    "bugs": 1,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 2217,
+   "kind": "project.update",
+   "text": "Started an update to Heron",
+   "cash": 304078,
+   "data": {
+    "features": [
+     "Plugin system",
+     "Analytics dashboard"
+    ],
+    "users": 6884,
+    "ageDays": 71,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2220,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 304665,
+   "data": {
+    "income": 1599,
+    "burn": 1412,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 21272,
+    "lifetimeRevenue": 1713917,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 4352 users, $218/day, quality 100)",
+     "Xenon (dev_tool, large, 4284 users, $214/day, quality 100)",
+     "Kaleido (saas_platform, large, 2140 users, $642/day, quality 100)",
+     "Quartz (dev_tool, large, 3814 users, $191/day, quality 100)",
+     "Heron (dev_tool, large, 6681 users, $334/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2231,
+   "kind": "notice",
+   "text": "Sparkwise launched Axon, a small developer tool (quality 76).",
+   "cash": 306510
+  },
+  {
+   "day": 2246,
+   "kind": "ship",
+   "text": "Shipped Heron",
+   "cash": 308501,
+   "data": {
+    "quality": 100,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 2246,
+   "kind": "ship.result",
+   "text": "Heron is out",
+   "cash": 308501,
+   "data": {
+    "quality": 100,
+    "reach": 50791,
+    "bugs": 2,
+    "hit": false,
+    "update": true
+   }
+  },
+  {
+   "day": 2249,
+   "kind": "event.offered",
+   "text": "Equipment trouble",
+   "cash": 308844,
+   "data": {
+    "text": "Half the office laptops are dying, and the air conditioning has given up too.",
+    "choices": [
+     "Buy replacements",
+     "Make do"
+    ]
+   }
+  },
+  {
+   "day": 2249,
+   "kind": "event.choice",
+   "text": "Equipment trouble: Buy replacements",
+   "cash": 304644,
+   "data": {
+    "options": [
+     "Buy replacements",
+     "Make do"
+    ]
+   }
+  },
+  {
+   "day": 2249,
+   "kind": "notice",
+   "text": "New gear all round. Everyone is happy.",
+   "cash": 304644
+  },
+  {
+   "day": 2249,
+   "kind": "contract.accept",
+   "text": "Took a job for Atlas Insurance: a website",
+   "cash": 340719,
+   "data": {
+    "pay": 72150,
+    "days": 55,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2250,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 340831,
+   "data": {
+    "income": 1523,
+    "burn": 1415,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 19408,
+    "lifetimeRevenue": 1760558,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 4128 users, $206/day, quality 100)",
+     "Xenon (dev_tool, large, 4093 users, $205/day, quality 100)",
+     "Kaleido (saas_platform, large, 2212 users, $664/day, quality 100)",
+     "Quartz (dev_tool, large, 3762 users, $188/day, quality 100)",
+     "Heron (dev_tool, large, 5213 users, $261/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2263,
+   "kind": "notice",
+   "text": "Ironclad Systems launched Pulse, a large saas platform (quality 68).",
+   "cash": 342146
+  },
+  {
+   "day": 2275,
+   "kind": "notice",
+   "text": "Neuron Foundry launched Whisper, a small saas platform (quality 69).",
+   "cash": 343099
+  },
+  {
+   "day": 2277,
+   "kind": "notice",
+   "text": "Delivered to Atlas Insurance: +$36,075 on top of the $36,075 deposit.",
+   "cash": 379303
+  },
+  {
+   "day": 2277,
+   "kind": "notice",
+   "text": "Sparkwise's new web app Dagger is taking off. Expect a crowded market.",
+   "cash": 379303
+  },
+  {
+   "day": 2278,
+   "kind": "contract.accept",
+   "text": "Took a job for City Library: a booking system",
+   "cash": 415465,
+   "data": {
+    "pay": 72200,
+    "days": 45,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2280,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 415582,
+   "data": {
+    "income": 1472,
+    "burn": 1423,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 18467,
+    "lifetimeRevenue": 1805583,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 4008 users, $200/day, quality 100)",
+     "Xenon (dev_tool, large, 3990 users, $200/day, quality 100)",
+     "Kaleido (saas_platform, large, 2197 users, $659/day, quality 100)",
+     "Quartz (dev_tool, large, 3736 users, $187/day, quality 100)",
+     "Heron (dev_tool, large, 4536 users, $227/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2298,
+   "kind": "event.offered",
+   "text": "Open-source help",
+   "cash": 416209,
+   "data": {
+    "text": "Open-source contributors have sent patches for A booking system for City Library.",
+    "choices": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 2298,
+   "kind": "event.choice",
+   "text": "Open-source help: Review them properly",
+   "cash": 413359,
+   "data": {
+    "options": [
+     "Merge them quickly",
+     "Review them properly"
+    ]
+   }
+  },
+  {
+   "day": 2298,
+   "kind": "notice",
+   "text": "A careful review turned the patches into real progress.",
+   "cash": 413359
+  },
+  {
+   "day": 2299,
+   "kind": "notice",
+   "text": "Delivered to City Library: +$36,100 on top of the $36,100 deposit.",
+   "cash": 449483
+  },
+  {
+   "day": 2300,
+   "kind": "contract.accept",
+   "text": "Took a job for City Library: an online shop",
+   "cash": 484907,
+   "data": {
+    "pay": 70800,
+    "days": 44,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2310,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 485111,
+   "data": {
+    "income": 1443,
+    "burn": 1432,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 18088,
+    "lifetimeRevenue": 1849163,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 3981 users, $199/day, quality 100)",
+     "Xenon (dev_tool, large, 3974 users, $199/day, quality 100)",
+     "Kaleido (saas_platform, large, 2153 users, $646/day, quality 100)",
+     "Quartz (dev_tool, large, 3775 users, $189/day, quality 100)",
+     "Heron (dev_tool, large, 4204 users, $210/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2310,
+   "kind": "notice",
+   "text": "SaaS Platform demand is surging: +25%.",
+   "cash": 485111
+  },
+  {
+   "day": 2311,
+   "kind": "notice",
+   "text": "Northwind Software's new developer tool Indigo is taking off. Expect a crowded market.",
+   "cash": 485121
+  },
+  {
+   "day": 2323,
+   "kind": "notice",
+   "text": "Delivered to City Library: +$35,400 on top of the $35,400 deposit.",
+   "cash": 520563
+  },
+  {
+   "day": 2324,
+   "kind": "contract.accept",
+   "text": "Took a job for Lakeside Clinic: a data migration",
+   "cash": 551111,
+   "data": {
+    "pay": 61100,
+    "days": 52,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2340,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 551047,
+   "data": {
+    "income": 1427,
+    "burn": 1437,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 17389,
+    "lifetimeRevenue": 1892099,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 3819 users, $191/day, quality 100)",
+     "Xenon (dev_tool, large, 3817 users, $191/day, quality 100)",
+     "Kaleido (saas_platform, large, 2231 users, $669/day, quality 100)",
+     "Quartz (dev_tool, large, 3640 users, $182/day, quality 100)",
+     "Heron (dev_tool, large, 3882 users, $194/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2340,
+   "kind": "notice",
+   "text": "Web App demand is cooling: -18%.",
+   "cash": 551047
+  },
+  {
+   "day": 2340,
+   "kind": "notice",
+   "text": "Game demand is cooling: -25%.",
+   "cash": 551047
+  },
+  {
+   "day": 2349,
+   "kind": "notice",
+   "text": "Neuron Foundry launched Velvet, a small saas platform (quality 68).",
+   "cash": 550979
+  },
+  {
+   "day": 2350,
+   "kind": "event.offered",
+   "text": "Job offer",
+   "cash": 550971,
+   "data": {
+    "text": "Tariq Moreau has an offer from Pixelforge and is thinking about leaving.",
+    "choices": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 2350,
+   "kind": "event.choice",
+   "text": "Job offer: Make a counter-offer",
+   "cash": 540771,
+   "data": {
+    "options": [
+     "Make a counter-offer",
+     "Let them go"
+    ]
+   }
+  },
+  {
+   "day": 2350,
+   "kind": "notice",
+   "text": "Tariq Moreau decided to stay.",
+   "cash": 540771
+  },
+  {
+   "day": 2351,
+   "kind": "notice",
+   "text": "Delivered to Lakeside Clinic: +$30,550 on top of the $30,550 deposit.",
+   "cash": 571313
+  },
+  {
+   "day": 2357,
+   "kind": "promote",
+   "text": "Promoted Kaleido (large)",
+   "cash": 509808,
+   "data": {
+    "cost": 61450,
+    "users": 2261,
+    "effect": 100
+   }
+  },
+  {
+   "day": 2357,
+   "kind": "product.retired",
+   "text": "Retired Quartz",
+   "cash": 509808,
+   "data": {
+    "users": 3614,
+    "ageDays": 547,
+    "revenue": 156714,
+    "hit": false,
+    "price": 0
+   }
+  },
+  {
+   "day": 2357,
+   "kind": "notice",
+   "text": "Quartz was retired.",
+   "cash": 509808
+  },
+  {
+   "day": 2358,
+   "kind": "notice",
+   "text": "Bluebird Labs launched Garnet, a flagship saas platform (quality 82).",
+   "cash": 509667
+  },
+  {
+   "day": 2362,
+   "kind": "notice",
+   "text": "Pocketwave launched Bloom, a small developer tool (quality 64).",
+   "cash": 509574
+  },
+  {
+   "day": 2364,
+   "kind": "research.start",
+   "text": "Started researching Marketing department",
+   "cash": 499796,
+   "data": {
+    "id": "marketing_dept"
+   }
+  },
+  {
+   "day": 2370,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 501445,
+   "data": {
+    "income": 1808,
+    "burn": 1438,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 15851,
+    "lifetimeRevenue": 1936697,
+    "research": 4,
+    "productList": [
+     "Lyric (dev_tool, large, 3948 users, $197/day, quality 100)",
+     "Xenon (dev_tool, large, 3950 users, $197/day, quality 100)",
+     "Kaleido (saas_platform, large, 4064 users, $1219/day, quality 100)",
+     "Heron (dev_tool, large, 3890 users, $194/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2370,
+   "kind": "notice",
+   "text": "Northwind Software launched Radish, a medium developer tool (quality 72).",
+   "cash": 501445
+  },
+  {
+   "day": 2370,
+   "kind": "notice",
+   "text": "Developer Tool demand is surging: +21%.",
+   "cash": 501445
+  },
+  {
+   "day": 2376,
+   "kind": "notice",
+   "text": "Tidewater Digital launched Nexus, a large saas platform (quality 84).",
+   "cash": 504401
+  },
+  {
+   "day": 2376,
+   "kind": "notice",
+   "text": "Stratus Works launched Summit, a small developer tool (quality 57).",
+   "cash": 504401
+  },
+  {
+   "day": 2388,
+   "kind": "notice",
+   "text": "Neuron Foundry launched Lemur, a small developer tool (quality 66).",
+   "cash": 513541
+  },
+  {
+   "day": 2389,
+   "kind": "notice",
+   "text": "Research complete: Marketing department. Everything you sell earns 3% more.",
+   "cash": 519472
+  },
+  {
+   "day": 2389,
+   "kind": "notice",
+   "text": "Milestone: Curious minds. Finish 5 pieces of research. +$5,000.",
+   "cash": 519472
+  },
+  {
+   "day": 2389,
+   "kind": "research.start",
+   "text": "Started researching Brand partnerships",
+   "cash": 499472,
+   "data": {
+    "id": "brand_partnerships"
+   }
+  },
+  {
+   "day": 2396,
+   "kind": "event.offered",
+   "text": "Tax audit",
+   "cash": 507140,
+   "data": {
+    "text": "The tax office wants to take a closer look at your books.",
+    "choices": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 2396,
+   "kind": "event.choice",
+   "text": "Tax audit: Contest it",
+   "cash": 476740,
+   "data": {
+    "options": [
+     "Pay the fine",
+     "Contest it"
+    ]
+   }
+  },
+  {
+   "day": 2396,
+   "kind": "notice",
+   "text": "You lost the dispute and paid $30,400.",
+   "cash": 476740
+  },
+  {
+   "day": 2400,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 481103,
+   "data": {
+    "income": 2487,
+    "burn": 1438,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 17850,
+    "lifetimeRevenue": 2004904,
+    "research": 5,
+    "productList": [
+     "Lyric (dev_tool, large, 3952 users, $204/day, quality 100)",
+     "Xenon (dev_tool, large, 3957 users, $204/day, quality 100)",
+     "Kaleido (saas_platform, large, 6090 users, $1882/day, quality 100)",
+     "Heron (dev_tool, large, 3852 users, $198/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2429,
+   "kind": "notice",
+   "text": "Research complete: Brand partnerships. Everything you sell earns another 3% more.",
+   "cash": 501927
+  },
+  {
+   "day": 2429,
+   "kind": "research.start",
+   "text": "Started researching Marketing automation",
+   "cash": 456927,
+   "data": {
+    "id": "marketing_automation"
+   }
+  },
+  {
+   "day": 2430,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 457436,
+   "data": {
+    "income": 1947,
+    "burn": 1438,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 7,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 16022,
+    "lifetimeRevenue": 2069387,
+    "research": 6,
+    "productList": [
+     "Lyric (dev_tool, large, 3981 users, $211/day, quality 100)",
+     "Xenon (dev_tool, large, 4010 users, $213/day, quality 100)",
+     "Kaleido (saas_platform, large, 4137 users, $1317/day, quality 100)",
+     "Heron (dev_tool, large, 3894 users, $207/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2435,
+   "kind": "notice",
+   "text": "Basement Games launched Quartet, a small saas platform (quality 66).",
+   "cash": 459769
+  },
+  {
+   "day": 2435,
+   "kind": "project.start",
+   "text": "Started a large Mobile App",
+   "cash": 459769,
+   "data": {
+    "type": "mobile_app",
+    "size": "large",
+    "features": [
+     "Cloud sync",
+     "Push notifications",
+     "Guided onboarding",
+     "Dark mode",
+     "User accounts"
+    ],
+    "office": "HQ",
+    "demand": 1.08
+   }
+  },
+  {
+   "day": 2437,
+   "kind": "notice",
+   "text": "Sparkwise launched Impala, a small developer tool (quality 79).",
+   "cash": 460608
+  },
+  {
+   "day": 2437,
+   "kind": "notice",
+   "text": "Neuron Foundry launched Banyan, a small saas platform (quality 65).",
+   "cash": 460608
+  },
+  {
+   "day": 2448,
+   "kind": "event.offered",
+   "text": "Alpha build",
+   "cash": 464297,
+   "data": {
+    "text": "Harvest is halfway done, and the alpha build runs. What do you do with it?",
+    "choices": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 2448,
+   "kind": "event.choice",
+   "text": "Alpha build: Preview it to the press",
+   "cash": 457497,
+   "data": {
+    "options": [
+     "Preview it to the press",
+     "Run a closed alpha",
+     "Keep it under wraps"
+    ]
+   }
+  },
+  {
+   "day": 2448,
+   "kind": "notice",
+   "text": "The preview got people talking: +15% users at launch.",
+   "cash": 457497
+  },
+  {
+   "day": 2460,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 460023,
+   "data": {
+    "income": 1598,
+    "burn": 1447,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 4,
+    "users": 14931,
+    "lifetimeRevenue": 2121924,
+    "research": 6,
+    "productList": [
+     "Lyric (dev_tool, large, 3976 users, $211/day, quality 100)",
+     "Xenon (dev_tool, large, 4007 users, $213/day, quality 100)",
+     "Kaleido (saas_platform, large, 3038 users, $967/day, quality 100)",
+     "Heron (dev_tool, large, 3909 users, $207/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2479,
+   "kind": "notice",
+   "text": "Research complete: Marketing automation. Set a product to promote itself whenever the bank can spare it, so you stop clicking Promote every month.",
+   "cash": 461500
+  },
+  {
+   "day": 2481,
+   "kind": "ship",
+   "text": "Shipped Harvest",
+   "cash": 443625,
+   "data": {
+    "quality": 100,
+    "campaign": "large",
+    "kind": "new",
+    "hitChance": 29.1
+   }
+  },
+  {
+   "day": 2481,
+   "kind": "ship.result",
+   "text": "Harvest is out",
+   "cash": 443625,
+   "data": {
+    "quality": 100,
+    "reach": 306818,
+    "bugs": 19,
+    "hit": false,
+    "update": false
+   }
+  },
+  {
+   "day": 2487,
+   "kind": "notice",
+   "text": "Neuron Foundry launched Comet, a small saas platform (quality 64).",
+   "cash": 444405
+  },
+  {
+   "day": 2490,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 444932,
+   "data": {
+    "income": 1631,
+    "burn": 1448,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 55646,
+    "lifetimeRevenue": 2168133,
+    "research": 7,
+    "productList": [
+     "Lyric (dev_tool, large, 4018 users, $213/day, quality 100)",
+     "Xenon (dev_tool, large, 4043 users, $214/day, quality 100)",
+     "Kaleido (saas_platform, large, 2439 users, $776/day, quality 100)",
+     "Heron (dev_tool, large, 3939 users, $209/day, quality 100)",
+     "Harvest (mobile_app, large, 41208 users, $219/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2490,
+   "kind": "notice",
+   "text": "Game demand is cooling: -17%.",
+   "cash": 444932
+  },
+  {
+   "day": 2494,
+   "kind": "notice",
+   "text": "Sparkwise launched Pylon, a medium mobile app (quality 80).",
+   "cash": 445753
+  },
+  {
+   "day": 2501,
+   "kind": "notice",
+   "text": "Ironclad Systems launched Cairn, a large developer tool (quality 82).",
+   "cash": 447501
+  },
+  {
+   "day": 2503,
+   "kind": "project.update",
+   "text": "Started an update to Harvest",
+   "cash": 448062,
+   "data": {
+    "features": [
+     "AI assistant"
+    ],
+    "users": 70287,
+    "ageDays": 22,
+    "office": "HQ"
+   }
+  },
+  {
+   "day": 2504,
+   "kind": "notice",
+   "text": "Lumen Interactive launched Warp, a medium mobile app (quality 65).",
+   "cash": 448352
+  },
+  {
+   "day": 2508,
+   "kind": "notice",
+   "text": "Luca Kowalski is ready to be promoted to senior. Don't keep them waiting too long.",
+   "cash": 449564
+  },
+  {
+   "day": 2511,
+   "kind": "notice",
+   "text": "Tidewater Digital's new web app Ultra is taking off. Expect a crowded market.",
+   "cash": 450530
+  },
+  {
+   "day": 2512,
+   "kind": "notice",
+   "text": "Zara Costa is ready to be promoted to senior. Don't keep them waiting too long.",
+   "cash": 450861
+  },
+  {
+   "day": 2513,
+   "kind": "notice",
+   "text": "Northwind Software's new developer tool Voyage is taking off. Expect a crowded market.",
+   "cash": 451197
+  },
+  {
+   "day": 2520,
+   "kind": "month",
+   "text": "Month end",
+   "cash": 453645,
+   "data": {
+    "income": 1808,
+    "burn": 1455,
+    "reputation": 100,
+    "stage": "Indie studio",
+    "rank": 8,
+    "employees": 12,
+    "offices": 1,
+    "products": 5,
+    "users": 111925,
+    "lifetimeRevenue": 2220297,
+    "research": 7,
+    "productList": [
+     "Lyric (dev_tool, large, 3913 users, $208/day, quality 100)",
+     "Xenon (dev_tool, large, 3932 users, $209/day, quality 100)",
+     "Kaleido (saas_platform, large, 2102 users, $669/day, quality 100)",
+     "Heron (dev_tool, large, 3820 users, $203/day, quality 100)",
+     "Harvest (mobile_app, large, 98158 users, $521/day, quality 100)"
+    ]
+   }
+  },
+  {
+   "day": 2521,
+   "kind": "ship",
+   "text": "Shipped Harvest",
+   "cash": 453987,
+   "data": {
+    "quality": 98,
+    "campaign": "none",
+    "kind": "update"
+   }
+  },
+  {
+   "day": 2521,
+   "kind": "ship.result",
+   "text": "Harvest is out",
+   "cash": 453987,
+   "data": {
+    "quality": 98,
+    "reach": 360962,
+    "bugs": 2,
+    "hit": false,
+    "update": true
+   }
+  }
+ ]
+}

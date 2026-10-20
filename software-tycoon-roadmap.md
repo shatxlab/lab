@@ -120,33 +120,63 @@ above). Still open: whether that tamed auto-promotion enough (check against a ne
 otherwise diminishing returns, a cap, or a cost that grows), a garage that has
 something to buy, and the tedium of the contract-only start.
 
+### Built: the roadmap pass (2026-10-20)
+
+Saves stay version 5: every new field is optional or defaulted on load (`dropRemovedContent`).
+
+- **Garage hustle.** Starting a new product, or growing one, costs a *budget*:
+  `BUDGET_PER_POINT` (15) per point of work (`projectBudget`), and the bank must keep
+  `BUDGET_RESERVE_DAYS` of wages after paying (`budgetBlocker`). `START_MONEY` is 8k, so the
+  first product with a few features costs more than the garage starts with and contracts are
+  the way in. Updates are free. Bot check: contract-taking bots end up where they were; bots that
+  never take client work now go bankrupt in the garage, by design.
+- **Knowledge** (`sim/knowledge.ts`). Working days on a product type and on a product make a
+  person faster on them (`KNOWLEDGE_*`, up to +12% and +15%); shown on the person's page. A
+  *Knowledge base* (research) lets a team keep 40% of a leaver's knowledge (`depart`).
+- **Teams.** `Employee.teamId` puts a builder on another office's project (`assignTeam`), at
+  `REMOTE_SPEED` (0.9); the Team dialog has a "Works on" select. Desks stay with the office.
+- **Analyst and Product Manager.** Roles `analyst` and `pm` (`Employee.analysis`), laptop on the
+  desk, no project work. Analysts need the *User research* research and gather insight
+  (`sim/insight.ts`): spend `SURVEY_COST` to study an audience, which then shows loved/fine/shrug
+  tags in the feature list. Without an analyst, launch feedback arrives over 20/60/120 days
+  (`feedbackFor`). A Senior analyst becomes a PM (*Product management* research, `becomePm`, one
+  per office, Mid to Lead): hit chance and launch/growth reach go up with their level
+  (`sim/direction.ts`).
+- **Research as mechanisms.** `stage` gates on nodes; *Audience study* (repeatable, money for an
+  audience reveal), *Knowledge base*, *Enterprise sales*, *Licensing programme*, and second and third
+  steps of the speed lines (CI pipeline II/III...). `ERA_WAGE_*`: wages rise 12% per early era, 4%
+  per late one.
+- **Act 2 income.** With *Enterprise sales*, a big client asks for a Large/Flagship product to be
+  customised (`ContractOffer.productId`, `sim/contracts.ts`); delivery pays by what the product
+  earns and counts as a release of it. With *Licensing programme*, a Flagship can be licensed:
+  `LICENSE_SHARE` of its income on top while it stays fresh and clean (`sim/licensing.ts`).
+- **Content.** Four more eras (trust years, agent era, spatial years, sovereign cloud; to year 17),
+  five product types (Marketplace, Creative Suite, Fintech App, Data Platform, XR Experience),
+  fourteen features with audiences, milestones reworked for a portfolio (team of 4, shelf of 5,
+  past products count), and "Tech giant" legacy goals that never gate. Newcomer studios are
+  generated (`generatedNewcomer`) for eras with no hand-written one.
+- **Tests** for the ranking, buyouts, eras, crowding and `settledUsers` (`competition.test.ts`).
+
+Open from this pass: the audience-weights reveal could also come from a PM automatically; bots
+still overexpand late (they hire up to the bank, never fire), so retune from a human run.
+
 ### Agreed, not built
 
-- **Offices.** Keep 4: US garage, then a US office; Europe is the second office at a
-  much higher price and opens a market (audience, localisation); offices 3 and 4 are
-  one more in each region.
-- **Garage hustle.** Make the first real product cost more than the starting money,
-  so contracts are the way in. Look for a non-contract mechanism later (grants,
-  pre-orders, sponsorship).
-- **Client work in Act 2.** It fades by the first office; replace it with enterprise
-  contracts and licensing tied to flagships.
-- **People and knowledge.** Per-product and per-type knowledge on each employee
-  (an RPG element); manual team assignment (split EU/US allowed); a new **Analyst**
-  (Junior to Senior) who can become **Product Manager** (Middle to Lead); laptop
-  only, one PM per office. Analysts produce insights that reveal hidden facts; the PM
-  owns a product's direction (bonus to feature fit and hit chance). Needs new
-  character art, reusing existing characters.
-- **Competitors.** Today's buyout (`acquire` in `sim/rivals.ts`: an industry leader,
-  stage `ACQUISITION_STAGE`, pays `ACQUISITION_DAYS` of the rival's income, and gets
-  its products and other business) gives little. Redesign as *Absorb* a rival: price
-  from its income and growth; it leaves the
-  ranking; choose which of its products to keep (they take portfolio slots); generated
-  staff with expertise in its focus types; its office, in its region, replaces
-  building office 3 or 4. A *Subsidiary* option (independent, sends a share of its
-  income) comes later. Rivals should grow so buying early is a bargain.
-- **Research** as mechanisms, like Incident management and Marketing automation (both
-  built), gated by company stage; the rest of the 16 items are mostly plain bonuses.
-- **Rival names** from a generator, so later newcomers do not depend on a hand list.
+- **Regions (US and Europe), planned with the player.** Market plus hiring pool: a product's
+  subscribers are tracked separately per region (`users` and `reach` split US/EU), so Act 2 is about
+  keeping the hit alive in both markets and tending up to 5 products at different stages in each.
+  Proposed: Europe office opens the EU market; reaching EU users also needs a localisation release
+  per product; each audience has an EU weight (size, pay, tastes); each region has its own candidate
+  pool and wage level; rivals get a home region; independent crowding per region. Not decided: how
+  much a localisation release costs, and whether the two regions share market room.
+- **Offices.** Keep 4: US garage, then a US office; Europe is the second office at a much higher
+  price and opens its market; offices 3 and 4 are one more in each region.
+- **Competitors.** Today's buyout (`acquire` in `sim/rivals.ts`) gives little. Redesign as *Absorb*
+  a rival: price from its income and growth; it leaves the ranking; choose which of its products to
+  keep (they take portfolio slots); generated staff with expertise in its focus types; its office, in
+  its region, replaces building office 3 or 4. A *Subsidiary* option (independent, sends a share of
+  its income) comes later. Rivals should grow so buying early is a bargain. Needs regions first.
+- **Garage hustle, later.** A non-contract way in (grants, pre-orders, sponsorship).
 
 ## First real playthrough (2026-10-15)
 
@@ -352,8 +382,7 @@ Balance so far comes mostly from bots, plus the one human run above.
 
 ## Content that runs out
 
-- **The last era starts in year 9** and nothing changes after it: add eras or
-  make them cycle. (The human run reached year 12 and saw nothing change.)
+- ~~The last era starts in year 9~~ Built: eras to year 17.
 - **Tech giant has no goals.** The long game stays a journey; the redesign above
   adds a legacy summary and no IPO-style reset. Options still open: an endless mode
   with growing rivals; a legacy / new-studio start.

@@ -165,6 +165,27 @@ export const TOOLS: readonly ToolEntry[] = [
         "Hire a team, build products, ship, and grow a studio — a free management sim that runs and saves entirely in your browser.",
     },
   },
+  {
+    id: "tower",
+    path: "/tower",
+    category: "games",
+    files: {
+      en: "single-player · made for phones · saves locally",
+      ru: "одиночная · для телефона · сохраняется локально",
+    },
+    title: { en: "Lone Tower", ru: "Одинокая башня" },
+    description: {
+      en: "Hold a lone archer tower against waves from every side: tap to rain volleys, pick an upgrade after each wave, and buy perks with the gold.",
+      ru: "Удержите одинокую башню лучника от волн врагов со всех сторон: обрушивайте залпы касанием, выбирайте улучшение после каждой волны и покупайте бонусы за золото.",
+    },
+    keywords:
+      "tower defense archer arrows waves roguelike upgrades casual arcade башня лучник стрелы волны защита улучшения аркада",
+    seo: {
+      title: "Lone Tower — a casual archer tower defense",
+      description:
+        "Defend a lone archer tower against endless waves: rain volleys of arrows, pick upgrades, beat your best wave. Free, offline, made for phones.",
+    },
+  },
 ];
 
 export function toolHref(tool: ToolEntry): string {

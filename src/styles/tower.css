@@ -1,0 +1,409 @@
+/*
+ * Lone Tower styling, scoped under .tower-root.
+ *
+ * The game keeps its own meadow-and-parchment palette in both lab themes:
+ * the field is drawn on canvas in fixed colours, so the chrome around it
+ * matches that instead of the site tokens.
+ */
+
+.tower-root {
+  --tower-bg: #24391f;
+  --tower-panel: #fbf5e6;
+  --tower-ink: #2b2418;
+  --tower-muted: #6d6250;
+  --tower-line: rgba(43, 36, 24, 0.16);
+  --tower-accent: #d9792b;
+  --tower-accent-ink: #ffffff;
+  --tower-good: #4fb35a;
+  --tower-warn: #f0a63a;
+  --tower-bad: #e0483f;
+  --tower-radius: 1rem;
+  color-scheme: light;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Pinned to the window like the tycoon game: an installed Android app sizes the page chain taller than the window. */
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--tower-bg);
+  color: var(--tower-ink);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.tower-root :where(button) {
+  font: inherit;
+  cursor: pointer;
+}
+
+.tower-root :where(button:disabled) {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.tower-root :where(button, a, canvas):focus-visible {
+  outline: 3px solid #ffd27a;
+  outline-offset: 2px;
+}
+
+.tower-root h1,
+.tower-root h2 {
+  margin: 0;
+  line-height: 1.15;
+}
+
+/* ------------------------------------------------------------- screens */
+
+.tower-screen {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 0%, rgba(140, 197, 107, 0.35), transparent 28rem),
+    var(--tower-bg);
+}
+
+.tower-panel {
+  width: min(100%, 24rem);
+  padding: 1.4rem 1.25rem;
+  border-radius: var(--tower-radius);
+  background: var(--tower-panel);
+  color: var(--tower-ink);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.tower-menu h1,
+.tower-perks h1 {
+  font-size: 1.9rem;
+  letter-spacing: -0.01em;
+}
+
+.tower-mark {
+  display: block;
+  width: 6rem;
+  height: 6rem;
+  margin: 0 auto 0.75rem;
+}
+
+.tower-tagline {
+  margin: 0.5rem 0 0;
+  color: var(--tower-muted);
+  line-height: 1.45;
+}
+
+.tower-meta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 1rem 0 0;
+  font-weight: 600;
+}
+
+.tower-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.tower-button {
+  min-height: 3rem;
+  padding: 0.7rem 1.2rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: var(--tower-accent);
+  color: var(--tower-accent-ink);
+  font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 0 3px 0 #a5571a;
+}
+
+.tower-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #a5571a;
+}
+
+.tower-button-quiet {
+  background: transparent;
+  color: var(--tower-ink);
+  box-shadow: inset 0 0 0 2px var(--tower-line);
+}
+
+.tower-button-quiet:active:not(:disabled) {
+  box-shadow: inset 0 0 0 2px var(--tower-line);
+}
+
+.tower-button-small {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.tower-howto {
+  margin: 1.25rem 0 0;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--tower-line);
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+  color: var(--tower-muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.tower-home {
+  display: inline-block;
+  margin-top: 1rem;
+  color: var(--tower-muted);
+  font-size: 0.9rem;
+}
+
+.tower-perk-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+  text-align: left;
+}
+
+.tower-perk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.8rem;
+  box-shadow: inset 0 0 0 1px var(--tower-line);
+}
+
+.tower-perk p {
+  margin: 0;
+}
+
+.tower-perk-name {
+  font-weight: 700;
+}
+
+.tower-perk-level {
+  color: var(--tower-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.tower-perk-description {
+  margin-top: 0.15rem;
+  color: var(--tower-muted);
+  font-size: 0.9rem;
+}
+
+/* ----------------------------------------------------------------- run */
+
+.tower-run {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem max(0.5rem, env(safe-area-inset-bottom));
+  gap: 0.4rem;
+  color: #fbf5e6;
+}
+
+.tower-hud {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+}
+
+.tower-hud-wave {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.tower-hud-gold {
+  color: #ffd27a;
+}
+
+.tower-icon-button {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+}
+
+.tower-tag {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--tower-bad);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tower-tag-best {
+  margin: 0.5rem auto 0;
+  background: var(--tower-good);
+}
+
+.tower-hp {
+  position: relative;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.tower-hp-fill {
+  height: 100%;
+  background: var(--tower-good);
+  transition: width 120ms linear;
+}
+
+.tower-hp-fill[data-level="warn"] {
+  background: var(--tower-warn);
+}
+
+.tower-hp-fill[data-level="bad"] {
+  background: var(--tower-bad);
+}
+
+.tower-hp-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.tower-field {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 0.8rem;
+  overflow: hidden;
+}
+
+.tower-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.tower-volley {
+  margin: 0;
+  min-height: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.tower-volley[data-ready] {
+  opacity: 1;
+  color: #ffd27a;
+}
+
+/* Upgrade picker, pause and game over sit over the field. */
+.tower-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(20, 30, 15, 0.55);
+  overflow-y: auto;
+}
+
+.tower-overlay .tower-panel h2 {
+  font-size: 1.4rem;
+}
+
+.tower-kicker {
+  margin: 0 0 0.3rem;
+  color: var(--tower-accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tower-choices {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.tower-choice {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.75rem;
+  padding: 0.85rem 0.95rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: #ffffff;
+  color: var(--tower-ink);
+  text-align: left;
+  box-shadow: inset 0 0 0 2px var(--tower-line), 0 3px 0 var(--tower-line);
+}
+
+.tower-choice:hover,
+.tower-choice:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--tower-accent), 0 3px 0 var(--tower-accent);
+}
+
+.tower-choice-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.tower-choice-level {
+  color: var(--tower-accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  align-self: center;
+}
+
+.tower-choice-description {
+  grid-column: 1 / -1;
+  color: var(--tower-muted);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.tower-result {
+  margin: 0.5rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.tower-stats {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--tower-muted);
+  display: grid;
+  gap: 0.25rem;
+}

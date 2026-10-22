@@ -6,6 +6,7 @@ import CouplesGame from "@/components/couples/CouplesGame";
 import CrosswordGame from "@/components/crossword/CrosswordGame";
 import BoardApp from "@/components/board/BoardApp";
 import FocusApp from "@/components/focus/FocusApp";
+import TowerApp from "@/components/tower/TowerApp";
 import LangToggle from "@/components/apps/LangToggle";
 import ThemeToggle from "@/components/apps/ThemeToggle";
 import ToolsGrid from "@/components/apps/ToolsGrid";
@@ -33,6 +34,7 @@ describe.each([
     ["Couples", () => <CouplesGame />],
     ["Whiteboard", () => <BoardApp />],
     ["Focus office", () => <FocusApp />],
+    ["Lone Tower", () => <TowerApp />],
   ];
 
   it.each(cases)("%s has no detectable violations", async (_name, render) => {

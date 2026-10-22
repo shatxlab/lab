@@ -117,19 +117,17 @@ describe('absorbing a rival', () => {
     expect(acquisitionBlocker(state, rival)).toBe('Move out of the garage first')
   })
 
-  it('replaces the third or fourth office: not before the European one, not past the limit, not in a full region', () => {
+  it('moves the rival\'s team into a floor of your building in its region, while that building has one free', () => {
     const state = giantState()
+    state.money = 1e12
     const us = rivalIn(state, 'us')
     const eu = rivalIn(state, 'eu')
     state.offices.splice(1, 1)
-    expect(acquisitionBlocker(state, us)).toMatch(/European office first/)
-    openOffice(state) // Europe
-    expect(acquisitionBlocker(state, eu)).toBeNull()
-    openOffice(state, 'eu')
-    expect(acquisitionBlocker(state, eu)).toMatch(/no room for another office in Europe/)
     expect(acquisitionBlocker(state, us)).toBeNull()
-    openOffice(state, 'us')
-    expect(acquisitionBlocker(state, us)).toMatch(/four offices/)
+    expect(acquisitionBlocker(state, eu)).toBeNull()
+    while (openOffice(state, 'eu').ok);
+    expect(acquisitionBlocker(state, eu)).toMatch(/Europe has no floor left/)
+    expect(acquisitionBlocker(state, us)).toBeNull()
   })
 
   it('refuses a studio that does not exist, and products that are not its own', () => {

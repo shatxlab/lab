@@ -201,7 +201,7 @@ export function OfferDialog() {
       </p>
       <p className="muted">
         Selling ends the run. If you say no, they will come back with a slightly better offer
-        {state.exit.declined > 0 ? ` (you have turned down ${state.exit.declined})` : ''}, but only for about {offerWindowLeft(state) ?? 0} more days: then buyers move on. Once you move into an office, nobody will buy the studio any more.
+        {state.exit.declined > 0 ? ` (you have turned down ${state.exit.declined})` : ''}, but only for about {offerWindowLeft(state) ?? 0} more days: then buyers move on. Moving into a rented floor is fine; once the studio takes a second floor (or opens in Europe) it is a building, and nobody will buy it any more.
       </p>
       <div className="actions">
         <button onClick={() => store.declineBuyout()}>Not yet</button>

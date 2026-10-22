@@ -3,16 +3,7 @@ import { EU_PAY, EU_TYPE_SIZE } from '@/lib/tycoon/data/regions'
 import { EU_OFFICE_COST, EU_WAGE, LAUNCH_ADOPTERS, NEW_OFFICE_COST, REGION_OFFICE_LIMIT, RIVAL_ABROAD } from '@/lib/tycoon/sim/balance'
 import { generateEmployee, hire, hiringOffice, refreshCandidates, salaryFor, salaryOf } from '@/lib/tycoon/sim/hiring'
 import { localiseBlocker } from '@/lib/tycoon/sim/lifecycle'
-import {
-  hasEuropeOffice,
-  officeName,
-  officesIn,
-  openableRegions,
-  openOffice,
-  openOfficeBlocker,
-  regionOf,
-  transfer,
-} from '@/lib/tycoon/sim/offices'
+import { floorOf, hasEuropeOffice, newOfficeCost, officeName, officesIn, openOffice, openOfficeBlocker, openableRegions, regionOf, transfer } from '@/lib/tycoon/sim/offices'
 import { euGain, startLocalisation, shipProject } from '@/lib/tycoon/sim/project'
 import {
   marketCrowding,
@@ -44,15 +35,14 @@ function withEurope() {
 }
 
 describe('offices in two regions', () => {
-  it('start in the US; the second office is always Europe, and costs much more', () => {
+  it('start in the US; Europe is a building of its own, offered first, and costs much more', () => {
     const state = makeState(team())
     state.offices[0].kind = 'office'
     state.stage = 3
     state.money = 5_000_000
     expect(regionOf(state.offices[0])).toBe('us')
-    expect(openableRegions(state)).toEqual(['eu'])
-    expect(openOfficeBlocker(state, 'us')).toBe('Europe is the second office')
-    expect(openOffice(state, 'us').ok).toBe(false)
+    expect(openableRegions(state)).toEqual(['eu', 'us'])
+    expect(newOfficeCost(state, 'us')).toBe(NEW_OFFICE_COST)
     expect(EU_OFFICE_COST).toBeGreaterThan(NEW_OFFICE_COST * 2)
     const money = state.money
     expect(openOffice(state).ok).toBe(true)
@@ -61,24 +51,25 @@ describe('offices in two regions', () => {
     expect(hasEuropeOffice(state)).toBe(true)
   })
 
-  it('split two and two: the third and fourth are one more in each region', () => {
+  it('grow each building floor by floor, up to its limit', () => {
     const state = withEurope()
+    state.money = 1e9
     expect(openableRegions(state).sort()).toEqual(['eu', 'us'])
-    expect(openOffice(state, 'us').ok).toBe(true)
+    while (officesIn(state, 'us').length < REGION_OFFICE_LIMIT) expect(openOffice(state, 'us').ok).toBe(true)
     expect(openableRegions(state)).toEqual(['eu'])
-    expect(openOfficeBlocker(state, 'us')).toBe('No room for another office in US')
-    expect(openOffice(state, 'eu').ok).toBe(true)
-    expect(state.offices).toHaveLength(4)
-    expect(officesIn(state, 'us')).toHaveLength(REGION_OFFICE_LIMIT)
+    expect(openOfficeBlocker(state, 'us')).toBe(`HQ has all its ${REGION_OFFICE_LIMIT} floors`)
+    while (officesIn(state, 'eu').length < REGION_OFFICE_LIMIT) expect(openOffice(state, 'eu').ok).toBe(true)
     expect(officesIn(state, 'eu')).toHaveLength(REGION_OFFICE_LIMIT)
-    expect(openOfficeBlocker(state)).toBe('No more offices available')
+    expect(openOfficeBlocker(state)).toBe('Both buildings are full')
   })
 
-  it('are named for where they are', () => {
+  it('are named for the building and, once it has more than one, the floor', () => {
     const state = withEurope()
+    expect(state.offices.map((o) => officeName(state, o))).toEqual(['HQ', 'Europe'])
     openOffice(state, 'us')
     openOffice(state, 'eu')
-    expect(state.offices.map((o) => officeName(state, o))).toEqual(['HQ', 'Europe', 'US 2', 'Europe 2'])
+    expect(state.offices.map((o) => officeName(state, o))).toEqual(['HQ 1', 'Europe 1', 'HQ 2', 'Europe 2'])
+    expect(state.offices.map((o) => floorOf(state, o))).toEqual([1, 1, 2, 2])
   })
 
   it('keep people in their region: a move across is refused, working on the other team is not', () => {

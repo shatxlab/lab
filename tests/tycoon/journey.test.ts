@@ -77,10 +77,11 @@ describe('the garage and offices', () => {
     const third = newOfficeCost(state)
     expect(openOffice(state).ok).toBe(true)
     expect(newOfficeCost(state)).toBeGreaterThan(third)
+    state.money = 1e9
     while (openOffice(state).ok);
     expect(state.offices).toHaveLength(MAX_OFFICES)
     expect(new Set(state.offices.map((o) => o.theme)).size).toBe(MAX_OFFICES)
-    expect(openOfficeBlocker(state)).toBe('No more offices available')
+    expect(openOfficeBlocker(state)).toBe('Both buildings are full')
 
     const garage = grownStudio()
     garage.offices[0].kind = 'garage'

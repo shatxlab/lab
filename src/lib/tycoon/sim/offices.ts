@@ -19,13 +19,28 @@ export function officesIn(state: GameState, region: Region): Office[] {
   return state.offices.filter((o) => regionOf(o) === region)
 }
 
-/** "Garage", "HQ", "Europe", "US 2"...: the first real office is headquarters; the others are named for where they are. */
+/** The name of a region's building: headquarters in the US, and the European office. */
+export const buildingName = (region: Region): string => (region === 'us' ? 'HQ' : REGION_NAME.eu)
+
+/** Which floor of its building an office is, from 1 at the bottom. */
+export function floorOf(state: GameState, office: Office): number {
+  return officesIn(state, regionOf(office)).indexOf(office) + 1
+}
+
+/** "Garage", "HQ", "Europe", or with more floors "HQ 2", "Europe 3": the building and the floor. */
 export function officeName(state: GameState, office: Office): string {
   if (office.kind === 'garage') return 'Garage'
   const region = regionOf(office)
-  const index = officesIn(state, region).indexOf(office)
-  if (region === 'us') return index <= 0 ? 'HQ' : `US ${index + 1}`
-  return index <= 0 ? REGION_NAME.eu : `${REGION_NAME.eu} ${index + 1}`
+  const name = buildingName(region)
+  return officesIn(state, region).length <= 1 ? name : `${name} ${floorOf(state, office)}`
+}
+
+/**
+ * True while the studio is small enough for a buyer: the garage, or a single rented floor. A second floor,
+ * or Europe, makes it a building, and nobody buys a building of a studio.
+ */
+export function canBeSold(state: GameState): boolean {
+  return state.offices.length === 1
 }
 
 /** True once the studio has an office in Europe: its market is open to localised products. */
@@ -135,43 +150,47 @@ export function moveOut(state: GameState): Result {
   if (blocker) return fail(blocker)
   const garage = state.offices.find((o) => o.kind === 'garage')!
   state.money -= MOVE_OUT_COST
-  state.exit.pending = null
   garage.kind = 'office'
   adjustMorale(state, OFFICE_UPGRADE_MORALE)
   return OK
 }
 
-/** The regions another office could open in: Europe is always the second office, and the last two split one and one. */
+/** The regions a floor could be added in: either building, until it has all its floors; the smaller building first. */
 export function openableRegions(state: GameState): Region[] {
-  if (state.offices.length === 1) return ['eu']
-  return REGIONS.filter((r) => officesIn(state, r).length < REGION_OFFICE_LIMIT)
+  return REGIONS.filter((r) => officesIn(state, r).length < REGION_OFFICE_LIMIT).sort((a, b) => officesIn(state, a).length - officesIn(state, b).length)
 }
 
-/** What the next office costs to open there: the first in Europe costs much more than the others. */
+/** What the next floor costs there: the first in Europe (a new building) costs much more than the others. */
 export function newOfficeCost(state: GameState, region: Region = openableRegions(state)[0] ?? 'us'): number {
   return region === 'eu' && !hasEuropeOffice(state) ? EU_OFFICE_COST : NEW_OFFICE_COST * state.offices.length
 }
 
-/** Why another office can't open now (in `region`, by default the first it could), or null when it can. */
+/** Why another floor can't be added now (in `region`, by default the first it could), or null when it can. */
 export function openOfficeBlocker(state: GameState, region?: Region): string | null {
-  if (state.offices.length >= MAX_OFFICES) return 'No more offices available'
+  if (state.offices.length >= MAX_OFFICES) return 'Both buildings are full'
   if (state.offices.some((o) => o.kind === 'garage')) return 'Move out of the garage first'
   if (state.stage < NEW_OFFICE_STAGE) return 'The studio is not ready yet'
   const where = region ?? openableRegions(state)[0]
-  if (!where || !openableRegions(state).includes(where)) {
-    return state.offices.length === 1 ? 'Europe is the second office' : `No room for another office in ${REGION_NAME[where ?? 'us']}`
-  }
+  if (!where || !openableRegions(state).includes(where)) return `${buildingName(where ?? 'us')} has all its ${REGION_OFFICE_LIMIT} floors`
   return state.money < newOfficeCost(state, where) ? 'Not enough money' : null
 }
 
-/** Opens another office, empty, with its own colours. Move people in or hire into it. */
+/** Adds a floor to a building (or opens the European one), empty, with its own colours. Move people in or hire into it. */
 export function openOffice(state: GameState, region?: Region): Result {
   const blocker = openOfficeBlocker(state, region)
   if (blocker) return fail(blocker)
   const where = region ?? openableRegions(state)[0]
   state.money -= newOfficeCost(state, where)
   state.offices.push({ id: state.nextId++, kind: 'office', theme: state.offices.length, region: where, project: null })
+  closeSale(state)
   return OK
+}
+
+/** A building is no studio a buyer wants: any offer is withdrawn and none come again. */
+export function closeSale(state: GameState): void {
+  if (canBeSold(state) || state.exit.closed) return
+  state.exit.pending = null
+  state.exit.closed = true
 }
 
 /** Moves someone to another office's team. They leave their old project behind. */

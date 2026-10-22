@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BANKRUPT_AFTER_DEBT_DAYS, EXIT_FIRST_OFFER_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_WINDOW_DAYS } from '@/lib/tycoon/sim/balance'
 import { checkBankruptcy, dailyIncome } from '@/lib/tycoon/sim/economy'
 import { acceptBuyout, buyoutPrice, declineBuyout, exitDay, offerWindowLeft, retireStudio, studioWorth } from '@/lib/tycoon/sim/exit'
-import { moveOut } from '@/lib/tycoon/sim/offices'
+import { moveOut, openOffice } from '@/lib/tycoon/sim/offices'
 import { createInitialState, deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { drainEvents } from '@/lib/tycoon/sim/tick'
 import type { GameState } from '@/lib/tycoon/sim/types'
@@ -75,14 +75,17 @@ describe('selling the studio', () => {
     expect(state.exit.pending!.price).toBeGreaterThan(first)
   })
 
-  it('is gone for good once the studio has moved out', () => {
+  it('stays open in a single rented floor, and is gone for good once the studio takes a second', () => {
     const state = garageWithHit()
-    state.stage = 1
+    state.stage = 3
     state.money = 1_000_000
     exitDay(state)
     expect(state.exit.pending).not.toBeNull()
     expect(moveOut(state).ok).toBe(true)
+    expect(state.exit.pending).not.toBeNull()
+    expect(openOffice(state, 'us').ok).toBe(true)
     expect(state.exit.pending).toBeNull()
+    expect(state.exit.closed).toBe(true)
     state.day += 1000
     exitDay(state)
     expect(state.exit.pending).toBeNull()

@@ -175,11 +175,14 @@ export const RIVAL_SIZE_REPUTATION: Record<'small' | 'medium' | 'large' | 'flags
 // Regions: the US and Europe are separate markets with room of their own
 /** A rival's products weigh this much in the market abroad (in its home market they weigh in full). */
 export const RIVAL_ABROAD = 0.35
-/** Wages in Europe next to the US, and what the first European office costs (offices after that cost as in the US). */
+/** Wages in Europe next to the US, and what the first floor in Europe costs (floors after that cost as in the US). */
 export const EU_WAGE = 0.88
 export const EU_OFFICE_COST = 450000
-/** At most this many offices in a region, so the four offices split two and two. */
-export const REGION_OFFICE_LIMIT = 2
+/**
+ * The studio has one building in each region, headquarters in the US and one in Europe, of at most this many
+ * floors. Each floor is an office of its own (a team, its desks and its project), so the sim calls them offices.
+ */
+export const REGION_OFFICE_LIMIT = 5
 
 // Bugs
 /** Bugs a release ships with per point of work when QA has just reached its target. */
@@ -529,10 +532,10 @@ export const OFFICE_KINDS: Record<'garage' | 'office', OfficeSpec> = {
 
 /** Moving out of the garage into a real office. */
 export const MOVE_OUT_COST = 40000
-/** Opening another office: the first extra one costs this, each after that this much more again. */
+/** Adding a floor: the first extra one costs this, each after that this much more again. */
 export const NEW_OFFICE_COST = 150000
-/** One office per colour scheme the renderer has. */
-export const MAX_OFFICES = 4
+/** Floors in both buildings together. */
+export const MAX_OFFICES = 2 * REGION_OFFICE_LIMIT
 
 // Selling and retiring products
 /** A product earning at least this much a day is sold to a rival; one that earns less is only switched off. (What it earns, not its users: a cloud platform with a thousand users out-earns a game with a hundred thousand.) */

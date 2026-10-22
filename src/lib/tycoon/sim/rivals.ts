@@ -17,7 +17,6 @@ import {
   HIRE_MAX_LEVEL,
   LEADER_STAGE,
   TOP_SLIP_DAYS,
-  MAX_OFFICES,
   PORTFOLIO_LIMIT,
   DAYS_PER_MONTH,
   RIVAL_BUSINESS_CAP,
@@ -45,7 +44,7 @@ import { generateEmployee, ROLE_DISCIPLINE, ROLES, salaryOf } from './hiring'
 import { levelForSkill } from './careers'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
 import { trailingIncome } from './economy'
-import { inGarage, openableRegions } from './offices'
+import { buildingName, closeSale, inGarage, openableRegions } from './offices'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
 import { interestSince, revenueForUsers } from './products'
@@ -309,9 +308,8 @@ const regionOfRival = (rival: Rival): Region => rival.region ?? 'us'
 export function acquisitionBlocker(state: GameState, rival: Rival): string | null {
   if (state.stage < ACQUISITION_STAGE) return 'Only an established company can absorb a rival'
   if (inGarage(state)) return 'Move out of the garage first'
-  if (state.offices.length < 2) return 'Open your European office first: an absorbed studio takes the place of your third or fourth'
-  if (state.offices.length >= MAX_OFFICES) return 'You already have four offices: its office would have no room'
-  if (!openableRegions(state).includes(regionOfRival(rival))) return `There is no room for another office in ${REGION_NAME[regionOfRival(rival)]}`
+  // Its team moves into a floor of your building in its region.
+  if (!openableRegions(state).includes(regionOfRival(rival))) return `${buildingName(regionOfRival(rival))} has no floor left for its team`
   return state.money < acquisitionPrice(state, rival) ? 'Not enough money' : null
 }
 
@@ -356,6 +354,7 @@ export function acquire(state: GameState, rivalId: number, keepIds: readonly num
   const region = regionOfRival(rival)
   const office: Office = { id: state.nextId++, kind: 'office', theme: state.offices.length, region, project: null }
   state.offices.push(office)
+  closeSale(state)
   state.employees.push(...absorbedStaff(state, rival, office, kept))
   for (const p of kept) {
     state.products.push({
@@ -385,7 +384,7 @@ export function acquire(state: GameState, rivalId: number, keepIds: readonly num
   state.reputation = Math.min(REPUTATION_MAX, state.reputation + ACQUISITION_REPUTATION)
   state.events.push({
     type: 'notice',
-    text: `You absorbed ${rival.name}. Its ${REGION_NAME[region]} office is yours now${kept.length > 0 ? `, with ${kept.map((p) => p.name).join(', ')}` : ''}.`,
+    text: `You absorbed ${rival.name}. Its team moved into a new floor of ${buildingName(region)}${kept.length > 0 ? `, with ${kept.map((p) => p.name).join(', ')}` : ''}.`,
     sound: 'deal',
   })
   return OK

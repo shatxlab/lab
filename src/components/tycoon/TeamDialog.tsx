@@ -24,6 +24,8 @@ import { pmEffectText } from '@/lib/tycoon/sim/direction'
 import { eraWageFactor, hireCost, hiringOffice, payShare, salaryFor } from '@/lib/tycoon/sim/hiring'
 import {
   deskCount,
+  buildingName,
+  canBeSold,
   freeDesks,
   getOffice,
   monthlyRent,
@@ -189,27 +191,32 @@ export function TeamDialog() {
               onClick={() => (confirmMove ? report(store.moveOut()) : setConfirmMove(true))}
               onBlur={() => setConfirmMove(false)}
             >
-              {confirmMove ? 'Sure? Nobody will buy the studio after' : `Move · ${formatMoney(MOVE_OUT_COST)}`}
+              {confirmMove ? 'Sure? Leave the garage' : `Move · ${formatMoney(MOVE_OUT_COST)}`}
             </button>
           </div>
         ) : (
           state.offices.length < MAX_OFFICES && (
           <div className="upgrade">
             <span>
-              Open another office: <strong>{OFFICE_KINDS.office.desks} more desks</strong> and a team on its own project{openWhere === 'eu' && !state.offices.some((o) => regionOf(o) === 'eu') ? ', and the European market for your products' : ''}
+              {openWhere === 'eu' && !state.offices.some((o) => regionOf(o) === 'eu') ? (
+                <>Open a building in Europe: its first floor, <strong>{OFFICE_KINDS.office.desks} desks</strong> and a team, and the European market for your products</>
+              ) : (
+                <>Add a floor to {buildingName(openWhere)}: <strong>{OFFICE_KINDS.office.desks} more desks</strong> and a team on its own product</>
+              )}
+              {canBeSold(state) && state.signatureId !== null && !state.exit.closed && <small className="warn"> · nobody buys a studio with a building: offers stop</small>}
               {openOffice && openOffice !== 'Not enough money' && <small className="muted"> · {readiness(openOffice, 'an established company')}</small>}
             </span>
             {openRegions.length > 1 && (
-              <select aria-label="Where to open the office" value={openWhere} onChange={(event) => setOpenRegion((event.target as HTMLSelectElement).value as Region)}>
+              <select aria-label="Which building" value={openWhere} onChange={(event) => setOpenRegion((event.target as HTMLSelectElement).value as Region)}>
                 {openRegions.map((r) => (
                   <option key={r} value={r}>
-                    {REGION_NAME[r]}
+                    {buildingName(r)}
                   </option>
                 ))}
               </select>
             )}
             <button disabled={openOffice !== null} onClick={() => report(store.openOffice(openWhere))}>
-              Open in {REGION_NAME[openWhere]} · {formatMoney(newOfficeCost(state, openWhere))}
+              {state.offices.some((o) => regionOf(o) === openWhere) ? 'Add floor' : 'Open'} · {formatMoney(newOfficeCost(state, openWhere))}
             </button>
           </div>
           )

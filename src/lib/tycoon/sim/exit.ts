@@ -1,7 +1,7 @@
 import { DAYS_PER_MONTH, EXIT_BASE_MULTIPLE, EXIT_FIRST_OFFER_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_RAISE_PER_DECLINE, EXIT_WINDOW_DAYS } from './balance'
 import { trailingIncome } from './economy'
 import { logEntry, runSummary } from './journal'
-import { inGarage } from './offices'
+import { canBeSold } from './offices'
 import { lastReleaseDay } from './products'
 import { standings } from './rivals'
 import { fail, OK, type GameState, type Result } from './types'
@@ -30,18 +30,18 @@ export function offerWindowLeft(state: GameState): number | null {
 }
 
 /**
- * Once the garage has a hit that has earned for a few months, a bigger company makes an offer now and then; turned down, it comes
+ * Once a small studio (the garage, or one rented floor: `canBeSold`) has a hit that has earned for a few months, a bigger company makes an offer now and then; turned down, it comes
  * back a little better. Buyers lose interest for good `EXIT_WINDOW_DAYS` after the first offer.
  */
 export function exitDay(state: GameState): void {
   if (state.exit.pending) {
-    if (!inGarage(state)) state.exit.pending = null
+    if (!canBeSold(state)) state.exit.pending = null
     return
   }
-  if (!inGarage(state) || state.signatureId === null || state.exit.closed) return
+  if (!canBeSold(state) || state.signatureId === null || state.exit.closed) return
   if (state.exit.firstDay !== null && state.day - state.exit.firstDay > EXIT_WINDOW_DAYS) {
     state.exit.closed = true
-    state.events.push({ type: 'notice', text: 'Buyers have moved on: nobody is interested in the garage startup any more.' })
+    state.events.push({ type: 'notice', text: 'Buyers have moved on: nobody is interested in buying the studio any more.' })
     logEntry(state, 'exit.closed', 'Buyers lost interest', { declined: state.exit.declined })
     return
   }
@@ -58,7 +58,7 @@ export function exitDay(state: GameState): void {
 /** Sells the studio for the offered price: the run ends here. */
 export function acceptBuyout(state: GameState): Result {
   const offer = state.exit.pending
-  if (!offer || !inGarage(state)) return fail('No offer to accept')
+  if (!offer || !canBeSold(state)) return fail('No offer to accept')
   state.money += offer.price
   state.exit.pending = null
   state.gameOver = true

@@ -3,10 +3,13 @@ import type { Store } from '@/lib/tycoon/store'
 import { App } from './App'
 import { browserStorage, setAutosave } from '@/lib/tycoon/browser'
 import { createSfx } from '@/lib/tycoon/audio'
-import { applyDevParams, hasDevParams } from '@/lib/tycoon/dev'
+import { applyDevParams, devClock, hasDevParams } from '@/lib/tycoon/dev'
 import { createAutosave, loadGame, migrateLegacySave } from '@/lib/tycoon/save'
 import { getOffice, inGarage, regionOf } from '@/lib/tycoon/sim/offices'
 import { createInitialState } from '@/lib/tycoon/sim/state'
+import { overallProgress } from '@/lib/tycoon/sim/scoring'
+import { routineAt } from '@/lib/tycoon/render-support/routines'
+import { SeatMap } from '@/lib/tycoon/render-support/seats'
 import { createStore } from '@/lib/tycoon/store'
 
 /**
@@ -100,14 +103,38 @@ export default function TycoonApp() {
         void app.destroy(true, { children: true })
         return
       }
+      // Stand-ups and coffee breaks keep the time the game has been running, the same on the street and up close.
+      let routineMs = import.meta.env.DEV ? devClock() : 0
+      const routineOf = (officeId: number) => {
+        const office = getOffice(store.state, officeId)
+        return office?.kind === 'office' ? routineAt(routineMs, office.id)?.routine : undefined
+      }
+      // Who sits where, shared by both views.
+      const seatMaps = new Map<number, SeatMap>()
       const scene = new OfficeScene(
         app,
         atlas,
         () => store.state,
         () => store.selectedOffice.value,
         (id) => store.openDialog({ kind: 'employee', id }),
+        {
+          standup: () => routineOf(store.selectedOffice.value) === 'standup',
+          breaks: () => routineOf(store.selectedOffice.value) === 'break',
+          boardProgress: () => {
+            const project = getOffice(store.state, store.selectedOffice.value)?.project
+            return project ? overallProgress(project) : 0
+          },
+          seatMaps,
+        },
       )
-      const building = new BuildingScene(app, atlas, () => store.state, () => regionOf(getOffice(store.state, store.selectedOffice.value) ?? store.state.offices[0]))
+      const building = new BuildingScene(
+        app,
+        atlas,
+        () => store.state,
+        () => regionOf(getOffice(store.state, store.selectedOffice.value) ?? store.state.offices[0]),
+        () => routineMs,
+        seatMaps,
+      )
       app.stage.addChild(scene.view, scene.popups, building.view)
 
       const layout = () => {
@@ -122,6 +149,7 @@ export default function TycoonApp() {
       app.ticker.add((ticker) => {
         store.tick(ticker.deltaMS)
         const speed = store.running() ? store.speed.value : 0
+        if (speed > 0) routineMs += ticker.deltaMS
         // One of the two is on screen: the buildings from the street, or the floor (or garage) up close.
         const street = store.view.value === 'building' && !inGarage(store.state)
         building.view.visible = street

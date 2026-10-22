@@ -44,7 +44,7 @@ export const SPOTS: readonly Spot[] = [
 export const SPOT_CLEARANCE = 14
 
 /** Is the spot free, given the spots people are at or on their way to? */
-export function spotFree(spot: Spot, taken: readonly Spot[]): boolean {
+export function spotFree(spot: Pick<Spot, 'x'>, taken: readonly Pick<Spot, 'x'>[]): boolean {
   return taken.every((other) => Math.abs(other.x - spot.x) >= SPOT_CLEARANCE)
 }
 

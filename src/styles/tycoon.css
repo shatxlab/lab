@@ -1149,23 +1149,6 @@
   flex-basis: 100%;
 }
 
-/* A floor's routines: two small toggles. */
-.tycoon-root .routines {
-  display: flex;
-  gap: 6px;
-}
-
-.tycoon-root .routines button {
-  min-height: 32px;
-  padding: 2px 10px;
-  font-size: 12px;
-}
-
-.tycoon-root .routines button.active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .tycoon-root .product-actions {
   display: flex;
   flex-wrap: wrap;

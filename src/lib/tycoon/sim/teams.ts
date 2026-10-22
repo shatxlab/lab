@@ -53,15 +53,6 @@ export function setDirection(state: GameState, officeId: number, direction: Dire
   return OK
 }
 
-/** Turns a floor's morning stand-up or its coffee breaks on or off. */
-export function setRoutine(state: GameState, officeId: number, routine: 'standup' | 'breaks', on: boolean): Result {
-  const office = getOffice(state, officeId)
-  if (!office) return fail('Unknown office')
-  if (on) office[routine] = true
-  else delete office[routine]
-  return OK
-}
-
 /** Why these features can't be queued for the product's next release, or null when they can. */
 export function queueBlocker(state: GameState, product: Product, featureIds: readonly string[]): string | null {
   if (featureIds.length > UPDATE_MAX_FEATURES) return `At most ${UPDATE_MAX_FEATURES} features in a release`

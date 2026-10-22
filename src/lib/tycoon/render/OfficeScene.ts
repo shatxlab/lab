@@ -7,14 +7,16 @@ import type { Atlas, FrameName } from './atlas'
 import { chairX, MIN_VISIBLE_WIDTH, MIN_WIDTH, partitionAt, partitionInFront, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
-import { blinkingAt, momentAt } from '../render-support/activity'
+import { blinkingAt, hash, momentAt } from '../render-support/activity'
 import { KEEPSAKE_TOP, keepsakeFor, keepsakeX } from '../render-support/keepsakes'
 import { POSE_PAD, STEP_CYCLE, WALK_CYCLE, type Pose } from '../render-support/poses'
 import { pathLength, pathToDoors, pointAlong, routePath, walkoutPath, type Point } from '../render-support/walkout'
 import { chooseErrand, chooseSpot, nextOutAt, poseAtSpot, SPOTS, spotFree, stayFor, type Errand, type Spot, type Stay } from '../render-support/breaks'
 import { BOOKSHELF_HEIGHT, bookshelfRects } from '../render-support/bookshelf'
+import { huddleSpots, scrumBoardRects, type HuddleSpot } from '../render-support/routines'
 import { CURSOR, KEY_DOWN, pressedKeys, SCREEN_ON, typingScreen, WORKSTATIONS, workstationsFor, type WorkstationSpec } from '../render-support/workstations'
 import { formatDateShort } from '@/lib/tycoon/format'
+import { CHAIR_TOP, DESK_WIDTH, FEET_ROW, freestandingDesk, placed } from './furniture'
 
 /** Size of the room's artwork in sprite pixels. Walls and floor go on beyond it as far as the screen needs. */
 export const SCENE_W = 256
@@ -26,10 +28,6 @@ const MAX_POPUPS = 24
 const POPUP_MS = 1100
 /** How long one keystroke takes on a desk's screen. */
 const TYPING_STEP_MS = 110
-/** The width of the desk top, which is where a computer sits against its edge. */
-const DESK_WIDTH = 17
-/** How far the desk top runs from the partition toward the viewer. */
-const DESK_DEPTH = 19
 /** Bug-fixing popups are red, with a little bug beside the number. */
 const BUG_RED = 0xff5a6a
 const INK = 0x14141f
@@ -49,27 +47,6 @@ const SAND = 0xffcd75
 
 const colorNumber = (hex: string): number => Number.parseInt(hex.slice(1), 16)
 
-function placed(texture: Texture, x: number, y: number, flip = false): Sprite {
-  const sprite = new Sprite(texture)
-  if (flip) {
-    sprite.scale.x = -1
-    sprite.x = x + texture.width
-  } else {
-    sprite.x = x
-  }
-  sprite.y = y
-  return sprite
-}
-
-/**
- * Rows from the top of a partition to the top of a chair. The pack's chairs are drawn for a person standing beside
- * them; with the seat this low, the sitter's thighs rest on it rather than hanging past its front edge.
- */
-const CHAIR_TOP = 9
-
-/** The row of a seated person's feet, counted from the top of their seat (see `seat`). */
-const FEET_ROW = 22
-
 /** Where a workstation's occupant sits in an arrangement: horizontal centre, and the top of a 23-row person's head. */
 function seat(arrangement: Arrangement, index: number): { x: number; y: number } {
   const [px, py] = partitionAt(arrangement, index >> 1)
@@ -87,23 +64,6 @@ function bugGraphic(): Graphics {
   g.rect(1, 2, 2, 4).rect(4, 2, 2, 4).rect(2, 6, 1, 1).rect(4, 6, 1, 1).fill(BUG_RED) // wings
   g.rect(1, 3, 1, 1).rect(5, 4, 1, 1).fill(INK) // spots
   g.pivot.set(3.5, 7)
-  return g
-}
-
-/**
- * What a desk needs to stand on its own, in the garage (which has no partitions) or in an office's last row,
- * drawn from the desk's top-left corner: an edge down the side the pack leaves open (in an office it meets the
- * pole between two desks), the front of the desk and two legs. The pack only draws desks running up to the next
- * partition, so a bare desk top on the floor looks sunk into it.
- */
-function freestandingDesk(right: boolean): Graphics {
-  const g = new Graphics()
-  const front = DESK_DEPTH
-  g.rect(right ? 0 : DESK_WIDTH - 1, 1, 1, front - 1)
-  g.rect(0, front, DESK_WIDTH, 1).rect(0, front + 1, 1, 1).rect(DESK_WIDTH - 1, front + 1, 1, 1).rect(0, front + 2, DESK_WIDTH, 1)
-  g.rect(0, front + 3, 2, 2).rect(DESK_WIDTH - 2, front + 3, 2, 2)
-  g.fill(DARK)
-  g.rect(1, front + 1, DESK_WIDTH - 2, 1).fill(WOOD)
   return g
 }
 
@@ -298,9 +258,18 @@ export interface SceneOptions {
   arrangement?: () => Arrangement
   /**
    * Whether it is break time. While it is, people get up and go to the coffee machine, the water cooler, the sofa, the
-   * bookshelf (drawn for the occasion) or the vending machine, and go back when it is over. Off by default, so the game's office has no such outings.
+   * bookshelf (drawn for the occasion) or the vending machine, and go back when it is over. Off by default.
    */
   breaks?: () => boolean
+  /**
+   * Whether the stand-up is on. While it is, everyone walks over to the Scrum board on the wall (drawn for the
+   * occasion), stands round it until it is over and walks back. Off by default.
+   */
+  standup?: () => boolean
+  /** How far along the work on the Scrum board is, 0 to 1: its notes move from "to do" to "done". */
+  boardProgress?: () => number
+  /** Seating per office, shared with another view of the same offices so that everyone has the same desk in both. */
+  seatMaps?: Map<number, SeatMap>
 }
 
 /** Someone on their way out with a box. */
@@ -314,10 +283,12 @@ interface Leaver {
   rightwards: boolean
 }
 
-/** Someone on a break outing: walking out to a spot, there for a while, then back to their desk. */
+/** Someone on a break outing or at the stand-up: walking out to a spot, there for a while, then back to their desk. */
 interface Trip {
-  errand: Errand
-  spot: Spot
+  /** What they went for: an errand on a break, or none at the stand-up. */
+  errand?: Errand
+  standup: boolean
+  spot: Pick<Spot, 'x' | 'feet' | 'rightwards'>
   /** Top-left corners from the desk to the spot (see `routePath`), and the same walked the other way. */
   path: Point[]
   back: Point[]
@@ -336,6 +307,16 @@ interface Outing {
   at: number
   last?: Errand
 }
+
+/** Where the Scrum board hangs on the wall (its top-left corner), and where the team stands round it: rows of six. */
+const BOARD_X = 60
+const BOARD_Y = 80
+const HUDDLE_CENTER = 75
+const HUDDLE_ROWS = [121, 128] as const
+const HUDDLE_PER_ROW = 6
+const HUDDLE_SPACING = 14
+/** Nobody sets off for the stand-up the moment it starts: they get there over this long. */
+const HUDDLE_STAGGER_MS = 1800
 
 /** Where the bookshelf stands: its left edge, and the row below its feet (the same as the sofa's). */
 const BOOKSHELF_X = 163
@@ -377,6 +358,12 @@ export class OfficeScene {
   /** Which break this is (they are numbered from 1, and seed the choices), and whether one was on at the last update. */
   private breakNo = 0
   private onBreak = false
+  /** Whether the stand-up was on at the last update, and when it began. */
+  private onStandup = false
+  private standupSince = 0
+  /** The Scrum board, and the notes it was last drawn with. */
+  private readonly board = new Graphics()
+  private boardKey = ''
   private chipLabel: string
   private readonly world = new Container()
   /** The room as drawn, one texel per sprite pixel; resized to the window on every layout. */
@@ -397,7 +384,7 @@ export class OfficeScene {
   private readonly desks = new Container()
   private readonly sprites = new Map<number, EmployeeSprite>()
   /** Seating per office, so everyone keeps their desk while another office is on screen. */
-  private readonly seatMaps = new Map<number, SeatMap>()
+  private readonly seatMaps: Map<number, SeatMap>
   private seats = new SeatMap()
   /** What the room currently shows, to notice a switch, a move out of the garage, or a new theme. */
   private shown: { id: number; kind: OfficeKind; theme: number } | null = null
@@ -443,6 +430,7 @@ export class OfficeScene {
     options: SceneOptions = {},
   ) {
     this.options = options
+    this.seatMaps = options.seatMaps ?? new Map()
     this.app = app
     this.atlas = atlas
     this.getState = getState
@@ -480,7 +468,7 @@ export class OfficeScene {
     this.popups.addChild(this.dateChip)
 
     // People sit beside their desks, so they're drawn over them, hands reaching onto the keyboard.
-    this.world.addChild(this.background, this.officeBack, this.wall, this.chairs, this.desks, this.people, this.cat, this.dog)
+    this.world.addChild(this.background, this.board, this.officeBack, this.wall, this.chairs, this.desks, this.people, this.cat, this.dog)
 
     // The office is drawn into a texture, so its sprites can't take clicks themselves:
     // hit-test the shown image instead.
@@ -605,10 +593,11 @@ export class OfficeScene {
       // Someone out on a break is posed by their outing (below), not by what they would be doing at their desk.
       if (!this.trips.has(id)) sprite.setPose(moment.pose ?? 'sit', speed > 0 && blinkingAt(id, this.time))
       const desk = this.seats.deskFor(id)
-      if (desk !== undefined) modes.set(desk, moment.typing ? 'typing' : 'idle')
+      if (desk !== undefined) modes.set(desk, moment.typing && !this.trips.has(id) ? 'typing' : 'idle')
     }
     for (const [desk, stations] of this.stations) for (const station of stations) station.update(modes.get(desk) ?? 'off', this.time)
-    if (this.options.breaks) this.updateBreaks(dtMs, this.options.breaks())
+    this.drawBoard(office)
+    if (this.options.breaks || this.options.standup) this.updateOutings(dtMs, this.options.breaks?.() ?? false, this.options.standup?.() ?? false)
     this.updatePopups(dtMs, speed)
     this.updateLeaving(dtMs)
 
@@ -687,20 +676,26 @@ export class OfficeScene {
   /**
    * Breaks: while one is on, everyone at their desk gets up in their own time, goes to a spot nobody else is at (the
    * coffee machine, a cooler, the sofa, the bookshelf, a place to buy a snack), does what is done there and comes back,
-   * round after round; when the break is over, whoever is out turns back at once.
+   * round after round; when the break is over, whoever is out turns back at once. The stand-up: everyone walks to
+   * their place round the Scrum board and stays there until it is over.
    */
-  private updateBreaks(dtMs: number, onBreak: boolean): void {
+  private updateOutings(dtMs: number, onBreak: boolean, onStandup: boolean): void {
     if (onBreak !== this.onBreak) {
       this.onBreak = onBreak
       if (onBreak) this.breakNo += 1
       this.outings.clear()
     }
+    if (onStandup !== this.onStandup) {
+      this.onStandup = onStandup
+      this.standupSince = this.time
+    }
 
     for (const [id, trip] of this.trips) {
       const sprite = this.sprites.get(id)
-      if (sprite) this.advanceTrip(id, sprite, trip, dtMs, onBreak)
+      if (sprite) this.advanceTrip(id, sprite, trip, dtMs, trip.standup ? onStandup : onBreak)
       else this.trips.delete(id) // they left, or were seated again somewhere else
     }
+    if (onStandup) this.joinStandup()
     if (!onBreak) return
 
     for (const [id, sprite] of this.sprites) {
@@ -720,7 +715,7 @@ export class OfficeScene {
     const desk = this.seats.deskFor(id)
     if (desk === undefined) return false
     const { width, height } = sprite.size
-    const taken = [...this.trips.values()].map((trip) => trip.spot)
+    const taken = [...this.trips.values()].filter((trip) => !trip.standup).map((trip) => trip.spot)
     const free = SPOTS.filter((spot) => spotFree(spot, taken) && this.inView(spot, width))
     const errand = chooseErrand(id, this.breakNo, outing.round, [...new Set(free.map((spot) => spot.errand))], outing.last)
     if (errand === undefined) return false
@@ -734,6 +729,7 @@ export class OfficeScene {
     )
     this.trips.set(id, {
       errand,
+      standup: false,
       spot,
       path,
       back: [...path].reverse(),
@@ -744,6 +740,56 @@ export class OfficeScene {
       stay: stayFor(id, this.breakNo, outing.round, errand),
     })
     return true
+  }
+
+  /** Sends everyone still at their desk to their place round the Scrum board, each in their own time; places go by desk. */
+  private joinStandup(): void {
+    const seated = [...this.sprites.keys()].filter((id) => this.seats.deskFor(id) !== undefined)
+    seated.sort((a, b) => this.seats.deskFor(a)! - this.seats.deskFor(b)!)
+    const spots = huddleSpots(seated.length, HUDDLE_CENTER, HUDDLE_ROWS, HUDDLE_PER_ROW, HUDDLE_SPACING, HUDDLE_SPACING / 2)
+    seated.forEach((id, i) => {
+      if (this.trips.has(id) || this.time < this.standupSince + (hash(id, 0x5c) % HUDDLE_STAGGER_MS)) return
+      this.walkTo(id, spots[i]!)
+    })
+  }
+
+  /** Starts someone off from their desk to a place at the stand-up. */
+  private walkTo(id: number, spot: HuddleSpot): void {
+    const sprite = this.sprites.get(id)
+    const desk = this.seats.deskFor(id)
+    if (!sprite || desk === undefined) return
+    const { width, height } = sprite.size
+    const start = { x: sprite.container.x, y: sprite.container.y }
+    const path = routePath(
+      { arrangement: this.arrangement, desk, start, size: { width, height }, window: this.window, doorX: DOOR_X, doorFeet: DOOR_FEET },
+      { x: Math.round(spot.x - width / 2), y: spot.feet - height },
+    )
+    this.trips.set(id, {
+      standup: true,
+      spot,
+      path,
+      back: [...path].reverse(),
+      length: pathLength(path),
+      phase: 'out',
+      walked: 0,
+      stayed: 0,
+      // They stand there, listening, for as long as it lasts.
+      stay: { steps: [{ pose: undefined, ms: Number.POSITIVE_INFINITY }], total: Number.POSITIVE_INFINITY },
+    })
+  }
+
+  /** The Scrum board on an office's wall, its notes as far along as the work; a garage has none. */
+  private drawBoard(office: Office): void {
+    const shown = office.kind === 'office' && this.options.standup !== undefined
+    const progress = shown ? (this.options.boardProgress?.() ?? 0) : 0
+    // Redrawn only when a note moves: the board has nine.
+    const key = shown ? String(Math.round(progress * 9)) : ''
+    if (key === this.boardKey) return
+    this.boardKey = key
+    this.board.clear()
+    if (!shown) return
+    for (const { x, y, w, h, color } of scrumBoardRects(progress)) this.board.rect(x, y, w, h).fill(color)
+    this.board.position.set(BOARD_X, BOARD_Y)
   }
 
   /** Moves one person along their outing by `dtMs` and draws them: striding, or at the spot doing what is done there. */
@@ -766,7 +812,7 @@ export class OfficeScene {
       // Home: back in the chair, as they were.
       this.trips.delete(id)
       const outing = this.outings.get(id)
-      if (outing && onBreak) {
+      if (outing && onBreak && !trip.standup) {
         outing.round += 1
         outing.last = trip.errand
         outing.at = nextOutAt(id, this.breakNo, outing.round, this.time)
@@ -939,7 +985,6 @@ export class OfficeScene {
       ['counter', 36, 103],
       ['mug', 39, 104],
       ['coffeeMachine', 50, 100],
-      ['calendar', 66, 90],
       ['plant', 91, 97],
       ['doorHalf', 111, 82],
       ['doorHalf', 127, 82, true],
@@ -949,6 +994,8 @@ export class OfficeScene {
       ['waterCooler', 221, 103],
       ['snackCabinet', 231, 89],
     ]
+    // The Scrum board takes the calendar's place on the wall.
+    if (!this.options.standup) bg.addChild(placed(atlas.frame('calendar'), 66, 90))
     for (const [name, x, y, flip] of decor) bg.addChild(placed(atlas.frame(name), x, y, flip))
     // The bookshelf stands between the plant and the sofa; only a host with breaks has anyone to read from it.
     if (this.options.breaks) {
@@ -1064,6 +1111,8 @@ export class OfficeScene {
   private syncEmployees(state: GameState, office: Office): void {
     const ids = staffOf(state, office).map((e) => e.id)
     const { left } = this.seats.sync(ids, this.builtDesks)
+    // The seating is shared with the building view, which may have seen them go first.
+    for (const id of this.sprites.keys()) if (!ids.includes(id) && !left.includes(id)) left.push(id)
     for (const id of left) {
       this.sprites.get(id)?.container.destroy({ children: true })
       this.sprites.delete(id)
@@ -1114,7 +1163,8 @@ export class OfficeScene {
     for (const work of state.dayWork) {
       if (this.live.length >= MAX_POPUPS) return
       const desk = this.seats.deskFor(work.employeeId)
-      if (desk === undefined) continue
+      // Someone away from their desk (at the stand-up, on a break) has no number over it.
+      if (desk === undefined || this.trips.has(work.employeeId)) continue
 
       let total = 0
       let top: Discipline = 'engineering'

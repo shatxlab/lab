@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { COMPLIANCE_FEATURE, EU_COMPLAINT_FACTOR } from '@/lib/tycoon/data/regions'
-import { BREAKS_MORALE, BUG_COMPLAINT_REPUTATION, BUG_COMPLAINTS, POLISH_FIX_SHARE, STANDUP_BUG_RISK, STANDUP_MORALE, TEAM_IDLE_DAYS } from '@/lib/tycoon/sim/balance'
+import { BUG_COMPLAINT_REPUTATION, BUG_COMPLAINTS, POLISH_FIX_SHARE, TEAM_IDLE_DAYS } from '@/lib/tycoon/sim/balance'
 import { teamSpeed } from '@/lib/tycoon/sim/careers'
 import { openOffice } from '@/lib/tycoon/sim/offices'
 import { bugFactor, productsDay } from '@/lib/tycoon/sim/products'
 import { shipProject, startProject } from '@/lib/tycoon/sim/project'
 import { moraleTarget } from '@/lib/tycoon/sim/staff'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
-import { assignProduct, ownerOf, queueBlocker, queueFeatures, setDirection, setRoutine, teamDay } from '@/lib/tycoon/sim/teams'
+import { assignProduct, ownerOf, queueBlocker, queueFeatures, setDirection, teamDay } from '@/lib/tycoon/sim/teams'
 import { DISCIPLINES, type GameState } from '@/lib/tycoon/sim/types'
 import { workDay } from '@/lib/tycoon/sim/work'
 import { makeEmployee, makeProduct, makeState } from './helpers'
@@ -125,33 +125,13 @@ describe('a floor that looks after a product', () => {
   it('forgets a product that is gone, and keeps everything in a save', () => {
     const state = floorWithProduct()
     setDirection(state, state.offices[0].id, 'grow')
-    setRoutine(state, state.offices[0].id, 'standup', true)
     queueFeatures(state, 50, ['dark_mode'])
     const restored = deserialize(serialize(state))!
-    expect(restored.offices[0]).toMatchObject({ productId: 50, direction: 'grow', standup: true })
+    expect(restored.offices[0]).toMatchObject({ productId: 50, direction: 'grow' })
     expect(restored.products[0].nextFeatures).toEqual(['dark_mode'])
     state.products = []
     teamDay(state)
     expect(state.offices[0].productId).toBeUndefined()
-  })
-})
-
-describe('routines', () => {
-  it('a stand-up speeds the floor up and ships fewer bugs, but costs a little morale; breaks the other way round', () => {
-    const state = floorWithProduct()
-    const office = state.offices[0]
-    const person = state.employees[0]
-    const speed = teamSpeed(state, office)
-    const morale = moraleTarget(state, person)
-    setRoutine(state, office.id, 'standup', true)
-    expect(teamSpeed(state, office)).toBeGreaterThan(speed)
-    expect(moraleTarget(state, person)).toBe(morale - STANDUP_MORALE)
-    run(state, TEAM_IDLE_DAYS + 1)
-    expect(office.project?.bugRisk).toBeCloseTo(STANDUP_BUG_RISK)
-    setRoutine(state, office.id, 'standup', false)
-    setRoutine(state, office.id, 'breaks', true)
-    expect(teamSpeed(state, office)).toBeLessThan(speed)
-    expect(moraleTarget(state, person)).toBe(morale + BREAKS_MORALE)
   })
 })
 

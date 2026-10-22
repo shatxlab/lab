@@ -172,9 +172,6 @@ export const decisions = {
     return ['team.direction', `${officeLabel(state, officeId)}: ${DIRECTION_INFO[direction].name}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), direction }]
   },
 
-  setRoutine(state: GameState, officeId: number, routine: 'standup' | 'breaks', on: boolean): Decision {
-    return ['team.routine', `${officeLabel(state, officeId)}: ${routine === 'standup' ? 'stand-ups' : 'coffee breaks'} ${on ? 'on' : 'off'}`, { office: officeLabel(state, officeId), routine, on }]
-  },
 
   queueFeatures(state: GameState, productId: number, featureIds: readonly string[]): Decision {
     const product = state.products.find((p) => p.id === productId)

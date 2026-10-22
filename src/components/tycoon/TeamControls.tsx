@@ -1,8 +1,7 @@
 import { getFeature } from '@/lib/tycoon/data/features'
-import { BREAKS_MORALE, BREAKS_SPEED, STANDUP_MORALE, STANDUP_SPEED } from '@/lib/tycoon/sim/balance'
 import { inGarage, officeName } from '@/lib/tycoon/sim/offices'
 import { DEFAULT_DIRECTION, DIRECTION_INFO, nextReleaseDay, nextReleasePlan, ownedProduct, ownerOf } from '@/lib/tycoon/sim/teams'
-import { DIRECTIONS, type Direction, type Office, type Product } from '@/lib/tycoon/sim/types'
+import { DIRECTIONS, type Direction, type Product } from '@/lib/tycoon/sim/types'
 import { useGame, useStore } from './context'
 
 /** "in 3 days", "tomorrow", "now": how long until a day. */
@@ -68,33 +67,6 @@ export function ProductTeam({ product }: { product: Product }) {
           </small>
         </>
       )}
-    </div>
-  )
-}
-
-/** A floor's daily routines: a morning stand-up and coffee breaks, each a trade between pace and mood. */
-export function Routines({ office }: { office: Office }) {
-  const store = useStore()
-  if (office.kind === 'garage') return null
-  const percent = (factor: number) => `${factor > 1 ? '+' : ''}${Math.round((factor - 1) * 100)}%`
-  return (
-    <div className="routines" role="group" aria-label="Routines">
-      <button
-        aria-pressed={office.standup === true}
-        className={office.standup ? 'active' : ''}
-        title={`Every morning in the meeting room: ${percent(STANDUP_SPEED)} pace and fewer bugs, ${-STANDUP_MORALE} morale`}
-        onClick={() => store.setRoutine(office.id, 'standup', !office.standup)}
-      >
-        Stand-up {office.standup ? 'on' : 'off'}
-      </button>
-      <button
-        aria-pressed={office.breaks === true}
-        className={office.breaks ? 'active' : ''}
-        title={`Coffee and snacks along the wall: +${BREAKS_MORALE} morale, ${percent(BREAKS_SPEED)} pace`}
-        onClick={() => store.setRoutine(office.id, 'breaks', !office.breaks)}
-      >
-        Coffee breaks {office.breaks ? 'on' : 'off'}
-      </button>
     </div>
   )
 }

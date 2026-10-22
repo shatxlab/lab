@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
-import { buildingLayout, FLOOR_H, toScreen, TWO_BUILDINGS_MIN_WIDTH, WALL_BAND, type Box } from '@/lib/tycoon/render-support/building'
+import { buildingLayout, toScreen, TWO_BUILDINGS_MIN_WIDTH, WALL_BAND, type Box } from '@/lib/tycoon/render-support/building'
 import { REGION_OFFICE_LIMIT } from '@/lib/tycoon/sim/balance'
 import { buildingName, getOffice, inGarage, officeName, officesIn, openOfficeBlocker, regionOf, teamOf } from '@/lib/tycoon/sim/offices'
 import { overallProgress } from '@/lib/tycoon/sim/scoring'
@@ -90,8 +90,8 @@ export function BuildingOverlay() {
       {layout.buildings.map((building) => {
         const roof = toScreen(layout, building.roof)
         const floors = building.floors.length
-        const nextFloor = toScreen(layout, { x: building.x, y: building.roof.y - FLOOR_H, w: building.w, h: FLOOR_H })
-        const canAdd = floors < REGION_OFFICE_LIMIT && openOfficeBlocker(state, building.region) !== 'The studio is not ready yet'
+        const next = building.vacant[0]
+        const canAdd = next !== undefined && floors < REGION_OFFICE_LIMIT && openOfficeBlocker(state, building.region) !== 'The studio is not ready yet'
         return (
           <div key={building.region}>
             {building.open ? (
@@ -105,8 +105,8 @@ export function BuildingOverlay() {
               </button>
             )}
             {building.open && canAdd && (
-              <button className="building-add" style={at(nextFloor)} onClick={() => store.openDialog({ kind: 'team' })}>
-                + Add floor {floors + 1}
+              <button className="building-add" style={at(toScreen(layout, next))} onClick={() => store.openDialog({ kind: 'team' })}>
+                + Rent floor {floors + 1}
               </button>
             )}
             {building.floors.map((box) => {

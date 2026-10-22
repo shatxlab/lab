@@ -10,7 +10,7 @@ import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, inGarage, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
-import { assignProduct, queueFeatures, setDirection, setRoutine } from '@/lib/tycoon/sim/teams'
+import { assignProduct, queueFeatures, setDirection } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
 import { shipProject, startLocalisation, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
@@ -154,8 +154,6 @@ export interface Store {
   assignProduct(officeId: number, productId: number | null): Result
   /** What a floor's team does with its product. */
   setDirection(officeId: number, direction: Direction): Result
-  /** Turns a floor's stand-up or coffee breaks on or off. */
-  setRoutine(officeId: number, routine: 'standup' | 'breaks', on: boolean): Result
   /** Queues the features of a product's next release. */
   queueFeatures(productId: number, featureIds: readonly string[]): Result
   /** Makes a senior analyst the product manager of their office. */
@@ -516,9 +514,6 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return cue(changed(logged(() => decisions.setDirection(state, officeId, direction), () => setDirection(state, officeId, direction))), 'click')
     },
 
-    setRoutine(officeId, routine, on) {
-      return cue(changed(logged(() => decisions.setRoutine(state, officeId, routine, on), () => setRoutine(state, officeId, routine, on))), 'click')
-    },
 
     queueFeatures(productId, featureIds) {
       return cue(changed(logged(() => decisions.queueFeatures(state, productId, featureIds), () => queueFeatures(state, productId, featureIds))), 'click')

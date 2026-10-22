@@ -350,10 +350,6 @@ export interface Office {
   /** The product this floor's team looks after, releasing it as `direction` says (`sim/teams.ts`). */
   productId?: number
   direction?: Direction
-  /** A short meeting every morning in the floor's meeting room: a little faster and tidier, a little less fun. */
-  standup?: boolean
-  /** Coffee breaks: happier people, a little less done. */
-  breaks?: boolean
   /** The day the team ran out of work, to give the player a few days before the next release starts by itself. */
   idleSince?: number
 }

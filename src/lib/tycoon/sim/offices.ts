@@ -1,5 +1,5 @@
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
-import { BREAKS_SPEED, EU_OFFICE_COST, MAX_OFFICES, STANDUP_BUG_RISK, STANDUP_SPEED, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
+import { EU_OFFICE_COST, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
 import { adjustMorale } from './morale'
 import { fail, isBuilder, OK, REGIONS, type Employee, type GameState, type Office, type Project, type Region, type Result } from './types'
 
@@ -208,14 +208,4 @@ export function transfer(state: GameState, employeeId: number, officeId: number)
   // A move is a fresh start: they join the team of the office they moved to.
   delete employee.teamId
   return OK
-}
-
-/** How the floor's routines change its pace: a stand-up speeds it up, coffee breaks slow it down a little. */
-export function routineSpeed(office: Office): number {
-  return (office.standup ? STANDUP_SPEED : 1) * (office.breaks ? BREAKS_SPEED : 1)
-}
-
-/** How bug-prone the floor's next project starts: a team that meets every morning ships fewer. */
-export function routineBugRisk(office: Office): number {
-  return office.standup ? STANDUP_BUG_RISK : 1
 }

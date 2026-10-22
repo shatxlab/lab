@@ -1,6 +1,7 @@
 import { REGION_OFFICE_LIMIT } from '@/lib/tycoon/sim/balance'
 import { officesIn } from '@/lib/tycoon/sim/offices'
 import { REGIONS, type GameState, type Region } from '@/lib/tycoon/sim/types'
+import { huddleSpots, type HuddleSpot } from './routines'
 
 /**
  * The building view: headquarters and the European office seen from the street, each floor cut open like a doll's
@@ -10,35 +11,56 @@ import { REGIONS, type GameState, type Region } from '@/lib/tycoon/sim/types'
 
 /** Inside a floor: its width, and its height with the slab under it. */
 export const FLOOR_W = 272
-export const FLOOR_H = 78
+export const FLOOR_H = 128
 /** The outer wall around the floors, the roof with its sign, and the lobby at street level. */
 export const WALL = 6
-export const ROOF_H = 16
-export const LOBBY_H = 26
+export const ROOF_H = 14
+export const LOBBY_H = 22
 /** Between two buildings, and around the pair. */
 export const GAP = 28
-export const MARGIN = 8
+export const MARGIN = 6
 
 export const BUILDING_W = FLOOR_W + 2 * WALL
-/** A building is laid out for all its floors from the start, so it grows upward as floors are added and never jumps. */
+/** A building is always drawn with all its floors, the ones not rented yet dark, so it stands complete from the start. */
 export const BUILDING_H = ROOF_H + REGION_OFFICE_LIMIT * FLOOR_H + LOBBY_H
 
-/** Inside a floor: the back wall above the floor line, and the meeting room at the right end. */
-export const WALL_BAND = 30
-export const MEETING_X = 196
+/** Inside a floor: the back wall above the floor line. */
+export const WALL_BAND = 24
 
-/** Desks in two rows of six; a desk "unit" (chair, person and desk) is this wide, its rows this far apart. */
-export const DESKS_PER_ROW = 6
-export const DESK_STRIDE = 28
-export const DESK_ROWS = [26, 44] as const
+/**
+ * The desks are laid out as on the floor up close: partitions of two desks, two side by side with an aisle between
+ * them, in rows; the first row starts just below where people stand at the wall. The right end is open floor, with the
+ * Scrum board on its wall.
+ */
 export const DESK_LEFT = 4
+export const DESK_TOP = 29
+export const PARTITION_STEP = 112
+export const DESK_ROW = 30
 
-/** Where desk `index` of a floor stands: the top-left of its unit, as a partition would be in the office (`partitionAt`). */
-export function deskAt(index: number): [x: number, y: number] {
-  const row = Math.floor(index / DESKS_PER_ROW) % DESK_ROWS.length
-  // The back row is staggered half a desk, so the people in front do not hide the ones behind.
-  return [DESK_LEFT + (index % DESKS_PER_ROW) * DESK_STRIDE + (row === 0 ? DESK_STRIDE / 2 : 0), DESK_ROWS[row]]
+/** Top-left of desk partition `p` (each holds two desks), as `partitionAt` is in the office up close. */
+export function floorPartitionAt(p: number): [x: number, y: number] {
+  return [DESK_LEFT + (p % 2) * PARTITION_STEP, DESK_TOP + DESK_ROW * Math.floor(p / 2)]
 }
+
+/** The Scrum board on the right end's wall (its top-left corner), and the rows the team stands in round it. */
+export const BOARD_X = 220
+export const BOARD_Y = 3
+const HUDDLE_CENTER = 235
+const HUDDLE_ROWS = [44, 60, 76, 92] as const
+
+/** Where everyone stands at the stand-up, by desk order: rows of four in front of the board. */
+export function floorHuddle(count: number): HuddleSpot[] {
+  return huddleSpots(count, HUDDLE_CENTER, HUDDLE_ROWS, 4, 15, -7)
+}
+
+/** Where people stand on a coffee break, at the wall: the coffee machine, the water cooler, and by the windows. */
+export const BREAK_SPOTS: readonly HuddleSpot[] = [
+  { x: 54, feet: WALL_BAND + 3, rightwards: false },
+  { x: 85, feet: WALL_BAND + 3, rightwards: false },
+  { x: 111, feet: WALL_BAND + 3, rightwards: true },
+  { x: 125, feet: WALL_BAND + 3, rightwards: false },
+  { x: 184, feet: WALL_BAND + 3, rightwards: true },
+]
 
 export interface Box {
   x: number
@@ -59,6 +81,8 @@ export interface BuildingBox extends Box {
   /** False for a region with no office yet: an empty lot, waiting. */
   open: boolean
   floors: FloorBox[]
+  /** The floors above them not rented yet, lowest first. */
+  vacant: Box[]
   /** The sign on the roof, and the lobby, in scene pixels. */
   roof: Box
   lobby: Box
@@ -78,37 +102,34 @@ export interface BuildingLayout {
 
 /**
  * Lays out the buildings to show in an area of `areaW` x `areaH` screen pixels: both side by side, or with
- * `only` set, just that region's (on a phone there is no room for two). Floors stack from the lobby up; a region
- * with no office is an empty lot. The scale is the largest that fits, in quarter steps so pixels stay even.
+ * `only` set, just that region's (on a phone there is no room for two). Floors stack from the lobby up to the
+ * roof, the ones not rented yet empty; a region with no office is an empty lot. The scale is the largest that fits,
+ * in eighth steps.
  */
 export function buildingLayout(state: GameState, areaW: number, areaH: number, only?: Region): BuildingLayout {
   const regions = only ? [only] : REGIONS
   const width = regions.length * BUILDING_W + (regions.length - 1) * GAP + 2 * MARGIN
   const height = BUILDING_H + 2 * MARGIN
   const fit = Math.min(areaW / width, areaH / height)
-  const scale = Math.max(0.25, Math.floor(fit * 4) / 4)
+  const scale = Math.max(0.25, Math.floor(fit * 8) / 8)
   const buildings = regions.map((region, i): BuildingBox => {
     const x = MARGIN + i * (BUILDING_W + GAP)
     const offices = officesIn(state, region).filter((o) => o.kind === 'office')
     const lobbyY = MARGIN + BUILDING_H - LOBBY_H
-    const floors = offices.map((office, floor): FloorBox => ({
-      officeId: office.id,
-      region,
-      floor: floor + 1,
-      x: x + WALL,
-      y: lobbyY - (floor + 1) * FLOOR_H,
-      w: FLOOR_W,
-      h: FLOOR_H,
-    }))
-    const top = lobbyY - Math.max(floors.length, 0) * FLOOR_H - ROOF_H
+    const level = (floor: number): Box => ({ x: x + WALL, y: lobbyY - (floor + 1) * FLOOR_H, w: FLOOR_W, h: FLOOR_H })
+    const floors = offices.slice(0, REGION_OFFICE_LIMIT).map((office, floor): FloorBox => ({ officeId: office.id, region, floor: floor + 1, ...level(floor) }))
+    const open = floors.length > 0
+    const vacant = open ? Array.from({ length: REGION_OFFICE_LIMIT - floors.length }, (_, k) => level(floors.length + k)) : []
+    const top = MARGIN
     return {
       region,
-      open: floors.length > 0,
+      open,
       floors,
+      vacant,
       x,
       y: top,
       w: BUILDING_W,
-      h: lobbyY + LOBBY_H - top,
+      h: BUILDING_H,
       roof: { x, y: top, w: BUILDING_W, h: ROOF_H },
       lobby: { x, y: lobbyY, w: BUILDING_W, h: LOBBY_H },
     }

@@ -36,7 +36,7 @@ import { officeRunning, pmHitFactor, pmReachFactor } from './direction'
 import { campaignCost, growBlocker, localiseBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
-import { inGarage, resolveOffice, routineBugRisk, teamOf } from './offices'
+import { inGarage, resolveOffice, teamOf } from './offices'
 import { bugProneness, euShareOf, regionScale, releaseBugs, settledUsers } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
@@ -165,7 +165,7 @@ export function startProject(
     readyNotified: false,
     hype: 1,
     alphaOffered: false,
-    bugRisk: routineBugRisk(office),
+    bugRisk: 1,
     contract: null,
   }
   return OK
@@ -224,7 +224,7 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     readyNotified: false,
     hype: 1,
     alphaOffered: false,
-    bugRisk: routineBugRisk(office),
+    bugRisk: 1,
     contract: null,
   }
   return OK
@@ -267,7 +267,7 @@ export function startLocalisation(state: GameState, productId: number, officeId?
     readyNotified: false,
     hype: 1,
     alphaOffered: false,
-    bugRisk: routineBugRisk(office),
+    bugRisk: 1,
     contract: null,
   }
   return OK

@@ -4,7 +4,7 @@ import { generateEmployee, ROLES } from '@/lib/tycoon/sim/hiring'
 import { freeDesks } from '@/lib/tycoon/sim/offices'
 import type { GameState } from '@/lib/tycoon/sim/types'
 
-const DEV_PARAMS = ['offices', 'money', 'rep', 'stage'] as const
+const DEV_PARAMS = ['offices', 'money', 'rep', 'stage', 'clock'] as const
 
 /** True when the URL asks for dev shortcuts; such sessions never read or write the real save. */
 export function hasDevParams(): boolean {
@@ -14,7 +14,7 @@ export function hasDevParams(): boolean {
 
 /**
  * Dev-only shortcuts read from the URL: `?offices=2` (out of the garage into that many full offices),
- * `?money=1e6`, `?rep=60`, `?stage=3`.
+ * `?money=1e6`, `?rep=60`, `?stage=3`. (`?clock=` is read by `devClock`.)
  */
 export function applyDevParams(state: GameState): void {
   const params = new URLSearchParams(location.search)
@@ -39,4 +39,9 @@ export function applyDevParams(state: GameState): void {
 
   const stage = params.get('stage')
   if (stage !== null) state.stage = Math.min(Math.max(Number(stage) || 0, 0), STAGES.length - 1)
+}
+
+/** Dev-only: `?clock=60000` starts the routines' clock there, to see a floor's stand-up or coffee break without waiting. */
+export function devClock(): number {
+  return Number(new URLSearchParams(location.search).get('clock')) || 0
 }

@@ -138,6 +138,118 @@
   inset: 0;
 }
 
+/* ---- the buildings from the street ---- */
+
+/* Laid over the canvas in the same place as what it labels (see render-support/building.ts). */
+.tycoon-root .building-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tycoon-root .building-overlay button {
+  pointer-events: auto;
+}
+
+.tycoon-root .building-floor {
+  position: absolute;
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tycoon-root .building-floor:hover,
+.tycoon-root .building-floor:focus-visible {
+  border-color: var(--accent);
+}
+
+.tycoon-root .building-floor.selected {
+  border-color: rgba(255, 209, 102, 0.55);
+}
+
+.tycoon-root .floor-plate {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  overflow: hidden;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(20, 20, 31, 0.82);
+  color: #ddd;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tycoon-root .floor-plate strong {
+  color: var(--accent);
+}
+
+.tycoon-root .building-sign {
+  position: absolute;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 1px;
+  color: #ffd166;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.tycoon-root .building-add,
+.tycoon-root .building-lot {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  border: 2px dashed rgba(255, 255, 255, 0.55);
+  border-radius: 4px;
+  background: rgba(20, 20, 31, 0.25);
+  color: #fff;
+  font-size: 13px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.tycoon-root .building-lot small {
+  max-width: 90%;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.tycoon-root .building-switch {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.tycoon-root .floor-back {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+}
+
+.tycoon-root .floor-back button {
+  min-height: 34px;
+  padding: 4px 12px;
+  font-size: 13px;
+  background: rgba(20, 20, 31, 0.85);
+}
+
 /* ---- top bar ---- */
 
 .tycoon-root .topbar {

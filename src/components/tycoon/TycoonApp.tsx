@@ -5,6 +5,7 @@ import { browserStorage, setAutosave } from '@/lib/tycoon/browser'
 import { createSfx } from '@/lib/tycoon/audio'
 import { applyDevParams, hasDevParams } from '@/lib/tycoon/dev'
 import { createAutosave, loadGame, migrateLegacySave } from '@/lib/tycoon/save'
+import { getOffice, inGarage, regionOf } from '@/lib/tycoon/sim/offices'
 import { createInitialState } from '@/lib/tycoon/sim/state'
 import { createStore } from '@/lib/tycoon/store'
 
@@ -73,10 +74,11 @@ export default function TycoonApp() {
       // pixi and the renderer load together here, so the island's initial chunk stays small.
       // 'pixi.js/unsafe-eval' swaps pixi's runtime-compiled shader helpers for precompiled ones: the
       // site CSP forbids unsafe-eval, and without it the renderer throws and the scene stays black.
-      const [{ Application }, { loadAtlas }, { OfficeScene }] = await Promise.all([
+      const [{ Application }, { loadAtlas }, { OfficeScene }, { BuildingScene }] = await Promise.all([
         import('pixi.js'),
         import('@/lib/tycoon/render/atlas'),
         import('@/lib/tycoon/render/OfficeScene'),
+        import('@/lib/tycoon/render/BuildingScene'),
         import('pixi.js/unsafe-eval'),
       ])
       if (destroyed) return
@@ -105,9 +107,13 @@ export default function TycoonApp() {
         () => store.selectedOffice.value,
         (id) => store.openDialog({ kind: 'employee', id }),
       )
-      app.stage.addChild(scene.view, scene.popups)
+      const building = new BuildingScene(app, atlas, () => store.state, () => regionOf(getOffice(store.state, store.selectedOffice.value) ?? store.state.offices[0]))
+      app.stage.addChild(scene.view, scene.popups, building.view)
 
-      const layout = () => scene.layout(app.screen.width, app.screen.height)
+      const layout = () => {
+        scene.layout(app.screen.width, app.screen.height)
+        building.layout(app.screen.width, app.screen.height)
+      }
       app.renderer.on('resize', layout)
       const observer = new ResizeObserver(() => app.renderer.resize(host.clientWidth, host.clientHeight))
       observer.observe(host)
@@ -115,7 +121,14 @@ export default function TycoonApp() {
 
       app.ticker.add((ticker) => {
         store.tick(ticker.deltaMS)
-        scene.update(ticker.deltaMS, store.running() ? store.speed.value : 0)
+        const speed = store.running() ? store.speed.value : 0
+        // One of the two is on screen: the buildings from the street, or the floor (or garage) up close.
+        const street = store.view.value === 'building' && !inGarage(store.state)
+        building.view.visible = street
+        scene.view.visible = !street
+        scene.popups.visible = !street
+        if (street) building.update(ticker.deltaMS, speed)
+        else scene.update(ticker.deltaMS, speed)
       })
 
       dispose = () => {

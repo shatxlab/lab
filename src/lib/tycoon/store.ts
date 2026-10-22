@@ -9,7 +9,7 @@ import { acceptBuyout, declineBuyout, retireStudio } from '@/lib/tycoon/sim/exit
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
-import { assignTeam, getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
+import { assignTeam, getOffice, inGarage, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { assignProduct, queueFeatures, setDirection, setRoutine } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
@@ -30,6 +30,9 @@ export const MS_PER_DAY = 1500
 /** A long frame (e.g. a backgrounded tab) never fast-forwards more than this. */
 const MAX_FRAME_MS = 250
 const TOAST_MS = 6000
+
+/** What the scene shows: the buildings from the street, or one floor (or the garage) up close. */
+export type SceneView = 'building' | 'floor'
 
 export type Dialog =
   | null
@@ -87,6 +90,8 @@ export interface Store {
   readonly toasts: Signal<Toast[]>
   /** The office on screen; commands without an office act on it. */
   readonly selectedOffice: Signal<number>
+  /** Out of the garage: the buildings from the street, or one floor up close. The garage is always up close. */
+  readonly view: Signal<SceneView>
   /** Sound effects and the mute switch. */
   readonly sfx: SfxPlayer
   /** True while game days are actually passing. */
@@ -98,6 +103,8 @@ export interface Store {
   closeDialog(): void
   /** Shows another office. */
   selectOffice(officeId: number): void
+  /** Switches between the buildings and the selected floor up close. */
+  setView(view: SceneView): void
   /** Starts a new product of `size` (Small if left out). Like the commands below, in the selected office unless told otherwise. */
   startProject(productTypeId: string, featureIds: readonly string[], size?: ProjectSize, officeId?: number, audienceId?: string): Result
   /** Ships an office's project; `campaign` buys launch marketing for a new product. */
@@ -173,6 +180,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   const dialog = signal<Dialog>(state.pendingEvent ? { kind: 'event' } : state.exit.pending ? { kind: 'offer' } : null)
   const toasts = signal<Toast[]>([])
   const selectedOffice = signal(state.offices[0].id)
+  const view = signal<SceneView>(inGarage(state) ? 'floor' : 'building')
   /** The office a command is for: the one named, or the one on screen. */
   const officeFor = (officeId?: number) => officeId ?? selectedOffice.value
   /** Dialogs that arrived on the same day as the one on screen; shown as each is closed. */
@@ -272,6 +280,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     dialog,
     toasts,
     selectedOffice,
+    view,
     sfx,
     running,
 
@@ -305,6 +314,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     selectOffice(officeId) {
       if (getOffice(state, officeId)) selectedOffice.value = officeId
+    },
+
+    setView(next) {
+      view.value = next === 'building' && inGarage(state) ? 'floor' : next
     },
 
     startProject(productTypeId, featureIds, size, officeId, audienceId) {
@@ -475,7 +488,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     moveOut() {
-      return cue(changed(logged(() => decisions.moveOut(), () => moveOut(state))), 'upgrade')
+      const result = cue(changed(logged(() => decisions.moveOut(), () => moveOut(state))), 'upgrade')
+      // The first look at the new place is from the street.
+      if (result.ok) view.value = 'building'
+      return result
     },
 
     openOffice(region) {

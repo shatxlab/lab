@@ -21,7 +21,9 @@ export function OfficeTabs() {
   // Subscribed before the early return: a conditional useSignal would break the rules of hooks
   // when a second office is added to a game that had only one.
   const selected = useSignal(store.selectedOffice)
-  if (state.offices.length < 2) return null
+  const view = useSignal(store.view)
+  // From the street every floor is in sight already.
+  if (state.offices.length < 2 || view === 'building') return null
 
   return (
     <nav className="office-tabs" aria-label="Offices">

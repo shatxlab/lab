@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import type { Store } from '@/lib/tycoon/store'
 import { StoreContext } from './context'
+import { BuildingOverlay } from './BuildingOverlay'
 import { CashBanner } from './CashBanner'
 import { DialogHost } from './DialogHost'
 import { OfficeTabs } from './OfficeTabs'
@@ -26,6 +27,7 @@ export function App({ store }: { store: Store }) {
       <div className="game">
         <TopBar />
         <div id="scene-host" className="scene-host">
+          <BuildingOverlay />
           {/* Messages sit over the top of the office wall, just under the top-bar buttons. */}
           <div className="scene-messages">
             <CashBanner />

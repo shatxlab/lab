@@ -4,7 +4,11 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-20).** Everything agreed with the player is built and pushed (commits
+**Handover (2026-10-22).** The third logged run was analysed and Phase 1 of its fixes is built (see "Third
+logged run, and the building pivot" below); the next big piece is the two-building pivot, to be planned with
+the player first.
+
+**Earlier handover (2026-10-20).** Everything agreed with the player is built and pushed (commits
 `82ac407` to `ee37b24`; the "Built: the roadmap pass" and "Built: regions, Europe and Absorb"
 sections below say what and where). The player is playtesting it for a day and will bring a
 fresh run log (`lab-tycoon-run-*.json`, untracked and gitignored: read it, never commit it) or
@@ -40,6 +44,84 @@ Also `node scripts/tycoon/e2e.mjs` after `npm run build` (real Chrome; needs
 `?offices=2&stage=3&money=1000000&rep=60` (dev server only). Art sources
 (`.aseprite`, large preview, CC0 licence) live in `art/pixeloffice/`, outside
 `assets/` so they are not published or precached.
+
+## Third logged run, and the building pivot (2026-10-21)
+
+**The run** (`lab-tycoon-run-2026-10-21 (1).json`, about 4 hours): 19.4 years, retired as Tech giant with
+$39M cash and a worth of $59M. Garage for 4.4 years (contracts until day 611; the save started on the old
+$25k), Zebu hit on the third launch, one $740k offer turned down, moved out 70 days later. Europe at 9.3,
+offices 3 and 4 on the same day at 10.1, Industry leader 10.1, Tech giant 18.6. 15 products, 5 hits.
+
+What it showed, and what the player said about it:
+
+- **Promotion was the economy**: $99.8M of $170M revenue. A promotion brought users by the product's raw
+  reach (Zebu: ~2.8M) while the market only held ~90k for it, so every push was a 4-6x sawtooth in users,
+  income and rank.
+- **Tech giant could only be bought.** `daysAtTop` reset on any day off #1, the rank swung with the sawtooth,
+  so the player held Industry leader 8.5 years and then spent ~$27M in a year on promotions at 25-30%
+  effect to stay #1. "There's no way to reach Tech giant if I don't try the manual promotion."
+- **Absorb was never used**: the player forgot how it worked and opened offices 3 and 4 once money stopped
+  mattering, which closed it; later wondered why the button was disabled.
+- **Sold good products for slots** (Dawn, Nebula, a hit) to make more flagships for the climb. Knows small,
+  then grow, is better ("cheaper features too") but flagships were simpler; "shrugged" feedback made adding
+  every feature feel wrong.
+- **People were a number**: 39 left after 6+ years unnoticed; the player refilled headcount.
+- **Europe felt the same as the US.** Moving people between regions was never understood, and hiring
+  failed silently ("22/24 and can't hire": the US office was selected).
+- **Analysts and PMs did nothing visible.** Study results never showed in the New project list on a phone
+  (all `.feature .tag` were hidden under 520px), and the list ignored them.
+- **Validation messages** sat at the bottom of long modals, out of sight.
+- Most fun: nourishing 3-5 products.
+
+### Built from it (2026-10-22)
+
+- **Trailing income.** `trailingIncome` (an average over `INCOME_AVERAGE_DAYS`, `GameState.incomeAverage`)
+  drives the ranking, the income goals, the buyout price and worth. A day off #1 costs `TOP_SLIP_DAYS`
+  of `daysAtTop` instead of all of them.
+- **Promotions sized by the market.** A promotion (and a launch campaign) speaks to its reach but at most
+  `PROMO_AUDIENCE` times the users the market holds for the product (`promotionAudience`,
+  `campaignAudience`), and is priced from that. `PROMO_KEEP` of the users it brings stay on as regulars
+  (`Product.loyalUsers`, part of the target, fading over `PROMO_LOYAL_DAYS` and with staleness). The
+  Promote buttons show the expected payback (`promotionReturn`, about 1.5x rested, under 1 soon after the
+  last one) and the log records it. Costs (`PROMOTIONS`, `CAMPAIGNS`) were retuned to that.
+- **Building more never hurts.** `audienceFit` only rises with features the audience loves; ones they barely
+  notice add nothing (`AUDIENCE_FIT_VALUE`; `HIT_AUDIENCE_MIN` is gone). Feedback says "Barely noticed".
+- **Studies you can see.** Taste tags show on phones; once studied, the feature list leads with what the
+  audience loves and says so. Product managers' effect is spelled out (`pmEffectText`) on the person, the
+  office row and the New project summary.
+- **Hiring by region**: a US/Europe switch with free desks, defaulting to where there is room; the Team
+  dialog explains desks versus *Works on*; other-region desks are marked; a row's controls get their own line
+  with several offices (they overflowed on desktop).
+- **Messages next to the button**: errors live in the sticky action bar (`.action-note`) or the row.
+- **Smaller**: the first buyout offer waits `EXIT_FIRST_OFFER_DAYS` after the hit; demand news at most once
+  per `MARKET_NEWS_GAP_DAYS` per type (Web App made the news 111 times); names are never reused in a run
+  (`GameState.usedNames`); the monthly log has the average income, Europe users and regulars.
+
+Not retuned yet: late-game income without the pump is much lower, so whether #1 and Tech giant are reachable
+needs the next run (bots do not promote, so they cannot tell). Saves stay version 5 (all new fields optional).
+
+### Next: two buildings instead of four offices (agreed direction, needs planning)
+
+The player's pivot: four offices ruin the focus and add nothing. Instead **one US and one European
+location, each growing into a building** of up to **5 floors**, seen from outside like Fallout Shelter
+(the existing office scene, one 12-desk floor each, turned into a cutaway), **all on one screen without
+scrolling**. Decided so far:
+
+- Selling the studio stays open past the garage, until the building: renting one office floor is still the
+  early days. The first offer comes some time after the hit, not the day of it (done).
+- Teams can be reassigned between products; the design must keep the player acting, not watching
+  ("explore options so you are not just an observer").
+- Releases stay something the player does, in some form (to explore with the above).
+- Stand-ups and coffee breaks affect the team, not only the look (the Focus office has break animations).
+- A floor holds several things: the team's desks, a meeting room on the right, and coffee and snack
+  machines and coolers along the wall, as in the Focus office, but drawn in the cutaway view.
+- Europe differs by stricter data rules, its own tastes, and a slightly but noticeably European interior.
+- Garage desks are in two rows of two with the pets below (built: the garage always uses the `tall`
+  arrangement, cropped like the office so the whole garage stays in view).
+
+Open questions: how teams own products and what the player does each month (so they act, not watch), what
+the stricter data rules mean in play, what replaces offices 3-4 in the stage goals and in Absorb, and whether
+5 floors x 2 buildings fit a phone screen at a readable size.
 
 ## Redesign: two acts (2026-10-18)
 

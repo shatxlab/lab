@@ -7,6 +7,7 @@ export const REGION_NAME: Record<Region, string> = { us: 'US', eu: 'Europe' }
  * compliance and local languages, and is cooler on the newest hype. Features left out count 1.
  */
 export const EU_LIKES: Readonly<Record<string, number>> = {
+  privacy: 1.3,
   encryption: 1.4,
   data_residency: 1.6,
   sso: 1.2,
@@ -34,6 +35,15 @@ export const EU_TYPE_SIZE: Readonly<Record<string, number>> = {
   data_platform: 0.65,
   xr_experience: 0.7,
 }
+
+/** Europe's data rules: a product needs this feature before it can be localised for Europe. */
+export const COMPLIANCE_FEATURE = 'privacy'
+/** European users put up with this share of the bugs American ones do. */
+export const EU_BUG_TOLERANCE = 0.6
+/** Public complaints about bugs cost this many times the reputation for a product sold in Europe. */
+export const EU_COMPLAINT_FACTOR = 2
+/** A breach of a product sold in Europe also brings a regulator's fine of this many days of its European income. */
+export const EU_BREACH_FINE_DAYS = 30
 
 /** What each user pays in Europe, next to the US. */
 export const EU_PAY = 0.9

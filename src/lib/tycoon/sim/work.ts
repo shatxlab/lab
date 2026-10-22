@@ -102,7 +102,8 @@ function officeWorkDay(state: GameState, office: Office): void {
     contractDay(state, office)
     return
   }
-  if (!project.readyNotified && isReady(project)) {
+  // A team's own release ships by itself (`teamDay`); nobody needs to be asked.
+  if (!project.readyNotified && !project.byTeam && isReady(project)) {
     project.readyNotified = true
     state.events.push({ type: 'projectReady', officeId: office.id })
   }

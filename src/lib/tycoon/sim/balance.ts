@@ -184,6 +184,22 @@ export const EU_OFFICE_COST = 450000
  */
 export const REGION_OFFICE_LIMIT = 5
 
+// Teams and their floors (`sim/teams.ts`)
+/** A team out of work gets this many days before its next release starts by itself, so the player can give it something else. */
+export const TEAM_IDLE_DAYS = 5
+/** Keeping a product running: the next maintenance release starts once this share of its fresh time has passed. */
+export const KEEP_FRESH_SHARE = 0.8
+/** A polishing release fixes this share of the product's open bugs, and ships this share of the new ones a release would. */
+export const POLISH_FIX_SHARE = 0.7
+export const POLISH_BUG_RISK = 0.5
+/** A daily stand-up: the team works this much faster and ships this share of the bugs, but likes it a little less. */
+export const STANDUP_SPEED = 1.05
+export const STANDUP_BUG_RISK = 0.85
+export const STANDUP_MORALE = 3
+/** Coffee breaks: the team's morale settles this much higher, and it works this much slower. */
+export const BREAKS_MORALE = 8
+export const BREAKS_SPEED = 0.96
+
 // Bugs
 /** Bugs a release ships with per point of work when QA has just reached its target. */
 export const BUGS_PER_POINT = 0.02

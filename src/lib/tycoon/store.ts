@@ -10,6 +10,7 @@ import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
+import { assignProduct, queueFeatures, setDirection, setRoutine } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
 import { shipProject, startLocalisation, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
@@ -19,7 +20,7 @@ import { isReady } from '@/lib/tycoon/sim/scoring'
 import { decisions, type Decision } from '@/lib/tycoon/sim/decisions'
 import { logEntry, logSimEvent } from '@/lib/tycoon/sim/journal'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
-import type { Discipline, GameState, ProjectSize, Region, Result, SimEvent, Tier } from '@/lib/tycoon/sim/types'
+import type { Direction, Discipline, GameState, ProjectSize, Region, Result, SimEvent, Tier } from '@/lib/tycoon/sim/types'
 
 export type Speed = 0 | 1 | 2
 export const SPEEDS: readonly Speed[] = [0, 1, 2]
@@ -140,6 +141,14 @@ export interface Store {
   transfer(employeeId: number, officeId: number): Result
   /** Puts someone on the team of another office's project, or back on their own office's with `null`. */
   assignTeam(employeeId: number, officeId: number | null): Result
+  /** Puts a floor's team on a product, or frees it with `null`. */
+  assignProduct(officeId: number, productId: number | null): Result
+  /** What a floor's team does with its product. */
+  setDirection(officeId: number, direction: Direction): Result
+  /** Turns a floor's stand-up or coffee breaks on or off. */
+  setRoutine(officeId: number, routine: 'standup' | 'breaks', on: boolean): Result
+  /** Queues the features of a product's next release. */
+  queueFeatures(productId: number, featureIds: readonly string[]): Result
   /** Makes a senior analyst the product manager of their office. */
   becomePm(employeeId: number): Result
   /** Spends insight to learn what an audience likes. */
@@ -479,6 +488,22 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     assignTeam(employeeId, officeId) {
       return changed(logged(() => decisions.assignTeam(state, employeeId, officeId), () => assignTeam(state, employeeId, officeId)))
+    },
+
+    assignProduct(officeId, productId) {
+      return cue(changed(logged(() => decisions.assignProduct(state, officeId, productId), () => assignProduct(state, officeId, productId))), 'click')
+    },
+
+    setDirection(officeId, direction) {
+      return cue(changed(logged(() => decisions.setDirection(state, officeId, direction), () => setDirection(state, officeId, direction))), 'click')
+    },
+
+    setRoutine(officeId, routine, on) {
+      return cue(changed(logged(() => decisions.setRoutine(state, officeId, routine, on), () => setRoutine(state, officeId, routine, on))), 'click')
+    },
+
+    queueFeatures(productId, featureIds) {
+      return cue(changed(logged(() => decisions.queueFeatures(state, productId, featureIds), () => queueFeatures(state, productId, featureIds))), 'click')
     },
 
     becomePm(employeeId) {

@@ -20,6 +20,7 @@ import { rankingDay, rivalArrives, rivalsDay } from './rivals'
 import { checkStage } from './stages'
 import { moraleDay, trainingDay } from './staff'
 import type { GameState, SimEvent } from './types'
+import { teamDay } from './teams'
 import { workDay } from './work'
 
 /**
@@ -33,6 +34,7 @@ export function advanceDay(state: GameState): void {
   state.dayWork = []
   fixesDay(state)
   workDay(state)
+  teamDay(state)
   rivalsDay(state)
   productsDay(state)
   revenueDay(state)

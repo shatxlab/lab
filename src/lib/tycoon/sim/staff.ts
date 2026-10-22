@@ -1,5 +1,6 @@
 import { getTrait, TRAITS, type Trait } from '@/lib/tycoon/data/traits'
 import {
+  BREAKS_MORALE,
   CANDIDATE_MORALE_MAX,
   LEVELS,
   CANDIDATE_MORALE_MIN,
@@ -22,6 +23,7 @@ import {
   RELEASE_GOOD_QUALITY,
   RELEASE_MORALE_BONUS,
   RELEASE_MORALE_PENALTY,
+  STANDUP_MORALE,
   TEAM_MORALE_CAP,
   TRAINING_COST_BASE,
   TRAINING_COST_PER_SKILL,
@@ -87,6 +89,8 @@ export function moraleTarget(state: GameState, employee: Employee): number {
   target += Math.min(cheer, TEAM_MORALE_CAP)
   const office = officeOf(state, employee)
   target += careerMorale(state, employee, office)
+  if (office.breaks) target += BREAKS_MORALE
+  if (office.standup) target -= STANDUP_MORALE
   const project = office.project
   if (project) {
     const over = state.day - project.startDay - crunchDays(project.size)

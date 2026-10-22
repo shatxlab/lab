@@ -1,5 +1,5 @@
 import { audienceFor } from '@/lib/tycoon/data/audiences'
-import { EU_PAY, EU_TYPE_SIZE } from '@/lib/tycoon/data/regions'
+import { EU_BUG_TOLERANCE, EU_COMPLAINT_FACTOR, EU_PAY, EU_TYPE_SIZE } from '@/lib/tycoon/data/regions'
 import { expectedFeatures } from '@/lib/tycoon/data/eras'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import {
@@ -147,9 +147,9 @@ export function bugDensity(product: Product): number {
   return product.bugs / PROJECT_SIZES[product.size].work
 }
 
-/** Share of the users it could have that a product keeps despite its bugs, 0..1. */
-export function bugFactor(product: Product): number {
-  return 1 / (1 + bugDensity(product) / BUG_TOLERANCE)
+/** Share of the users it could have that a product keeps despite its bugs, 0..1; European users put up with fewer. */
+export function bugFactor(product: Product, region: Region = 'us'): number {
+  return 1 / (1 + bugDensity(product) / (BUG_TOLERANCE * (region === 'eu' ? EU_BUG_TOLERANCE : 1)))
 }
 
 /** The share of a product's reach in a region. */
@@ -164,7 +164,7 @@ export function targetUsersIn(state: GameState, product: Product, region: Region
   const reach = reachIn(product, region)
   if (reach <= 0) return 0
   const crowd = crowding(weights, product.productTypeId, ownWeight(product, state.day, region), region)
-  const kept = interest(product, state.day) * bugFactor(product)
+  const kept = interest(product, state.day) * bugFactor(product, region)
   const users = reach * kept * expectationFactor(product, state.day)
   const loyal = (product.loyalUsers ?? 0) * regionShare(product, region) * kept
   return saturate(product.productTypeId, users, region) / (1 + crowd) + loyal
@@ -253,10 +253,12 @@ export function productsDay(state: GameState): void {
     surfaceBugs(product)
     product.bugs += bugsFoundPerDay(product)
     if (before < BUG_COMPLAINTS && bugDensity(product) >= BUG_COMPLAINTS) {
-      state.reputation = Math.max(0, Math.min(REPUTATION_MAX, state.reputation - BUG_COMPLAINT_REPUTATION))
+      // European users have regulators to write to as well.
+      const loss = BUG_COMPLAINT_REPUTATION * (share > 0 ? EU_COMPLAINT_FACTOR : 1)
+      state.reputation = Math.max(0, Math.min(REPUTATION_MAX, state.reputation - loss))
       state.events.push({
         type: 'notice',
-        text: `${product.name} has ${Math.round(product.bugs)} open bugs and ${getProductType(product.productTypeId).userNoun} are complaining in public: -${BUG_COMPLAINT_REPUTATION} reputation.`,
+        text: `${product.name} has ${Math.round(product.bugs)} open bugs and ${getProductType(product.productTypeId).userNoun} are complaining in public${share > 0 ? ', in Europe to the regulators too' : ''}: -${loss} reputation.`,
       })
     }
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EU_PAY, EU_TYPE_SIZE } from '@/lib/tycoon/data/regions'
+import { COMPLIANCE_FEATURE } from '@/lib/tycoon/data/regions'
 import { EU_OFFICE_COST, EU_WAGE, LAUNCH_ADOPTERS, NEW_OFFICE_COST, REGION_OFFICE_LIMIT, RIVAL_ABROAD } from '@/lib/tycoon/sim/balance'
 import { generateEmployee, hire, hiringOffice, refreshCandidates, salaryFor, salaryOf } from '@/lib/tycoon/sim/hiring'
 import { localiseBlocker } from '@/lib/tycoon/sim/lifecycle'
@@ -204,9 +205,15 @@ describe('markets in two regions', () => {
 describe('localising a product', () => {
   const ready = () => {
     const state = withEurope()
-    state.products = [makeProduct({ id: 70, name: 'Anchor', reach: 20_000, users: 18_000, releaseDay: 500, updates: [{ day: 760 }], featureIds: ['accounts'] })]
+    state.products = [makeProduct({ id: 70, name: 'Anchor', reach: 20_000, users: 18_000, releaseDay: 500, updates: [{ day: 760 }], featureIds: ['accounts', COMPLIANCE_FEATURE] })]
     return state
   }
+
+  it("needs Europe's data rules met first: the compliance feature", () => {
+    const state = ready()
+    state.products[0].featureIds = ['accounts']
+    expect(localiseBlocker(state, state.offices[0], state.products[0])).toMatch(/data rules/)
+  })
 
   it('needs an office in Europe, and a product that is not already there', () => {
     const state = ready()

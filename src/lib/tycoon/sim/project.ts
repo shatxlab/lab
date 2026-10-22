@@ -7,6 +7,7 @@ import {
   BUDGET_RESERVE_DAYS,
   DAYS_PER_MONTH,
   CAMPAIGNS,
+  POLISH_FIX_SHARE,
   PROMO_AUDIENCE,
   DEMAND_NOISE,
   HIT_BASE_CHANCE,
@@ -35,7 +36,7 @@ import { officeRunning, pmHitFactor, pmReachFactor } from './direction'
 import { campaignCost, growBlocker, localiseBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
-import { inGarage, resolveOffice, teamOf } from './offices'
+import { inGarage, resolveOffice, routineBugRisk, teamOf } from './offices'
 import { bugProneness, euShareOf, regionScale, releaseBugs, settledUsers } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
@@ -164,7 +165,7 @@ export function startProject(
     readyNotified: false,
     hype: 1,
     alphaOffered: false,
-    bugRisk: 1,
+    bugRisk: routineBugRisk(office),
     contract: null,
   }
   return OK
@@ -223,7 +224,7 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     readyNotified: false,
     hype: 1,
     alphaOffered: false,
-    bugRisk: 1,
+    bugRisk: routineBugRisk(office),
     contract: null,
   }
   return OK
@@ -266,7 +267,7 @@ export function startLocalisation(state: GameState, productId: number, officeId?
     readyNotified: false,
     hype: 1,
     alphaOffered: false,
-    bugRisk: 1,
+    bugRisk: routineBugRisk(office),
     contract: null,
   }
   return OK
@@ -411,6 +412,8 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
     boostUntil: 0,
     boostUsers: 0,
   }
+  // A team with nothing of its own to look after takes on what it launched.
+  if (office.productId === undefined || !state.products.some((p) => p.id === office.productId)) office.productId = product.id
   if (campaign) {
     const audience = Math.min(product.reach, PROMO_AUDIENCE * settledUsers(state, product.productTypeId, product.featureIds, product.reach))
     startBoost(product, CAMPAIGNS[campaign], state.day, audience)
@@ -448,6 +451,7 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
       state.launchesSinceHit += 1
     }
   }
+  if (project.polishes) product.bugs *= 1 - POLISH_FIX_SHARE
   if (project.localises && euShareOf(product) === 0) {
     // Europe is a market of its own: the product gains reach there, and its first users arrive as a launch's do.
     const gain = euGain(product)

@@ -5,12 +5,13 @@ import { getResearch } from '@/lib/tycoon/data/research'
 import { title } from './careers'
 import { describePendingEvent } from './events'
 import { nextSize, promotionCost, promotionEffect, promotionReturn } from './lifecycle'
-import { newOfficeCost, officeName, getOffice, openableRegions } from './offices'
+import { buildingName, newOfficeCost, officeName, officesIn, getOffice, openableRegions } from './offices'
+import { DIRECTION_INFO, ownedProduct } from './teams'
 import { hitBreakdown, projectBudget, projectQuality, projectTarget } from './project'
 import { acquisitionPrice } from './rivals'
 import { salePrice, sunsetOutcome } from './sunset'
 import { trainingCost } from './staff'
-import type { Discipline, Employee, GameState, ProjectSize, Region, Tier } from './types'
+import type { Direction, Discipline, Employee, GameState, ProjectSize, Region, Tier } from './types'
 
 /** What a decision looks like in the log: a category, a line to read, and the numbers behind it. */
 export type Decision = [kind: string, text: string, data?: Record<string, string | number | boolean | string[]>]
@@ -156,8 +157,28 @@ export const decisions = {
   },
 
   openOffice(state: GameState, region?: Region): Decision {
-    const where = region ?? openableRegions(state)[0]
-    return ['office.open', `Opened office ${state.offices.length + 1} in ${where === 'eu' ? 'Europe' : 'the US'}`, { cost: newOfficeCost(state, where), region: where ?? 'us' }]
+    const where = region ?? openableRegions(state)[0] ?? 'us'
+    const floor = officesIn(state, where).length + 1
+    return ['office.open', floor === 1 ? `Opened the building in ${where === 'eu' ? 'Europe' : 'the US'}` : `Added floor ${floor} to ${buildingName(where)}`, { cost: newOfficeCost(state, where), region: where, floor }]
+  },
+
+  assignProduct(state: GameState, officeId: number, productId: number | null): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    return ['team.product', productId === null ? `${officeLabel(state, officeId)}'s team let its product go` : `${officeLabel(state, officeId)}'s team took on ${product?.name ?? 'a product'}`, { office: officeLabel(state, officeId) }]
+  },
+
+  setDirection(state: GameState, officeId: number, direction: Direction): Decision {
+    const product = ownedProduct(state, getOffice(state, officeId)!)
+    return ['team.direction', `${officeLabel(state, officeId)}: ${DIRECTION_INFO[direction].name}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), direction }]
+  },
+
+  setRoutine(state: GameState, officeId: number, routine: 'standup' | 'breaks', on: boolean): Decision {
+    return ['team.routine', `${officeLabel(state, officeId)}: ${routine === 'standup' ? 'stand-ups' : 'coffee breaks'} ${on ? 'on' : 'off'}`, { office: officeLabel(state, officeId), routine, on }]
+  },
+
+  queueFeatures(state: GameState, productId: number, featureIds: readonly string[]): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    return ['team.queue', `Next release of ${product?.name ?? 'a product'}: ${featureIds.length > 0 ? featureNames(featureIds).join(', ') : 'nothing queued'}`, { features: featureNames(featureIds) }]
   },
 
   acquire(state: GameState, rivalId: number, keepProductIds: readonly number[] = []): Decision {

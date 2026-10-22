@@ -7,7 +7,8 @@ import { fire, generateEmployee, hireCost, hiringOffice, ROLES, salaryOf } from 
 import { getOffice } from '@/lib/tycoon/sim/offices'
 import { rivalFor } from '@/lib/tycoon/sim/rivals'
 import { estimateReach } from '@/lib/tycoon/sim/lifecycle'
-import { bugDensity, revenueForUsers } from '@/lib/tycoon/sim/products'
+import { bugDensity, revenueForUsers, usersIn } from '@/lib/tycoon/sim/products'
+import { EU_BREACH_FINE_DAYS } from './regions'
 import { projectQuality } from '@/lib/tycoon/sim/project'
 import { isReady } from '@/lib/tycoon/sim/scoring'
 import { adjustMorale } from '@/lib/tycoon/sim/morale'
@@ -49,6 +50,9 @@ const OSS_QUICK_BUG_RISK = 1.3
 
 const roundTo = (n: number, step: number) => Math.max(step, Math.round(n / step) * step)
 const burnPerDay = (s: GameState) => monthlyBurn(s) / DAYS_PER_MONTH
+/** What Europe's regulators fine a breach: days of what the studio's products earn there, or nothing with none sold there. */
+const europeanFine = (s: GameState) =>
+  Math.round((s.products.reduce((sum, p) => sum + revenueForUsers(p.productTypeId, usersIn(p, 'eu'), p.audienceId, 'eu'), 0) * EU_BREACH_FINE_DAYS) / 50) * 50
 const newestProduct = (s: GameState) => s.products[s.products.length - 1]
 const poachable = (s: GameState) => s.employees.filter((e) => !e.founder && (e.keptDay === undefined || s.day - e.keptDay > POACH_IMMUNITY_DAYS))
 const nameOf = (s: GameState, id: number | undefined) => s.employees.find((e) => e.id === id)?.name ?? 'Someone'
@@ -521,12 +525,14 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
       }),
       choice(state, {
         label: 'Ignore it',
-        note: '40% chance it gets exploited',
+        note: europeanFine(state) > 0 ? `40% chance it gets exploited, and Europe's regulators fine a breach ${$(europeanFine(state))}` : '40% chance it gets exploited',
         apply: () => {
           if (rand(state) >= 0.4) return 'Nothing happened. This time.'
           addReputation(state, -8)
           addModifier(state, { source: 'breach', stat: 'revenue', mult: 0.7, days: 15 })
-          return 'It was exploited. Customers are furious: -8 reputation and weaker income for 15 days.'
+          const fine = europeanFine(state)
+          state.money -= fine
+          return `It was exploited. Customers are furious: -8 reputation and weaker income for 15 days${fine > 0 ? `, and a ${$(fine)} fine from Europe's regulators` : ''}.`
         },
       }),
     ],

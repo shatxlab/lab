@@ -18,7 +18,7 @@ import {
 import { PM_RESEARCH, salaryOf } from './hiring'
 import { depart } from './knowledge'
 import { adjustMorale } from './morale'
-import { staffOf } from './offices'
+import { routineSpeed, staffOf } from './offices'
 import { isResearched } from './unlocks'
 import { rand } from './rng'
 import { fail, isBuilder, OK, type BuilderRole, type Discipline, type Employee, type GameState, type Office, type Result } from './types'
@@ -122,8 +122,8 @@ export function becomePm(state: GameState, employeeId: number): Result {
 
 /** Output multiplier for a whole office: a Lead speeds it up; a big team without one gets in its own way. */
 export function teamSpeed(state: GameState, office: Office): number {
-  if (leadOf(state, office)) return LEAD_SPEED
-  return buildersIn(state, office) > LEAD_FREE_TEAM ? NO_LEAD_SPEED : 1
+  const lead = leadOf(state, office) ? LEAD_SPEED : buildersIn(state, office) > LEAD_FREE_TEAM ? NO_LEAD_SPEED : 1
+  return lead * routineSpeed(office)
 }
 
 /** True when an office is big enough to need a Lead and has none. */

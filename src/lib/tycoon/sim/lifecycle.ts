@@ -1,3 +1,5 @@
+import { COMPLIANCE_FEATURE } from '@/lib/tycoon/data/regions'
+import { getFeature } from '@/lib/tycoon/data/features'
 import {
   AUTO_PROMOTE_MIN_EFFECT,
   AUTO_PROMOTE_RESERVE_DAYS,
@@ -215,5 +217,6 @@ export function growBlocker(state: GameState, office: Office, product: Product):
 export function localiseBlocker(state: GameState, office: Office, product: Product): string | null {
   if (euShareOf(product) > 0) return 'Already in Europe'
   if (!hasEuropeOffice(state)) return 'Needs an office in Europe'
+  if (!product.featureIds.includes(COMPLIANCE_FEATURE)) return `Europe's data rules: it needs ${getFeature(COMPLIANCE_FEATURE).name} first`
   return updateBlocker(state, office, product)
 }

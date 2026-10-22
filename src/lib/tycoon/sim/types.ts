@@ -141,6 +141,10 @@ export interface Project {
   grows?: ProjectSize
   /** Localising a product: opens the European market when this update ships. */
   localises?: boolean
+  /** A polishing release: it fixes most of the open bugs and ships fewer new ones. */
+  polishes?: boolean
+  /** A release the product's own team started (`sim/teams.ts`): it ships by itself when every bar is full. */
+  byTeam?: boolean
   /** Client work: who it is for, what it pays on delivery, and when it is due. Null for everything else. */
   contract: ContractTerms | null
 }
@@ -205,6 +209,8 @@ export interface Product {
   /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
   boostUntil: number
   boostUsers: number
+  /** Features queued for the next release by the team that looks after it. Absent when none are. */
+  nextFeatures?: string[]
   /** Users earlier promotions won over for good, slowly drifting away; part of what the product heads toward. Absent in older saves. */
   loyalUsers?: number
   /** Once Marketing automation is researched: promote this product by itself at this tier whenever the bank allows. */
@@ -341,7 +347,23 @@ export interface Office {
   /** Where it is: the garage and the first office are in the US. Absent in older saves, which are all US. */
   region?: Region
   project: Project | null
+  /** The product this floor's team looks after, releasing it as `direction` says (`sim/teams.ts`). */
+  productId?: number
+  direction?: Direction
+  /** A short meeting every morning in the floor's meeting room: a little faster and tidier, a little less fun. */
+  standup?: boolean
+  /** Coffee breaks: happier people, a little less done. */
+  breaks?: boolean
+  /** The day the team ran out of work, to give the player a few days before the next release starts by itself. */
+  idleSince?: number
 }
+
+/**
+ * What a team does with the product it looks after: add the features queued for it, polish it, keep it fresh
+ * at the least cost, or take it to Europe (compliance first, then localising).
+ */
+export type Direction = 'grow' | 'polish' | 'keep' | 'expand'
+export const DIRECTIONS: readonly Direction[] = ['grow', 'polish', 'keep', 'expand']
 
 /** A competing studio. Its products live in `GameState.rivalProducts`. */
 export interface Rival {

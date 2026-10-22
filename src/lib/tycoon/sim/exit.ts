@@ -1,14 +1,15 @@
-import { DAYS_PER_MONTH, EXIT_BASE_MULTIPLE, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_RAISE_PER_DECLINE, EXIT_WINDOW_DAYS } from './balance'
-import { dailyIncome } from './economy'
+import { DAYS_PER_MONTH, EXIT_BASE_MULTIPLE, EXIT_FIRST_OFFER_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_RAISE_PER_DECLINE, EXIT_WINDOW_DAYS } from './balance'
+import { trailingIncome } from './economy'
 import { logEntry, runSummary } from './journal'
 import { inGarage } from './offices'
+import { lastReleaseDay } from './products'
 import { standings } from './rivals'
 import { fail, OK, type GameState, type Result } from './types'
 
 /** What `multiple` years of what the studio earns come to, a little more for a good name. */
 function valuation(state: GameState, multiple: number): number {
   const reputation = 1 + state.reputation / 200
-  return dailyIncome(state) * DAYS_PER_MONTH * 12 * multiple * reputation
+  return trailingIncome(state) * DAYS_PER_MONTH * 12 * multiple * reputation
 }
 
 /** What a buyer would pay now: years of what the studio earns, a slightly better multiple each time you turn one down. */
@@ -29,7 +30,7 @@ export function offerWindowLeft(state: GameState): number | null {
 }
 
 /**
- * Once the garage has a hit that earns, a bigger company makes an offer now and then; turned down, it comes
+ * Once the garage has a hit that has earned for a few months, a bigger company makes an offer now and then; turned down, it comes
  * back a little better. Buyers lose interest for good `EXIT_WINDOW_DAYS` after the first offer.
  */
 export function exitDay(state: GameState): void {
@@ -44,7 +45,9 @@ export function exitDay(state: GameState): void {
     logEntry(state, 'exit.closed', 'Buyers lost interest', { declined: state.exit.declined })
     return
   }
-  if (state.day < state.exit.nextDay || dailyIncome(state) < EXIT_MIN_INCOME) return
+  if (state.day < state.exit.nextDay || trailingIncome(state) < EXIT_MIN_INCOME) return
+  const hit = state.products.find((p) => p.id === state.signatureId)
+  if (state.exit.firstDay === null && hit && state.day - lastReleaseDay(hit) < EXIT_FIRST_OFFER_DAYS) return
   const buyer = standings(state).find((s) => s.id !== 0)
   state.exit.firstDay ??= state.day
   state.exit.pending = { price: buyoutPrice(state), bidder: buyer?.name ?? 'A bigger company' }

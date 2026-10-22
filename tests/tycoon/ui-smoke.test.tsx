@@ -118,6 +118,29 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     expect(audience).toBeDefined()
     act(() => audience!.click())
     expect(host.textContent).toMatch(/loved/)
+    expect(host.textContent).toContain('small businesses love the ones at the top')
+    // The first feature they can pick is one they love.
+    const first = host.querySelector('.features .feature:not(.locked)')!
+    expect(first.textContent).toContain('loved')
+  })
+
+  it('the team dialog hires in the region with room, and says what a product manager adds', () => {
+    const store = richStore()
+    const host = mount(store, <TeamDialog />)
+    expect(host.textContent).toMatch(/Europe · \d+ free desks/)
+    const europe = [...host.querySelectorAll<HTMLButtonElement>('.segmented button')].find((b) => b.textContent?.startsWith('Europe'))!
+    act(() => europe.click())
+    expect(host.textContent).toContain('these are from Europe')
+    expect(host.textContent).toContain('Works on')
+  })
+
+  it('the products tab says what a promotion pays back', () => {
+    const store = richStore()
+    const host = mount(store, <ProductsTab />)
+    const promote = [...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Promote'))
+    expect(promote).toBeDefined()
+    act(() => promote!.click())
+    expect(host.textContent).toMatch(/Pays back about|Loses money/)
   })
 
   it('the employee dialog for an analyst, and for a builder with experience', () => {

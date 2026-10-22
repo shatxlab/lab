@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { getTrait } from '@/lib/tycoon/data/traits'
-import { ANALYST_MAX_LEVEL, LEVELS, MORALE_UNHAPPY, PROMOTION_PATIENCE_DAYS, TRAINING_DAYS } from '@/lib/tycoon/sim/balance'
+import { ANALYST_MAX_LEVEL, LEVELS, MORALE_UNHAPPY, PROMOTION_PATIENCE_DAYS, SURVEY_COST, TRAINING_DAYS } from '@/lib/tycoon/sim/balance'
+import { pmEffectText } from '@/lib/tycoon/sim/direction'
+import { getOffice, officeName } from '@/lib/tycoon/sim/offices'
 import { pmBlocker, primarySkillName, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
 import { insightOf } from '@/lib/tycoon/sim/insight'
 import { salaryFor } from '@/lib/tycoon/sim/hiring'
@@ -106,6 +108,16 @@ export function EmployeeDialog({ id }: { id: number }) {
           </div>
         )}
         {topAnalyst && pmBlocker(state, person) !== null && <p className="muted">Product manager: {pmBlocker(state, person)}.</p>}
+        {person.role === 'pm' && (
+          <p className="good">
+            Steers {officeName(state, getOffice(state, person.officeId)!)}: every product launched or grown there gets {pmEffectText(state, getOffice(state, person.officeId))}. It grows with their level and their analysis.
+          </p>
+        )}
+        {person.role === 'analyst' && (
+          <p className="muted">
+            Their insight pays for studying an audience ({SURVEY_COST} insight, from the New project dialog): the feature list then shows what those people love, and puts it first.
+          </p>
+        )}
       </section>
 
       <section className="section">
@@ -192,8 +204,8 @@ export function EmployeeDialog({ id }: { id: number }) {
       </section>
       )}
 
-      {message && <p className="bad">{message}</p>}
       <div className="actions">
+        {message && <p className="bad action-note">{message}</p>}
         <button onClick={() => store.openDialog({ kind: 'team' })}>Back to team</button>
         {!person.founder && (
           <button className={confirmFire ? 'danger' : ''} onClick={fire} onBlur={() => setConfirmFire(false)}>

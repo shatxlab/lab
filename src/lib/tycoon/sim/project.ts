@@ -7,11 +7,11 @@ import {
   BUDGET_RESERVE_DAYS,
   DAYS_PER_MONTH,
   CAMPAIGNS,
+  PROMO_AUDIENCE,
   DEMAND_NOISE,
   HIT_BASE_CHANCE,
   HIT_CAMPAIGN_BOOST,
   HIT_AUDIENCE_MAX,
-  HIT_AUDIENCE_MIN,
   HIT_CHANCE_PER_MISS,
   HIT_MAX_CHANCE,
   HIT_MIN_QUALITY,
@@ -36,7 +36,7 @@ import { campaignCost, growBlocker, localiseBlocker, newProductBlocker, nextSize
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
 import { inGarage, resolveOffice, teamOf } from './offices'
-import { bugProneness, euShareOf, regionScale, releaseBugs } from './products'
+import { bugProneness, euShareOf, regionScale, releaseBugs, settledUsers } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
 import { pick, rand, randRange } from './rng'
@@ -339,7 +339,7 @@ export interface HitBreakdown {
   quality: number
   market: number
   buzz: number
-  /** How well the features suit the audience: a little up when they love them, down when they do not care. */
+  /** How well the features suit the audience: up for every feature they love, never down. */
   audience: number
   /** A product manager in the office steers the product toward what people want. */
   pm: number
@@ -357,7 +357,7 @@ export function hitBreakdown(state: GameState, project: Project, quality: number
   const qualityFactor = 0.5 + (quality - HIT_MIN_QUALITY) / (100 - HIT_MIN_QUALITY)
   const market = marketDemand(state, project.productTypeId)
   const buzz = project.hype * (campaign ? HIT_CAMPAIGN_BOOST[campaign] : 1)
-  const audience = Math.min(HIT_AUDIENCE_MAX, Math.max(HIT_AUDIENCE_MIN, audienceFit(project.productTypeId, project.audienceId, project.featureIds)))
+  const audience = Math.min(HIT_AUDIENCE_MAX, audienceFit(project.productTypeId, project.audienceId, project.featureIds))
   const pm = pmHitFactor(state, officeRunning(state, project))
   const raw = quality < HIT_MIN_QUALITY ? 0 : base * qualityFactor * market * buzz * audience * pm
   return { chance: Math.min(HIT_MAX_CHANCE, raw), base, misses, quality: qualityFactor, market, buzz, audience, pm, capped: raw > HIT_MAX_CHANCE }
@@ -411,7 +411,10 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
     boostUntil: 0,
     boostUsers: 0,
   }
-  if (campaign) startBoost(product, CAMPAIGNS[campaign], state.day)
+  if (campaign) {
+    const audience = Math.min(product.reach, PROMO_AUDIENCE * settledUsers(state, product.productTypeId, product.featureIds, product.reach))
+    startBoost(product, CAMPAIGNS[campaign], state.day, audience)
+  }
   state.products.push(product)
   state.shippedCount += 1
   reputationFromRelease(state, project, quality, 1)

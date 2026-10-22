@@ -5,6 +5,7 @@ import { getProductType } from '@/lib/tycoon/data/productTypes'
 import {
   COVERAGE_EXPONENT,
   FEATURE_REACH_BONUS,
+  AUDIENCE_FIT_VALUE,
   FIT_FLOOR,
   OFF_TYPE_FEATURE_FIT,
   OVERSHOOT_CAP,
@@ -69,16 +70,15 @@ export function featureScore(productTypeId: string, featureIds: readonly string[
   return score
 }
 
-/** How well the features suit the audience, value-weighted: 1 when they are indifferent, up when they love them. */
+/**
+ * How well the features suit the audience, for the chance of a hit: 1 with nothing they love, and up for
+ * every feature they love, by its value. A feature they barely notice adds nothing but takes nothing away,
+ * so building more never hurts.
+ */
 export function audienceFit(productTypeId: string, audienceId: string | undefined, featureIds: readonly string[]): number {
-  let total = 0
-  let weighted = 0
-  for (const id of featureIds) {
-    const value = getFeature(id).value
-    total += value
-    weighted += value * audienceLikes(productTypeId, audienceId, id)
-  }
-  return total > 0 ? weighted / total : 1
+  let loved = 0
+  for (const id of featureIds) loved += getFeature(id).value * Math.max(0, audienceLikes(productTypeId, audienceId, id) - 1)
+  return 1 + loved / AUDIENCE_FIT_VALUE
 }
 
 /** What the audience says after a launch: features they loved, features they shrugged at, and ones they wished for. */

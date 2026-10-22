@@ -4,7 +4,7 @@ import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
 import { title } from './careers'
 import { describePendingEvent } from './events'
-import { nextSize, promotionCost, promotionEffect } from './lifecycle'
+import { nextSize, promotionCost, promotionEffect, promotionReturn } from './lifecycle'
 import { newOfficeCost, officeName, getOffice, openableRegions } from './offices'
 import { hitBreakdown, projectBudget, projectQuality, projectTarget } from './project'
 import { acquisitionPrice } from './rivals'
@@ -60,7 +60,7 @@ export const decisions = {
 
   promote(state: GameState, productId: number, tier: Tier): Decision {
     const product = state.products.find((p) => p.id === productId)
-    return ['promote', `Promoted ${product?.name ?? 'a product'} (${tier})`, product ? { cost: promotionCost(product, tier), users: Math.round(product.users), effect: Math.round(promotionEffect(state, product) * 100) } : undefined]
+    return ['promote', `Promoted ${product?.name ?? 'a product'} (${tier})`, product ? { cost: promotionCost(state, product, tier), users: Math.round(product.users), effect: Math.round(promotionEffect(state, product) * 100), payback: Math.round(promotionReturn(state, product, tier) * 100) / 100 } : undefined]
   },
 
   setLicensed(state: GameState, productId: number, licensed: boolean): Decision {

@@ -205,6 +205,8 @@ export interface Product {
   /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
   boostUntil: number
   boostUsers: number
+  /** Users earlier promotions won over for good, slowly drifting away; part of what the product heads toward. Absent in older saves. */
+  loyalUsers?: number
   /** Once Marketing automation is researched: promote this product by itself at this tier whenever the bank allows. */
   autoPromote?: Tier | null
   /** A Flagship licensed to other companies (needs the Licensing programme): it pays a fee on top, for as long as it is kept in shape. */
@@ -405,8 +407,14 @@ export interface GameState {
   contractsDone: number
   rivals: Rival[]
   rivalProducts: RivalProduct[]
-  /** Consecutive days at the top of the industry ranking. */
+  /** Days counted at the top of the industry ranking as a leader; a day below costs a few of them. */
   daysAtTop: number
+  /** The day each product type's demand last made the news; absent in older saves. */
+  marketNews?: Record<string, number>
+  /** Every product name ever given out, yours and the rivals', lower case, so none comes back; absent in older saves. */
+  usedNames?: string[]
+  /** Income per day, averaged over the last couple of months (`trailingIncome`); absent in older saves. */
+  incomeAverage?: number
   /** Income per day from the businesses of rivals you bought, beyond their products. */
   acquiredIncome: number
   lifetimeRevenue: number

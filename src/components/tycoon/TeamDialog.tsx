@@ -12,6 +12,7 @@ import {
   NO_LEAD_SPEED,
   OFFICE_KINDS,
   OUTING_MORALE,
+  REMOTE_SPEED,
 } from '@/lib/tycoon/sim/balance'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
@@ -19,10 +20,12 @@ import { monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { needsLead, pmBlocker, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
 import { hasAnalyst, insightRate } from '@/lib/tycoon/sim/insight'
+import { pmEffectText } from '@/lib/tycoon/sim/direction'
 import { eraWageFactor, hireCost, hiringOffice, payShare, salaryFor } from '@/lib/tycoon/sim/hiring'
 import {
   deskCount,
   freeDesks,
+  getOffice,
   monthlyRent,
   moveOutBlocker,
   newOfficeCost,
@@ -35,7 +38,7 @@ import {
   teamOfficeId,
 } from '@/lib/tycoon/sim/offices'
 import { outingBlocker, outingCost } from '@/lib/tycoon/sim/staff'
-import { DISCIPLINES, isBuilder, type Employee, type Region, type Result } from '@/lib/tycoon/sim/types'
+import { DISCIPLINES, isBuilder, REGIONS, type Employee, type Region, type Result } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { useGame, useOffice, useStore } from './context'
 import { formatMoney } from '@/lib/tycoon/format'
@@ -81,10 +84,11 @@ function Skills({ employee }: { employee: Employee }) {
   )
 }
 
-function Person({ employee, action, showMorale }: { employee: Employee; action: ReactNode; showMorale?: boolean }) {
+/** One person's row; with `actionsBelow` their controls get a row of their own (with several offices there are too many for one line). */
+function Person({ employee, action, showMorale, actionsBelow }: { employee: Employee; action: ReactNode; showMorale?: boolean; actionsBelow?: boolean }) {
   const trait = getTrait(employee.trait)
   return (
-    <div className={`person ${showMorale ? '' : 'plain'}`}>
+    <div className={`person ${showMorale ? '' : 'plain'} ${actionsBelow ? 'actions-below' : ''}`}>
       <div className="person-name">
         <strong>
           {employee.name}
@@ -123,7 +127,11 @@ export function TeamDialog() {
 
   const selected = useOffice()
   const desks = deskCount(state)
-  const region = regionOf(selected)
+  const regions = REGIONS.filter((r) => state.offices.some((o) => regionOf(o) === r))
+  const freeIn = (r: Region) => state.offices.filter((o) => regionOf(o) === r).reduce((sum, o) => sum + freeDesks(state, o), 0)
+  // Hire where there is room: the shown office's region if it has a free desk, else one that does.
+  const [hireRegion, setHireRegion] = useState<Region | null>(null)
+  const region = hireRegion ?? (freeIn(regionOf(selected)) > 0 ? regionOf(selected) : (regions.find((r) => freeIn(r) > 0) ?? regionOf(selected)))
   const hireInto = hiringOffice(state, selected.id, region)
   const pool = state.candidates.filter((c) => (c.region ?? 'us') === region)
   const many = state.offices.length > 1
@@ -165,6 +173,7 @@ export function TeamDialog() {
                 </span>
               </span>
               {needsLead(state, office) && <small className="warn">needs a Lead · {SLOWER}% slower without one</small>}
+              {pmEffectText(state, office) && <small className="good" title="Their product manager steers what this office launches and grows">PM: {pmEffectText(state, office)}</small>}
               {office.id !== selected.id && <button onClick={() => store.selectOffice(office.id)}>Show</button>}
             </div>
           ))}
@@ -216,6 +225,12 @@ export function TeamDialog() {
           </span>
         </div>
         {state.employees.length === 0 && <p className="muted">Nobody works here. Hire someone to start a project.</p>}
+        {many && (
+          <p className="muted">
+            Everyone has a desk in one office (the second list: they can move to another office in the same region). <em>Works on</em> lets
+            someone help another office's project from their own desk, {Math.round((1 - REMOTE_SPEED) * 100)}% slower, even across the Atlantic.
+          </p>
+        )}
         {!many && needsLead(state, state.offices[0]) && (
           <p className="warn">
             An office of more than {LEAD_FREE_TEAM} people needs a Lead to coordinate it: without one it works {SLOWER}% slower, with one {FASTER}% faster.
@@ -242,6 +257,7 @@ export function TeamDialog() {
             key={employee.id}
             employee={employee}
             showMorale
+            actionsBelow={many}
             action={
               <>
                 {promotionBlocker(state, employee) === null && (
@@ -281,11 +297,16 @@ export function TeamDialog() {
                     value={employee.officeId}
                     onChange={(event) => report(store.transfer(employee.id, Number((event.target as HTMLSelectElement).value)))}
                   >
-                    {state.offices.map((office) => (
-                      <option key={office.id} value={office.id} disabled={office.id !== employee.officeId && freeDesks(state, office) <= 0}>
-                        {officeName(state, office)}
-                      </option>
-                    ))}
+                    {state.offices.map((office) => {
+                      const home = getOffice(state, employee.officeId)
+                      const abroad = home !== undefined && regionOf(office) !== regionOf(home)
+                      return (
+                        <option key={office.id} value={office.id} disabled={office.id !== employee.officeId && (abroad || freeDesks(state, office) <= 0)}>
+                          Desk in {officeName(state, office)}
+                          {abroad ? ' (other region)' : ''}
+                        </option>
+                      )
+                    })}
                   </select>
                 )}
                 <button onClick={() => store.openDialog({ kind: 'employee', id: employee.id })}>Details</button>
@@ -309,13 +330,22 @@ export function TeamDialog() {
           <h3>Candidates</h3>
           <span className="muted">
             New faces in {refreshIn} days. Signing fee is one month's salary.
-            {many && hireInto && ` New hires join ${officeName(state, hireInto)}.`}{many && ` These are people from ${REGION_NAME[region]}${region === 'eu' ? ', paid a little less' : ''}.`}
+            {many && hireInto && ` New hires join ${officeName(state, hireInto)}.`}{many && ` People live where they work: these are from ${REGION_NAME[region]}${region === 'eu' ? ', paid a little less' : ''}.`}
           </span>
         </div>
+        {regions.length > 1 && (
+          <div className="segmented" role="group" aria-label="Hire in">
+            {regions.map((r) => (
+              <button key={r} className={r === region ? 'active' : ''} aria-pressed={r === region} onClick={() => setHireRegion(r)}>
+                {REGION_NAME[r]} <small>· {freeIn(r)} free desk{freeIn(r) === 1 ? '' : 's'}</small>
+              </button>
+            ))}
+          </div>
+        )}
         {pool.length === 0 && <p className="muted">No one is looking right now.</p>}
         {pool.map((candidate) => {
           const cost = hireCost(candidate)
-          const blocked = !hireInto ? 'No free desk' : state.money < cost ? 'Too expensive' : ''
+          const blocked = !hireInto ? `No free desk in ${REGION_NAME[region]}` : state.money < cost ? 'Too expensive' : ''
           return (
             <Person
               key={candidate.id}
@@ -330,8 +360,8 @@ export function TeamDialog() {
         })}
       </section>
 
-      {message && <p className="bad">{message}</p>}
       <div className="actions">
+        {message && <p className="bad action-note">{message}</p>}
         <button onClick={() => store.closeDialog()}>Close</button>
       </div>
     </Modal>

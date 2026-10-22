@@ -1,7 +1,7 @@
 import { ERAS } from '@/lib/tycoon/data/eras'
 import { getStage } from '@/lib/tycoon/data/stages'
 import { DAYS_PER_MONTH } from './balance'
-import { dailyIncome, monthlyBurn } from './economy'
+import { dailyIncome, monthlyBurn, trailingIncome } from './economy'
 import { productRevenue } from './products'
 import { statMultiplier } from './modifiers'
 import { playerRank } from './rivals'
@@ -62,6 +62,7 @@ export function journalMonth(state: GameState): void {
   const revenueMult = statMultiplier(state, 'revenue')
   logEntry(state, 'month', 'Month end', {
     income: Math.round(dailyIncome(state)),
+    incomeAverage: Math.round(trailingIncome(state)),
     burn: Math.round(monthlyBurn(state) / DAYS_PER_MONTH),
     reputation: Math.round(state.reputation),
     stage: getStage(state.stage).name,
@@ -74,7 +75,9 @@ export function journalMonth(state: GameState): void {
     research: state.research.done.length,
     productList: state.products.map((p) => {
       const income = Math.round(productRevenue(p) * revenueMult)
-      return `${p.name} (${p.productTypeId}, ${p.size}, ${Math.round(p.users)} users, $${income}/day, quality ${Math.round(p.quality)}${p.autoPromote ? `, auto-promote ${p.autoPromote}` : ''})`
+      const regions = p.euUsers ? `, ${Math.round(p.euUsers)} in Europe` : ''
+      const loyal = p.loyalUsers ? `, ${Math.round(p.loyalUsers)} regulars` : ''
+      return `${p.name} (${p.productTypeId}, ${p.size}, ${Math.round(p.users)} users${regions}${loyal}, $${income}/day, quality ${Math.round(p.quality)}${p.autoPromote ? `, auto-promote ${p.autoPromote}` : ''})`
     }),
   })
 }
@@ -102,6 +105,7 @@ export function runSummary(state: GameState): Record<string, string | number | b
     stage: getStage(state.stage).name,
     money: Math.round(state.money),
     income: Math.round(dailyIncome(state)),
+    incomeAverage: Math.round(trailingIncome(state)),
     lifetimeRevenue: Math.round(state.lifetimeRevenue),
     reputation: Math.round(state.reputation),
     rank: playerRank(state),

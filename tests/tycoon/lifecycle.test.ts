@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { AUTO_PROMOTE_MIN_EFFECT, CAMPAIGNS, LAUNCH_ADOPTERS, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from '@/lib/tycoon/sim/balance'
-import { AUTO_PROMOTE_RESEARCH, autoPromoteDay, promotionEffect, campaignCost, estimateReach, productPhase, promotionCost, promoteProduct, promotionReserve, setAutoPromote, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
-import { bugProneness, productRevenue, productsDay, releaseBugs, revenueForUsers } from '@/lib/tycoon/sim/products'
+import { AUTO_PROMOTE_MIN_EFFECT, CAMPAIGNS, LAUNCH_ADOPTERS, PROMO_AUDIENCE, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from '@/lib/tycoon/sim/balance'
+import { AUTO_PROMOTE_RESEARCH, autoPromoteDay, promotionAudience, promotionEffect, promotionReturn, campaignCost, estimateReach, productPhase, promotionCost, promoteProduct, promotionReserve, setAutoPromote, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { bugProneness, productRevenue, productsDay, releaseBugs, revenueForUsers, targetUsers } from '@/lib/tycoon/sim/products'
 import { projectQuality, projectTarget, reachAfterUpdate, shipProject, startProject, startUpdate } from '@/lib/tycoon/sim/project'
 import { featureReach } from '@/lib/tycoon/sim/scoring'
 import { createInitialState, deserialize, serialize } from '@/lib/tycoon/sim/state'
@@ -161,29 +161,29 @@ describe('updates', () => {
 })
 
 describe('promotions', () => {
-  it('cost a few days of income at full reach, with a floor, and bigger tiers cost more', () => {
+  it('cost days of what their audience would earn, with a floor, and bigger tiers cost more', () => {
     const state = studioWithProduct()
     const product = state.products[0]
-    const daily = revenueForUsers('web_app', product.reach)
-    const [small, medium, large] = TIERS.map((t) => promotionCost(product, t))
+    const daily = revenueForUsers('web_app', promotionAudience(state, product))
+    const [small, medium, large] = TIERS.map((t) => promotionCost(state, product, t))
     expect(small).toBeGreaterThanOrEqual(PROMOTIONS.small.costFloor)
     expect(small).toBeLessThan(medium)
     expect(medium).toBeLessThan(large)
     expect(large).toBeGreaterThanOrEqual(Math.round(daily * PROMOTIONS.large.costDays) - 50)
 
     product.reach = 1 // a product nobody wants still has a floor price
-    expect(promotionCost(product, 'small')).toBe(PROMOTIONS.small.costFloor)
+    expect(promotionCost(state, product, 'small')).toBe(PROMOTIONS.small.costFloor)
   })
 
   it('charge the price and bring in the tier\'s users while they run', () => {
     const state = studioWithProduct()
     const product = state.products[0]
-    const cost = promotionCost(product, 'medium')
+    const cost = promotionCost(state, product, 'medium')
     const money = state.money
     expect(promoteProduct(state, 50, 'medium').ok).toBe(true)
     expect(state.money).toBe(money - cost)
     expect(product.boostUntil).toBe(state.day + PROMOTIONS.medium.days)
-    expect(product.boostUsers * PROMOTIONS.medium.days).toBeCloseTo(product.reach * PROMOTIONS.medium.users)
+    expect(product.boostUsers * PROMOTIONS.medium.days).toBeCloseTo(promotionAudience(structuredClone(state), product) * PROMOTIONS.medium.users, -1)
 
     const plain = structuredClone(state)
     plain.products[0].boostUntil = 0
@@ -211,13 +211,45 @@ describe('promotions', () => {
         const state = studioWithProduct()
         state.products[0].releaseDay = state.day - age
         const plain = structuredClone(state)
-        const cost = promotionCost(state.products[0], tier)
+        const cost = promotionCost(state, state.products[0], tier)
         promoteProduct(state, 50, tier)
         const roi = (earn(state, 400) - earn(plain, 400)) / cost
         expect(roi, `${tier} at ${age} days`).toBeGreaterThan(1.2)
         expect(roi, `${tier} at ${age} days`).toBeLessThan(2)
       }
     }
+  })
+})
+
+describe('promotions in a full market', () => {
+  it('speak to no more than a few times the users the market holds for the product', () => {
+    const state = studioWithProduct()
+    const product = state.products[0]
+    product.reach = 1e9
+    expect(promotionAudience(state, product)).toBeCloseTo(PROMO_AUDIENCE * targetUsers(state, product))
+    expect(promotionAudience(state, product)).toBeLessThan(product.reach / 10)
+  })
+
+  it('leave a few regulars behind, who stay long after the push', () => {
+    const state = studioWithProduct()
+    promoteProduct(state, 50, 'large')
+    earn(state, PROMOTIONS.large.days + 200)
+    const regulars = state.products[0].loyalUsers ?? 0
+    expect(regulars).toBeGreaterThan(0)
+    expect(targetUsers(state, state.products[0])).toBeGreaterThan(regulars)
+  })
+
+  it('say what they will earn back: about what they do, and much less soon after the last one', () => {
+    const state = studioWithProduct()
+    const plain = structuredClone(state)
+    const expected = promotionReturn(state, state.products[0], 'medium')
+    const cost = promotionCost(state, state.products[0], 'medium')
+    promoteProduct(state, 50, 'medium')
+    const measured = (earn(state, 1500) - earn(plain, 1500)) / cost
+    expect(measured / expected).toBeGreaterThan(0.6)
+    expect(measured / expected).toBeLessThan(1.5)
+    state.products[0].boostUntil = state.day
+    expect(promotionReturn(state, state.products[0], 'medium')).toBeLessThan(expected * 0.4)
   })
 })
 
@@ -391,7 +423,7 @@ describe('automatic promotion', () => {
     const state = unlocked()
     state.money = 1_000_000
     setAutoPromote(state, 50, 'small')
-    const cost = promotionCost(state.products[0], 'small')
+    const cost = promotionCost(state, state.products[0], 'small')
     autoPromoteDay(state)
     expect(state.money).toBe(1_000_000 - cost)
     expect(state.products[0].boostUntil).toBeGreaterThan(state.day)
@@ -403,7 +435,7 @@ describe('automatic promotion', () => {
 
   it('never dips into the reserve, and does nothing when off', () => {
     const state = unlocked()
-    const cost = promotionCost(state.products[0], 'small')
+    const cost = promotionCost(state, state.products[0], 'small')
     state.money = cost + promotionReserve(state) - 1
     setAutoPromote(state, 50, 'small')
     autoPromoteDay(state)

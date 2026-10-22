@@ -16,6 +16,7 @@ import {
   ACQUISITION_STAGE,
   HIRE_MAX_LEVEL,
   LEADER_STAGE,
+  TOP_SLIP_DAYS,
   MAX_OFFICES,
   PORTFOLIO_LIMIT,
   DAYS_PER_MONTH,
@@ -43,7 +44,7 @@ import {
 import { generateEmployee, ROLE_DISCIPLINE, ROLES, salaryOf } from './hiring'
 import { levelForSkill } from './careers'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
-import { dailyIncome } from './economy'
+import { trailingIncome } from './economy'
 import { inGarage, openableRegions } from './offices'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
@@ -252,7 +253,7 @@ export interface Standing {
 /** The industry ranking: every studio by what its products earn a day, the biggest first. */
 export function standings(state: GameState): Standing[] {
   const yourBest = [...state.products].sort((a, b) => b.users - a.users)[0]
-  const rows: Standing[] = [{ id: 0, name: 'Your studio', revenue: dailyIncome(state), reputation: state.reputation, best: yourBest?.name ?? null }]
+  const rows: Standing[] = [{ id: 0, name: 'Your studio', revenue: trailingIncome(state), reputation: state.reputation, best: yourBest?.name ?? null }]
   for (const rival of state.rivals) {
     const products = state.rivalProducts.filter((p) => p.rivalId === rival.id)
     const best = [...products].sort((a, b) => b.users - a.users)[0]
@@ -272,9 +273,10 @@ export function playerRank(state: GameState): number {
   return standings(state).findIndex((s) => s.id === 0) + 1
 }
 
-/** Counts consecutive days at the top as an industry leader, for the last stage of the journey. */
+/** Counts days at the top as an industry leader, for the last stage of the journey: a day below the top costs a few of them. */
 export function rankingDay(state: GameState): void {
-  state.daysAtTop = state.stage >= LEADER_STAGE && playerRank(state) === 1 ? state.daysAtTop + 1 : 0
+  if (state.stage < LEADER_STAGE) state.daysAtTop = 0
+  else state.daysAtTop = playerRank(state) === 1 ? state.daysAtTop + 1 : Math.max(0, state.daysAtTop - TOP_SLIP_DAYS)
 }
 
 /** What a rival earns per day: its products, and its business beyond them. */

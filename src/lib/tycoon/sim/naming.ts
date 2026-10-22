@@ -11,15 +11,27 @@ function takenNames(state: GameState): Set<string> {
     ...state.retired.map((p) => p.name),
     ...state.rivalProducts.map((p) => p.name),
     ...state.offices.flatMap((o) => (o.project ? [o.project.name] : [])),
+    ...(state.usedNames ?? []),
   ]
   return new Set(names.map((n) => n.toLowerCase()))
 }
 
+/** Remembers a name as given out, for good. */
+function claim(state: GameState, name: string): string {
+  state.usedNames = [...(state.usedNames ?? []), name.toLowerCase()]
+  return name
+}
+
 /**
- * A product name nobody else has used. A single word while there are free ones, then a two-word name
- * ("Quiet Harbor") once the single words start running out, so a long game never repeats itself.
+ * A product name nobody has used in this run, yours or a rival's, even one long gone. A single word while there
+ * are free ones, then a two-word name ("Quiet Harbor") once the single words start running out, so a long game
+ * never repeats itself.
  */
 export function freshProductName(state: GameState): string {
+  return claim(state, pickFreshName(state))
+}
+
+function pickFreshName(state: GameState): string {
   const taken = takenNames(state)
   for (let i = 0; i < SINGLE_TRIES; i++) {
     const word = pick(state, PRODUCT_WORDS)

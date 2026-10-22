@@ -19,9 +19,17 @@ import { useGame, useOffice, useStore } from './context'
 import { formatCount, formatDays, formatDemand, formatMoney } from '@/lib/tycoon/format'
 import { crowdLabel } from './IndustryTab'
 import { hasAnalyst, isSurveyed, surveyBlocker } from '@/lib/tycoon/sim/insight'
+import { pmEffectText } from '@/lib/tycoon/sim/direction'
 import { audienceLikes, LOVED_AT, SHRUGGED_AT } from '@/lib/tycoon/sim/scoring'
 import { Modal } from './Modal'
 import { cssVars } from './style'
+
+/** What a studied audience thinks of a feature: loved, fine, or barely noticed (which adds little but does no harm). */
+function TasteTag({ likes }: { likes: number }) {
+  if (likes >= LOVED_AT) return <span className="tag taste good" title="They love it: more users, and a better chance of a hit">♥ loved</span>
+  if (likes <= SHRUGGED_AT) return <span className="tag taste muted" title="They barely notice it: it adds little, but does no harm">meh</span>
+  return <span className="tag taste muted" title="They like it well enough">fine</span>
+}
 
 /** Colours the demand label: green when hot, red when cold. */
 function marketTone(demand: number): string {
@@ -32,11 +40,11 @@ function marketTone(demand: number): string {
 function ClientWork({ office }: { office: Office }) {
   const store = useStore()
   const state = useGame()
-  const [error, setError] = useState('')
+  const [error, setError] = useState<{ offerId: number; reason: string } | null>(null)
   const blocker = contractBlocker(state, office)
   const take = (offer: ContractOffer) => {
     const result = store.acceptContract(offer.id, office.id)
-    if (!result.ok) setError(result.reason)
+    setError(result.ok ? null : { offerId: offer.id, reason: result.reason })
   }
 
   return (
@@ -74,11 +82,12 @@ function ClientWork({ office }: { office: Office }) {
                 Take it · {formatMoney(offer.pay)}
                 <small> · {formatMoney(Math.round(offer.pay * CONTRACT_DEPOSIT))} now</small>
               </button>
+              {error?.offerId === offer.id && <p className="bad action-note">{error.reason}</p>}
             </div>
           )
         })}
       </div>
-      {error && <p className="bad">{error}</p>}
+      {blocker && <p className="muted">{blocker}</p>}
     </>
   )
 }
@@ -108,16 +117,20 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
   const type = getProductType(typeId)
   const expected = expectedFeatures(typeId, state.day)
   const weights = marketWeights(state)
+  /** Once the audience is studied the list leads with what they love; until then, with what suits the type best. */
+  const studied = isSurveyed(state, tasteAudience)
   const features = useMemo(
     () =>
       FEATURES.filter((f) => !product?.featureIds.includes(f.id)).sort((a, b) => {
         const open = Number(featureLock(state, b) === null) - Number(featureLock(state, a) === null)
         const wanted = Number(expected.includes(b.id)) - Number(expected.includes(a.id))
         const fit = Number(b.suits.includes(typeId)) - Number(a.suits.includes(typeId))
-        return open || wanted || fit || b.value - a.value || a.name.localeCompare(b.name)
+        const liked = studied ? audienceLikes(typeId, tasteAudience, b.id) - audienceLikes(typeId, tasteAudience, a.id) : 0
+        return open || wanted || fit || liked || b.value - a.value || a.name.localeCompare(b.name)
       }),
-    [typeId, state.research.done.length, product?.id, expected.length],
+    [typeId, state.research.done.length, product?.id, expected.length, studied, tasteAudience],
   )
+  const tasteName = audiencesOf(typeId).find((a) => a.id === tasteAudience)?.name.toLowerCase()
   const projectSize = product?.size ?? size
   const spec = PROJECT_SIZES[projectSize]
   const target = growsTo ? growTarget(typeId, selected, projectSize, growsTo) : projectTarget(typeId, selected, isUpdate ? 'update' : 'new', projectSize)
@@ -265,6 +278,10 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
         <div className="features-head">
           <span>
             Features ({selected.length}/{maxFeatures})
+            <small className="muted">
+              {' '}
+              · {studied ? `${tasteName} love the ones at the top` : tasteName ? `by fit and value; study ${tasteName} to see what they love` : 'by fit and value'}
+            </small>
           </span>
           <span className="cost-legend muted">
             cost:{' '}
@@ -284,23 +301,18 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
               <label key={f.id} className={`feature ${on ? 'on' : ''} ${lock ? 'locked' : ''}`}>
                 <input type="checkbox" checked={on} disabled={lock !== null || (!on && full)} onChange={() => toggle(f.id)} />
                 <span className="feature-name">{f.name}</span>
-                {lock ? (
-                  <span className="tag muted">{lock}</span>
-                ) : expected.includes(f.id) ? (
-                  <span className="tag warn" title={`${eraAt(state.day).name}: users of this type take it for granted`}>
-                    expected
-                  </span>
-                ) : (
-                  <span className={`tag ${fits ? 'good' : 'bad'}`}>{fits ? 'fits' : 'off-type'}</span>
-                )}
-                {isSurveyed(state, tasteAudience) && fits && (
-                  <span
-                    className={`tag ${audienceLikes(typeId, tasteAudience, f.id) >= LOVED_AT ? 'good' : audienceLikes(typeId, tasteAudience, f.id) <= SHRUGGED_AT ? 'bad' : 'muted'}`}
-                    title="What your audience thinks of it"
-                  >
-                    {audienceLikes(typeId, tasteAudience, f.id) >= LOVED_AT ? 'loved' : audienceLikes(typeId, tasteAudience, f.id) <= SHRUGGED_AT ? 'shrug' : 'fine'}
-                  </span>
-                )}
+                <span className="feature-tags">
+                  {lock ? (
+                    <span className="tag muted">{lock}</span>
+                  ) : expected.includes(f.id) ? (
+                    <span className="tag warn" title={`${eraAt(state.day).name}: users of this type take it for granted`}>
+                      expected
+                    </span>
+                  ) : (
+                    <span className={`tag kind ${fits ? 'good' : 'bad'}`}>{fits ? 'fits' : 'off-type'}</span>
+                  )}
+                  {studied && fits && <TasteTag likes={audienceLikes(typeId, tasteAudience, f.id)} />}
+                </span>
                 <span className="stars" title={`Value ${f.value}`}>
                   {'★'.repeat(f.value)}
                 </span>
@@ -328,6 +340,7 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
             {spec.name} {type.name}: about <b>{formatDays(days)}</b> with your team
             {Number.isFinite(cost) && <> · ~{formatMoney(cost)} in wages</>}
           </div>
+          {(!isUpdate || growsTo) && pmEffectText(state, office) && <div className="good">Your product manager steers it: {pmEffectText(state, office)}</div>}
           {budget > 0 && (
             <div className={budgetProblem ? 'bad' : 'muted'} title="Licences, servers, assets and freelancers. Client work is how a garage pays for it.">
               Budget <b>{formatMoney(budget)}</b>, paid now{budgetProblem ? `. ${budgetProblem.replace(/^Not enough money: the budget is [^,]+, and /, 'Keep ')}` : ''}
@@ -345,10 +358,10 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
           )}
         </div>
 
-        {portfolioProblem && <p className="bad">{portfolioProblem}</p>}
-        {budgetProblem && <p className="muted">Short of cash? Client work pays the bills and the budget.</p>}
-        {error && <p className="bad">{error}</p>}
         <div className="actions">
+          {portfolioProblem && <p className="bad action-note">{portfolioProblem}</p>}
+          {budgetProblem && <p className="bad action-note">Not enough money for the budget. Client work pays the bills and the budget.</p>}
+          {error && <p className="bad action-note">{error}</p>}
           <button onClick={() => store.closeDialog()}>Cancel</button>
           <button className="primary" disabled={portfolioProblem !== null || budgetProblem !== null} title={portfolioProblem ?? budgetProblem ?? undefined} onClick={start}>
             {growsTo ? 'Start growing' : product ? (selected.length === 0 ? 'Start maintenance' : 'Start update') : 'Start project'}

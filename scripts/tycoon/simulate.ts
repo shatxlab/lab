@@ -215,7 +215,7 @@ function promoteBest(state: GameState): void {
   const best = [...state.products].sort((a, b) => productRevenue(b) - productRevenue(a))[0]
   if (!best || productRevenue(best) < 80 || promotionEffect(state, best) < AUTO_PROMOTE_MIN_EFFECT) return
   const tiers: Tier[] = ['large', 'medium', 'small']
-  const tier = tiers.find((t) => promotionBlocker(state, best, t) === null && promotionCost(best, t) * 6 < state.money)
+  const tier = tiers.find((t) => promotionBlocker(state, best, t) === null && promotionCost(state, best, t) * 6 < state.money)
   if (tier) promoteProduct(state, best.id, tier)
 }
 

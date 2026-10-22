@@ -503,6 +503,7 @@
   bottom: -16px;
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin: 4px -16px -16px;
@@ -510,6 +511,12 @@
   border-radius: 0 0 12px 12px;
   background: var(--panel);
   box-shadow: 0 -8px 12px -4px var(--panel);
+}
+
+/* Why the button next to it did not work: kept in the sticky bar (or the row) so it is never scrolled out of sight. */
+.tycoon-root .action-note {
+  flex-basis: 100%;
+  text-align: right;
 }
 
 .tycoon-root .chips {
@@ -562,6 +569,13 @@
   border: 1px solid var(--line);
   background: var(--panel-2);
   cursor: pointer;
+}
+
+.tycoon-root .feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
 .tycoon-root .feature.on {
@@ -663,12 +677,13 @@
 
 @media (max-width: 520px) {
   .tycoon-root .feature {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr auto auto;
     row-gap: 2px;
     padding: 6px 10px;
   }
 
-  .tycoon-root .feature .tag {
+  /* No room for every tag on a phone: what the audience thinks stays, the type fit goes. */
+  .tycoon-root .feature .tag.kind {
     display: none;
   }
 
@@ -1107,7 +1122,14 @@
 
 .tycoon-root .person-action {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+}
+
+.tycoon-root .person.actions-below .person-action {
+  grid-column: 1 / -1;
+  grid-row: auto;
 }
 
 .tycoon-root .morale {

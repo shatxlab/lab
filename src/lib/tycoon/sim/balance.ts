@@ -94,6 +94,17 @@ export const MAINTENANCE_TARGET_SHARE = 0.6
 export const PROMO_MIN_EFFECT = 0.25
 /** ...recovering to its full effect over this many days. */
 export const PROMO_RECOVERY_DAYS = 180
+/**
+ * A promotion speaks to the product's reach, but never to more than this many times the users its market holds
+ * for it now: past what a crowded or saturated market can take, more advertising finds nobody new.
+ */
+export const PROMO_AUDIENCE = 3
+/** What a promotion's estimated return keeps after what the estimate leaves out: the bugs the extra users find, and a market that moves on. */
+export const PROMO_FRICTION = 0.75
+/** Of the users a promotion brings, this share stays on as regulars (`Product.loyalUsers`)... */
+export const PROMO_KEEP = 0.1
+/** ...who drift away again over about this many days, faster when the product goes stale. */
+export const PROMO_LOYAL_DAYS = 360
 /** Automatic promotion waits until the next one would bring at least this share of its users: below it, it would not pay. */
 export const AUTO_PROMOTE_MIN_EFFECT = 0.8
 /** Automatic promotion never spends the bank below this many days of what the studio burns. */
@@ -142,6 +153,13 @@ export const ACQUISITION_REPUTATION = 3
 export const ACQUISITION_STAGE = 3
 /** Journey stage from which days at the top of the ranking count: an industry leader. */
 export const LEADER_STAGE = 4
+/** A day off the top costs this many of the days counted there, instead of starting the count again. */
+export const TOP_SLIP_DAYS = 3
+/**
+ * The ranking, the income goals and what the studio is worth go by income averaged over about this many days,
+ * so a promotion's few weeks of extra users do not swing them.
+ */
+export const INCOME_AVERAGE_DAYS = 60
 /** An absorbed rival brings this many people, plus one for every this much reputation, up to the cap; each knows its kind of product and its products. */
 export const ABSORB_STAFF_BASE = 5
 export const ABSORB_STAFF_PER_REPUTATION = 25
@@ -197,6 +215,8 @@ export const MARKET_SHOCK_CHANCE = 0.06
 export const MARKET_SHOCK = 0.3
 export const MARKET_HOT = 1.2
 export const MARKET_COLD = 0.85
+/** A product type's demand makes the news at most once in this many days. */
+export const MARKET_NEWS_GAP_DAYS = 360
 
 // Random events
 // Events are an interruption, so there are few: after the warm-up and the cooldown, one turns up about every 80 days.
@@ -229,18 +249,18 @@ export interface MarketingOffer {
   days: number
 }
 
-/** Paid promotion of a live product. Roughly 1.3-1.6x its cost back. */
+/** Paid promotion of a live product. About 1.5x its cost back at full effect (`promotionReturn`), less soon after the last one. */
 export const PROMOTIONS: Record<'small' | 'medium' | 'large', MarketingOffer> = {
-  small: { costDays: 2.6, costFloor: 300, users: 0.08, days: 20 },
-  medium: { costDays: 6, costFloor: 700, users: 0.18, days: 30 },
-  large: { costDays: 11, costFloor: 1500, users: 0.35, days: 40 },
+  small: { costDays: 3.3, costFloor: 300, users: 0.08, days: 20 },
+  medium: { costDays: 7.5, costFloor: 700, users: 0.18, days: 30 },
+  large: { costDays: 14.5, costFloor: 1500, users: 0.35, days: 40 },
 }
 
 /** The same at launch, where the new users also get word of mouth going sooner. */
 export const CAMPAIGNS: Record<'small' | 'medium' | 'large', MarketingOffer> = {
   small: { costDays: 4, costFloor: 300, users: 0.08, days: 20 },
-  medium: { costDays: 7.5, costFloor: 700, users: 0.18, days: 30 },
-  large: { costDays: 12, costFloor: 1500, users: 0.35, days: 40 },
+  medium: { costDays: 8.5, costFloor: 700, users: 0.18, days: 30 },
+  large: { costDays: 16, costFloor: 1500, users: 0.35, days: 40 },
 }
 
 // Reputation
@@ -263,6 +283,8 @@ export const GROW_MAX_FEATURES = 3
 // Selling the studio: only possible from the garage
 /** The studio has to earn at least this much a day before anyone makes an offer. */
 export const EXIT_MIN_INCOME = 400
+/** Buyers wait this long after the garage's first hit, to see that it lasts, before the first offer. */
+export const EXIT_FIRST_OFFER_DAYS = 120
 /** Days before the next offer once one is turned down. */
 export const EXIT_GAP_DAYS = 90
 /** An offer is this many years of the studio's income, plus... */
@@ -383,9 +405,10 @@ export const HIT_BASE_CHANCE = 0.01
 export const HIT_CHANCE_PER_MISS = 0.012
 /** ...but never more than this. */
 export const HIT_MAX_CHANCE = 0.35
-/** Features the audience loves raise the chance, up to this; ones they do not care about cut it, down to the other. */
+/** Features the audience loves raise the chance, up to this; ones they barely notice leave it alone. */
 export const HIT_AUDIENCE_MAX = 1.5
-export const HIT_AUDIENCE_MIN = 0.6
+/** Audience fit goes up by 1 for this much feature value the audience loves, weighted by how much more than "fine" they love it. */
+export const AUDIENCE_FIT_VALUE = 10
 /** A launch campaign gets people talking: the chance is multiplied by this per tier. */
 export const HIT_CAMPAIGN_BOOST: Record<'small' | 'medium' | 'large', number> = { small: 1.2, medium: 1.4, large: 1.7 }
 /** A hit reaches this many times as many users, most for small products: a big launch was already aimed at most of its market... */

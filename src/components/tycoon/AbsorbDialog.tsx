@@ -75,9 +75,9 @@ export function AbsorbDialog({ rivalId }: { rivalId: number }) {
           Price <strong>{formatMoney(acquisitionPrice(state, rival))}</strong> <small className="muted">· {Math.round(rival.growth * 100)}% growth a year</small>
         </span>
       </div>
-      {blocker && <p className="bad">{blocker}</p>}
-      {error && <p className="bad">{error}</p>}
       <div className="actions">
+        {blocker && <p className="bad action-note">{blocker}</p>}
+        {error && <p className="bad action-note">{error}</p>}
         <button onClick={() => store.closeDialog()}>Cancel</button>
         <button className="primary" disabled={blocker !== null} onClick={confirm}>
           Absorb

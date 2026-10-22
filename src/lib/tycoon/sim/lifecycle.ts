@@ -8,8 +8,13 @@ import {
   NEW_PRODUCT_FREE_COUNT,
   NEW_PRODUCT_GAP_DAYS,
   PORTFOLIO_LIMIT,
+  PROMO_AUDIENCE,
+  PROMO_FRICTION,
+  PROMO_KEEP,
+  PROMO_LOYAL_DAYS,
   PROMO_MIN_EFFECT,
   PROMO_RECOVERY_DAYS,
+  USER_DECLINE,
   PROJECT_SIZES,
   PROMOTIONS,
   UPDATE_MIN_AGE_DAYS,
@@ -20,7 +25,7 @@ import { monthlyBurn } from './economy'
 import { logEntry } from './journal'
 import { marketDemand } from './market'
 import { activeProjects, hasEuropeOffice, inGarage, productInWork, teamOf } from './offices'
-import { euShareOf, interest, lastReleaseDay, revenueForUsers, targetUsers } from './products'
+import { euShareOf, interest, lastReleaseDay, revenueForUsers, settledUsers, targetUsers } from './products'
 import { computeReach } from './scoring'
 import { sizeLock } from './unlocks'
 import { fail, OK, PROJECT_SIZE_IDS, TIERS, type GameState, type Office, type Product, type Project, type ProjectSize, type Result, type Tier } from './types'
@@ -43,10 +48,32 @@ export function updateBlocker(state: GameState, office: Office, product: Product
   return wait > 0 ? `Wait ${wait} more day${wait === 1 ? '' : 's'}` : null
 }
 
-/** What a promotion costs: a few days of what the product earns at its full reach, more for a bigger push. */
-export function promotionCost(product: Product, tier: Tier): number {
+/**
+ * The people a promotion of this product speaks to: its reach, but no more than a few times the users its
+ * market holds for it now. A crowded or saturated market has few new people left to find.
+ */
+export function promotionAudience(state: GameState, product: Product): number {
+  return Math.min(product.reach, PROMO_AUDIENCE * targetUsers(state, product))
+}
+
+/** What a promotion costs: days of what its audience would earn, more for a bigger push. */
+export function promotionCost(state: GameState, product: Product, tier: Tier): number {
   const offer = PROMOTIONS[tier]
-  return price(revenueForUsers(product.productTypeId, product.reach, product.audienceId) * offer.costDays, offer.costFloor)
+  return price(revenueForUsers(product.productTypeId, promotionAudience(state, product), product.audienceId) * offer.costDays, offer.costFloor)
+}
+
+/** Days of use a user brought by a marketing push is worth, on average: most drift back within weeks, the few who become regulars stay about a year. */
+const DAYS_PER_BROUGHT_USER = ((1 - PROMO_KEEP) / USER_DECLINE + PROMO_KEEP * PROMO_LOYAL_DAYS) * PROMO_FRICTION
+
+/**
+ * About what a promotion earns back for every dollar it costs, if the product stays fresh: 1.5 or so after
+ * a good rest, well under 1 soon after the last one. Ignores the cost floor's rounding.
+ */
+export function promotionReturn(state: GameState, product: Product, tier: Tier): number {
+  const offer = PROMOTIONS[tier]
+  const cost = promotionCost(state, product, tier)
+  const users = promotionAudience(state, product) * offer.users * promotionEffect(state, product)
+  return cost > 0 ? (revenueForUsers(product.productTypeId, users, product.audienceId) * DAYS_PER_BROUGHT_USER) / cost : 0
 }
 
 /**
@@ -59,17 +86,17 @@ export function promotionEffect(state: GameState, product: Product): number {
   return PROMO_MIN_EFFECT + (1 - PROMO_MIN_EFFECT) * rested
 }
 
-/** Starts a marketing push on a product: its new users, scaled by `effect`, arrive a little each day while it runs. */
-export function startBoost(product: Product, offer: MarketingOffer, day: number, effect = 1): void {
+/** Starts a marketing push on a product: its new users, a share of `audience` scaled by `effect`, arrive a little each day while it runs. */
+export function startBoost(product: Product, offer: MarketingOffer, day: number, audience: number, effect = 1): void {
   product.boostUntil = day + offer.days
-  product.boostUsers = (product.reach * offer.users * effect) / offer.days
+  product.boostUsers = (audience * offer.users * effect) / offer.days
 }
 
 /** Why a product can't be promoted at this tier, or null when it can. */
 export function promotionBlocker(state: GameState, product: Product, tier: Tier): string | null {
   const left = product.boostUntil - state.day
   if (left > 0) return `Promoted for ${left} more day${left === 1 ? '' : 's'}`
-  return state.money < promotionCost(product, tier) ? 'Not enough money' : null
+  return state.money < promotionCost(state, product, tier) ? 'Not enough money' : null
 }
 
 export function promoteProduct(state: GameState, productId: number, tier: Tier): Result {
@@ -77,8 +104,9 @@ export function promoteProduct(state: GameState, productId: number, tier: Tier):
   if (!product) return fail('Unknown product')
   const blocker = promotionBlocker(state, product, tier)
   if (blocker) return fail(blocker)
-  state.money -= promotionCost(product, tier)
-  startBoost(product, PROMOTIONS[tier], state.day, promotionEffect(state, product))
+  const audience = promotionAudience(state, product)
+  state.money -= promotionCost(state, product, tier)
+  startBoost(product, PROMOTIONS[tier], state.day, audience, promotionEffect(state, product))
   return OK
 }
 
@@ -90,10 +118,16 @@ export function estimateReach(state: GameState, project: Project, quality: numbe
   return computeReach(project, quality, state.reputation, marketDemand(state, project.productTypeId)) * pmReachFactor(state, officeRunning(state, project))
 }
 
-/** A launch campaign is priced from what the product will earn per day once its users have arrived. */
+/** The people a launch campaign speaks to: as for a promotion, the reach, but no more than a few times the users the market will hold for it. */
+export function campaignAudience(state: GameState, project: Project, quality: number): number {
+  const reach = estimateReach(state, project, quality)
+  return Math.min(reach, PROMO_AUDIENCE * settledUsers(state, project.productTypeId, project.featureIds, reach))
+}
+
+/** A launch campaign is priced from what its audience would earn per day. */
 export function campaignCost(state: GameState, project: Project, quality: number, tier: Tier): number {
   const offer = CAMPAIGNS[tier]
-  const daily = revenueForUsers(project.productTypeId, estimateReach(state, project, quality), project.audienceId)
+  const daily = revenueForUsers(project.productTypeId, campaignAudience(state, project, quality), project.audienceId)
   return price(daily * offer.costDays, offer.costFloor)
 }
 
@@ -127,11 +161,12 @@ export function autoPromoteDay(state: GameState): void {
     if (!tier || promotionBlocker(state, product, tier) !== null) continue
     const effect = promotionEffect(state, product)
     if (effect < AUTO_PROMOTE_MIN_EFFECT) continue
-    const cost = promotionCost(product, tier)
+    const cost = promotionCost(state, product, tier)
     if (state.money - cost < promotionReserve(state)) continue
+    const payback = Math.round(promotionReturn(state, product, tier) * 100) / 100
     state.money -= cost
-    startBoost(product, PROMOTIONS[tier], state.day, effect)
-    logEntry(state, 'promote.auto', `${product.name} promoted itself (${tier})`, { cost, users: Math.round(product.users), effect: Math.round(effect * 100) })
+    startBoost(product, PROMOTIONS[tier], state.day, promotionAudience(state, product), effect)
+    logEntry(state, 'promote.auto', `${product.name} promoted itself (${tier})`, { cost, users: Math.round(product.users), effect: Math.round(effect * 100), payback })
   }
 }
 

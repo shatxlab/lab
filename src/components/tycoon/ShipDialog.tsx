@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { CAMPAIGNS } from '@/lib/tycoon/sim/balance'
-import { campaignCost, estimateReach } from '@/lib/tycoon/sim/lifecycle'
+import { campaignAudience, campaignCost, estimateReach } from '@/lib/tycoon/sim/lifecycle'
 import { releaseBugs, revenueForUsers, settledUsers } from '@/lib/tycoon/sim/products'
 import { hitBreakdown, projectQuality, reachAfterUpdate } from '@/lib/tycoon/sim/project'
 import { isReady } from '@/lib/tycoon/sim/scoring'
@@ -65,7 +65,7 @@ export function ShipDialog({ officeId }: { officeId: number }) {
                   {TIER_NAME[tier]} campaign
                   <small className="muted">
                     {' '}
-                    +{formatCount(reach * CAMPAIGNS[tier].users)} {type.userNoun} over {CAMPAIGNS[tier].days} days
+                    +{formatCount(campaignAudience(state, project, quality) * CAMPAIGNS[tier].users)} {type.userNoun} over {CAMPAIGNS[tier].days} days
                   </small>
                 </span>
                 <span className={broke ? 'bad' : ''}>-{formatMoney(cost)}</span>
@@ -107,8 +107,8 @@ export function ShipDialog({ officeId }: { officeId: number }) {
                 {type.name} market: {hit.market >= 1.05 ? 'hot' : hit.market <= 0.95 ? 'cold' : 'steady'} {factorLabel(hit.market)}
               </li>
               {project.featureIds.length > 0 && (
-                <li className={hit.audience > 1.05 ? 'good' : hit.audience < 0.95 ? 'warn' : ''}>
-                  Audience fit: {hit.audience > 1.05 ? 'they will like these features' : hit.audience < 0.95 ? 'they will shrug at these features' : 'neither here nor there'} {factorLabel(hit.audience)}
+                <li className={hit.audience > 1.05 ? 'good' : ''}>
+                  Audience fit: {hit.audience > 1.05 ? 'it has features they love' : 'nothing they love yet'} {factorLabel(hit.audience)}
                 </li>
               )}
               {hit.pm > 1 && <li className="good">Product manager steering it {factorLabel(hit.pm)}</li>}
@@ -120,8 +120,8 @@ export function ShipDialog({ officeId }: { officeId: number }) {
         </div>
       )}
 
-      {error && <p className="bad">{error}</p>}
       <div className="actions">
+        {error && <p className="bad action-note">{error}</p>}
         <button onClick={() => store.closeDialog()}>Back</button>
         <button className="primary" onClick={confirm}>
           {isUpdate ? 'Release update' : 'Launch'}

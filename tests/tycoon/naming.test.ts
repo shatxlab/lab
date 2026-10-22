@@ -22,6 +22,14 @@ describe('product names', () => {
     }
   })
 
+  it('remembers names whose products are gone, so a rival\'s old product name does not come back', () => {
+    const state = createInitialState(5)
+    state.rivalProducts = []
+    const first = freshProductName(state)
+    for (let i = 0; i < 40; i++) expect(freshProductName(state)).not.toBe(first)
+    expect(state.usedNames).toContain(first.toLowerCase())
+  })
+
   it('avoids a name the player has retired', () => {
     const state = createInitialState(3)
     const taken = new Set(PRODUCT_WORDS.slice(1))

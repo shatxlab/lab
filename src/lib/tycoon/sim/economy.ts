@@ -1,4 +1,4 @@
-import { BANKRUPT_AFTER_DEBT_DAYS, DAYS_PER_MONTH } from './balance'
+import { BANKRUPT_AFTER_DEBT_DAYS, DAYS_PER_MONTH, INCOME_AVERAGE_DAYS } from './balance'
 import { statMultiplier } from './modifiers'
 import { monthlyRent } from './offices'
 import { licenseIncome } from './licensing'
@@ -18,6 +18,11 @@ export function monthlyBurn(state: GameState): number {
 export function dailyIncome(state: GameState): number {
   const base = state.products.reduce((sum, p) => sum + productRevenue(p) + licenseIncome(state, p), 0)
   return base * statMultiplier(state, 'revenue') + state.acquiredIncome
+}
+
+/** Income per day averaged over the last couple of months: what the ranking, the income goals and buyers go by. */
+export function trailingIncome(state: GameState): number {
+  return state.incomeAverage ?? dailyIncome(state)
 }
 
 /** Net money per day at today's income and costs. */
@@ -42,6 +47,8 @@ export function revenueDay(state: GameState): void {
   // The businesses that came with bought rivals.
   state.money += state.acquiredIncome
   state.lifetimeRevenue += state.acquiredIncome
+  const today = dailyIncome(state)
+  state.incomeAverage = state.incomeAverage === undefined ? today : state.incomeAverage + (today - state.incomeAverage) / INCOME_AVERAGE_DAYS
 }
 
 export function costsDay(state: GameState): void {

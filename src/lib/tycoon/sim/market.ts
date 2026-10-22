@@ -5,6 +5,7 @@ import {
   MARKET_HOT,
   MARKET_MAX,
   MARKET_MIN,
+  MARKET_NEWS_GAP_DAYS,
   MARKET_NOISE,
   MARKET_PULL,
   MARKET_SHOCK,
@@ -41,11 +42,16 @@ export function updateMarket(state: GameState): void {
     state.market[type.id] = after
 
     if (productTypeLock(state, type) !== null) continue
+    // A market hovering at the edge would make news every month: once in a while is news enough.
+    const news = state.marketNews ?? {}
+    if (state.day - (news[type.id] ?? -Infinity) < MARKET_NEWS_GAP_DAYS) continue
     const percent = Math.round(Math.abs(after - 1) * 100)
     if (before < MARKET_HOT && after >= MARKET_HOT) {
       state.events.push({ type: 'notice', text: `${type.name} demand is surging: +${percent}%.` })
+      state.marketNews = { ...news, [type.id]: state.day }
     } else if (before > MARKET_COLD && after <= MARKET_COLD) {
       state.events.push({ type: 'notice', text: `${type.name} demand is cooling: -${percent}%.` })
+      state.marketNews = { ...news, [type.id]: state.day }
     }
   }
 }

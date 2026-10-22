@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BANKRUPT_AFTER_DEBT_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_WINDOW_DAYS } from '@/lib/tycoon/sim/balance'
+import { BANKRUPT_AFTER_DEBT_DAYS, EXIT_FIRST_OFFER_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_WINDOW_DAYS } from '@/lib/tycoon/sim/balance'
 import { checkBankruptcy, dailyIncome } from '@/lib/tycoon/sim/economy'
 import { acceptBuyout, buyoutPrice, declineBuyout, exitDay, offerWindowLeft, retireStudio, studioWorth } from '@/lib/tycoon/sim/exit'
 import { moveOut } from '@/lib/tycoon/sim/offices'
@@ -27,6 +27,16 @@ describe('selling the studio', () => {
     exitDay(state)
     expect(state.exit.pending?.price).toBe(buyoutPrice(state))
     expect(drainEvents(state).some((e) => e.type === 'offer')).toBe(true)
+  })
+
+  it('waits a few months after the hit before the first offer', () => {
+    const state = garageWithHit()
+    state.products[0].releaseDay = state.day - 10
+    exitDay(state)
+    expect(state.exit.pending).toBeNull()
+    state.day += EXIT_FIRST_OFFER_DAYS
+    exitDay(state)
+    expect(state.exit.pending).not.toBeNull()
   })
 
   it('is not offered without a hit, or without income', () => {

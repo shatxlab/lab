@@ -1,4 +1,5 @@
-import { dailyIncome } from '@/lib/tycoon/sim/economy'
+import { TOP_SLIP_DAYS } from '@/lib/tycoon/sim/balance'
+import { trailingIncome } from '@/lib/tycoon/sim/economy'
 import { productRevenue } from '@/lib/tycoon/sim/products'
 import { playerRank, standings } from '@/lib/tycoon/sim/rivals'
 import type { GameState } from '@/lib/tycoon/sim/types'
@@ -84,7 +85,7 @@ export const STAGES: readonly Stage[] = [
     goals: [
       { id: 'two_offices', label: 'Run 2 full offices: 24 people', check: (s) => realOffices(s) >= 2 && s.employees.length >= 24, progress: (s) => `${realOffices(s)} offices, ${s.employees.length} / 24 people` },
       { id: 'top_3', label: 'Reach the top 3 of the industry ranking', check: (s) => playerRank(s) <= 3, progress: (s) => `#${playerRank(s)}` },
-      { id: 'income_15k', label: 'Earn $15,000 a day', check: (s) => dailyIncome(s) >= 15_000, progress: (s) => `$${upTo(dailyIncome(s), 15_000)}` },
+      { id: 'income_15k', label: 'Earn $15,000 a day', check: (s) => trailingIncome(s) >= 15_000, progress: (s) => `$${upTo(trailingIncome(s), 15_000)}` },
     ],
   },
   {
@@ -95,16 +96,16 @@ export const STAGES: readonly Stage[] = [
     goals: [
       {
         id: 'number_one',
-        label: 'Hold #1 in the industry ranking for a year as a leader',
+        label: `Hold #1 in the industry ranking for a year as a leader (a day below it takes ${TOP_SLIP_DAYS} back)`,
         check: (s) => s.daysAtTop >= DAYS_AT_TOP,
-        progress: (s) => (s.daysAtTop > 0 ? `${s.daysAtTop} / ${DAYS_AT_TOP} days` : `#${playerRank(s)} now`),
+        progress: (s) => `${s.daysAtTop} / ${DAYS_AT_TOP} days · #${playerRank(s)} now`,
       },
       { id: 'three_offices', label: 'Run 3 full offices: 36 people', check: (s) => realOffices(s) >= 3 && s.employees.length >= 36, progress: (s) => `${realOffices(s)} offices, ${s.employees.length} / 36 people` },
       {
         id: 'two_rivals',
         label: 'Earn as much as the two biggest rivals put together',
-        check: (s) => dailyIncome(s) >= nextTwo(s),
-        progress: (s) => `$${count(dailyIncome(s))} vs $${count(nextTwo(s))} a day`,
+        check: (s) => trailingIncome(s) >= nextTwo(s),
+        progress: (s) => `$${count(trailingIncome(s))} vs $${count(nextTwo(s))} a day`,
       },
     ],
   },

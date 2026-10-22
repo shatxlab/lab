@@ -23,6 +23,8 @@ import {
   MARKET_CAP,
   MARKET_ROOM,
   PROJECT_SIZES,
+  PROMO_KEEP,
+  PROMO_LOYAL_DAYS,
   REPUTATION_MAX,
   RIVAL_ABROAD,
   STALE_DAYS,
@@ -150,16 +152,22 @@ export function bugFactor(product: Product): number {
   return 1 / (1 + bugDensity(product) / BUG_TOLERANCE)
 }
 
+/** The share of a product's reach in a region. */
+const regionShare = (product: Product, region: Region): number => (region === 'eu' ? euShareOf(product) : 1 - euShareOf(product))
+
 /**
  * Users the product is heading toward today: its reach, cut by staleness, bugs, features users now expect
- * that it lacks, and the other products competing for the same people.
+ * that it lacks, and the other products competing for the same people; plus the regulars earlier promotions
+ * won over, who stay while it is fresh and working.
  */
 export function targetUsersIn(state: GameState, product: Product, region: Region, weights = marketWeights(state)): number {
   const reach = reachIn(product, region)
   if (reach <= 0) return 0
   const crowd = crowding(weights, product.productTypeId, ownWeight(product, state.day, region), region)
-  const users = reach * interest(product, state.day) * bugFactor(product) * expectationFactor(product, state.day)
-  return saturate(product.productTypeId, users, region) / (1 + crowd)
+  const kept = interest(product, state.day) * bugFactor(product)
+  const users = reach * kept * expectationFactor(product, state.day)
+  const loyal = (product.loyalUsers ?? 0) * regionShare(product, region) * kept
+  return saturate(product.productTypeId, users, region) / (1 + crowd) + loyal
 }
 
 /** The users a product is heading toward in all its markets together. */
@@ -237,6 +245,9 @@ export function productsDay(state: GameState): void {
     // A promotion reaches people in each market in proportion to the reach it has there.
     product.users = us + eu + boost
     if (share > 0) product.euUsers = eu + boost * share
+    // A few of the people a promotion brings stay on; regulars won earlier slowly drift away.
+    const loyal = (product.loyalUsers ?? 0) * (1 - 1 / PROMO_LOYAL_DAYS) + boost * PROMO_KEEP
+    if (loyal > 0) product.loyalUsers = loyal
 
     const before = bugDensity(product)
     surfaceBugs(product)

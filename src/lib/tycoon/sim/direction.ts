@@ -23,3 +23,10 @@ export function pmReachFactor(state: GameState, office: Office | undefined): num
   const pm = office && pmOf(state, office)
   return pm ? 1 + pull(pm, PM_REACH_BONUS) : 1
 }
+
+/** What the office's product manager adds, in words ("+15% chance of a hit, +6% reach"), or null when it has none. */
+export function pmEffectText(state: GameState, office: Office | undefined): string | null {
+  if (!office || !pmOf(state, office)) return null
+  const percent = (factor: number) => `+${Math.round((factor - 1) * 100)}%`
+  return `${percent(pmHitFactor(state, office))} chance of a hit, ${percent(pmReachFactor(state, office))} reach`
+}

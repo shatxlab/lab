@@ -10,7 +10,7 @@ import { licenseBlocker, licenseIncome, LICENSING_RESEARCH } from '@/lib/tycoon/
 import { isResearched } from '@/lib/tycoon/sim/unlocks'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
-import { autoPromoteUnlocked, growBlocker, promotionEffect, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
+import { autoPromoteUnlocked, growBlocker, promotionAudience, promotionEffect, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, promotionReturn, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { audienceFor } from '@/lib/tycoon/data/audiences'
 import { feedbackFor } from '@/lib/tycoon/sim/insight'
 import { getFeature } from '@/lib/tycoon/data/features'
@@ -78,6 +78,12 @@ function ProductRow({ product }: { product: Product }) {
           <strong>{formatCount(product.users)}</strong> {type.userNoun}
           {inEurope && <small className="muted"> ({REGION_NAME.us} {formatCount(usersIn(product, 'us'))} · {REGION_NAME.eu} {formatCount(usersIn(product, 'eu'))})</small>}
           {arrow && <span className={tone}> {arrow}</span>} · <strong>{formatMoney(productRevenue(product))}</strong>/day
+          {(product.loyalUsers ?? 0) >= 1 && (
+            <small className="muted" title="People earlier promotions won over for good. They stay while the product is fresh and working, and drift away slowly.">
+              {' '}
+              · {formatCount(product.loyalUsers ?? 0)} regulars
+            </small>
+          )}
           {promoLeft > 0 && (
             <span className="good">
               {' '}
@@ -108,7 +114,7 @@ function ProductRow({ product }: { product: Product }) {
             {feedback.loved.length > 0 && (
               <span className="good">Loved: {feedback.loved.join(', ')}. </span>
             )}
-            {feedback.shrugged.length > 0 && <span>Shrugged at: {feedback.shrugged.join(', ')}. </span>}
+            {feedback.shrugged.length > 0 && <span title="These add little for them, but do no harm">Barely noticed: {feedback.shrugged.join(', ')}. </span>}
             {feedback.missed.length > 0 && <span className="warn">Wished for: {feedback.missed.join(', ')}.</span>}
             {feedback.waiting && <span className="muted"> More feedback is still coming in.</span>}
           </small>
@@ -199,7 +205,7 @@ function ProductRow({ product }: { product: Product }) {
             <option value="">Off</option>
             {TIERS.map((tier) => (
               <option key={tier} value={tier}>
-                {TIER_NAME[tier]} · {formatMoney(promotionCost(product, tier))}
+                {TIER_NAME[tier]} · {formatMoney(promotionCost(state, product, tier))}
               </option>
             ))}
           </select>
@@ -219,14 +225,20 @@ function ProductRow({ product }: { product: Product }) {
           ) : (
             TIERS.map((tier) => {
               const reason = promotionBlocker(state, product, tier)
+              const payback = promotionReturn(state, product, tier)
               return (
                 <button key={tier} disabled={reason !== null} onClick={() => store.promote(product.id, tier)}>
                   <span>
-                    <strong>{TIER_NAME[tier]}</strong> {formatMoney(promotionCost(product, tier))}
+                    <strong>{TIER_NAME[tier]}</strong> {formatMoney(promotionCost(state, product, tier))}
                   </span>
                   <small className={reason ? 'bad' : 'muted'}>
-                    {reason ?? `+${formatCount(product.reach * PROMOTIONS[tier].users * effect)} ${type.userNoun} over ${PROMOTIONS[tier].days} days`}
+                    {reason ?? `+${formatCount(promotionAudience(state, product) * PROMOTIONS[tier].users * effect)} ${type.userNoun} over ${PROMOTIONS[tier].days} days`}
                   </small>
+                  {!reason && (
+                    <small className={payback < 1 ? 'bad' : payback < 1.2 ? 'warn' : 'good'} title="What it should earn back for every dollar, if the product stays fresh">
+                      {payback < 1 ? `Loses money: about ${payback.toFixed(1)}× back` : `Pays back about ${payback.toFixed(1)}×`}
+                    </small>
+                  )}
                 </button>
               )
             })

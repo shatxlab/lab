@@ -39,7 +39,7 @@ export function IndustryTab() {
             <tr>
               <th>#</th>
               <th>Studio</th>
-              <th className="num">Income / day</th>
+              <th className="num" title="Yours is averaged over the last two months, so a promotion's few weeks do not swing the ranking">Income / day</th>
               <th className="num">Reputation</th>
               <th>Biggest product</th>
               {canBuy && <th />}

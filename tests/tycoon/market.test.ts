@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
-import { MARKET_MAX, MARKET_MIN } from '@/lib/tycoon/sim/balance'
+import { MARKET_COLD, MARKET_HOT, MARKET_MAX, MARKET_MIN, MARKET_NEWS_GAP_DAYS } from '@/lib/tycoon/sim/balance'
 import { initialMarket, marketDemand, updateMarket } from '@/lib/tycoon/sim/market'
 import { shipProject, startProject } from '@/lib/tycoon/sim/project'
 import { createInitialState } from '@/lib/tycoon/sim/state'
@@ -59,6 +59,20 @@ describe('market', () => {
     expect(texts.every((t) => t.startsWith('Web App demand is'))).toBe(true)
     expect(texts.some((t) => t.includes('surging'))).toBe(true)
     expect(texts.some((t) => t.includes('cooling'))).toBe(true)
+  })
+
+  it('makes the news about a type at most once in a while, however its demand hovers', () => {
+    const state = createInitialState(11)
+    let news = 0
+    for (let month = 0; month < 120; month++) {
+      state.day += 30
+      // Swing Web App across the line every month.
+      state.market.web_app = month % 2 === 0 ? MARKET_HOT - 0.01 : MARKET_COLD + 0.01
+      updateMarket(state)
+      news += state.events.filter((e) => e.type === 'notice' && e.text.startsWith('Web App')).length
+      state.events = []
+    }
+    expect(news).toBeLessThanOrEqual(Math.ceil((120 * 30) / MARKET_NEWS_GAP_DAYS) + 1)
   })
 
   it('scales a product\'s reach with demand at launch', () => {

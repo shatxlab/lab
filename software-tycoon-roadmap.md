@@ -119,9 +119,26 @@ scrolling**. Decided so far:
 - Garage desks are in two rows of two with the pets below (built: the garage always uses the `tall`
   arrangement, cropped like the office so the whole garage stays in view).
 
-Open questions: how teams own products and what the player does each month (so they act, not watch), what
-the stricter data rules mean in play, what replaces offices 3-4 in the stage goals and in Absorb, and whether
-5 floors x 2 buildings fit a phone screen at a readable size.
+- Europe's stricter data rules mean all of: a product needs a compliance feature before it launches there,
+  and bugs and breaches cost more there.
+- An absorbed rival arrives as a new floor in your building in its region; stage goals that ask for 3 or 4
+  offices are replaced (floors, teams, products per team).
+- Monthly loop (agreed 2026-10-22): a team owns a product and works on it non-stop under a
+  *direction* (Grow, Polish, Keep it running, Expand to Europe) and ships a release on its own every 2-3
+  months; the player picks the features of the next release, when to grow, moves teams, picks new products
+  and runs the floor (stand-ups, breaks, meeting room). Fewer teams than wanted, and Europe's rules pulling
+  Expand against Grow, make the trade-offs.
+- Screen size (mockups, 2026-10-22): on a phone, 5 floors fit one screen at about 390x120 px each for one
+  building, or 190x120 for both side by side. At a readable size a floor shows about 4-6 desks, not 12, so the
+  agreed shape (2026-10-22) is a building overview on one screen (floors with status at a glance), tapping a floor to zoom
+  into today's detailed office view, and on phones one building at a time with a US/Europe switch.
+
+Built 2026-10-22 (commits f3b9250 to cb90e79): offices are floors (`REGION_OFFICE_LIMIT` 5 per building, `MAX_OFFICES` 10; selling
+stays open until a second floor, `canBeSold`/`closeSale`); `sim/teams.ts` (a floor looks after a product under a direction, ships its own
+releases, queued features, stand-up and coffee-break routines); Europe's rules (Privacy compliance before localising, `EU_*` in
+`data/regions.ts`, fines on breaches); `render/BuildingScene.ts` + `render-support/building.ts` + `BuildingOverlay` for the street view
+(tap a floor to go in, one building at a time on phones). Not done: meeting room, coffee corner and EU interior inside the zoomed-in
+floor, watching stand-ups and breaks play out, retuning the first-guess numbers, a phone check of the new dialogs.
 
 ## Redesign: two acts (2026-10-18)
 

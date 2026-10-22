@@ -4,7 +4,12 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-22).** The third logged run was analysed and Phase 1 of its fixes is built (see "Third
+**Handover (2026-10-22, evening).** The player played the building build. The visual fixes from that are built (see
+"Fourth feedback: the building, routines, and one product" below); the bigger pivot it proposes (a long garage hunt
+for a hard hit, then a company built around that one product) is **proposed, not agreed**: settle the open questions
+with the player before building it.
+
+**Earlier handover (2026-10-22).** The third logged run was analysed and Phase 1 of its fixes is built (see "Third
 logged run, and the building pivot" below); the next big piece is the two-building pivot, to be planned with
 the player first.
 
@@ -44,6 +49,55 @@ Also `node scripts/tycoon/e2e.mjs` after `npm run build` (real Chrome; needs
 `?offices=2&stage=3&money=1000000&rep=60` (dev server only). Art sources
 (`.aseprite`, large preview, CC0 licence) live in `art/pixeloffice/`, outside
 `assets/` so they are not published or precached.
+
+## Fourth feedback: the building, routines, and one product (2026-10-22)
+
+From playing the building build, no run log. What the player said:
+
+- The building from outside looked clunky and unfinished; the team sat in one row, unlike the floor up close; the
+  laptops sat at the far end of the desks, so people typed on the bare desk.
+- Stand-ups and coffee breaks are culture, not switches. A stand-up lasted one game day, gone in a blink at 2x;
+  up close nobody went to the breaks or the stand-up. Gather everyone at a physical Scrum board, in both views,
+  instead of a meeting room.
+- Directions (Grow, Polish, Keep it running, Expand) are unclear and counterintuitive.
+- Analysts and PMs seemed missing. They are not: they are only offered once *User research* is done (one candidate
+  per pool), and look like developers at their desks.
+- The pivot, below.
+
+**Built (2026-10-22).**
+- **The building** (`render-support/building.ts`, `render/BuildingScene.ts`): always all five floors, the ones not
+  rented dark with their lights off (`BuildingBox.vacant`, "+ Rent floor N" on the next one); rooftop unit and aerial,
+  a ledge at every floor, an awning and planters at the lobby, trees and clouds. A floor is laid out as up close: two
+  partitions to a row, three rows (`floorPartitionAt`), computers at the near edge of the desk under the hands
+  (`render/furniture.ts` is shared with `OfficeScene`), and both views share one `SeatMap` per office, so everyone has
+  the same desk in both. `FLOOR_H` is 128, so the building is drawn at 0.75 on a phone (eighth steps now).
+- **Routines are culture**: `Office.standup`/`breaks`, `setRoutine`, the toggles and `STANDUP_*`/`BREAKS_*` are gone.
+  They only show, on a clock of running time, not game days (`render-support/routines.ts`: every 90 s a 16 s stand-up
+  and a 24 s coffee break, offset per floor), so they read the same at any speed. Up close (`OfficeScene`, options
+  `standup`, `breaks`, `boardProgress`, `seatMaps`) everyone walks to the Scrum board on the wall and stands round it,
+  and coffee breaks use the Focus office's outings; on the street the team huddles at the board at the floor's right
+  end and takes turns at the coffee corner. The board's notes move from to do to done with the project.
+- Dev shortcut `?clock=ms` starts the routines' clock there.
+
+**Proposed pivot (not agreed; to plan with the player).** The player's words: "Garage is to play one mode of the game:
+try to make a hit, grow as a small team, live this life for a while, then make a hit (finally!) and rent the office
+floor (look ma I made it!) with a 12-desk team, work on the hit to make it better (the whole focus on this second
+part) in order to grow to a whole building, and then expand to Europe, perhaps build a couple of internal tools or
+products that accompany the main hit." Companies with buildings maintain and grow one big product; they do not ship
+a new one every month.
+
+- *Act 1, the garage, longer and harder.* A hit is earned by reading the market and building piece by piece: launch
+  small, read what the audience says, add what they love, kill what does not work. Products that are not hits get far
+  fewer users: a good one covers the costs and a bit more, a bad one barely covers them. Analysts belong here: market
+  analysis is how you find what to build.
+- *Act 2, the hit is the company.* Renting the first floor needs the hit. Floors are teams on that one product
+  rather than owners of separate products under a direction; the work on it should be concrete (a feature, quality,
+  capacity, Europe) instead of Grow/Polish/Keep/Expand. Growing the product grows the company into the building, then
+  Europe. Small side teams build internal tools (dashboards, HR tool, admin panel, landing pages) that help the main
+  product, and perhaps a companion product.
+- Open questions: how a hit is found (a product-market fit that grows with each release the audience loves, against a
+  launch roll); whether new standalone products remain possible after the garage; whether internal tools earn money or
+  only help; what replaces directions; what the 5-product portfolio, buyouts and Absorb become.
 
 ## Third logged run, and the building pivot (2026-10-21)
 
@@ -112,9 +166,10 @@ scrolling**. Decided so far:
 - Teams can be reassigned between products; the design must keep the player acting, not watching
   ("explore options so you are not just an observer").
 - Releases stay something the player does, in some form (to explore with the above).
-- Stand-ups and coffee breaks affect the team, not only the look (the Focus office has break animations).
-- A floor holds several things: the team's desks, a meeting room on the right, and coffee and snack
-  machines and coolers along the wall, as in the Focus office, but drawn in the cutaway view.
+- ~~Stand-ups and coffee breaks affect the team, not only the look~~ (2026-10-22: they are culture, always on, look only).
+- A floor holds several things: the team's desks, ~~a meeting room on the right~~ a Scrum board on the right
+  (2026-10-22), and coffee and snack machines and coolers along the wall, as in the Focus office, but drawn in the
+  cutaway view.
 - Europe differs by stricter data rules, its own tastes, and a slightly but noticeably European interior.
 - Garage desks are in two rows of two with the pets below (built: the garage always uses the `tall`
   arrangement, cropped like the office so the whole garage stays in view).

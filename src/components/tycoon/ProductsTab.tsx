@@ -18,6 +18,7 @@ import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, 
 import { TIERS, type GameState, type Product, type Tier } from '@/lib/tycoon/sim/types'
 import { useGame, useOffice, useStore } from './context'
 import { FixPicker, OnCallPanel } from './FixControls'
+import { ProductTeam } from './TeamControls'
 import { formatAge, formatCount, formatDateShort, formatMoney, TIER_NAME } from '@/lib/tycoon/format'
 
 /** Bugs per unit of work above which the count shows in red: users are noticeably leaving. */
@@ -120,6 +121,7 @@ function ProductRow({ product }: { product: Product }) {
           </small>
         </div>
       )}
+      <ProductTeam product={product} />
       <div className="product-actions">
         <button disabled={blocker !== null} onClick={() => store.openDialog({ kind: 'new-project', updateOf: product.id, officeId: office.id })}>
           Update

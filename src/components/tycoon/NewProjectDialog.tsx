@@ -20,6 +20,7 @@ import { formatCount, formatDays, formatDemand, formatMoney } from '@/lib/tycoon
 import { crowdLabel } from './IndustryTab'
 import { hasAnalyst, isSurveyed, surveyBlocker } from '@/lib/tycoon/sim/insight'
 import { pmEffectText } from '@/lib/tycoon/sim/direction'
+import { ownerOf } from '@/lib/tycoon/sim/teams'
 import { audienceLikes, LOVED_AT, SHRUGGED_AT } from '@/lib/tycoon/sim/scoring'
 import { Modal } from './Modal'
 import { cssVars } from './style'
@@ -93,10 +94,11 @@ function ClientWork({ office }: { office: Office }) {
 }
 
 /** Plans a new product (or client work) for an office, or (with `updateOf`) an update to a live product. */
-export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateOf?: number; officeId?: number; grow?: boolean }) {
+export function NewProjectDialog({ updateOf, officeId, grow = false, queue = false }: { updateOf?: number; officeId?: number; grow?: boolean; queue?: boolean }) {
   const store = useStore()
   const state = useGame()
-  const office = useOffice(officeId)
+  // A queue is for the team that looks after the product: its pace is what the estimate shows.
+  const office = useOffice(officeId ?? (queue && updateOf !== undefined ? ownerOf(state, updateOf)?.id : undefined))
   const [mode, setMode] = useState<'product' | 'client'>('product')
   const product = updateOf === undefined ? undefined : state.products.find((p) => p.id === updateOf)
   const isUpdate = product !== undefined
@@ -108,7 +110,8 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
   const [typeId, setTypeId] = useState(product?.productTypeId ?? unlocked[unlocked.length - 1].id)
   // The biggest size the office allows: growing into bigger projects is the point of a bigger office.
   const [size, setSize] = useState<ProjectSize>(() => PROJECT_SIZE_IDS.filter((s) => sizeLock(state, s, office) === null).at(-1) ?? 'small')
-  const [selected, setSelected] = useState<string[]>([])
+  // Queueing the next release starts from what is already queued.
+  const [selected, setSelected] = useState<string[]>(() => (queue ? (product?.nextFeatures ?? []) : []))
   const [audienceId, setAudienceId] = useState(() => audiencesOf(typeId)[0]?.id)
   const [error, setError] = useState('')
 
@@ -157,13 +160,19 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
       current.includes(id) ? current.filter((x) => x !== id) : current.length < maxFeatures ? [...current, id] : current,
     )
   const start = () => {
+    if (queue && product) {
+      const queued = store.queueFeatures(product.id, selected)
+      if (queued.ok) store.closeDialog()
+      else setError(queued.reason)
+      return
+    }
     const result = product ? store.startUpdate(product.id, selected, office.id, growsTo !== null) : store.startProject(typeId, selected, size, office.id, audienceId)
     if (!result.ok) setError(result.reason)
   }
 
   if (updateOf !== undefined && !product) return null
 
-  const title = growsTo ? `Grow ${product?.name} into a ${PROJECT_SIZES[growsTo].name} product` : product ? `Update ${product.name}` : state.offices.length > 1 ? `New project · ${officeName(state, office)}` : 'New project'
+  const title = queue && product ? `Next release of ${product.name}` : growsTo ? `Grow ${product?.name} into a ${PROJECT_SIZES[growsTo].name} product` : product ? `Update ${product.name}` : state.offices.length > 1 ? `New project · ${officeName(state, office)}` : 'New project'
   return (
     <Modal title={title} onClose={() => store.closeDialog()}>
       {!isUpdate && (
@@ -192,7 +201,8 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
                 Growing turns {product.name} into a {PROJECT_SIZES[growsTo].name} product: it can reach {(PROJECT_SIZES[growsTo].reach / PROJECT_SIZES[product.size].reach).toFixed(1)}× as many {type.userNoun} and they stay interested longer. It costs what the extra scale adds, and you can build up to {GROW_MAX_FEATURES} features into it.
               </>
             ) : null}
-            {!growsTo && <>An update is a smaller project that brings {product.name}'s {type.userNoun} back to full interest, and its new
+            {queue && <>What {product.name}'s team adds in its next release, if its direction is to grow it. Nothing queued means a maintenance release that keeps it fresh.</>}
+            {!growsTo && !queue && <>An update is a smaller project that brings {product.name}'s {type.userNoun} back to full interest, and its new
             features let it reach more people. It ships a few new bugs of its own. With no features chosen it is a
             maintenance release: cheaper, and it keeps the product fresh without growing it.</>}
           </p>
@@ -363,10 +373,16 @@ export function NewProjectDialog({ updateOf, officeId, grow = false }: { updateO
           {budgetProblem && <p className="bad action-note">Not enough money for the budget. Client work pays the bills and the budget.</p>}
           {error && <p className="bad action-note">{error}</p>}
           <button onClick={() => store.closeDialog()}>Cancel</button>
-          <button className="primary" disabled={portfolioProblem !== null || budgetProblem !== null} title={portfolioProblem ?? budgetProblem ?? undefined} onClick={start}>
-            {growsTo ? 'Start growing' : product ? (selected.length === 0 ? 'Start maintenance' : 'Start update') : 'Start project'}
-            {budget > 0 && <small> · {formatMoney(budget)}</small>}
-          </button>
+          {queue ? (
+            <button className="primary" onClick={start}>
+              {selected.length === 0 ? 'Clear the queue' : 'Queue for the next release'}
+            </button>
+          ) : (
+            <button className="primary" disabled={portfolioProblem !== null || budgetProblem !== null} title={portfolioProblem ?? budgetProblem ?? undefined} onClick={start}>
+              {growsTo ? 'Start growing' : product ? (selected.length === 0 ? 'Start maintenance' : 'Start update') : 'Start project'}
+              {budget > 0 && <small> · {formatMoney(budget)}</small>}
+            </button>
+          )}
         </div>
         </>
       )}

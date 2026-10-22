@@ -8,6 +8,8 @@ import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { formatMoney } from '@/lib/tycoon/format'
 import { useGame, useOffice, useStore } from './context'
 import { cssVars } from './style'
+import { Routines } from './TeamControls'
+import { DEFAULT_DIRECTION, DIRECTION_INFO, nextReleaseDay, nextReleasePlan, ownedProduct } from '@/lib/tycoon/sim/teams'
 
 function Bar({ project, discipline }: { project: Project; discipline: Discipline }) {
   const progress = project.progress[discipline]
@@ -62,6 +64,7 @@ function ContractPanel({ office, project }: { office: Office; project: Project }
         <button onClick={() => store.abandonContract(office.id)}>Drop the job</button>
       </div>
       <Bars project={project} />
+      <Routines office={office} />
     </section>
   )
 }
@@ -73,9 +76,15 @@ export function ProjectPanel() {
   const project = office.project
 
   if (!project) {
+    const owned = ownedProduct(state, office)
     return (
       <section className="project idle">
-        <span className="muted">No project in progress. The team is burning salary.</span>
+        <span className="muted">
+          {owned && office.kind !== 'garage'
+            ? `Looks after ${owned.name} (${DIRECTION_INFO[office.direction ?? DEFAULT_DIRECTION].name}): next, ${nextReleasePlan(state, office, owned)} in ${Math.max(0, nextReleaseDay(state, office, owned) - state.day)} days, unless you give the team something else.`
+            : 'No project in progress. The team is burning salary.'}
+        </span>
+        <Routines office={office} />
         <div className="idle-actions">
           <button className="primary" onClick={() => store.openDialog({ kind: 'new-project', officeId: office.id })}>
             Start a project

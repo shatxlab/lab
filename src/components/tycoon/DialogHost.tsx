@@ -15,6 +15,8 @@ export function DialogHost() {
   switch (dialog?.kind) {
     case 'new-project':
       return <NewProjectDialog updateOf={dialog.updateOf} officeId={dialog.officeId} grow={dialog.grow} />
+    case 'queue':
+      return <NewProjectDialog updateOf={dialog.productId} queue />
     case 'ship':
       return <ShipDialog officeId={dialog.officeId} />
     case 'ready':

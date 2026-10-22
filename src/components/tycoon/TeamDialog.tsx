@@ -21,6 +21,7 @@ import { getTrait } from '@/lib/tycoon/data/traits'
 import { needsLead, pmBlocker, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
 import { hasAnalyst, insightRate } from '@/lib/tycoon/sim/insight'
 import { pmEffectText } from '@/lib/tycoon/sim/direction'
+import { ownedProduct } from '@/lib/tycoon/sim/teams'
 import { eraWageFactor, hireCost, hiringOffice, payShare, salaryFor } from '@/lib/tycoon/sim/hiring'
 import {
   deskCount,
@@ -176,6 +177,7 @@ export function TeamDialog() {
               </span>
               {needsLead(state, office) && <small className="warn">needs a Lead · {SLOWER}% slower without one</small>}
               {pmEffectText(state, office) && <small className="good" title="Their product manager steers what this office launches and grows">PM: {pmEffectText(state, office)}</small>}
+              {ownedProduct(state, office) && <small className="muted">looks after {ownedProduct(state, office)!.name}</small>}
               {office.id !== selected.id && <button onClick={() => store.selectOffice(office.id)}>Show</button>}
             </div>
           ))}

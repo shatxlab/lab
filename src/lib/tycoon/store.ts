@@ -35,6 +35,8 @@ export type Dialog =
   | null
   /** Plans work for an office (the selected one if left out); `updateOf` is a product id: plan an update to it instead. */
   | { kind: 'new-project'; officeId?: number; updateOf?: number; grow?: boolean }
+  /** Picks the features a product's team adds in its next release. */
+  | { kind: 'queue'; productId: number }
   | { kind: 'ship'; officeId: number }
   | { kind: 'ready'; officeId: number }
   | { kind: 'event' }

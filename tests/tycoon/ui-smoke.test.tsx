@@ -134,6 +134,23 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     expect(host.textContent).toContain('Works on')
   })
 
+  it('the products tab shows the team that looks after a product, and the next release can be queued', () => {
+    const store = richStore()
+    store.state.offices[0].productId = 501
+    store.state.offices[0].direction = 'grow'
+    const host = mount(store, <ProductsTab />)
+    expect(host.textContent).toContain('Direction')
+    expect(host.textContent).toContain('Next release: nothing queued')
+    act(() => root?.unmount())
+    const queue = mount(store, <NewProjectDialog updateOf={501} queue />)
+    expect(queue.textContent).toContain('Next release of Anchor')
+    const feature = [...queue.querySelectorAll<HTMLInputElement>('.feature input')].find((i) => !i.disabled)!
+    act(() => feature.click())
+    const button = [...queue.querySelectorAll('button')].find((b) => b.textContent === 'Queue for the next release')!
+    act(() => button.click())
+    expect(store.state.products.find((p) => p.id === 501)?.nextFeatures).toHaveLength(1)
+  })
+
   it('the products tab says what a promotion pays back', () => {
     const store = richStore()
     const host = mount(store, <ProductsTab />)

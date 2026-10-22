@@ -4,7 +4,7 @@ import { getOffice, officeSpec, staffOf } from '@/lib/tycoon/sim/offices'
 import { DISCIPLINES, type Discipline, type Employee, type GameState, type Role, type Office, type OfficeKind } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS } from '@/lib/tycoon/theme'
 import type { Atlas, FrameName } from './atlas'
-import { chairX, MIN_WIDTH, partitionAt, partitionInFront, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
+import { chairX, MIN_VISIBLE_WIDTH, MIN_WIDTH, partitionAt, partitionInFront, ROOM_TOP, roomBottom, sceneLayout, seatX, type Arrangement, type SceneLayout } from '../render-support/layout'
 import { SeatMap } from '../render-support/seats'
 import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '../render-support/vacancy'
 import { blinkingAt, momentAt } from '../render-support/activity'
@@ -517,8 +517,7 @@ export class OfficeScene {
   }
 
   private applyLayout(): void {
-    // Rows of four unless the host asks for the one deep column.
-    const arrangement = this.options.arrangement?.() ?? 'wide'
+    const arrangement = this.arrangementFor(this.shown?.kind)
     if (arrangement !== this.arrangement) {
       this.arrangement = arrangement
       // Everyone keeps their desk, which has moved: their sprites are drawn again where it is now.
@@ -528,7 +527,8 @@ export class OfficeScene {
         return
       }
     }
-    const next = sceneLayout(this.areaW, this.areaH, this.bottom, MIN_WIDTH[this.arrangement])
+    // The garage's two rows of two still show the whole garage: its door, pegboard and shelves.
+    const next = sceneLayout(this.areaW, this.areaH, this.bottom, this.shown?.kind === 'garage' ? MIN_VISIBLE_WIDTH : MIN_WIDTH[this.arrangement])
     const before = this.window
     this.window = next
     this.scale = next.scale
@@ -960,9 +960,18 @@ export class OfficeScene {
     return bg
   }
 
+  /**
+   * How the desks are laid out: an office in rows of four unless the host asks for the one deep column; the garage
+   * always in two rows of two, with the pets below, like a corner of an office.
+   */
+  private arrangementFor(kind: OfficeKind | undefined): Arrangement {
+    return kind === 'garage' ? 'tall' : (this.options.arrangement?.() ?? 'wide')
+  }
+
   /** (Re)builds partitions, chairs and desks for the given number of desks; a garage has no partitions. */
   private buildOffice(desks: number, kind: OfficeKind): void {
     const { atlas } = this
+    this.arrangement = this.arrangementFor(kind)
     for (const child of this.officeBack.removeChildren()) child.destroy()
 
     for (let p = 0; p < Math.ceil(desks / 2) && kind === 'office'; p++) {

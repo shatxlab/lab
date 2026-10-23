@@ -4,10 +4,14 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-22, evening).** The player played the building build. The visual fixes from that are built (see
+**Handover (2026-10-23).** Phase 0 of the one-product pivot is built (see "Built: Phase 0" under "Fourth feedback"
+below): a new run names you and the studio, you are the founder analyst with a developer friend, and the run starts at
+a café. Next is Phase A (fit instead of the hit roll); play the café first. Saves are now version 6.
+
+**Earlier handover (2026-10-22, evening).** The player played the building build. The visual fixes from that are built (see
 "Fourth feedback: the building, routines, and one product" below); the bigger pivot it proposes (a long garage hunt
-for a hard hit, then a company built around that one product) is **proposed, not agreed**: settle the open questions
-with the player before building it.
+for a hard hit, then a company built around that one product) has its direction agreed (2026-10-23) and a build plan
+in phases 0 to E in that section: go through the plan and its open questions with the player before building.
 
 **Earlier handover (2026-10-22).** The third logged run was analysed and Phase 1 of its fixes is built (see "Third
 logged run, and the building pivot" below); the next big piece is the two-building pivot, to be planned with
@@ -79,25 +83,168 @@ From playing the building build, no run log. What the player said:
   end and takes turns at the coffee corner. The board's notes move from to do to done with the project.
 - Dev shortcut `?clock=ms` starts the routines' clock there.
 
-**Proposed pivot (not agreed; to plan with the player).** The player's words: "Garage is to play one mode of the game:
-try to make a hit, grow as a small team, live this life for a while, then make a hit (finally!) and rent the office
-floor (look ma I made it!) with a 12-desk team, work on the hit to make it better (the whole focus on this second
-part) in order to grow to a whole building, and then expand to Europe, perhaps build a couple of internal tools or
-products that accompany the main hit." Companies with buildings maintain and grow one big product; they do not ship
-a new one every month.
+**The pivot (direction agreed 2026-10-23; the build plan below is to go through with the player first).** The
+player's words: "Garage is to play one mode of the game: try to make a hit, grow as a small team, live this life for a
+while, then make a hit (finally!) and rent the office floor (look ma I made it!) with a 12-desk team, work on the hit
+to make it better (the whole focus on this second part) in order to grow to a whole building, and then expand to
+Europe, perhaps build a couple of internal tools or products that accompany the main hit." Companies with buildings
+maintain and grow one big product; they do not ship a new one every month.
 
-- *Act 1, the garage, longer and harder.* A hit is earned by reading the market and building piece by piece: launch
-  small, read what the audience says, add what they love, kill what does not work. Products that are not hits get far
-  fewer users: a good one covers the costs and a bit more, a bad one barely covers them. Analysts belong here: market
-  analysis is how you find what to build.
-- *Act 2, the hit is the company.* Renting the first floor needs the hit. Floors are teams on that one product
-  rather than owners of separate products under a direction; the work on it should be concrete (a feature, quality,
-  capacity, Europe) instead of Grow/Polish/Keep/Expand. Growing the product grows the company into the building, then
-  Europe. Small side teams build internal tools (dashboards, HR tool, admin panel, landing pages) that help the main
-  product, and perhaps a companion product.
-- Open questions: how a hit is found (a product-market fit that grows with each release the audience loves, against a
-  launch roll); whether new standalone products remain possible after the garage; whether internal tools earn money or
-  only help; what replaces directions; what the 5-product portfolio, buyouts and Absorb become.
+Decided with the player (2026-10-23):
+- **A hit is earned, not rolled** (option B). Every product has a product–market fit that only releases move: features
+  its audience loves raise it, ones they shrug at add nothing, and a crowded or cold market holds it back. Past a
+  threshold, with room in the market, it takes off. Bad products stall; you kill them and try again.
+- **You are the analyst.** A new game asks your name; you start as the analyst, with a developer friend. You read the
+  market in the garage, become the hit's PM when it takes off (the key role in Act 2), and become CEO when the company
+  opens in Europe, with your developer friend as CTO and one of your analysts as the hit's PM.
+- **A café before the garage**: just the two of you working from a café, short and entertaining, earning enough to
+  hire two more and move into the garage. A new scene with a barista and customers.
+- **After the garage the hit is the company**: internal tools, plus one or two companion products at most, to
+  millions of users and billions in revenue. Internal tools help the main product (earning from them later, maybe).
+- **Moving out**: keep up to 2 garage products, sell the rest. What a second product is for needs a clear role (below).
+- **Absorb** a rival: its best people take your empty desks, and only those.
+- **Endings**: sell (with a confirmation that the game ends), an IPO, bankruptcy, and retiring (kept: it does no harm).
+- Capacity and outages are a good Act 2 pressure, alongside rivals.
+
+### Build plan (to go through with the player before building)
+
+Each phase is playable on its own and ends with a playtest. Numbers are first guesses for the retune.
+
+**Phase 0: you, a friend, and a café.**
+1. *A proper start.* The new game asks your name and the studio's, each with a dice button on the right of the input
+   to make one up. You are a founder analyst with your name, and
+   your friend a founder developer (the start's designer goes). Founders cannot be fired or quit, and draw a small
+   salary. You gather insight from day one; PM needs no research for you.
+2. *The café* (a new office kind before `garage`, 2 seats at a window table, no rent but coffee money, about $10 a
+   day). Only easy work: small client gigs (a landing page, a bug fix, a plugin) and small dev tools. Goal: save
+   enough to hire two people and pay the garage's deposit; then you pick the two and move. Aim for 5–10 minutes at
+   1×. Café happenings to keep it lively: the barista passes on a lead (a client job), the Wi-Fi drops (a slow day),
+   coffee over a laptop (a cost), a regular asks what you are building (a first user interview: insight).
+3. *The café scene*: a counter with an espresso machine and a barista who works it, tables, the two of you at the
+   window with laptops and cups, and customers who come in now and then, queue, order, wait and leave with a cup to
+   go (some sit down a while). Same pixel style; anything the PixelOffice pack lacks is drawn by hand like the Scrum
+   board.
+
+**Built: Phase 0 (2026-10-23).**
+- *The start* (`sim/founding.ts`, `components/tycoon/FoundingDialog.tsx`): a new run opens "A new studio" with your
+  name and the studio's, each with dice (`rollPersonName`, `rollStudioName`, which use their own randomness, not the
+  run's). `state.studioName` (optional) names you in the ranking. The founders are an analyst (you, `you(state)`) and
+  a developer; a founder analyst becomes a PM without the research (`pmBlocker`).
+- *The café* (office kind `cafe`, 2 desks, $300 a month of coffee, `OFFICE_KINDS.cafe`): founders draw no pay there
+  (`monthlySalaries`), there are no outings, only Small products (`sizeLock`), and the panel and the new-project
+  dialog lead with client work ("Find a job"). It is the first journey stage, "Two friends at a café": deliver
+  `CAFE_JOBS` (3) jobs, then save `GARAGE_READY_MONEY` ($6,000) and move (`moveToGarage`, a $1,000 deposit; the
+  Team dialog's button). `inGarage` is true in the café too; `inCafe` is the café alone. The run starts with
+  `CAFE_START_MONEY` ($2,500); `START_MONEY` is gone. A bot that takes the best-paying job moved out after about
+  75 days (45 to 200 by seed), two minutes or so at 1x.
+- *Café events* (`CAFE_EVENTS` in `data/events.ts`, drawn only at the café, from day 6, 15 days apart, 12% a day):
+  Rosa the barista passes on a better-paid lead (`offerJob`), the Wi-Fi goes down, coffee on your friend's laptop,
+  a curious regular (insight, or a lead).
+- *The café scene* (`OfficeScene.buildCafe`, `buildCounter`; the crowd in `render-support/cafe.ts`): a green wall
+  over panelling, a glass door, a shop window onto the street, a chalkboard menu and cup shelf, lamps, a checked
+  floor, two tables. Rosa works the till and the espresso machine behind the counter; guests come in at the door,
+  queue, order, wait, get their cup and leave by a lane nearer the front, or sit at a free table for a while. The
+  crowd runs on game running time, deterministic, and stands still while paused. The founders have mugs on their
+  desks; there is a cat but no dog.
+- *Stages moved up one*: `MOVE_OUT_STAGE` 2, `NEW_OFFICE_STAGE` and `ACQUISITION_STAGE` 4, `LEADER_STAGE` 5, the
+  Flagship size 3, every research `stage` +1. Version 5 saves are upgraded with `stage + 1` (`upgradeFromV5`). The
+  garage's client-job goal counts the café's: 5 now. `makeState` in the tests puts the studio in its garage at the
+  Garage startup stage.
+- Dev shortcut `?garage` skips the café.
+- Not done: `scripts/tycoon/e2e.mjs` was already stale before this (it imports `render/characters.ts` and
+  `render/layout.ts`, which moved to `render-support/`) and now also assumes the old start (no founding dialog, the
+  garage, `START_MONEY`): it needs a pass before it can run again.
+
+**Phase A: the hunt (garage).**
+4. *Fit, not a roll.* `Product.fit` 0–100, set at launch and moved by every update: `audienceFit` (what the audience
+   loves, by value), quality, expected features present, market demand, and crowding (`marketCrowding`). The breakout
+   roll goes: `hitBreakdown`, `HIT_BASE_CHANCE`, `HIT_CHANCE_PER_MISS`, `launchesSinceHit`, the PM hit bonus. Rivals
+   keep their simple roll.
+5. *Takeoff.* Past the line (about 75), with room in the market, the product takes off over the next weeks: word of
+   mouth climbs, the toast and journal say so, it becomes the signature, and you become its PM. Fit can still sag
+   afterwards (stale, rivals, bugs), which is what Act 2 is about.
+6. *Reading the market is your job.* Fit shows as a meter whose precision is your analysis skill: a wide band at
+   first ("somewhere between lukewarm and warm"), narrowing to a number as you grow and as feedback comes in, with
+   what moved it. Beside the audience survey, a *market scan* (insight) ranks product type × audience pairs by room
+   and demand. More analysts can be hired later; PMs stay behind research for anyone but you.
+7. *Non-hit money.* A good product that is not a hit earns the garage's costs and a bit more (about 1.2× a 4-person
+   garage's burn); a weak one 0.8–1×. Contracts stay the safety net.
+8. *Kill and pivot.* The garage holds at most 3 live products; killing one is quick and costs no reputation.
+   *Pivot*: point a live product at another audience of its type, keeping its code.
+   - Gets you: every feature already built counts at once (no work to rebuild them), fit is worked out afresh for the
+     new audience, and it costs about an update's work instead of a launch's. Right when what you built is good but
+     for someone else (the feedback says *shrugged* where another audience *loves*).
+   - Costs you: most of the users leave (about a fifth stay), the product restarts as a launch (word of mouth from the
+     bottom), its bugs and its quality stay, fit can come out lower, and a product pivots once.
+   - Against killing it and starting over: pivot when the features are right for someone else, start over when the
+     features are wrong.
+9. *Garage goals* (`data/stages.ts`): find the hit, then save up and move out. The breakout stage's "3 products earning
+   $300 a day" goes.
+
+**Phase B: the hit is the company.**
+10. *Moving out* needs the hit. Keep up to 2 garage products as side products (they earn what they earn and take a
+    second-product slot, below) and sell the rest to rivals for cash towards the office.
+11. *Workstreams instead of directions.* Every floor works on the hit, on one workstream with concrete items to queue:
+    **Features**, **Quality** (bugs, performance), **Scale** (capacity: the users the servers hold; past it come
+    outages and churn), **Growth** (onboarding and marketing), **Monetisation** (plans, a business tier, ads: what a
+    user pays), **Europe** (data rules, localising, European growth). As the hit's PM you set the order of the
+    roadmap; your level speeds how much fit each release wins. Grow, Polish, Keep it running and Expand go, with
+    `setDirection` and `queueFeatures`.
+12. *Scale to millions.* A hit's market is no longer capped at five times its type's audience: its ceiling is set by
+    capacity, features, regions and the era. Rough targets: first floor 100k–500k users, full headquarters 5–10M, both
+    buildings 20M+, daily income $1M+ late on, $1B+ lifetime. Server costs grow with users. `formatMoney` and
+    `formatCount` learn billions.
+13. *Pressure on the hit.* Rivals launch into its market, eras bring features users start to expect, fit sags without
+    releases, and outages when users outrun capacity: churn is the Act 2 enemy. A dashboard for the hit (users by
+    region, fit, capacity, revenue per user, churn) is the main screen once you have moved out.
+
+**Phase C: internal tools and second products.**
+14. *Internal tools*: small projects for a 2–4 person team that help the hit, with upkeep, and earn nothing: admin
+    panel (bugs fixed faster), analytics dashboard (insight, and fit in detail), CI/deploy pipeline (faster releases,
+    fewer bugs), HR tool (hiring and morale), landing pages (Growth). Later idea: spin one out as a product (as Slack
+    came out of an internal tool).
+15. *Second products: two slots, each with a job.* A second product exists to make the hit bigger, in one of two ways:
+    - **Reach**: brings new people to the hit, such as a mobile app for a web hit, a free tier, a creator tool for a
+      game. It raises the hit's ceiling and growth.
+    - **Keep**: makes the hit's users stay and pay more, such as a pro add-on, an integrations marketplace, an
+      analytics add-on. It lowers churn and raises what each user pays.
+    It is offered from a short list that suits the hit's type, starts with a slice of the hit's users (cross-sell, no
+    hunt), earns some money of its own, and needs a team, which is people off the hit: that is the trade. A buggy or
+    stale one costs the hit a little fit. A garage product kept at move-out fills a slot as a side product (its
+    income only) until you switch it off to make room for a real one.
+
+**Phase D: endings, Absorb, the journey.**
+16. *Selling*: an offer comes when the hit takes off: "sell the hit to Big Co, or go big". Accepting asks for
+    confirmation that the game ends there, with the final score. Turned down, it comes back larger while you have one
+    floor; renting the second ends the offers.
+17. *IPO*: the other ending. Once the company is big enough (to set: about 10M users, $1B lifetime, a year in profit)
+    you can take it public: a bell-ringing moment, a valuation at a higher multiple, the run's final screen. Endings
+    are then sell, IPO, retire or bankruptcy.
+18. *Absorb*: buy a rival that competes with the hit. Its best people, by skill, take your empty desks and only
+    those (no free desks, nobody comes); a share of its users move to the hit, and its product shuts down (or, with a
+    free slot, is kept as a second product).
+19. *The journey*: Café → Garage (find the hit) → First floor → Headquarters (1M users, a full building) → Europe →
+    Global (10M users, $1B lifetime) → the IPO. You become CEO, and your friend CTO, at Europe. Research items about
+    running many products (licensing, the portfolio) are reworked or dropped.
+
+**Phase E: retune** from a run log, as before. Saves become version 6 (the founder, the café, a `fit` per product,
+workstreams, capacity, second-product and tool slots); old saves are upgraded with the signature as the hit, a
+founder analyst added, and the rest kept as side products or switched off.
+
+**Why hire analysts when you are one** (proposed to the player, 2026-10-23):
+- *Your time runs out.* In the garage you study users full time. As the hit's PM you spend half the day steering (as
+  PMs do now, `PM_INSIGHT_SHARE`); as CEO or CTO none of it.
+- *Act 2 needs far more insight than the garage.* Spending it is what makes the hit's releases count: user research
+  on the hit shows which roadmap items its users want most and how much fit each would win; churn analysis shows why
+  people leave, so you know which workstream to put a floor on; A/B tests make Growth and Monetisation items pay more;
+  a survey of each European audience before localising; a market scan for each second product. Without enough
+  insight the roadmap is a guess.
+- *Analysts are where PMs come from.* Each second product needs a PM to run it, and the hit needs a new one when you
+  move up. Analyst, senior analyst, PM is the only way to grow one, so hiring analysts early is planning ahead.
+- In the garage a second analyst is possible but rarely worth one of four desks: that seat is better as a builder.
+
+**Moving up** (decided 2026-10-23): when the company opens in Europe you become CEO and your developer friend CTO;
+one of your analysts becomes the hit's new PM.
 
 ## Third logged run, and the building pivot (2026-10-21)
 

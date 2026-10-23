@@ -50,6 +50,13 @@ log; `lab-tycoon-run-*.json`, untracked and gitignored: read it, never commit it
 - Balance checks: bundle a script with `npx esbuild <file>.ts --bundle --platform=node --format=esm --alias:@=./src
   --outfile=<out>.mjs` and run it with node. `scripts/tycoon/simulate.ts` predates the pivot (its bots still play
   the old game); `scripts/tycoon/e2e.mjs` is stale (it imports moved files and assumes the old start).
+- `npx esbuild scripts/tycoon/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/playthrough.mjs`
+  then `node /tmp/playthrough.mjs [seed] [years] [quiet]` plays the whole game with a bot (see its header; `SAVE_DIR=<dir>`
+  writes a save per stage). Use it for pacing checks after balance changes, run over many seeds, and remember it is an
+  optimistic player. The stages now are 0 café, 1 garage, 2 indie (`MOVE_OUT_STAGE`), 3 first floor, 4 headquarters
+  (`NEW_OFFICE_STAGE`, `ACQUISITION_STAGE`), 5 Europe (`LEADER_STAGE`), 6 global company (the IPO).
+- Dev server for screenshots: Playwright's Chromium is cached under `~/.cache/ms-playwright` and `@playwright/cli` has
+  `playwright-core` globally; point `createRequire` at it and `executablePath` at the cached chrome.
 - Commit straight to `main` as `type(scope): summary`, only when asked; stage only the task's files.
 
 **Earlier handover (2026-10-22, evening).** The player played the building build. The visual fixes from that are built (see
@@ -73,7 +80,7 @@ Absorb, New project, Employee and Research dialogs (only `tests/tycoon/ui-smoke.
 them). The bots (`scripts/tycoon/simulate.ts`) overexpand late and never localise or absorb well,
 so do not retune from them. Agreed and dropped: Subsidiary, non-contract garage income.
 
-**Where things stand.** The studio has a real arc: garage (4 desks) → office →
+**Where things stand (as of 2026-10-20: older than the sections above; where they differ, "Built: Phases B to E" and the handover win. Saves are now version 7, the journey has seven stages, floors work on workstreams, not directions).** The studio has a real arc: garage (4 desks) → office →
 more offices; client contracts; users and bugs on every product; breakout hits;
 six journey stages; ten rival studios, split between the US and Europe (and a newcomer at each of nine eras, to year 17) and an
 industry ranking; eras that shift demand and expectations; careers from Junior to
@@ -150,7 +157,7 @@ Decided with the player (2026-10-23):
 - **Endings**: sell (with a confirmation that the game ends), an IPO, bankruptcy, and retiring (kept: it does no harm).
 - Capacity and outages are a good Act 2 pressure, alongside rivals.
 
-### Build plan (to go through with the player before building)
+### Build plan (the design record: all phases are now built, see "Built: Phases B to E" for what changed from it)
 
 Each phase is playable on its own and ends with a playtest. Numbers are first guesses for the retune.
 

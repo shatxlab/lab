@@ -4,10 +4,75 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-23).** Phases 0 and A of the one-product pivot are built (see "Built: Phase 0" and "Built:
-Phase A" under "Fourth feedback" below): the run starts at a café with you as the founder analyst, and a hit is earned
-by product–market fit rather than rolled. Next is a playtest of both, then Phase B (the hit is the company). Saves are
-version 6.
+**Handover (2026-10-23).** Phases 0 and A of the one-product pivot are built and pushed (`c291d25`, `c10fe99`; see
+"Built: Phase 0" and "Built: Phase A" under "Fourth feedback" below): the run starts at a café with you as the founder
+analyst, and a hit is earned by product–market fit rather than rolled. Saves are version 6. **Start with "Next steps"
+just below.**
+
+## Next steps (start here)
+
+The pivot is planned in phases 0 to E in "Build plan" under "Fourth feedback" below; 0 and A are built. The player
+agreed the direction and answered the plan's questions (the decisions are listed there: "Decided with the player",
+"Why hire analysts when you are one", "Moving up"). Each phase ends with a playtest, and the player wants to go
+through a phase's details before it is built: propose, get a yes, then build.
+
+**1. Playtest 0 and A (waiting on the player).** Ask for a run log (Menu → Export run log; `lab-tycoon-run-*.json`,
+untracked and gitignored: read it, never commit it). Look at:
+- How long the café takes (a bot: about 75 days, two minutes at 1x) and whether its events feel lively or repetitive.
+- How long the hunt for a hit takes (a bot: 240 to 970 days, 4 of 10 runs none in four years) and whether the fit
+  range, the "Not taking off: ..." line and the feedback make it clear what to build next.
+- Garage money: products that do not take off earn little ($5–40 a day in a crowded market); client work pays $18 a
+  point. If the garage is too poor, raise `UNDISCOVERED_REACH` first.
+- The knobs are in `sim/balance.ts`: `CAFE_*`, `GARAGE_*`, `FIT_*`, `UNDISCOVERED_*`, `TAKEOFF_MAX_CROWDING`,
+  `HIT_MARKET_SCALE`, `PIVOT_KEEP`, `GARAGE_PRODUCT_LIMIT`, `CONTRACT_PAY_PER_POINT`.
+
+**2. Phase B: the hit is the company.** Propose it to the player in this shape, settle the open points, then build in
+this order (each a commit, tests and typecheck green):
+- *B1 Moving out with the hit.* The move (`moveOut` in `sim/offices.ts`, the button in `TeamDialog.tsx`) asks which
+  garage products to keep, up to 2, as side products; the rest are sold to rivals (`sunsetProduct` in
+  `sim/sunset.ts` already sells or retires). Mark side products (e.g. `Product.role: 'hit' | 'side'`), so later
+  phases can tell them from the hit (`state.signatureId`) and from second products.
+- *B2 Workstreams instead of directions.* Today each floor owns a product and a direction (`Office.productId`,
+  `Office.direction`, `DIRECTIONS` and `DIRECTION_INFO` in `sim/teams.ts`, chosen in `TeamControls.tsx`; the floor
+  ships releases by itself in `teamDay`). Replace the directions with workstreams on the hit: Features (the queued
+  features: `queueFeatures`, `Product.nextFeatures`), Quality (what `polish` does now), Scale, Growth, Monetisation,
+  Europe (what `expand` does now: compliance, then `startLocalisation`). Each floor picks one; you, the hit's PM, set
+  the order of the roadmap. Give each workstream concrete items to queue (a data file, e.g. `data/workstreams.ts`).
+  `setDirection`, `Direction` and the direction UI go. This changes the save shape: bump `STATE_VERSION` to 7 with an
+  `upgradeFromV6` that maps old directions to workstreams.
+- *B3 Scale to millions.* A hit's market is no longer capped (`saturate(..., hit)` in `sim/products.ts` now allows
+  `HIT_MARKET_SCALE` times the cap): its ceiling comes from capacity (the Scale workstream), features, regions and the
+  era. Add capacity to the hit; past it, outages and churn. Server costs grow with users (`costsDay` in
+  `sim/economy.ts`). Monetisation raises what a user pays (`revenueForUsers`). `formatMoney` and `formatCount` in
+  `format.ts` stop at millions: add billions. Targets: first floor 100k–500k users, full headquarters 5–10M, both
+  buildings 20M+, $1M+ a day late on, $1B+ lifetime.
+- *B4 Pressure on the hit.* `fitOf` (`sim/fit.ts`) only takes off for missing expected features; for a hit, let fit
+  sag with staleness, bugs and rivals in its market, and churn follow it. Rivals already launch into markets
+  (`sim/rivals.ts`).
+- *B5 The hit's dashboard* as the main screen once out of the garage: users by region, fit, capacity, revenue per
+  user, churn.
+- Open points to settle with the player: the workstream items and their effects; how you set the roadmap order as PM
+  (a ranked list in the dashboard?); capacity and server-cost numbers; what side products are worth keeping for.
+
+**3. Then C, D, E** as in the build plan: internal tools and second products (Reach or Keep), endings (selling with a
+"this ends the game" confirmation, an IPO, retiring, bankruptcy), Absorb (the rival's best people take your empty
+desks only; its users move to the hit), the journey Café → Garage → First floor → Headquarters → Europe → Global, and
+you becoming CEO and your friend CTO at Europe, with one of your analysts as the hit's PM.
+
+**Things to know before changing code.**
+- Verify with `npm test` and `npm run typecheck`; for UI, run `npm run dev -- --port 4321` (base path `/lab/tycoon/`)
+  and look. Dev shortcuts use a throwaway game: `?garage` (skip the café), `?offices=N`, `?money=`, `?rep=`, `?stage=`,
+  `?clock=`. To look at a prepared state, write it into `localStorage['lab:tycoon:save']` before the page loads
+  (puppeteer-core and a headless Chrome were used for screenshots; neither is in `package.json`).
+- Stage numbers are indices into `STAGES` (`data/stages.ts`) and are used as numbers (`MOVE_OUT_STAGE`,
+  `NEW_OFFICE_STAGE`, `ACQUISITION_STAGE`, `LEADER_STAGE`, `PROJECT_SIZES[...].stage`, research `stage`). Inserting a
+  stage shifts them all, plus a save upgrade, as the café did (`upgradeFromV5`).
+- `inGarage` is true at the café too; `inCafe` is the café alone. `makeState` in `tests/tycoon/helpers.ts` puts the
+  studio in its garage at the Garage startup stage; tests about the café start from `createInitialState`.
+- Balance checks: bundle a script with `npx esbuild <file>.ts --bundle --platform=node --format=esm --alias:@=./src
+  --outfile=<out>.mjs` and run it with node. `scripts/tycoon/simulate.ts` predates the pivot (its bots still play
+  the old game); `scripts/tycoon/e2e.mjs` is stale (it imports moved files and assumes the old start).
+- Commit straight to `main` as `type(scope): summary`, only when asked; stage only the task's files.
 
 **Earlier handover (2026-10-22, evening).** The player played the building build. The visual fixes from that are built (see
 "Fourth feedback: the building, routines, and one product" below); the bigger pivot it proposes (a long garage hunt

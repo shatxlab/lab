@@ -328,48 +328,11 @@ function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy, time: number): v
     ctx.stroke();
   }
 
-  circle(ctx, x, y, radius, def.color);
-  ctx.strokeStyle = shade(def.color, -0.3);
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(facing);
-  if (enemy.kind === "brute") {
-    ctx.fillStyle = "#efe6d2";
-    for (const side of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(radius * 0.1, side * radius * 0.7);
-      ctx.lineTo(radius * 0.9, side * radius * 1.15);
-      ctx.lineTo(radius * 0.5, side * radius * 0.45);
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-  if (enemy.kind === "boss") {
-    ctx.fillStyle = COLORS.crown;
-    ctx.beginPath();
-    ctx.moveTo(-radius * 0.5, -radius * 0.45);
-    ctx.lineTo(-radius * 0.5, radius * 0.45);
-    for (const [px, py] of [
-      [-radius * 0.05, radius * 0.45],
-      [-radius * 0.25, radius * 0.22],
-      [-radius * 0.05, 0],
-      [-radius * 0.25, -radius * 0.22],
-      [-radius * 0.05, -radius * 0.45],
-    ]) {
-      ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
-  }
-  // Eyes on the side facing the tower.
-  const eye = Math.max(1.6, radius * 0.22);
-  for (const side of [-1, 1]) {
-    circle(ctx, radius * 0.45, side * radius * 0.35, eye, "#ffffff");
-    circle(ctx, radius * 0.45 + eye * 0.35, side * radius * 0.35, eye * 0.55, "#1d1b26");
-  }
+  if (enemy.flying) drawBat(ctx, radius, def.color);
+  else drawSoldier(ctx, enemy, def.color, time);
   ctx.restore();
 
   if (enemy.slowLeft > 0) {
@@ -400,6 +363,159 @@ function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy, time: number): v
     ctx.fillRect(x - width / 2, top, width, 3);
     ctx.fillStyle = enemy.kind === "boss" ? COLORS.bad : COLORS.good;
     ctx.fillRect(x - width / 2, top, width * Math.max(0, enemy.hp / enemy.maxHp), 3);
+  }
+}
+
+/** A bat seen from above: furry body, pricked ears, a pair of eyes. */
+function drawBat(ctx: CanvasRenderingContext2D, radius: number, color: string): void {
+  ellipse(ctx, 0, 0, radius * 0.8, radius * 0.6, color);
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = shade(color, -0.3);
+    ctx.beginPath();
+    ctx.moveTo(radius * 0.4, side * radius * 0.2);
+    ctx.lineTo(radius * 0.75, side * radius * 0.7);
+    ctx.lineTo(radius * 0.05, side * radius * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    circle(ctx, radius * 0.5, side * radius * 0.25, 1.6, "#ff6b6b");
+  }
+}
+
+/**
+ * One soldier of the horde, seen from above and facing +x: boots that step,
+ * shoulders in the army's colour, a helmet and whatever it carries.
+ */
+function drawSoldier(ctx: CanvasRenderingContext2D, enemy: Enemy, color: string, time: number): void {
+  const { kind, radius } = enemy;
+  const steel = "#b8bfc9";
+  const dark = shade(color, -0.35);
+  const stride = Math.sin(time * enemy.speed * 0.22 + enemy.phase);
+
+  // Boots, stepping in turn.
+  for (const side of [-1, 1]) {
+    ellipse(ctx, stride * side * radius * 0.4, side * radius * 0.4, radius * 0.38, radius * 0.22, "#3a2c22");
+  }
+
+  if (kind === "boss") {
+    // Cape trailing behind.
+    ctx.fillStyle = "#7d1f2a";
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.1, -radius * 0.7);
+    ctx.lineTo(-radius * 1.15, -radius * 0.45 + stride * 2);
+    ctx.lineTo(-radius * 1.15, radius * 0.45 - stride * 2);
+    ctx.lineTo(-radius * 0.1, radius * 0.7);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Weapon arm and weapon, held forward.
+  const swing = stride * 1.5;
+  ctx.lineCap = "round";
+  if (kind === "grunt") {
+    ctx.strokeStyle = "#6b4423";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.3, radius * 0.55);
+    ctx.lineTo(radius * 1.5, radius * 0.55 + swing * 0.3);
+    ctx.stroke();
+    ctx.fillStyle = steel;
+    ctx.beginPath();
+    ctx.moveTo(radius * 1.5, radius * 0.55 - 2.5 + swing * 0.3);
+    ctx.lineTo(radius * 1.95, radius * 0.55 + swing * 0.3);
+    ctx.lineTo(radius * 1.5, radius * 0.55 + 2.5 + swing * 0.3);
+    ctx.closePath();
+    ctx.fill();
+  } else if (kind === "runner") {
+    ctx.strokeStyle = steel;
+    ctx.lineWidth = 1.8;
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(radius * 0.3, side * radius * 0.7);
+      ctx.lineTo(radius * 1.15, side * radius * 0.7 + swing * side * 0.4);
+      ctx.stroke();
+    }
+  } else if (kind === "brute") {
+    ctx.strokeStyle = "#5a3a1a";
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.1, radius * 0.75);
+    ctx.lineTo(radius * 1.35, radius * 0.75 + swing * 0.4);
+    ctx.stroke();
+    circle(ctx, radius * 1.4, radius * 0.75 + swing * 0.4, radius * 0.3, "#4a3a2e");
+  } else {
+    ctx.strokeStyle = steel;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(radius * 0.2, radius * 0.7);
+    ctx.lineTo(radius * 1.6, radius * 0.7 + swing * 0.3);
+    ctx.stroke();
+    ctx.strokeStyle = COLORS.crown;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(radius * 0.4, radius * 0.7 - 5);
+    ctx.lineTo(radius * 0.4, radius * 0.7 + 5);
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+
+  // Shield on the other arm for the footman and the brute.
+  if (kind === "grunt" || kind === "brute") {
+    const shield = kind === "brute" ? radius * 0.5 : radius * 0.42;
+    ellipse(ctx, radius * 0.5, -radius * 0.75, shield, shield * 1.15, "#8a6a45");
+    circle(ctx, radius * 0.5, -radius * 0.75, shield * 0.35, steel);
+  }
+
+  // Shoulders and torso.
+  const shoulders = kind === "brute" || kind === "boss" ? 0.95 : kind === "runner" ? 0.6 : 0.78;
+  ellipse(ctx, -radius * 0.05, 0, radius * 0.6, radius * shoulders, color);
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  if (kind === "brute" || kind === "boss") {
+    for (const side of [-1, 1]) circle(ctx, -radius * 0.05, side * radius * 0.78, radius * 0.28, steel);
+  }
+
+  // Helmet.
+  const head = radius * (kind === "runner" ? 0.4 : 0.5);
+  circle(ctx, radius * 0.1, 0, head, kind === "runner" ? dark : steel);
+  ctx.strokeStyle = shade(steel, -0.35);
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  if (kind === "grunt" || kind === "brute") {
+    // Nose guard along the forward edge.
+    ctx.strokeStyle = shade(steel, -0.35);
+    ctx.beginPath();
+    ctx.moveTo(radius * 0.1, 0);
+    ctx.lineTo(radius * 0.1 + head, 0);
+    ctx.stroke();
+  }
+  if (kind === "brute") {
+    ctx.fillStyle = "#efe6d2";
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(radius * 0.05, side * head * 0.8);
+      ctx.lineTo(radius * 0.5, side * head * 1.7);
+      ctx.lineTo(radius * 0.3, side * head * 0.6);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  if (kind === "boss") {
+    ctx.fillStyle = COLORS.crown;
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.15, -head);
+    ctx.lineTo(-radius * 0.15, head);
+    for (const [px, py] of [
+      [radius * 0.3, head],
+      [radius * 0.12, head * 0.5],
+      [radius * 0.3, 0],
+      [radius * 0.12, -head * 0.5],
+      [radius * 0.3, -head],
+    ]) {
+      ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
 }
 

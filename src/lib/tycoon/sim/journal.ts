@@ -1,12 +1,17 @@
 import { ERAS } from '@/lib/tycoon/data/eras'
 import { getStage } from '@/lib/tycoon/data/stages'
 import { DAYS_PER_MONTH } from './balance'
-import { dailyIncome, monthlyBurn, trailingIncome } from './economy'
+import { dailyIncome, monthlyBurn, productIncome, trailingIncome } from './economy'
 import { productRevenue } from './products'
 import { statMultiplier } from './modifiers'
 import { playerRank } from './rivals'
 import { describePendingEvent } from './events'
-import type { GameState, JournalEntry, SimEvent } from './types'
+import { companionEffects, freeSlots } from './companions'
+import { fitPressure, peakFitOf, retention } from './fit'
+import { officeName } from './offices'
+import { capacityOf, hostingCost, loadOf, payFactor, worldOf } from './scale'
+import { toolUpkeep } from './tools'
+import type { GameState, JournalEntry, Product, SimEvent } from './types'
 
 /** A run is a few thousand lines; this only stops a runaway from filling the save. */
 export const JOURNAL_LIMIT = 20000
@@ -60,6 +65,7 @@ export function logSimEvent(state: GameState, event: SimEvent): void {
 export function journalMonth(state: GameState): void {
   const users = state.products.reduce((sum, p) => sum + p.users, 0)
   const revenueMult = statMultiplier(state, 'revenue')
+  const hit = state.products.find((p) => p.id === state.signatureId)
   logEntry(state, 'month', 'Month end', {
     income: Math.round(dailyIncome(state)),
     incomeAverage: Math.round(trailingIncome(state)),
@@ -73,13 +79,44 @@ export function journalMonth(state: GameState): void {
     users: Math.round(users),
     lifetimeRevenue: Math.round(state.lifetimeRevenue),
     research: state.research.done.length,
+    // The hit (Act 2): what to read to judge its pace, its servers, its fit and what presses on it.
+    ...(hit ? hitFields(state, hit) : {}),
     productList: state.products.map((p) => {
       const income = Math.round(productRevenue(p) * revenueMult)
       const regions = p.euUsers ? `, ${Math.round(p.euUsers)} in Europe` : ''
       const loyal = p.loyalUsers ? `, ${Math.round(p.loyalUsers)} regulars` : ''
-      return `${p.name} (${p.productTypeId}, ${p.size}, ${Math.round(p.users)} users${regions}${loyal}, $${income}/day, quality ${Math.round(p.quality)}${p.autoPromote ? `, auto-promote ${p.autoPromote}` : ''})`
+      const role = p.role ? `, ${p.role}` : ''
+      return `${p.name} (${p.productTypeId}, ${p.size}, ${Math.round(p.users)} users${regions}${loyal}, $${income}/day, quality ${Math.round(p.quality)}${role}${p.autoPromote ? `, auto-promote ${p.autoPromote}` : ''})`
     }),
   })
+}
+
+/** The monthly log's fields about the hit: users, fit, servers, what presses on it, what is built and planned, and who works on what. */
+function hitFields(state: GameState, hit: Product): Data {
+  const pressure = fitPressure(state, hit)
+  return {
+    hitName: hit.name,
+    hitUsers: Math.round(hit.users),
+    hitEuUsers: Math.round(hit.euUsers ?? 0),
+    hitFit: Math.round(hit.fit ?? 0),
+    hitPeakFit: Math.round(peakFitOf(hit)),
+    hitRetention: Math.round(retention(hit, companionEffects(state).retention) * 100),
+    hitReach: Math.round(hit.reach),
+    hitWorld: Math.round(worldOf(hit) * 100) / 100,
+    hitCapacity: capacityOf(hit),
+    hitLoadPercent: Math.round(loadOf(hit) * 100),
+    hitIncome: Math.round(productIncome(state, hit)),
+    hitPayFactor: Math.round(payFactor(hit) * 100) / 100,
+    hitBugs: Math.round(hit.bugs),
+    hitPressure: `stale ${pressure.stale.toFixed(2)}, bugs ${pressure.bugs.toFixed(2)}, rivals ${pressure.rivals.toFixed(2)}, missing ${pressure.missing.toFixed(2)}, companions ${pressure.companions.toFixed(2)}`,
+    hitBuilt: hit.built ?? [],
+    hitRoadmap: hit.roadmap ?? [],
+    floors: state.offices.map((o) => `${officeName(state, o)}: ${o.workstream ?? '-'}${o.project ? ` (${o.project.itemId ?? o.project.kind})` : ''}`),
+    hosting: Math.round(hostingCost(state)),
+    toolUpkeep: toolUpkeep(state),
+    profitDays: state.profitDays ?? 0,
+    secondSlotsFree: freeSlots(state),
+  }
 }
 
 /** The most the studio ever earned in a day, from the monthly samples and today. */

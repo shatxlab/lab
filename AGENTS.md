@@ -19,6 +19,12 @@
   - For UI changes, run the app and check the page when you can.
 - Report test or typecheck failures with their output. Do not claim success on a check you did not run.
 
+## Software Tycoon
+
+- The game's single source of TODOs, design record and retune playbook is `software-tycoon-roadmap.md`: start with its
+  "Next steps" and "Guide for the next session" before changing anything in `src/lib/tycoon/`.
+- `scripts/tycoon/playthrough.ts` plays the whole game with a bot (usage in its header): run it over several seeds after balance changes.
+
 ## Copy
 
 - The Focus app's user-facing strings live in `src/lib/focus/i18n.ts`, with English and Russian in the same object. Update both languages together.

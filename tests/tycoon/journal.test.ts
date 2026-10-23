@@ -96,4 +96,19 @@ describe('the run log and launches', () => {
     expect(miss.products[0].hit).toBe(false)
     expect(miss.journal.some((e) => e.kind === 'hit')).toBe(false)
   })
+
+  it('the monthly snapshot carries the hit: users, fit, servers, pressure, roadmap and who works on what', () => {
+    const state = createInitialState(5)
+    state.offices[0].kind = 'office'
+    state.products = [makeProduct({ id: 9, name: 'Atlas', hit: true, users: 400_000, reach: 500_000, fit: 80, built: ['load_balancer'], roadmap: ['cdn'] })]
+    state.signatureId = 9
+    state.offices[0].productId = 9
+    state.offices[0].workstream = 'scale'
+    advance(state, DAYS_PER_MONTH)
+    const month = state.journal.filter((e) => e.kind === 'month').at(-1)!
+    expect(month.data).toMatchObject({ hitName: 'Atlas', hitCapacity: 600_000, hitBuilt: ['load_balancer'], hitRoadmap: ['cdn'], secondSlotsFree: 2 })
+    expect(month.data!.hitLoadPercent).toBeGreaterThan(50)
+    expect(month.data!.hitPressure).toContain('stale')
+    expect(month.data!.floors).toEqual(['HQ: scale'])
+  })
 })

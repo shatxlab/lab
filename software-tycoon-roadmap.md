@@ -13,7 +13,8 @@ not committed yet (see "Built: Phases B to E" below). **Start with "Next steps".
 
 **1. The player plays it (waiting on them).** Everything after the garage has only been played by a bot
 (`scripts/tycoon/playthrough.ts`) and looked at in screenshots, never by a person. Ask for a run log (Menu → Export run
-log; `lab-tycoon-run-*.json`, untracked and gitignored: read it, never commit it). Look at:
+log; `lab-tycoon-run-*.json`, untracked and gitignored: read it, never commit it; the monthly entries now carry the hit's
+fields: see "Guide for the next session"). Look at:
 - *The hunt* (café and garage): a bot that reads the true fit finds its first hit after 250 to 570 days (and often two or three more in the garage); a person reading it through
   an analyst's eye will be slower. If the garage is too poor, `CONTRACT_PAY_PER_POINT` and `UNDISCOVERED_REACH` come first.
 - *Act 2 pace*: the bot goes from the move out to the IPO in about 3.5 to 5.5 years (6 to 8.5 years from the start). The numbers
@@ -36,6 +37,153 @@ log; `lab-tycoon-run-*.json`, untracked and gitignored: read it, never commit it
 - A version 6 save loads with its directions mapped to workstreams, but it has no hit roadmap and may be past stages whose
   goals changed; fine for a test, not worth migrating further.
 - Researches about running many products (licensing, the portfolio) were not reworked; they still exist.
+
+## Guide for the next session (written 2026-10-23, before the player's first playthrough of phases B to E)
+
+Read this first if you are picking the game up after the player has played. It says what to read in a run log, which knob
+answers which complaint, how the new systems work and why they are shaped this way.
+
+### 1. What to do when the player comes back
+
+1. Ask for the run log (Menu → Export run log, `lab-tycoon-run-*.json`; untracked and gitignored: read it, never commit it)
+   and what they felt: where they got stuck, bored or confused, where they skipped time.
+2. Read the log (section 2), place each complaint in the playbook (section 5), change one knob at a time, and check it with
+   the bot over 12 seeds (`playthrough.ts`) so a fix for one end does not break the other.
+3. Only then think about content or features. The player's order of priority so far has been: feel the arc first,
+   features later. The roadmap's "Next steps" lists the open questions (hunt length, Act 2 pace, a dry roadmap, clarity).
+4. Commit only when asked, to `main`, `type(scope): summary`, staging only the task's files (see `AGENTS.md`).
+
+### 2. Reading a run log
+
+Each entry is `{ day, kind, text, cash, data? }`. Kinds that matter now:
+- `month` (every 30 days): `income`, `incomeAverage`, `burn` (a day), `reputation`, `stage`, `employees`, `offices`, `users`,
+  `lifetimeRevenue`, `productList` (each product with users, income, quality and its role), and, once there is a hit, the
+  **hit fields**: `hitName`, `hitUsers`, `hitEuUsers`, `hitFit` and `hitPeakFit` (the fit its last release earned),
+  `hitRetention` (% of users kept at that fit), `hitReach`, `hitWorld` (its pull on the world, a multiplier on reach),
+  `hitCapacity`, `hitLoadPercent` (users over capacity), `hitIncome`, `hitPayFactor` (what Monetisation raised pay to),
+  `hitBugs`, `hitPressure` (what presses on the fit, in points a day, by cause), `hitBuilt` and `hitRoadmap` (item ids),
+  `floors` (each floor and its workstream, and what it is building), `hosting` and `toolUpkeep` (a day), `profitDays`,
+  `secondSlotsFree`.
+- `stage`, `hit` (a launch took off), `office.toGarage`, `office.moveOut` (`kept`: the side products), `team.workstream`
+  (a floor changed stream), `product.roadmap` (the roadmap was edited), `team.release` (a floor shipped), `notice` (outages
+  read "went down: the servers were full", items "is live on", companions "is out", Absorb "You absorbed", the change
+  of guard "is the CEO now"), `exit.offer`/`exit.declined`, `end.ipo`/`end.sold`/`end.retired`/`end.bankrupt`.
+- Quick checks: users and income per month against the targets (first floor 100k to 500k users, headquarters 5M to 10M,
+  both buildings 20M+, $1M a day late, $1B lifetime); `hitLoadPercent` pinned at 90 to 100 for months means the player
+  never built Scale (or did not find out how); `hitFit` far under `hitPeakFit` means pressure (read `hitPressure`);
+  `floors` all `features` means the player never found the workstream selectors; `hitRoadmap` empty with floors idle means
+  the roadmap ran dry or was never filled; `secondSlotsFree: 0` with no companion means the slots stayed taken by side products.
+
+### 3. How the new systems work (reference)
+
+Files: `sim/teams.ts` (floors and workstreams), `sim/roadmap.ts` (the ranked list, `nextItem`), `data/workstreams.ts` (all
+items, `itemEffects`), `sim/scale.ts` (capacity, outages, hosting, the hit's pull on the world), `sim/fit.ts` (takeoff,
+pressure, retention), `sim/companions.ts` and `data/companions.ts`, `sim/tools.ts`, `sim/exit.ts` (selling, the IPO),
+`sim/rivals.ts` (`acquire`), `sim/founding.ts` (`changeOfGuard`), `sim/offices.ts` (`moveOut`, `openOffice`), `data/stages.ts`,
+UI: `HitDashboard.tsx`, `RoadmapDialog.tsx`, `TeamControls.tsx` (per-product team and workstream), `TeamDialog.tsx` (the
+move out picker), `MenuDialog.tsx` (IPO), `AbsorbDialog.tsx`.
+
+**A floor and its workstream.** `Office.productId` is the product it looks after (the hit, for every floor that opens or
+moves out) and `Office.workstream` what it works on. `teamDay` runs each day: ships a finished team release, and for an idle
+floor asks `releasePlan` what is next. The plan by stream: *features*: the queued features (`Product.nextFeatures`), else
+a maintenance release timed near the end of the fresh period; *quality*: a quality item, else a polishing release; *scale,
+growth, monetisation, tools*: the highest roadmap item for that stream that is on offer, else the floor idles (the panel
+says "Nothing on the roadmap for ..."; `nextReleaseDay` is `Number.MAX_SAFE_INTEGER`: UI code must check it); *europe*:
+compliance, then localising, then its items; *companions*: a companion item, else look after the stalest companion.
+An item is a normal update project (`Project.itemId`) whose work is the maintenance target times `item.work`.
+Floors' releases run side by side: `productInWork(state, id, byTeam)` ignores other floors' team releases, while manual
+updates and fixes still exclude each other. Items already being built are skipped by `nextItem`.
+
+**Items** (`WORK_ITEMS` plus one launch item per companion, `ALL_ITEMS`). `minUsers` gates when an item is on offer.
+When one ships, `buildItem` (in `sim/project.ts`) applies what is immediate (reach multiplier, fit and peak fit, bugs, quality),
+adds it to `Product.built` and removes it from the roadmap; everything else is read live from `itemEffects(product)`:
+`capacity` (scale), `pay` (monetisation), `churn` (retention), and the tool effects `fixes`, `insight`, `speed`, `morale`,
+`upkeep` (read through `toolEffects(state)` from the *hit's* built items: tools go with the hit). Saves store item ids: if
+you rename or delete an id, `getWorkItem` returns undefined and the effect silently disappears.
+
+**The hit's users** (`targetUsersIn` in `sim/products.ts`): `saturate(reach x world x interest x bugFactor x retention x
+expectation, cap) / (1 + crowding) + regulars`, per region, where cap is audience x regionScale x `MARKET_CAP` (5) x
+`HIT_MARKET_SCALE` (300), so the market is rarely what stops a hit. Users move toward it (`nextUsers`). Then `loadDay`:
+users over `capacityOf` (`BASE_CAPACITY` 300k plus Scale items) are cut to it; from `OUTAGE_LOAD` (92%) of capacity an outage
+strikes with `OUTAGE_CHANCE` (2%) a day, costing `OUTAGE_USER_LOSS` of users, reputation and bugs. `growWorld`: while users are
+under capacity, `world` grows by `HIT_GROWTH_RATE` x health x room x (1 + the items' reach + 0.4 per healthy Reach companion)
+a day; health is (fit - 50) / 50 clamped to -1..1, room is 1 - users / market cap; a fit under 50 shrinks `world` back toward 1.
+Revenue: `productRevenue` (users x price x audience pay / 30, Europe's pay factor) x `payFactor` (1 + the items' pay), and the
+hit also earns x (1 + 0.15 per healthy Keep companion) through `productIncome`. Costs: `HOSTING_PER_USER_DAY` (0.002) a hit user,
+plus tool upkeep, on top of salaries and rent.
+
+**Fit pressure** (`sim/fit.ts`, `sagFit`, once a day for hits): pressure in points a day = 0.25 x (1 - interest) + 0.3 x
+(1 - bugFactor) + 0.08 x min(3, crowding by others) + 0.06 x features the era expects and it lacks + 0.1 per unhealthy
+companion. Above 0.02 the fit falls by it; otherwise it recovers 0.15 a day; it never exceeds `peakFit`, the fit the last
+release earned (a release resets both). `retention`: 0.4 + 0.6 x min(1, fit / 75), plus (1 - that) x (the items' churn + 0.1
+per healthy Keep companion), multiplies the hit's users.
+
+**Second-product slots** (`COMPANION_SLOTS` 2): side products (kept at move out) and companions share them. A companion
+launches when its item ships, with 12% of the hit's users; it has no floor of its own: a floor on the Companions stream
+keeps its reach at 12% of the hit's users and updates the stalest one. Healthy means interest of at least 0.6 and fewer than
+10 bugs per unit of work. To free a slot, retire a product in Studio → Products.
+
+**Absorb** (`acquire`): needs stage 4, a hit and a rival with a product of the hit's type; costs `acquisitionPrice`. Half the
+users of its competing products join the hit; its best people (by skill) fill the empty desks of real offices in its region
+and nobody comes if there are none; kept products become side products; its other business adds to `acquiredIncome`. The
+name is recorded in `absorbedNames` so `rivalsArrive` does not bring it back.
+
+**Journey and endings.** Stages 0 to 6 (see "Things to know"). Opening the first European floor calls `changeOfGuard`.
+The IPO is open at stage 6 when its three goals hold (10M users, $1B lifetime, `profitDays` of 360) and values the company at
+cash plus `IPO_MULTIPLE` (9) years of trailing income; selling uses `EXIT_BASE_MULTIPLE` (2 years of income) and the old offer rules.
+
+### 4. Why it is shaped this way (decisions, and what was rejected)
+
+- *A hit is earned, and the company is built around it.* The player's own words in "The pivot". The roadmap, workstreams and
+  capacity exist to give Act 2 decisions that are not money: which floor builds what, in what order, and what the hit's
+  servers and fit can bear.
+- *Workstreams with a ranked roadmap* (the player agreed): you rank items, floors take the top one for their stream. Rejected:
+  picking an item per floor (more clicks, same choice).
+- *Tools and companions reuse the roadmap machinery* (items of two more streams) instead of being separate 2 to 4 person
+  projects as the plan said. A floor on Tools or Companions is the "team off the hit". Cheaper to build and test; if the
+  player wants small teams inside a floor, that is a new feature.
+- *Side products earn only* until they are retired or replaced (the player's call). They hold slots that companions need,
+  which is deliberate: the choice of which to keep at move out has a price later. The bot retires them as soon as a hit is
+  300k users; check whether the player notices the slot message.
+- *The hit's growth is a "pull on the world" (`world`), not a bigger reach per release.* Per-release reach gains are small
+  (a feature gives about 10%) and could never reach millions; `world` compounds with fit, so a hit that holds its fit snowballs
+  until its servers or its market stop it, and one that sags shrinks. It is the single biggest pacing lever.
+- *Capacity is the main wall.* Past it users are turned away rather than angry, and near it outages hurt: the player has to put
+  a floor on Scale in time. A hit left alone stalls at its servers (seen in the bot runs: 4.1M users for 12 years).
+- *Hosting per user, not a share of revenue*, so cheap-per-user products feel it more. Money is still plentiful (see Next steps).
+- *Stage gates use things the player does* (200k users and a Scale item to leave the first floor), not reputation, which a
+  bot reached years late and a person may find arbitrary.
+- *Floors work in parallel on the hit.* Without it one floor on Quality blocked every other floor for good (found by the bot).
+- *The IPO and selling are separate endings*: selling stays the early exit (one floor, a hit that earns), the IPO the late one.
+
+### 5. Retune playbook (symptom, then knob, in `sim/balance.ts` unless noted)
+
+- Garage too poor or the hunt too long: `CONTRACT_PAY_PER_POINT`, `UNDISCOVERED_REACH`, `CAFE_*`, `GARAGE_READY_MONEY`, `FIT_BASE`,
+  `FIT_TAKEOFF`, `TAKEOFF_MAX_CROWDING`.
+- Act 2 too fast or too slow: `HIT_GROWTH_RATE` first; then the capacity and `minUsers` of the Scale items and `BASE_CAPACITY`
+  (`data/workstreams.ts`); the stage goals (`data/stages.ts`); `HIT_REACH` for the hit's starting size.
+- Money does not matter: `HOSTING_PER_USER_DAY`, item `upkeep`, `NEW_OFFICE_COST`, `EU_OFFICE_COST`, salaries, or new sinks (the roadmap
+  has no costs per item today: an item could cost money, not only work).
+- Outages too harsh or too rare: `OUTAGE_LOAD`, `OUTAGE_CHANCE`, `OUTAGE_USER_LOSS`, `OUTAGE_REPUTATION`.
+- The fit sags too fast or never: `FIT_*_PRESSURE`, `FIT_RECOVERY`, `HIT_RETENTION_FLOOR`.
+- Companions pointless or mandatory: `COMPANION_REACH_BOOST`, `COMPANION_KEEP_*`, `COMPANION_SHARE`, `COMPANION_CARE_FIT`.
+- Late game empty: add items (per era or repeatable ones) in `data/workstreams.ts`, more companions in `data/companions.ts`.
+- IPO too early or late: `IPO_USERS`, `IPO_REVENUE`, `IPO_PROFIT_DAYS`, `IPO_MULTIPLE`.
+- After any change run the bot (`playthrough.ts`) over 12 seeds, then `npm test` and `npm run typecheck`.
+
+### 6. Pitfalls
+
+- `sim/products.ts`, `fit.ts`, `companions.ts`, `scale.ts` and `economy.ts` import each other (functions only, no top-level use);
+  keep it that way (no constants computed from another module at import time) or an import cycle will bite.
+- `STAGES.length - 1` is the IPO stage; adding or removing stages shifts the stage numbers in `balance.ts`/`data` and needs a save
+  upgrade (see "Things to know").
+- `moveOut(state)` without `keepIds` keeps nothing and sells everything else; the store passes the picker's choice.
+- `nextReleaseDay` may be `MAX_SAFE_INTEGER` (idle floor); `changeOfGuard` runs once, on the first European floor, and does nothing
+  if the founders are gone.
+- The tests that pin balance numbers are few; most numeric checks live in `tests/tycoon/scale.test.ts`, `pressure.test.ts`,
+  `workstreams.test.ts`, `companions.test.ts`, `moveout.test.ts`, `endings.test.ts`, `competition.test.ts` (Absorb),
+  `journal.test.ts` (the log's hit fields) and `ui-smoke.test.tsx` (the new screens).
+- Bot-based numbers are optimistic (true fit, ideal roadmap). Do not tune late-game pace to the bot alone.
 
 **Things to know before changing code.**
 - Verify with `npm test` and `npm run typecheck`; for UI, run `npm run dev -- --port 4321` (base path `/lab/tycoon/`)

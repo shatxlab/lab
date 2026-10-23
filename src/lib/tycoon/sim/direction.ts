@@ -1,4 +1,4 @@
-import { PM_HIT_BONUS, PM_REACH_BONUS } from './balance'
+import { PM_FIT_BONUS, PM_REACH_BONUS } from './balance'
 import { pmOf } from './careers'
 import type { Employee, GameState, Office, Project } from './types'
 
@@ -12,10 +12,10 @@ function pull(pm: Employee, bonuses: readonly number[]): number {
   return bonuses[pm.level] * (0.6 + 0.4 * ((pm.analysis ?? 0) / 100))
 }
 
-/** Multiplier on the chance a launch breaks out from the office's product manager; 1 when there is none. */
-export function pmHitFactor(state: GameState, office: Office | undefined): number {
+/** Multiplier on the fit a release from the office earns, from its product manager; 1 when there is none. */
+export function pmFitFactor(state: GameState, office: Office | undefined): number {
   const pm = office && pmOf(state, office)
-  return pm ? 1 + pull(pm, PM_HIT_BONUS) : 1
+  return pm ? 1 + pull(pm, PM_FIT_BONUS) : 1
 }
 
 /** Multiplier on the reach of a launch, or of a product growing into the next size, from the office's product manager. */
@@ -24,9 +24,9 @@ export function pmReachFactor(state: GameState, office: Office | undefined): num
   return pm ? 1 + pull(pm, PM_REACH_BONUS) : 1
 }
 
-/** What the office's product manager adds, in words ("+15% chance of a hit, +6% reach"), or null when it has none. */
+/** What the office's product manager adds, in words ("+8% fit, +6% reach"), or null when it has none. */
 export function pmEffectText(state: GameState, office: Office | undefined): string | null {
   if (!office || !pmOf(state, office)) return null
   const percent = (factor: number) => `+${Math.round((factor - 1) * 100)}%`
-  return `${percent(pmHitFactor(state, office))} chance of a hit, ${percent(pmReachFactor(state, office))} reach`
+  return `${percent(pmFitFactor(state, office))} fit, ${percent(pmReachFactor(state, office))} reach`
 }

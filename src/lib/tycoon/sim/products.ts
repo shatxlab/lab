@@ -20,6 +20,7 @@ import {
   FRESH_DAYS,
   MATURITY_MAX_UPDATES,
   MATURITY_PER_UPDATE,
+  HIT_MARKET_SCALE,
   MARKET_CAP,
   MARKET_ROOM,
   PROJECT_SIZES,
@@ -86,8 +87,8 @@ export function reachIn(product: Pick<Product, 'reach' | 'euShare'>, region: Reg
  * Users a product could hold in a region, eased toward the market's cap: about `users` while that is small
  * next to the type's audience there, never more than MARKET_CAP times it however big the reach.
  */
-export function saturate(productTypeId: string, users: number, region: Region = 'us'): number {
-  const cap = getProductType(productTypeId).audience * regionScale(productTypeId, region) * MARKET_CAP
+export function saturate(productTypeId: string, users: number, region: Region = 'us', hit = false): number {
+  const cap = getProductType(productTypeId).audience * regionScale(productTypeId, region) * MARKET_CAP * (hit ? HIT_MARKET_SCALE : 1)
   return cap * (1 - Math.exp(-users / cap))
 }
 
@@ -125,6 +126,11 @@ export function marketWeights(state: GameState): Map<string, number> {
 /** How crowded a product's market is by everyone else's products: 0 when it is alone. */
 function crowding(weights: Map<string, number>, productTypeId: string, own: number, region: Region): number {
   return Math.max(0, (weights.get(marketKey(productTypeId, region)) ?? 0) - own)
+}
+
+/** How crowded a product's market is by everyone else's products, in the US: what is left for it to take off into. */
+export function crowdingAround(state: GameState, product: Product): number {
+  return crowding(marketWeights(state), product.productTypeId, ownWeight(product, state.day, 'us'), 'us')
 }
 
 /** How crowded the market for this product type is right now in a region, for a product that isn't in it yet. */
@@ -167,7 +173,7 @@ export function targetUsersIn(state: GameState, product: Product, region: Region
   const kept = interest(product, state.day) * bugFactor(product, region)
   const users = reach * kept * expectationFactor(product, state.day)
   const loyal = (product.loyalUsers ?? 0) * regionShare(product, region) * kept
-  return saturate(product.productTypeId, users, region) / (1 + crowd) + loyal
+  return saturate(product.productTypeId, users, region, product.hit) / (1 + crowd) + loyal
 }
 
 /** The users a product is heading toward in all its markets together. */

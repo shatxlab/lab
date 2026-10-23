@@ -63,11 +63,19 @@ export function surveyAudience(state: GameState, audienceId: string): Result {
   return OK
 }
 
-/** What the audience has said about a product so far: it arrives over the months after launch, all at once when there is an analyst to read it. */
+/** The best eye for users the studio has: its sharpest analyst or product manager's skill, 0..100. */
+export function readingSkill(state: GameState): number {
+  return state.employees.filter(isAnalyst).reduce((best, e) => Math.max(best, e.analysis ?? 0), 0)
+}
+
+/**
+ * What the audience has said about a product so far: it arrives over the months after launch, sooner the sharper the
+ * studio's analysts, and all at once for an audience the studio has studied.
+ */
 export function feedbackFor(state: GameState, product: Product): Feedback & { waiting: boolean } {
   const full = audienceFeedback(product.productTypeId, product.audienceId, product.featureIds)
-  if (hasAnalyst(state) || isSurveyed(state, product.audienceId)) return { ...full, waiting: false }
-  const age = state.day - product.releaseDay
+  if (isSurveyed(state, product.audienceId)) return { ...full, waiting: false }
+  const age = (state.day - product.releaseDay) / Math.max(0.05, 1 - readingSkill(state) / 100)
   const loved = age >= FEEDBACK_LOVED_DAYS
   const shrugged = age >= FEEDBACK_SHRUGGED_DAYS
   const missed = age >= FEEDBACK_MISSED_DAYS

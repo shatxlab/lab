@@ -107,12 +107,12 @@ describe('project sizes', () => {
     expect(state.offices[0].project?.target).toEqual(projectTarget('web_app', ['search'], 'update', 'large'))
   })
 
-  it('price launch campaigns from what the product earns at its reach, at any size', () => {
+  it('price launch campaigns from what the product would earn from everyone it could reach, at any size', () => {
     const state = studio()
     startProject(state, 'web_app', ['accounts'], 'flagship')
     finish(state)
     const quality = projectQuality(state, state.offices[0].project!)
-    const reach = estimateReach(state, state.offices[0].project!, quality)
+    const reach = estimateReach(state, state.offices[0].project!, quality, false)
     const price = campaignCost(state, state.offices[0].project!, quality, 'large')
     expect(price).toBeCloseTo(revenueForUsers('web_app', reach, state.offices[0].project!.audienceId) * CAMPAIGNS.large.costDays, -2)
     const money = state.money

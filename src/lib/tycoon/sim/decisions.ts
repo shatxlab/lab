@@ -7,7 +7,7 @@ import { describePendingEvent } from './events'
 import { nextSize, promotionCost, promotionEffect, promotionReturn } from './lifecycle'
 import { buildingName, newOfficeCost, officeName, officesIn, getOffice, openableRegions } from './offices'
 import { DIRECTION_INFO, ownedProduct } from './teams'
-import { hitBreakdown, projectBudget, projectQuality, projectTarget } from './project'
+import { projectBudget, projectFit, projectQuality, projectTarget, updateFit } from './project'
 import { acquisitionPrice } from './rivals'
 import { salePrice, sunsetOutcome } from './sunset'
 import { trainingCost } from './staff'
@@ -55,7 +55,9 @@ export const decisions = {
     if (!project) return ['ship', 'Shipped']
     const quality = projectQuality(state, project)
     const data: Record<string, string | number | boolean> = { quality: Math.round(quality), campaign: campaign ?? 'none', kind: project.kind }
-    if (project.kind === 'new') data.hitChance = Math.round(hitBreakdown(state, project, quality, campaign).chance * 1000) / 10
+    const product = state.products.find((p) => p.id === project.parentId)
+    if (project.kind === 'new') data.fit = Math.round(projectFit(state, project, quality))
+    else if (product) data.fit = Math.round(updateFit(state, product, project, quality))
     return ['ship', `Shipped ${project.name}`, data]
   },
 
@@ -154,6 +156,11 @@ export const decisions = {
 
   found(yourName: string, studioName: string): Decision {
     return ['found', `Founded ${studioName.trim()}, with ${yourName.trim()} as its analyst`, { you: yourName.trim(), studio: studioName.trim() }]
+  },
+
+  pivot(state: GameState, productId: number, audienceId: string): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    return ['product.pivot', `Started pivoting ${product?.name ?? 'a product'} to ${getAudience(audienceId).name}`, { users: Math.round(product?.users ?? 0), fit: Math.round(product?.fit ?? 0), audience: audienceId }]
   },
 
   moveToGarage(state: GameState): Decision {

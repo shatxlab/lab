@@ -1214,12 +1214,6 @@
   font-size: 13px;
 }
 
-.tycoon-root .hit-factors {
-  margin: 0 0 8px;
-  padding-left: 18px;
-  font-size: 13px;
-}
-
 @media (max-width: 520px) {
   .tycoon-root .tiers {
     grid-template-columns: 1fr;
@@ -1749,4 +1743,70 @@
 .tycoon-root .founding-input button {
   padding: 0;
   font-size: 1.2em;
+}
+
+/* Product–market fit: a range on a bar from 0 to 100, with the line a product takes off at. */
+.tycoon-root .fit-meter {
+  display: grid;
+  gap: 4px;
+}
+
+.tycoon-root .fit-track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.tycoon-root .fit-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: var(--muted);
+}
+
+.tycoon-root .fit-range.good {
+  background: var(--good);
+}
+
+.tycoon-root .fit-range.warn {
+  background: var(--accent);
+}
+
+.tycoon-root .fit-range.bad {
+  background: var(--bad);
+}
+
+.tycoon-root .fit-line {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--text);
+}
+
+.tycoon-root .product-fit {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.tycoon-root .pivot-picker {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.tycoon-root .pivot-option {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.tycoon-root .pivot-option button {
+  justify-self: start;
 }

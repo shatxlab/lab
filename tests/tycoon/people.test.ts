@@ -5,7 +5,7 @@ import {
   FEEDBACK_MISSED_DAYS,
   INSIGHT_PER_SKILL,
   PM_AFTER_DAYS,
-  PM_HIT_BONUS,
+  PM_FIT_BONUS,
   PM_INSIGHT_SHARE,
   PM_MIN_ANALYSIS,
   PM_REACH_BONUS,
@@ -13,11 +13,11 @@ import {
   SURVEY_COST,
 } from '@/lib/tycoon/sim/balance'
 import { becomePm, leadOf, needsLead, pmBlocker, pmOf, primarySkill, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
-import { pmHitFactor, pmReachFactor } from '@/lib/tycoon/sim/direction'
+import { pmFitFactor, pmReachFactor } from '@/lib/tycoon/sim/direction'
 import { ANALYST_RESEARCH, generateAnalyst, hire, PM_RESEARCH, refreshCandidates, salaryFor, salaryOf } from '@/lib/tycoon/sim/hiring'
 import { feedbackFor, hasAnalyst, insightDay, insightOf, insightRate, isSurveyed, surveyAudience, surveyBlocker } from '@/lib/tycoon/sim/insight'
 import { assignTeam, openOffice, teamOf, teamOfficeId, transfer, workersOf } from '@/lib/tycoon/sim/offices'
-import { hitBreakdown, shipProject, startProject } from '@/lib/tycoon/sim/project'
+import { projectFit, shipProject, startProject } from '@/lib/tycoon/sim/project'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { isBuilder, type Employee, type GameState } from '@/lib/tycoon/sim/types'
 import { dailyContribution, expectedContribution, workDay } from '@/lib/tycoon/sim/work'
@@ -234,7 +234,7 @@ describe('studying an audience', () => {
     expect(loaded.insight).toBe(12.5)
   })
 
-  it('comes in over the months after a launch, unless an analyst reads it', () => {
+  it('comes in over the months after a launch, sooner the sharper the analyst reading it', () => {
     const state = makeState([builder(1)])
     state.day = 500
     const product = makeProduct({ id: 5, audienceId: 'web_business', featureIds: ['payments', 'dark_mode'], releaseDay: 500 })
@@ -247,11 +247,13 @@ describe('studying an audience', () => {
     const late = feedbackFor(state, product)
     expect(late.missed.length).toBeGreaterThan(0)
     expect(late.waiting).toBe(false)
-    state.day = 500
-    analyst(state)
+    state.day = 500 + FEEDBACK_LOVED_DAYS / 2
+    expect(feedbackFor(state, product).loved).toEqual([])
+    analyst(state, { analysis: 60 })
     const quick = feedbackFor(state, product)
     expect(quick.loved).toEqual(['In-app payments'])
-    expect(quick.waiting).toBe(false)
+    expect(quick.missed).toEqual([])
+    expect(quick.waiting).toBe(true)
   })
 
   it('is whole at once for an audience already studied', () => {
@@ -323,38 +325,35 @@ describe('product managers', () => {
     expect(promotionBlocker(state, senior)).toBe('A senior analyst can become a product manager')
   })
 
-  it('give their office a better chance of a hit and a wider reach, more at higher levels', () => {
+  it('give their office a better fit and a wider reach, more at higher levels', () => {
     const state = twoOffices()
     const office = state.offices[0]
-    expect(pmHitFactor(state, office)).toBe(1)
+    expect(pmFitFactor(state, office)).toBe(1)
     expect(pmReachFactor(state, office)).toBe(1)
     const pm = readyAnalyst(state, { analysis: 100 })
     becomePm(state, pm.id)
-    const mid = pmHitFactor(state, office)
-    expect(mid).toBeCloseTo(1 + PM_HIT_BONUS[1], 5)
+    const mid = pmFitFactor(state, office)
+    expect(mid).toBeCloseTo(1 + PM_FIT_BONUS[1], 5)
     expect(pmReachFactor(state, office)).toBeCloseTo(1 + PM_REACH_BONUS[1], 5)
     pm.level = 3
-    expect(pmHitFactor(state, office)).toBeGreaterThan(mid)
-    expect(pmHitFactor(state, state.offices[1])).toBe(1)
+    expect(pmFitFactor(state, office)).toBeGreaterThan(mid)
+    expect(pmFitFactor(state, state.offices[1])).toBe(1)
     pm.analysis = 0
-    expect(pmHitFactor(state, office)).toBeLessThan(1 + PM_HIT_BONUS[3])
-    expect(pmHitFactor(state, undefined)).toBe(1)
+    expect(pmFitFactor(state, office)).toBeLessThan(1 + PM_FIT_BONUS[3])
+    expect(pmFitFactor(state, undefined)).toBe(1)
   })
 
-  it('show in the hit breakdown for projects of their office only', () => {
+  it('raise the fit of releases from their office only', () => {
     const state = twoOffices()
     const [first, second] = state.offices
     state.employees[0].skills = { design: 90, engineering: 90, qa: 90 }
-    startProject(state, 'web_app', [], 'small', first.id)
-    startProject(state, 'web_app', [], 'small', second.id)
-    const none = hitBreakdown(state, first.project!, 85)
-    expect(none.pm).toBe(1)
+    startProject(state, 'web_app', ['payments'], 'small', first.id, 'web_business')
+    startProject(state, 'web_app', ['payments'], 'small', second.id, 'web_business')
+    const none = projectFit(state, first.project!, 85)
     const pm = readyAnalyst(state, { analysis: 100 })
     becomePm(state, pm.id)
-    const steered = hitBreakdown(state, first.project!, 85)
-    expect(steered.pm).toBeGreaterThan(1)
-    expect(steered.chance).toBeCloseTo(none.chance * steered.pm, 10)
-    expect(hitBreakdown(state, second.project!, 85).pm).toBe(1)
+    expect(projectFit(state, first.project!, 85)).toBeCloseTo(none * pmFitFactor(state, first), 10)
+    expect(projectFit(state, second.project!, 85)).toBe(none)
   })
 
   it('widen the reach of a launch from their office', () => {
@@ -365,7 +364,6 @@ describe('product managers', () => {
       if (withPm) becomePm(state, readyAnalyst(state, { analysis: 100 }).id)
       const project = state.offices[0].project!
       for (const d of ['design', 'engineering', 'qa'] as const) project.progress[d] = project.target[d] * 1.2
-      state.launchesSinceHit = 0
       expect(shipProject(state).ok).toBe(true)
       return state.products[0].reach
     }

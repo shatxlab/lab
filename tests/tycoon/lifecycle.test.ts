@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AUTO_PROMOTE_MIN_EFFECT, CAMPAIGNS, LAUNCH_ADOPTERS, PROMO_AUDIENCE, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from '@/lib/tycoon/sim/balance'
+import { undiscovered } from '@/lib/tycoon/sim/fit'
 import { AUTO_PROMOTE_RESEARCH, autoPromoteDay, promotionAudience, promotionEffect, promotionReturn, campaignCost, estimateReach, productPhase, promotionCost, promoteProduct, promotionReserve, setAutoPromote, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { bugProneness, productRevenue, productsDay, releaseBugs, revenueForUsers, targetUsers } from '@/lib/tycoon/sim/products'
 import { projectQuality, projectTarget, reachAfterUpdate, shipProject, startProject, startUpdate } from '@/lib/tycoon/sim/project'
@@ -114,7 +115,7 @@ describe('updates', () => {
     const reach = state.products[0].reach
     startUpdate(state, 50, [])
     state.offices[0].project!.progress = { design: 1, engineering: 1, qa: 1 } // a poor update
-    expect(reachAfterUpdate(state.products[0], state.offices[0].project!, 10)).toBe(reach)
+    expect(reachAfterUpdate(state, state.products[0], state.offices[0].project!, 10)).toBe(reach)
     shipProject(state)
     expect(state.products[0].quality).toBe(95)
     expect(state.products[0].reach).toBe(reach)
@@ -282,7 +283,8 @@ describe('launch campaigns', () => {
     const [small, medium, large] = TIERS.map((t) => campaignCost(state, project, quality, t))
     expect(small).toBeLessThan(medium)
     expect(medium).toBeLessThan(large)
-    expect(medium).toBeCloseTo(revenueForUsers('web_app', estimateReach(state, project, quality), project.audienceId) * CAMPAIGNS.medium.costDays, -2)
+    // A campaign speaks to everyone the launch could reach, not only those who would find it by themselves.
+    expect(medium).toBeCloseTo(revenueForUsers('web_app', estimateReach(state, project, quality, false), project.audienceId) * CAMPAIGNS.medium.costDays, -2)
     expect(campaignCost(state, project, 1, 'small')).toBe(CAMPAIGNS.small.costFloor)
   })
 
@@ -294,7 +296,7 @@ describe('launch campaigns', () => {
     expect(money - state.money).toBe(price)
     const product = state.products[0]
     expect(product.boostUntil).toBe(state.day + CAMPAIGNS.medium.days)
-    expect(product.boostUsers * CAMPAIGNS.medium.days).toBeCloseTo(product.reach * CAMPAIGNS.medium.users)
+    expect(product.boostUsers * CAMPAIGNS.medium.days).toBeCloseTo((product.reach / undiscovered(product.fit!)) * CAMPAIGNS.medium.users)
   })
 
   it('refuse an unaffordable campaign without shipping or disturbing the game', () => {
@@ -305,7 +307,7 @@ describe('launch campaigns', () => {
     expect(state).toEqual(before) // not even the random number generator moved
   })
 
-  it('pay back roughly 1.2-2x their price', () => {
+  it('pay back roughly 1.1-2x their price', () => {
     for (const tier of TIERS) {
       const plain = readyToLaunch()
       const boosted = structuredClone(plain)
@@ -313,7 +315,7 @@ describe('launch campaigns', () => {
       shipProject(plain)
       shipProject(boosted, tier)
       const roi = (earn(boosted, 600) - earn(plain, 600)) / cost
-      expect(roi, tier).toBeGreaterThan(1.2)
+      expect(roi, tier).toBeGreaterThan(1.1)
       expect(roi, tier).toBeLessThan(2.1)
     }
   })

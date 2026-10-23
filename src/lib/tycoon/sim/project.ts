@@ -1,5 +1,5 @@
 import { formatMoney } from '@/lib/tycoon/format'
-import { audiencesOf } from '@/lib/tycoon/data/audiences'
+import { audienceFor, audiencesOf } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import {
@@ -10,18 +10,11 @@ import {
   POLISH_FIX_SHARE,
   PROMO_AUDIENCE,
   DEMAND_NOISE,
-  HIT_BASE_CHANCE,
-  HIT_CAMPAIGN_BOOST,
-  HIT_AUDIENCE_MAX,
-  HIT_CHANCE_PER_MISS,
-  HIT_MAX_CHANCE,
-  HIT_MIN_QUALITY,
-  HIT_REACH,
   GROW_MAX_FEATURES,
-  HIT_REPUTATION,
   MAINTENANCE_TARGET_SHARE,
   LAUNCH_ADOPTERS,
   MAX_FEATURES,
+  PIVOT_KEEP,
   PROJECT_SIZES,
   REPUTATION_DIVISOR,
   REPUTATION_MAX,
@@ -32,7 +25,8 @@ import {
   WORK_SCALE,
 } from './balance'
 import { monthlyBurn } from './economy'
-import { officeRunning, pmHitFactor, pmReachFactor } from './direction'
+import { officeRunning, pmFitFactor, pmReachFactor } from './direction'
+import { releaseFit, takeoffBlocker, takeOff, undiscovered } from './fit'
 import { campaignCost, growBlocker, localiseBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
@@ -40,8 +34,8 @@ import { inGarage, resolveOffice, teamOf } from './offices'
 import { bugProneness, euShareOf, regionScale, releaseBugs, settledUsers } from './products'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
-import { pick, rand, randRange } from './rng'
-import { audienceFit, computeQuality, computeReach, featureReach } from './scoring'
+import { pick, randRange } from './rng'
+import { computeQuality, computeReach, featureReach } from './scoring'
 import { featureLock, productTypeLock, sizeLock } from './unlocks'
 import {
   DISCIPLINES,
@@ -230,6 +224,68 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
   return OK
 }
 
+/** Why `product` can't pivot to `audienceId` from `office` now, or null when it can. */
+export function pivotBlocker(state: GameState, office: Office, product: Product, audienceId: string): string | null {
+  if (product.hit) return 'A hit has found its people'
+  if (product.pivoted) return 'It has pivoted once already'
+  if (!audiencesOf(product.productTypeId).some((a) => a.id === audienceId)) return 'Unknown audience'
+  if (audienceId === (product.audienceId ?? audiencesOf(product.productTypeId)[0]?.id)) return 'It is already for them'
+  return updateBlocker(state, office, product)
+}
+
+/** The work of a pivot: an update's, without new features, but not the cheap maintenance kind. */
+export function pivotTarget(product: Product): Skills {
+  const target = projectTarget(product.productTypeId, [], 'update', product.size)
+  for (const d of DISCIPLINES) target[d] = Math.round(target[d] / MAINTENANCE_TARGET_SHARE)
+  return target
+}
+
+/**
+ * Starts pointing a live product at another audience of its type. Everything built so far stays, and counts for the
+ * new audience at once; when it ships, most of its users leave (they came for what it was), it starts again as a
+ * launch, and its fit is the new audience's. A product pivots once.
+ */
+export function startPivot(state: GameState, productId: number, audienceId: string, officeId?: number): Result {
+  if (state.gameOver) return fail('Game over')
+  const office = resolveOffice(state, officeId)
+  if (!office) return fail('Unknown office')
+  const product = state.products.find((p) => p.id === productId)
+  if (!product) return fail('Unknown product')
+  const blocker = pivotBlocker(state, office, product, audienceId)
+  if (blocker) return fail(blocker)
+  office.project = {
+    id: state.nextId++,
+    name: product.name,
+    kind: 'update',
+    parentId: product.id,
+    productTypeId: product.productTypeId,
+    audienceId: product.audienceId,
+    size: product.size,
+    featureIds: [],
+    target: pivotTarget(product),
+    pivotsTo: audienceId,
+    progress: emptySkills(),
+    startDay: state.day,
+    readyNotified: false,
+    hype: 1,
+    alphaOffered: false,
+    bugRisk: 1,
+    contract: null,
+  }
+  return OK
+}
+
+/** A pivot ships: the product is for its new audience, keeps a few of its users, and starts again as a launch does. */
+function pivot(state: GameState, product: Product, audienceId: string): void {
+  product.audienceId = audienceId
+  product.users *= PIVOT_KEEP
+  if (product.euUsers !== undefined) product.euUsers *= PIVOT_KEEP
+  delete product.loyalUsers
+  product.releaseDay = state.day
+  product.pivoted = true
+  state.events.push({ type: 'notice', text: `${product.name} is now for ${audienceFor(product.productTypeId, audienceId).name.toLowerCase()}.` })
+}
+
 /** The share of its reach a product would gain in Europe if localised now: the market's size there, as its features and audience suit it. */
 export function euGain(product: Pick<Product, 'productTypeId' | 'featureIds' | 'audienceId'>): number {
   const us = featureReach(product.productTypeId, product.featureIds, product.audienceId, 'us')
@@ -285,14 +341,27 @@ export function shipProject(state: GameState, campaign?: Tier, officeId?: number
   return project.kind === 'update' ? shipUpdate(state, office, project) : shipNewProduct(state, office, project, campaign)
 }
 
-/** The product's reach once this update ships at `quality`: its new features and any better quality reach more people. */
-export function reachAfterUpdate(product: Product, project: Project, quality: number): number {
+/** The fit a product has once this update ships at `quality`: all its features, for its audience (a new one if it pivots), at its best quality yet. */
+export function updateFit(state: GameState, product: Product, project: Project, quality: number): number {
+  return projectFit(state, project, Math.max(product.quality, quality), [...product.featureIds, ...project.featureIds])
+}
+
+/**
+ * The product's reach once this update ships at `quality`: its new features and any better quality reach more people,
+ * and until it takes off, a better fit lets more of them find it.
+ */
+export function reachAfterUpdate(state: GameState, product: Product, project: Project, quality: number): number {
   const newQuality = Math.max(product.quality, quality)
   const features = [...product.featureIds, ...project.featureIds]
+  const audience = project.pivotsTo ?? product.audienceId
+  const found = product.hit || product.fit === undefined ? 1 : undiscovered(updateFit(state, product, project, quality)) / undiscovered(product.fit)
+  const people = project.pivotsTo ? audienceFor(product.productTypeId, project.pivotsTo).reach / audienceFor(product.productTypeId, product.audienceId).reach : 1
   const growth =
-    (featureReach(product.productTypeId, features, product.audienceId) / featureReach(product.productTypeId, product.featureIds, product.audienceId)) *
+    (featureReach(product.productTypeId, features, audience) / featureReach(product.productTypeId, product.featureIds, product.audienceId)) *
     (newQuality / Math.max(product.quality, 1)) ** 2 *
-    project.hype
+    project.hype *
+    found *
+    people
   return product.reach * growth
 }
 
@@ -320,7 +389,7 @@ export function estimateUpdateReach(state: GameState, productId: number, feature
     bugRisk: 1,
     contract: null,
   }
-  const reach = reachAfterUpdate(product, plan, projectQuality(state, plan))
+  const reach = reachAfterUpdate(state, product, plan, projectQuality(state, plan))
   return bigger ? reach * (PROJECT_SIZES[bigger].reach / PROJECT_SIZES[product.size].reach) : reach
 }
 
@@ -330,42 +399,10 @@ function reputationFromRelease(state: GameState, project: Project, quality: numb
   state.reputation = Math.max(0, Math.min(REPUTATION_MAX, state.reputation + change))
 }
 
-/** What a launch's breakout chance is made of: a base from the streak, times a factor each for quality, market and buzz. */
-export interface HitBreakdown {
-  chance: number
-  /** Before the other factors: grows with every good launch since the last hit. */
-  base: number
-  /** Good launches since the last hit. */
-  misses: number
-  quality: number
-  market: number
-  buzz: number
-  /** How well the features suit the audience: up for every feature they love, never down. */
-  audience: number
-  /** A product manager in the office steers the product toward what people want. */
-  pm: number
-  /** True when the chance was cut down to the highest it can be. */
-  capped: boolean
-}
-
-/**
- * The chance a launch of this quality breaks out: none for anything less than good, more for better
- * products, hotter markets and louder launches, and more again for every good launch since the last hit.
- */
-export function hitBreakdown(state: GameState, project: Project, quality: number, campaign?: Tier): HitBreakdown {
-  const misses = state.launchesSinceHit
-  const base = HIT_BASE_CHANCE + HIT_CHANCE_PER_MISS * misses
-  const qualityFactor = 0.5 + (quality - HIT_MIN_QUALITY) / (100 - HIT_MIN_QUALITY)
-  const market = marketDemand(state, project.productTypeId)
-  const buzz = project.hype * (campaign ? HIT_CAMPAIGN_BOOST[campaign] : 1)
-  const audience = Math.min(HIT_AUDIENCE_MAX, audienceFit(project.productTypeId, project.audienceId, project.featureIds))
-  const pm = pmHitFactor(state, officeRunning(state, project))
-  const raw = quality < HIT_MIN_QUALITY ? 0 : base * qualityFactor * market * buzz * audience * pm
-  return { chance: Math.min(HIT_MAX_CHANCE, raw), base, misses, quality: qualityFactor, market, buzz, audience, pm, capped: raw > HIT_MAX_CHANCE }
-}
-
-export function hitChance(state: GameState, project: Project, quality: number, campaign?: Tier): number {
-  return hitBreakdown(state, project, quality, campaign).chance
+/** The fit a release of this project would earn: its features for its audience, its quality, and the product manager steering it. */
+export function projectFit(state: GameState, project: Project, quality: number, featureIds: readonly string[] = project.featureIds): number {
+  const audience = project.pivotsTo ?? project.audienceId
+  return Math.min(100, releaseFit(state, project.productTypeId, audience, featureIds, quality).fit * pmFitFactor(state, officeRunning(state, project)))
 }
 
 /** The market at launch, plus a little luck per release. */
@@ -373,12 +410,9 @@ function launchDemand(state: GameState, productTypeId: string): number {
   return marketDemand(state, productTypeId) * (1 + randRange(state, -DEMAND_NOISE, DEMAND_NOISE))
 }
 
-/** A product takes off: the odds reset, and the first one becomes the studio's signature. */
-function breakOut(state: GameState, product: Product): void {
-  state.launchesSinceHit = 0
-  state.signatureId ??= product.id
-  state.reputation = Math.min(REPUTATION_MAX, state.reputation + HIT_REPUTATION)
-  state.events.push({ type: 'breakout', productId: product.id })
+/** Takes off now if it is ready to. */
+function maybeTakeOff(state: GameState, product: Product): void {
+  if (!product.hit && takeoffBlocker(state, product) === null) takeOff(state, product)
 }
 
 function shipNewProduct(state: GameState, office: Office, project: Project, campaign: Tier | undefined): Result {
@@ -386,11 +420,10 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
   const cost = campaign ? campaignCost(state, project, quality, campaign) : 0
   if (campaign && cost > state.money) return fail('Not enough money for that campaign')
 
-  let reach = computeReach(project, quality, state.reputation, launchDemand(state, project.productTypeId)) * pmReachFactor(state, office)
+  // Until it takes off, a product reaches only the few who go looking for it.
+  const fit = projectFit(state, project, quality)
+  const reach = computeReach(project, quality, state.reputation, launchDemand(state, project.productTypeId)) * pmReachFactor(state, office) * undiscovered(fit)
   const bugs = releaseBugs(project)
-  const chance = hitChance(state, project, quality, campaign)
-  const hit = chance > 0 && rand(state) < chance
-  if (hit) reach *= HIT_REACH[project.size]
   state.money -= cost
 
   const product: Product = {
@@ -406,7 +439,8 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
     users: reach * LAUNCH_ADOPTERS,
     bugs,
     pendingBugs: 0,
-    hit,
+    hit: false,
+    fit,
     totalRevenue: 0,
     updates: [],
     boostUntil: 0,
@@ -415,14 +449,15 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
   // A team with nothing of its own to look after takes on what it launched.
   if (office.productId === undefined || !state.products.some((p) => p.id === office.productId)) office.productId = product.id
   if (campaign) {
-    const audience = Math.min(product.reach, PROMO_AUDIENCE * settledUsers(state, product.productTypeId, product.featureIds, product.reach))
+    // As priced (`campaignAudience`): everyone it could reach, not only those who find it by themselves.
+    const everyone = product.reach / undiscovered(fit)
+    const audience = Math.min(everyone, PROMO_AUDIENCE * settledUsers(state, product.productTypeId, product.featureIds, everyone))
     startBoost(product, CAMPAIGNS[campaign], state.day, audience)
   }
   state.products.push(product)
   state.shippedCount += 1
   reputationFromRelease(state, project, quality, 1)
-  if (hit) breakOut(state, product)
-  else if (quality >= HIT_MIN_QUALITY) state.launchesSinceHit += 1
+  maybeTakeOff(state, product)
   moraleFromRelease(state, quality)
   office.project = null
   state.events.push({ type: 'shipped', productId: project.id, update: false, reach, bugs, quality })
@@ -437,19 +472,14 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   const quality = projectQuality(state, project)
   // Hidden at first: users find them over the following weeks, and a well-made product has fewer.
   const bugs = releaseBugs(project) * bugProneness(product.quality)
-  product.reach = reachAfterUpdate(product, project, quality)
+  const fit = updateFit(state, product, project, quality)
+  product.reach = reachAfterUpdate(state, product, project, quality)
+  product.fit = fit
+  if (project.pivotsTo) pivot(state, product, project.pivotsTo)
   if (project.grows) {
     product.reach *= (PROJECT_SIZES[project.grows].reach / PROJECT_SIZES[product.size].reach) * pmReachFactor(state, office)
     state.events.push({ type: 'notice', text: `${product.name} grew into a ${PROJECT_SIZES[project.grows].name} product.`, sound: 'milestone' })
     product.size = project.grows
-    // Growing a product is a second launch: it gets its own roll for a breakout.
-    if (!product.hit && rand(state) < hitChance(state, project, quality)) {
-      product.hit = true
-      product.reach *= HIT_REACH[project.grows]
-      breakOut(state, product)
-    } else if (!product.hit && quality >= HIT_MIN_QUALITY) {
-      state.launchesSinceHit += 1
-    }
   }
   if (project.polishes) product.bugs *= 1 - POLISH_FIX_SHARE
   if (project.localises && euShareOf(product) === 0) {
@@ -467,6 +497,7 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   product.quality = Math.max(product.quality, quality)
   reputationFromRelease(state, project, quality, UPDATE_REPUTATION_SHARE)
   moraleFromRelease(state, quality, UPDATE_REPUTATION_SHARE)
+  maybeTakeOff(state, product)
   office.project = null
   state.events.push({ type: 'shipped', productId: product.id, update: true, reach: product.reach, bugs, quality })
   return OK

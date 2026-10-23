@@ -11,6 +11,7 @@ import { missingFeatures } from '@/lib/tycoon/sim/products'
 import { projectQuality } from '@/lib/tycoon/sim/project'
 import { useGame, useOffice, useStore } from './context'
 import { formatCount, formatDate, formatMoney, qualityLabel } from '@/lib/tycoon/format'
+import { you as founderAnalyst } from '@/lib/tycoon/sim/founding'
 import { Modal } from './Modal'
 
 export function ReadyDialog({ officeId }: { officeId: number }) {
@@ -220,6 +221,7 @@ export function BreakoutDialog({ productId }: { productId: number }) {
   const product = state.products.find((p) => p.id === productId)
   if (!product) return null
   const signature = state.signatureId === product.id
+  const you = founderAnalyst(state)
   const noun = getProductType(product.productTypeId).userNoun
 
   return (
@@ -229,10 +231,17 @@ export function BreakoutDialog({ productId }: { productId: number }) {
         reach about <strong>{formatCount(product.reach)}</strong> {noun}.
       </p>
       {signature ? (
-        <p>
-          It is your first hit, and from now on it is what people know the studio for. Keep it fresh and keep its bugs down:
-          a hit draws far more {noun}, and they find far more bugs.
-        </p>
+        <>
+          <p>
+            It is your first hit, and from now on it is what people know the studio for. Keep it fresh and keep its bugs down:
+            a hit draws far more {noun}, and they find far more bugs.
+          </p>
+          {you && you.role === 'pm' && (
+            <p>
+              <strong>{you.name}</strong>, you steer it from here as its product manager.
+            </p>
+          )}
+        </>
       ) : (
         <p className="muted">Another hit. Look after it like the first one.</p>
       )}

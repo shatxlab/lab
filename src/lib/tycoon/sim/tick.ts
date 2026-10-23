@@ -1,4 +1,5 @@
 import { CANDIDATE_REFRESH_DAYS, DAYS_PER_MONTH } from './balance'
+import { fitDay } from './fit'
 import { contractsDay } from './contracts'
 import { checkBankruptcy, costsDay, revenueDay } from './economy'
 import { rollRandomEvent } from './events'
@@ -24,7 +25,7 @@ import { teamDay } from './teams'
 import { workDay } from './work'
 
 /**
- * The only place time moves. Order: bug fixing, work, the rivals, users and bugs, income, the ranking, a new era, costs, research, training, morale, expiring modifiers, monthly raises and
+ * The only place time moves. Order: bug fixing, work, the rivals, users and bugs, products taking off, income, the ranking, a new era, costs, research, training, morale, expiring modifiers, monthly raises and
  * market drift and a history sample, hire-pool refresh, bankruptcy, milestones and the journey, then maybe a random event.
  */
 export function advanceDay(state: GameState): void {
@@ -37,6 +38,7 @@ export function advanceDay(state: GameState): void {
   teamDay(state)
   rivalsDay(state)
   productsDay(state)
+  fitDay(state)
   revenueDay(state)
   rankingDay(state)
   if (eraIndexAt(state.day) !== eraIndexAt(state.day - 1)) {

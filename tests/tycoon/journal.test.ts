@@ -73,26 +73,27 @@ describe('the run log', () => {
 })
 
 describe('the run log and launches', () => {
-  it('logs a breakout that a launch caused, and flags only new launches as hits', () => {
-    let seen = false
-    for (let seed = 1; seed <= 60 && !seen; seed++) {
-      const state = createInitialState(seed)
+  it('logs a launch that takes off as a hit, and one that does not as none', () => {
+    const launch = (features: string[]) => {
+      const state = createInitialState(3)
+      state.offices[0].kind = 'garage'
       state.money = 100_000
-      state.launchesSinceHit = 100
+      state.rivals = []
+      state.rivalProducts = []
       const store = createStore(state)
-      expect(store.startProject('web_app', []).ok).toBe(true)
+      expect(store.startProject('web_app', features, 'small', undefined, 'web_business').ok).toBe(true)
       const project = state.offices[0].project!
       for (const d of DISCIPLINES) project.progress[d] = project.target[d] * 1.5
       expect(store.shipProject().ok).toBe(true)
       const result = state.journal.find((e) => e.kind === 'ship.result')!
       expect(result.data?.hit).toBe(state.products[0].hit)
-      if (state.products[0].hit) {
-        seen = true
-        expect(state.journal.some((e) => e.kind === 'hit')).toBe(true)
-      } else {
-        expect(state.journal.some((e) => e.kind === 'hit')).toBe(false)
-      }
+      return state
     }
-    expect(seen).toBe(true)
+    const hit = launch(['payments', 'accounts', 'analytics', 'search', 'cloud_sync'])
+    expect(hit.products[0].hit).toBe(true)
+    expect(hit.journal.some((e) => e.kind === 'hit')).toBe(true)
+    const miss = launch([])
+    expect(miss.products[0].hit).toBe(false)
+    expect(miss.journal.some((e) => e.kind === 'hit')).toBe(false)
   })
 })

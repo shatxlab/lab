@@ -51,7 +51,6 @@ export function createInitialState(seed: number): GameState {
     bugsFixed: 0,
     insight: 0,
     surveyed: [],
-    launchesSinceHit: 0,
     signatureId: null,
     debtDays: 0,
     market: initialMarket(),
@@ -327,7 +326,6 @@ function validState(v: unknown): v is GameState {
     isNum(v.insight) &&
     Array.isArray(v.surveyed) &&
     v.surveyed.every((id) => typeof id === 'string') &&
-    isNum(v.launchesSinceHit) &&
     (v.signatureId === null || isNum(v.signatureId)) &&
     (v.studioName === undefined || typeof v.studioName === 'string') &&
     isNum(v.debtDays) &&

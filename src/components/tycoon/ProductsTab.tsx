@@ -11,7 +11,10 @@ import { isResearched } from '@/lib/tycoon/sim/unlocks'
 import { fixBlocker, fixOf } from '@/lib/tycoon/sim/fixes'
 import { salePrice, sunsetBlocker, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
 import { autoPromoteUnlocked, growBlocker, promotionAudience, promotionEffect, newProductBlocker, nextSize, productPhase, promotionBlocker, promotionCost, promotionReturn, updateBlocker } from '@/lib/tycoon/sim/lifecycle'
-import { audienceFor } from '@/lib/tycoon/data/audiences'
+import { audienceFor, audiencesOf } from '@/lib/tycoon/data/audiences'
+import { fitOf, NOT_FIT_YET, releaseFit, releaseKey, takeoffBlocker } from '@/lib/tycoon/sim/fit'
+import { pivotBlocker } from '@/lib/tycoon/sim/project'
+import { FitMeter } from './FitMeter'
 import { feedbackFor } from '@/lib/tycoon/sim/insight'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { bugDensity, interest, lastReleaseDay, missingFeatures, productRevenue, targetUsers } from '@/lib/tycoon/sim/products'
@@ -32,6 +35,53 @@ function trend(state: GameState, product: Product): { arrow: string; tone: strin
   return { arrow: '', tone: '' }
 }
 
+/** Why a product has not taken off yet, in a line under its fit. */
+function takeoffNote(blocker: string | null): string {
+  if (blocker === null) return 'Taking off.'
+  if (blocker === NOT_FIT_YET) return 'Not taking off yet: add what its audience loves, and polish it.'
+  return `Not taking off: ${blocker.charAt(0).toLowerCase()}${blocker.slice(1)}.`
+}
+
+/**
+ * Pointing a product at another audience: each with how well what is built would fit them, as far as the studio can
+ * tell, and what it costs (most of the users, and starting again as a launch).
+ */
+function PivotPicker({ product, onDone }: { product: Product; onDone: () => void }) {
+  const store = useStore()
+  const state = useGame()
+  const office = useOffice()
+  const others = audiencesOf(product.productTypeId).filter((a) => a.id !== (product.audienceId ?? audiencesOf(product.productTypeId)[0]?.id))
+  return (
+    <div className="pivot-picker">
+      <small className="muted">
+        A pivot keeps everything built and counts it for the new audience. When it ships, most of the {getProductType(product.productTypeId).userNoun} leave
+        and {product.name} starts again as a launch. A product pivots once.
+      </small>
+      {others.map((audience, i) => {
+        const problem = pivotBlocker(state, office, product, audience.id)
+        const fit = releaseFit(state, product.productTypeId, audience.id, product.featureIds, product.quality).fit
+        return (
+          <div key={audience.id} className="pivot-option">
+            <span>
+              <strong>{audience.name}</strong> <small className="muted">{audience.blurb}</small>
+            </span>
+            <FitMeter fit={fit} rangeKey={releaseKey(product) * 8 + i + 1} label="Fit for them" />
+            <button
+              disabled={problem !== null}
+              title={problem ?? undefined}
+              onClick={() => {
+                if (store.pivot(product.id, audience.id, office.id).ok) onDone()
+              }}
+            >
+              Pivot to them
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function ProductRow({ product }: { product: Product }) {
   const store = useStore()
   const state = useGame()
@@ -40,6 +90,7 @@ function ProductRow({ product }: { product: Product }) {
   const [promoting, setPromoting] = useState(false)
   const [fixing, setFixing] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [pivoting, setPivoting] = useState(false)
 
   const type = getProductType(product.productTypeId)
   const blocker = updateBlocker(state, office, product)
@@ -109,6 +160,12 @@ function ProductRow({ product }: { product: Product }) {
           </span>
         )}
       </div>
+      {!product.hit && (
+        <div className="product-fit">
+          <FitMeter fit={fitOf(state, product)} rangeKey={releaseKey(product)} />
+          <small className="muted">{takeoffNote(takeoffBlocker(state, product))}</small>
+        </div>
+      )}
       {audience.name !== 'Everyone' && (feedback.loved.length > 0 || feedback.shrugged.length > 0 || feedback.missed.length > 0 || feedback.waiting) && (
         <div className="product-feedback">
           <small className="muted" title={`What ${audience.name.toLowerCase()} say about ${product.name}`}>
@@ -150,6 +207,11 @@ function ProductRow({ product }: { product: Product }) {
         <button aria-expanded={promoting} onClick={() => setPromoting(!promoting)}>
           Promote…
         </button>
+        {!product.hit && !product.pivoted && audiencesOf(product.productTypeId).length > 1 && (
+          <button disabled={blocker !== null} aria-expanded={pivoting} title="Point it at another audience, keeping what is built" onClick={() => setPivoting(!pivoting)}>
+            Pivot…
+          </button>
+        )}
         <button disabled={sunsetProblem !== null} title={sunsetProblem ?? undefined} aria-expanded={confirming} onClick={() => setConfirming(!confirming)}>
           {outcome === 'sold' ? 'Sell…' : 'Retire…'}
         </button>
@@ -157,6 +219,7 @@ function ProductRow({ product }: { product: Product }) {
         {!blocker && fixProblem && <small className="muted">{fixProblem}</small>}
       </div>
       {fixing && !fixingNow && <FixPicker product={product} onDone={() => setFixing(false)} />}
+      {pivoting && <PivotPicker product={product} onDone={() => setPivoting(false)} />}
       {confirming && (
         <div className="confirm-sunset">
           {outcome === 'sold' ? (

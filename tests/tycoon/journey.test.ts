@@ -9,8 +9,6 @@ import {
   CONTRACT_NEW_MAX_DAYS,
   CONTRACT_OFFERS,
   EU_OFFICE_COST,
-  HIT_MAX_CHANCE,
-  HIT_REACH,
   MAX_OFFICES,
   MOVE_OUT_COST,
   OFFICE_KINDS,
@@ -20,8 +18,7 @@ import { estimateDays } from '@/lib/tycoon/sim/work'
 import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { hire } from '@/lib/tycoon/sim/hiring'
 import { deskCount, moveOut, moveOutBlocker, newOfficeCost, openOffice, openOfficeBlocker, staffOf, transfer } from '@/lib/tycoon/sim/offices'
-import { estimateReach } from '@/lib/tycoon/sim/lifecycle'
-import { hitBreakdown, hitChance, projectQuality, shipProject, startProject } from '@/lib/tycoon/sim/project'
+import { shipProject, startProject } from '@/lib/tycoon/sim/project'
 import { checkStage, stageComplete } from '@/lib/tycoon/sim/stages'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
@@ -285,86 +282,6 @@ describe('client contracts', () => {
   })
 })
 
-describe('breakout hits', () => {
-  it('explain their chance: the shown factors multiply out to it', () => {
-    const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
-    startProject(state, 'web_app', [])
-    const project = state.offices[0].project!
-    state.launchesSinceHit = 3
-    state.market.web_app = 1.2
-    const b = hitBreakdown(state, project, 85, 'medium')
-    expect(b.capped).toBe(false)
-    expect(b.misses).toBe(3)
-    expect(b.chance).toBeCloseTo(b.base * b.quality * b.market * b.buzz, 10)
-    expect(b.chance).toBe(hitChance(state, project, 85, 'medium'))
-    expect(hitBreakdown(state, project, 60).chance).toBe(0)
-    state.launchesSinceHit = 100
-    expect(hitBreakdown(state, project, 95, 'large').capped).toBe(true)
-  })
-
-  it('need a good product, and get likelier with quality, buzz, a hot market and every miss', () => {
-    const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
-    startProject(state, 'web_app', [])
-    const project = state.offices[0].project!
-    expect(hitChance(state, project, 69)).toBe(0)
-    const base = hitChance(state, project, 80)
-    expect(base).toBeGreaterThan(0)
-    expect(hitChance(state, project, 95)).toBeGreaterThan(base)
-    expect(hitChance(state, project, 80, 'large')).toBeGreaterThan(hitChance(state, project, 80, 'small'))
-    state.market.web_app = 1.4
-    expect(hitChance(state, project, 80)).toBeGreaterThan(base)
-    state.market.web_app = 1
-    state.launchesSinceHit = 5
-    expect(hitChance(state, project, 80)).toBeGreaterThan(base * 3)
-    state.launchesSinceHit = 100
-    expect(hitChance(state, project, 100, 'large')).toBe(HIT_MAX_CHANCE)
-  })
-
-  it('reach far more people, become the signature product, and reset the odds', () => {
-    // Try seeds until a good launch breaks out, then compare it with the same launch that didn't.
-    for (let seed = 1; seed < 400; seed++) {
-      const state = makeState([makeEmployee(1, { design: 60, engineering: 60, qa: 60 })], seed)
-      state.launchesSinceHit = 12
-      startProject(state, 'web_app', [])
-      for (const d of DISCIPLINES) state.offices[0].project!.progress[d] = state.offices[0].project!.target[d] * 1.3
-      const before = structuredClone(state)
-      shipProject(state)
-      const product = state.products[0]
-      if (!product.hit) {
-        expect(state.launchesSinceHit).toBe(13)
-        continue
-      }
-      expect(state.signatureId).toBe(product.id)
-      expect(state.launchesSinceHit).toBe(0)
-      expect(state.events.some((e) => e.type === 'breakout' && e.productId === product.id)).toBe(true)
-      // Against the same launch without the luck (give or take the market's few percent of noise).
-      const project = before.offices[0].project!
-      const ratio = product.reach / estimateReach(before, project, projectQuality(before, project))
-      expect(ratio).toBeGreaterThan(HIT_REACH.small * 0.94)
-      expect(ratio).toBeLessThan(HIT_REACH.small * 1.06)
-      return
-    }
-    throw new Error('no seed gave a hit')
-  })
-
-  it('open the breakout dialog after the result through the store', () => {
-    for (let seed = 1; seed < 400; seed++) {
-      const state = makeState([makeEmployee(1, { design: 60, engineering: 60, qa: 60 })], seed)
-      state.launchesSinceHit = 15
-      const store = createStore(state, 0)
-      store.startProject('web_app', [])
-      for (const d of DISCIPLINES) state.offices[0].project!.progress[d] = state.offices[0].project!.target[d] * 1.3
-      store.shipProject()
-      if (!state.products[0].hit) continue
-      expect(store.dialog.value).toMatchObject({ kind: 'result' })
-      store.closeDialog()
-      expect(store.dialog.value).toEqual({ kind: 'breakout', productId: state.products[0].id })
-      return
-    }
-    throw new Error('no seed gave a hit')
-  })
-})
-
 describe('the journey', () => {
   it('starts at the café and has goals for every stage but the last', () => {
     expect(createInitialState(1).stage).toBe(0)
@@ -384,11 +301,9 @@ describe('the journey', () => {
     const state = makeState([makeEmployee(1)])
     expect(stageComplete(state)).toBe(false)
     state.shippedCount = 3
-    state.products.push(makeProduct({ users: 5000 }))
-    expect(stageComplete(state)).toBe(false) // no client jobs yet
-    state.contractsDone = 4
-    expect(stageComplete(state)).toBe(false)
-    state.contractsDone = 5
+    expect(stageComplete(state)).toBe(false) // no hit yet
+    state.products.push(makeProduct({ id: 7, hit: true }))
+    state.signatureId = 7
     expect(stageComplete(state)).toBe(true)
     checkStage(state)
     expect(state.stage).toBe(2)
@@ -397,21 +312,19 @@ describe('the journey', () => {
     expect(state.stage).toBe(2) // the indie goals are not met yet
   })
 
-  it('needs the move and a hit to become a breakout studio', () => {
+  it('needs the move out of the garage to become a breakout studio', () => {
     const state = makeState([makeEmployee(1)])
     state.stage = 2
-    state.offices[0].kind = 'office'
     expect(stageComplete(state)).toBe(false)
-    state.products.push(makeProduct({ id: 7, hit: true }))
-    state.signatureId = 7
+    state.offices[0].kind = 'office'
     expect(stageComplete(state)).toBe(true)
   })
 
   it('shows a stage dialog through the store', () => {
     const state = makeState([makeEmployee(1)])
     state.shippedCount = 3
-    state.contractsDone = 5
-    state.products.push(makeProduct({ users: 5000 }))
+    state.products.push(makeProduct({ id: 7, hit: true }))
+    state.signatureId = 7
     const store = createStore(state, 1)
     for (let i = 0; i < 10 && store.dialog.value === null; i++) store.tick(2000)
     expect(store.dialog.value).toEqual({ kind: 'stage', stage: 2 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GROW_MIN_AGE_DAYS, NEW_PRODUCT_GAP_DAYS, PORTFOLIO_LIMIT, PROJECT_SIZES } from '@/lib/tycoon/sim/balance'
+import { GARAGE_PRODUCT_LIMIT, GROW_MIN_AGE_DAYS, NEW_PRODUCT_GAP_DAYS, PORTFOLIO_LIMIT, PROJECT_SIZES } from '@/lib/tycoon/sim/balance'
 import { growBlocker, newProductBlocker, nextSize } from '@/lib/tycoon/sim/lifecycle'
 import { growTarget, projectTarget, shipProject, startProject, startUpdate } from '@/lib/tycoon/sim/project'
 import { DISCIPLINES, type GameState } from '@/lib/tycoon/sim/types'
@@ -17,11 +17,12 @@ function officeWith(count: number): GameState {
 }
 
 describe('the portfolio', () => {
-  it('is unlimited in the garage', () => {
+  it(`holds ${GARAGE_PRODUCT_LIMIT} live products in the garage, counting one being made: retire one to try another`, () => {
     const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
-    state.products = Array.from({ length: 9 }, (_, i) => makeProduct({ id: 10 + i, name: `P${i}` }))
+    state.products = Array.from({ length: GARAGE_PRODUCT_LIMIT - 1 }, (_, i) => makeProduct({ id: 10 + i, name: `P${i}` }))
     expect(newProductBlocker(state)).toBeNull()
     expect(startProject(state, 'web_app', []).ok).toBe(true)
+    expect(newProductBlocker(state)).toContain('retire one first')
   })
 
   it(`holds ${PORTFOLIO_LIMIT} products, counting one being made, outside the garage`, () => {
@@ -99,35 +100,16 @@ describe('growing a product', () => {
     expect(state.products).toHaveLength(1)
   })
 
-  it('rolls for a breakout, which makes the product the signature and resets the odds', () => {
-    for (let seed = 1; seed < 400; seed++) {
-      const state = officeWith(1)
-      state.rng = seed
-      state.launchesSinceHit = 20
-      const product = state.products[0]
-      product.size = 'small'
-      product.releaseDay = state.day - 400
-      startUpdate(state, product.id, [], 1, true)
-      const project = state.offices[0].project!
-      for (const d of DISCIPLINES) project.progress[d] = project.target[d] * 1.3
-      shipProject(state)
-      if (!product.hit) continue
-      expect(state.signatureId).toBe(product.id)
-      expect(state.launchesSinceHit).toBe(0)
-      return
-    }
-    throw new Error('no seed produced a breakout')
-  })
-
-  it('counts a miss, but a plain update never rolls', () => {
+  it('growing does not make a hit by itself: a product takes off on its fit', () => {
     const state = officeWith(1)
-    state.launchesSinceHit = 0
     const product = state.products[0]
-    startUpdate(state, product.id, [], 1)
+    product.size = 'small'
+    product.releaseDay = state.day - 400
+    startUpdate(state, product.id, [], 1, true)
     for (const d of DISCIPLINES) state.offices[0].project!.progress[d] = state.offices[0].project!.target[d] * 1.3
     shipProject(state)
-    expect(product.hit).toBe(false)
-    expect(state.launchesSinceHit).toBe(0)
+    expect(product.size).toBe('medium')
+    expect(product.fit).toBeGreaterThan(0)
   })
 })
 

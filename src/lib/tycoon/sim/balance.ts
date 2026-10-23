@@ -353,8 +353,8 @@ export const PM_MIN_ANALYSIS = 70
 export const PM_AFTER_DAYS = 150
 /** The highest level an analyst reaches before becoming a product manager (Senior). */
 export const ANALYST_MAX_LEVEL = 2
-/** A product manager steers their office's products by level (Junior..Lead): hit chance and reach are multiplied by 1 plus these. */
-export const PM_HIT_BONUS: readonly number[] = [0, 0.08, 0.15, 0.25]
+/** A product manager steers their office's products by level (Junior..Lead): the fit of a release and reach are multiplied by 1 plus these. */
+export const PM_FIT_BONUS: readonly number[] = [0, 0.04, 0.08, 0.12]
 export const PM_REACH_BONUS: readonly number[] = [0, 0.03, 0.06, 0.1]
 /** Feedback on a launch arrives over time, unless there is an analyst to read it: what they loved, shrugged at, wished for. */
 export const FEEDBACK_LOVED_DAYS = 20
@@ -407,21 +407,32 @@ export const CANDIDATE_MORALE_MAX = 85
 /** Monthly samples kept for the stats charts (20 years). */
 export const HISTORY_LIMIT = 240
 
-// Breakout hits: now and then a launch takes off far beyond its reach.
-/** Launches below this quality never break out. */
+// Product–market fit, and the hits it makes (see sim/fit.ts).
+/** A product whose fit reaches this, in a market that is neither cold nor too crowded, takes off. */
+export const FIT_TAKEOFF = 75
+/** Fit with nothing the audience loves, as a share of what loving all of it would give. */
+export const FIT_BASE = 0.1
+/** Each feature the audience shrugs at takes this much off the share of what they love that a product gives them. */
+export const FIT_SHRUG_PENALTY = 0.06
+/** Quality allows all of the fit from this quality, falling to this share of it at quality 40 and below. */
+export const FIT_QUALITY_FULL = 90
+export const FIT_QUALITY_FLOOR = 0.4
+/** How wide the studio's reading of a fit is: this wide with nobody who knows users, this narrow with a perfect eye. */
+export const FIT_BAND_MAX = 40
+export const FIT_BAND_MIN = 4
+/** Before it takes off a product reaches only this share of the people it could, a little more the better it fits. */
+export const UNDISCOVERED_REACH = 0.7
+export const UNDISCOVERED_FIT_FLOOR = 0.4
+/** A market at least this crowded by others (see the Industry tab) leaves no room for a product to take off. */
+export const TAKEOFF_MAX_CROWDING = 1.2
+/** A pivot keeps this share of the product's users: the rest came for what it was. */
+export const PIVOT_KEEP = 0.2
+/** The garage (and the café) can look after this many live products at once. */
+export const GARAGE_PRODUCT_LIMIT = 3
+/** A hit makes its own market: it can hold this many times the users a market holds for anything else. */
+export const HIT_MARKET_SCALE = 4
+/** Rivals' launches still roll for a hit, from this quality up. */
 export const HIT_MIN_QUALITY = 70
-/** Chance for a good launch... */
-export const HIT_BASE_CHANCE = 0.01
-/** ...plus this for every good launch since the last hit, so persistence pays... */
-export const HIT_CHANCE_PER_MISS = 0.012
-/** ...but never more than this. */
-export const HIT_MAX_CHANCE = 0.35
-/** Features the audience loves raise the chance, up to this; ones they barely notice leave it alone. */
-export const HIT_AUDIENCE_MAX = 1.5
-/** Audience fit goes up by 1 for this much feature value the audience loves, weighted by how much more than "fine" they love it. */
-export const AUDIENCE_FIT_VALUE = 10
-/** A launch campaign gets people talking: the chance is multiplied by this per tier. */
-export const HIT_CAMPAIGN_BOOST: Record<'small' | 'medium' | 'large', number> = { small: 1.2, medium: 1.4, large: 1.7 }
 /** A hit reaches this many times as many users, most for small products: a big launch was already aimed at most of its market... */
 export const HIT_REACH: Record<'small' | 'medium' | 'large' | 'flagship', number> = { small: 6, medium: 4, large: 3, flagship: 2 }
 /** ...and makes the studio's name. */
@@ -485,7 +496,7 @@ export const CONTRACT_MIN_RATE = 0.5
 /** Jobs that fit the team at least this well (compared with the best-fitting job) can be offered. */
 export const CONTRACT_FIT = 0.6
 /** What a client pays per point of work, before reputation... */
-export const CONTRACT_PAY_PER_POINT = 12
+export const CONTRACT_PAY_PER_POINT = 18
 /** ...which adds this share per point of reputation. */
 export const CONTRACT_REPUTATION_PAY = 0.01
 /** A job is sized to take a team this many days... */
@@ -545,7 +556,7 @@ export const OFFICE_KINDS: Record<'cafe' | 'garage' | 'office', OfficeSpec> = {
 export const CAFE_START_MONEY = 2500
 /** The garage asks a deposit, and the money in the bank has to reach this first: the deposit and a month or so for two new people. */
 export const GARAGE_DEPOSIT = 1000
-export const GARAGE_READY_MONEY = 6000
+export const GARAGE_READY_MONEY = 8000
 /** Client jobs the two of you deliver from the café before a garage is worth it: they are how the café pays. */
 export const CAFE_JOBS = 3
 /** Something happens at the café more often than at the studio later: from this day, this many days apart at least, with this chance a day. */

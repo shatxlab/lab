@@ -141,6 +141,8 @@ export interface Project {
   grows?: ProjectSize
   /** Localising a product: opens the European market when this update ships. */
   localises?: boolean
+  /** A pivot: the product is for this audience once the release ships. */
+  pivotsTo?: string
   /** A polishing release: it fixes most of the open bugs and ships fewer new ones. */
   polishes?: boolean
   /** A release the product's own team started (`sim/teams.ts`): it ships by itself when every bar is full. */
@@ -202,8 +204,12 @@ export interface Product {
   bugs: number
   /** Bugs an update shipped that users have not found yet; they come to light over the next weeks. */
   pendingBugs: number
-  /** True if it broke out at launch and reaches far more people than it otherwise would. */
+  /** True once it has taken off (see `sim/fit.ts`): it reaches far more people than it otherwise would. */
   hit: boolean
+  /** Its product–market fit as of its last release, 0..100; absent in older saves, where it is worked out when needed. */
+  fit?: number
+  /** True once it has pivoted to another audience: a product does that once. */
+  pivoted?: boolean
   totalRevenue: number
   updates: ProductUpdate[]
   /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
@@ -450,8 +456,6 @@ export interface GameState {
   surveyed: string[]
   /** Bugs fixed by fixing jobs, ever. */
   bugsFixed: number
-  /** Good launches since the last breakout hit; each one makes the next hit likelier. */
-  launchesSinceHit: number
   /** The studio's first hit, which it becomes known for; null until it has one. */
   signatureId: number | null
   /** What the studio is called, chosen at the start; absent in older saves. */

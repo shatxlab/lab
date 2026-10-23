@@ -7,6 +7,7 @@ import {
   DAYS_PER_MONTH,
   FRESH_DAYS,
   GROW_MIN_AGE_DAYS,
+  GARAGE_PRODUCT_LIMIT,
   NEW_PRODUCT_FREE_COUNT,
   NEW_PRODUCT_GAP_DAYS,
   PORTFOLIO_LIMIT,
@@ -29,6 +30,8 @@ import { marketDemand } from './market'
 import { activeProjects, hasEuropeOffice, inGarage, productInWork, teamOf } from './offices'
 import { euShareOf, interest, lastReleaseDay, revenueForUsers, settledUsers, targetUsers } from './products'
 import { computeReach } from './scoring'
+import { undiscovered } from './fit'
+import { projectFit } from './project'
 import { sizeLock } from './unlocks'
 import { fail, OK, PROJECT_SIZE_IDS, TIERS, type GameState, type Office, type Product, type Project, type ProjectSize, type Result, type Tier } from './types'
 
@@ -113,16 +116,19 @@ export function promoteProduct(state: GameState, productId: number, tier: Tier):
 }
 
 /**
- * The users a launch would reach right now, without the per-product luck. The launch campaign is
+ * The users a launch would reach right now, without the per-product luck: the few who find it by themselves before it
+ * takes off, or with `unaided` false everyone it could reach, who are who a launch campaign speaks to. The campaign is
  * priced from this, so the price the player sees is the price they pay.
  */
-export function estimateReach(state: GameState, project: Project, quality: number): number {
-  return computeReach(project, quality, state.reputation, marketDemand(state, project.productTypeId)) * pmReachFactor(state, officeRunning(state, project))
+export function estimateReach(state: GameState, project: Project, quality: number, unaided = true): number {
+  const found = unaided ? undiscovered(projectFit(state, project, quality)) : 1
+  return computeReach(project, quality, state.reputation, marketDemand(state, project.productTypeId)) * pmReachFactor(state, officeRunning(state, project)) * found
 }
 
 /** The people a launch campaign speaks to: as for a promotion, the reach, but no more than a few times the users the market will hold for it. */
 export function campaignAudience(state: GameState, project: Project, quality: number): number {
-  const reach = estimateReach(state, project, quality)
+  // A campaign speaks to the people who would not have found the product by themselves.
+  const reach = estimateReach(state, project, quality, false)
   return Math.min(reach, PROMO_AUDIENCE * settledUsers(state, project.productTypeId, project.featureIds, reach))
 }
 
@@ -181,10 +187,12 @@ export function productPhase(state: GameState, product: Product): ProductPhase {
   return product.users < targetUsers(state, product) * 0.9 ? 'Growing' : 'Established'
 }
 
-/** Why another new product can't be started, or null when it can. Only applies outside the garage. */
+/** Why another new product can't be started, or null when it can. */
 export function newProductBlocker(state: GameState): string | null {
-  if (inGarage(state)) return null
   const making = activeProjects(state).filter((a) => a.project.kind === 'new').length
+  if (inGarage(state)) {
+    return state.products.length + making >= GARAGE_PRODUCT_LIMIT ? `${GARAGE_PRODUCT_LIMIT} products are as many as you can look after here: retire one first` : null
+  }
   if (state.products.length + making >= PORTFOLIO_LIMIT) {
     return `Your portfolio is full (${PORTFOLIO_LIMIT} products): retire one to make room, or grow one you have`
   }

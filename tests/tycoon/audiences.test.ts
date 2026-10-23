@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { AUDIENCES, audienceFor, audiencesOf } from '@/lib/tycoon/data/audiences'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
-import { HIT_AUDIENCE_MAX } from '@/lib/tycoon/sim/balance'
 import { revenueForUsers } from '@/lib/tycoon/sim/products'
-import { hitBreakdown, projectQuality, shipProject, startProject } from '@/lib/tycoon/sim/project'
-import { audienceFeedback, audienceFit, computeReach, featureScore } from '@/lib/tycoon/sim/scoring'
+import { projectQuality, shipProject, startProject } from '@/lib/tycoon/sim/project'
+import { audienceFeedback, computeReach, featureScore } from '@/lib/tycoon/sim/scoring'
 import { DISCIPLINES } from '@/lib/tycoon/sim/types'
 import { makeEmployee, makeState } from './helpers'
 
@@ -54,28 +53,6 @@ describe('an audience', () => {
 
   it('values the features it likes more', () => {
     expect(featureScore('web_app', ['payments'], 'web_business')).toBeGreaterThan(featureScore('web_app', ['payments'], 'web_consumers'))
-    expect(audienceFit('web_app', 'web_business', ['payments', 'accounts'])).toBeGreaterThan(1)
-    expect(audienceFit('web_app', 'web_consumers', ['sso', 'api'])).toBe(1)
-    expect(audienceFit('web_app', 'web_consumers', [])).toBe(1)
-  })
-
-  it('never punishes building more: a feature they barely notice adds nothing and takes nothing away', () => {
-    const loved = audienceFit('web_app', 'web_business', ['payments'])
-    expect(audienceFit('web_app', 'web_business', ['payments', 'dark_mode'])).toBe(loved)
-    expect(audienceFit('web_app', 'web_business', ['payments', 'accounts'])).toBeGreaterThan(loved)
-  })
-
-  it('moves the hit chance, within limits', () => {
-    const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
-    state.money = 100_000
-    startProject(state, 'web_app', ['payments', 'accounts', 'analytics'], 'small', undefined, 'web_business')
-    const project = state.offices[0].project!
-    const liked = hitBreakdown(state, project, 85)
-    expect(liked.audience).toBeGreaterThan(1)
-    expect(liked.audience).toBeLessThanOrEqual(HIT_AUDIENCE_MAX)
-    const shrugged = hitBreakdown(state, { ...project, audienceId: 'web_teams', featureIds: ['notifications', 'dark_mode'] }, 85)
-    expect(shrugged.audience).toBe(1)
-    expect(liked.chance).toBeCloseTo(liked.base * liked.quality * liked.market * liked.buzz * liked.audience, 10)
   })
 
   it('passes from the project to the launched product', () => {

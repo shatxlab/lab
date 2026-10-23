@@ -1,4 +1,4 @@
-import { CAFE_JOBS, GARAGE_READY_MONEY, TOP_SLIP_DAYS } from '@/lib/tycoon/sim/balance'
+import { CAFE_JOBS, FIT_TAKEOFF, GARAGE_READY_MONEY, TOP_SLIP_DAYS } from '@/lib/tycoon/sim/balance'
 import { trailingIncome } from '@/lib/tycoon/sim/economy'
 import { productRevenue } from '@/lib/tycoon/sim/products'
 import { playerRank, standings } from '@/lib/tycoon/sim/rivals'
@@ -25,9 +25,9 @@ export interface Stage {
 }
 
 const count = (n: number) => Math.floor(n).toLocaleString('en-US')
-const mostUsers = (s: GameState) => s.products.reduce((most, p) => Math.max(most, p.users), 0)
-/** Products at least a year old that still earn this much a day: ones people rely on. */
-const lasting = (s: GameState, perDay: number) => s.products.filter((p) => productRevenue(p) >= perDay && s.day - p.releaseDay >= 360).length
+/** Users of the studio's hit, its signature product. */
+const hitUsers = (s: GameState) => s.products.find((p) => p.id === s.signatureId)?.users ?? 0
+
 /** What the next two studios in the ranking earn together. */
 const nextTwo = (s: GameState) =>
   standings(s)
@@ -62,8 +62,7 @@ export const STAGES: readonly Stage[] = [
     unlocks: ['A garage with four desks: room to hire two more people', 'Medium projects', 'Paying yourselves: half the market rate'],
     goals: [
       { id: 'ship_3', label: 'Ship 3 products', check: (s) => s.shippedCount >= 3, progress: (s) => upTo(s.shippedCount, 3) },
-      { id: 'users_5k', label: 'Have 5,000 users on one product', check: (s) => mostUsers(s) >= 5000, progress: (s) => upTo(mostUsers(s), 5000) },
-      { id: 'client_jobs', label: 'Deliver 5 jobs for clients', check: (s) => s.contractsDone >= 5, progress: (s) => upTo(s.contractsDone, 5) },
+      { id: 'hit', label: `Make a product take off: a fit of ${FIT_TAKEOFF} with what its audience loves, in a market with room`, check: (s) => s.signatureId !== null },
     ],
   },
   {
@@ -71,10 +70,7 @@ export const STAGES: readonly Stage[] = [
     name: 'Indie studio',
     blurb: 'People have started to notice. A real office would let the team grow.',
     unlocks: ['Moving out of the garage into a 12-desk office', 'Large projects, once you have moved'],
-    goals: [
-      { id: 'hit', label: 'Have a breakout hit (good launches make one likelier each time)', check: (s) => s.signatureId !== null },
-      { id: 'moved_out', label: 'Move into an office (needs the hit)', check: (s) => s.offices.every((o) => o.kind === 'office') },
-    ],
+    goals: [{ id: 'moved_out', label: 'Move into an office', check: (s) => s.offices.every((o) => o.kind === 'office') }],
   },
   {
     id: 'breakout',
@@ -82,12 +78,7 @@ export const STAGES: readonly Stage[] = [
     blurb: 'You have a hit, and it is what people know you for.',
     unlocks: ['Flagship projects'],
     goals: [
-      {
-        id: 'three_lasting',
-        label: 'Have 3 products over a year old earning $300 a day each',
-        check: (s) => lasting(s, 300) >= 3,
-        progress: (s) => upTo(lasting(s, 300), 3),
-      },
+      { id: 'hit_50k', label: 'Grow your hit to 50,000 users', check: (s) => hitUsers(s) >= 50_000, progress: (s) => upTo(hitUsers(s), 50_000) },
       { id: 'rep_70', label: 'Reach reputation 70', check: (s) => s.reputation >= 70, progress: (s) => upTo(s.reputation, 70) },
       { id: 'team_12', label: 'Fill an office: a team of 12', check: (s) => s.employees.length >= 12, progress: (s) => upTo(s.employees.length, 12) },
     ],

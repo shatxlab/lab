@@ -14,7 +14,7 @@ import { foundStudio } from '@/lib/tycoon/sim/founding'
 import { assignProduct, queueFeatures, setDirection } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
-import { shipProject, startLocalisation, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
+import { shipProject, startLocalisation, startPivot, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
 import { startResearch } from '@/lib/tycoon/sim/research'
 import { startTraining, teamOuting } from '@/lib/tycoon/sim/staff'
 import { isReady } from '@/lib/tycoon/sim/scoring'
@@ -114,6 +114,8 @@ export interface Store {
   startUpdate(productId: number, featureIds: readonly string[], officeId?: number, grow?: boolean): Result
   /** Starts localising a live product for Europe in an office: a maintenance-sized release that opens the market there. */
   localise(productId: number, officeId?: number): Result
+  /** Starts pointing a live product at another audience of its type. */
+  pivot(productId: number, audienceId: string, officeId?: number): Result
   /** Sends a developer and a tester to fix a live product's bugs. */
   startFix(productId: number, developerId: number, testerId: number): Result
   /** Ends a bug-fixing job early, keeping what it fixed. */
@@ -346,6 +348,15 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     localise(productId, officeId) {
       const result = logged(() => decisions.localise(state, productId, officeFor(officeId)), () => startLocalisation(state, productId, officeFor(officeId)))
+      if (!result.ok) return result
+      if (speed.value === 0) speed.value = 1
+      bump()
+      sfx.play('click')
+      return result
+    },
+
+    pivot(productId, audienceId, officeId) {
+      const result = logged(() => decisions.pivot(state, productId, audienceId), () => startPivot(state, productId, audienceId, officeFor(officeId)))
       if (!result.ok) return result
       if (speed.value === 0) speed.value = 1
       bump()

@@ -467,35 +467,27 @@ function drawSoldier(ctx: CanvasRenderingContext2D, enemy: Enemy, color: string,
 
   // Shoulders and torso.
   const shoulders = kind === "brute" || kind === "boss" ? 0.95 : kind === "runner" ? 0.6 : 0.78;
-  ellipse(ctx, -radius * 0.05, 0, radius * 0.6, radius * shoulders, color);
+  ellipse(ctx, 0, 0, radius * 0.5, radius * (shoulders + 0.12), color);
   ctx.strokeStyle = dark;
   ctx.lineWidth = 1.4;
   ctx.stroke();
   if (kind === "brute" || kind === "boss") {
-    for (const side of [-1, 1]) circle(ctx, -radius * 0.05, side * radius * 0.78, radius * 0.28, steel);
+    for (const side of [-1, 1]) circle(ctx, 0, side * radius * 0.85, radius * 0.28, steel);
   }
 
   // Helmet.
-  const head = radius * (kind === "runner" ? 0.4 : 0.5);
-  circle(ctx, radius * 0.1, 0, head, kind === "runner" ? dark : steel);
+  const head = radius * (kind === "runner" ? 0.34 : 0.4);
+  circle(ctx, 0, 0, head, kind === "runner" ? dark : steel);
   ctx.strokeStyle = shade(steel, -0.35);
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  if (kind === "grunt" || kind === "brute") {
-    // Nose guard along the forward edge.
-    ctx.strokeStyle = shade(steel, -0.35);
-    ctx.beginPath();
-    ctx.moveTo(radius * 0.1, 0);
-    ctx.lineTo(radius * 0.1 + head, 0);
-    ctx.stroke();
-  }
   if (kind === "brute") {
     ctx.fillStyle = "#efe6d2";
     for (const side of [-1, 1]) {
       ctx.beginPath();
-      ctx.moveTo(radius * 0.05, side * head * 0.8);
-      ctx.lineTo(radius * 0.5, side * head * 1.7);
-      ctx.lineTo(radius * 0.3, side * head * 0.6);
+      ctx.moveTo(0, side * head * 0.8);
+      ctx.lineTo(radius * 0.3, side * head * 1.8);
+      ctx.lineTo(radius * 0.2, side * head * 0.5);
       ctx.closePath();
       ctx.fill();
     }

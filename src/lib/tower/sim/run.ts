@@ -22,6 +22,8 @@ export const STEP = 1 / 60;
 
 /** Extra reach an arrow gets on top of the enemy's radius. */
 const ARROW_REACH = 3;
+/** Radians between the arrows of one multishot. */
+const MULTISHOT_SPREAD = 0.1;
 const DUST = "#d9c8a0";
 
 export function createRun(seed: number, perks: PerkLevels = emptyPerks()): Run {
@@ -41,6 +43,7 @@ export function createRun(seed: number, perks: PerkLevels = emptyPerks()): Run {
     reloadLeft: 0,
     volleyLeft: 0,
     aim: -Math.PI / 2,
+    firing: false,
     enemies: [],
     arrows: [],
     volleys: [],
@@ -86,6 +89,17 @@ export function step(run: Run, dt: number): void {
     return;
   }
   if (run.spawns.length === 0 && run.enemies.length === 0) finishWave(run, tower);
+}
+
+/** The player is holding a finger (or the mouse button) on this spot: face it and keep shooting. */
+export function aimAt(run: Run, x: number, y: number): void {
+  run.aim = Math.atan2(y - TOWER.y, x - TOWER.x);
+  run.firing = true;
+}
+
+/** The finger lifted: stop shooting, keep facing the same way. */
+export function holdFire(run: Run): void {
+  run.firing = false;
 }
 
 /** Rain the volley on a spot. False when it is still reloading or no wave is running. */
@@ -164,6 +178,7 @@ function startWave(run: Run): void {
   run.volleys = [];
   run.reloadLeft = 0;
   run.volleyLeft = 0;
+  run.firing = false;
   run.choices = [];
   run.phase = "playing";
 }
@@ -173,6 +188,7 @@ function finishWave(run: Run, tower: TowerStats): void {
   run.hp = Math.min(tower.maxHp, run.hp + WAVE_CLEAR_HEAL);
   run.arrows = [];
   run.volleys = [];
+  run.firing = false;
   run.picksLeft += 1;
   offerChoices(run);
 }
@@ -206,36 +222,16 @@ function spawnEnemy(run: Run, kind: EnemyKind, x: number, y: number): Enemy {
 }
 
 function shoot(run: Run, tower: TowerStats, dt: number): void {
-  run.reloadLeft -= dt;
-  if (run.reloadLeft > 0) return;
-  const targets = run.enemies
-    .map((enemy) => ({ enemy, distance: Math.hypot(enemy.x - TOWER.x, enemy.y - TOWER.y) }))
-    .filter(({ enemy, distance }) => distance - enemy.radius <= tower.range)
-    .sort((a, b) => a.distance - b.distance)
-    .map(({ enemy }) => enemy);
-  if (targets.length === 0) {
-    // Ready and waiting: fire the moment something walks into range.
-    run.reloadLeft = 0;
-    return;
-  }
+  run.reloadLeft = Math.max(0, run.reloadLeft - dt);
+  if (!run.firing || run.reloadLeft > 0) return;
+  // Multishot fans the extra arrows out evenly either side of the aim.
   for (let index = 0; index < tower.multishot; index += 1) {
-    const target = targets[index % targets.length];
-    // Spare arrows fan out either side of their target.
-    const extra = index - targets.length + 1;
-    const spread = extra > 0 ? Math.ceil(extra / 2) * 0.12 * (extra % 2 === 0 ? 1 : -1) : 0;
-    fireArrow(run, tower, target, spread);
+    fireArrow(run, tower, run.aim + (index - (tower.multishot - 1) / 2) * MULTISHOT_SPREAD);
   }
-  run.aim = Math.atan2(targets[0].y - TOWER.y, targets[0].x - TOWER.x);
   run.reloadLeft = tower.reload;
 }
 
-function fireArrow(run: Run, tower: TowerStats, target: Enemy, spread: number): void {
-  // Lead the target by where it will be when the arrow gets there.
-  const flight = Math.hypot(target.x - TOWER.x, target.y - TOWER.y) / tower.arrowSpeed;
-  const velocity = enemyVelocity(run, target, tower);
-  const aimX = target.x + velocity.x * flight;
-  const aimY = target.y + velocity.y * flight;
-  const angle = Math.atan2(aimY - TOWER.y, aimX - TOWER.x) + spread;
+function fireArrow(run: Run, tower: TowerStats, angle: number): void {
   const crit = random(run) < tower.critChance;
   const arrow: Arrow = {
     id: run.nextId++,
@@ -247,7 +243,7 @@ function fireArrow(run: Run, tower: TowerStats, target: Enemy, spread: number): 
     crit,
     pierceLeft: tower.pierce,
     ricochetLeft: tower.ricochet,
-    life: (tower.range + 40) / tower.arrowSpeed,
+    life: tower.range / tower.arrowSpeed,
     hitIds: [],
   };
   run.arrows.push(arrow);
@@ -388,16 +384,6 @@ function moveEnemies(run: Run, tower: TowerStats, dt: number): void {
       }
     }
   }
-}
-
-/** Where an enemy is heading and how fast, ignoring a bat's weave. */
-function enemyVelocity(run: Run, enemy: Enemy, tower: TowerStats): { x: number; y: number } {
-  const dx = TOWER.x - enemy.x;
-  const dy = TOWER.y - enemy.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance <= TOWER.radius + enemy.radius) return { x: 0, y: 0 };
-  const speed = currentSpeed(run, enemy, tower);
-  return { x: (dx / distance) * speed, y: (dy / distance) * speed };
 }
 
 function currentSpeed(run: Run, enemy: Enemy, tower: TowerStats): number {

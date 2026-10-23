@@ -313,16 +313,46 @@
 }
 
 .tower-volley {
-  margin: 0;
-  min-height: 1.5rem;
-  text-align: center;
-  font-weight: 600;
-  opacity: 0.6;
+  position: relative;
+  min-height: 3rem;
+  border: 0;
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  font-weight: 700;
+  font-size: 1.05rem;
 }
 
-.tower-volley[data-ready] {
+.tower-volley:disabled {
   opacity: 1;
-  color: #ffd27a;
+  color: rgba(251, 245, 230, 0.6);
+}
+
+/* Fills left to right as the volley reloads. */
+.tower-volley-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  transform: scaleX(var(--charge, 0));
+  background: rgba(255, 210, 122, 0.25);
+  transition: transform 120ms linear;
+}
+
+.tower-volley:not(:disabled) .tower-volley-fill {
+  background: var(--tower-accent);
+}
+
+.tower-volley[aria-pressed="true"] .tower-volley-fill {
+  background: #ffd27a;
+}
+
+.tower-volley[aria-pressed="true"] {
+  color: var(--tower-ink);
+}
+
+.tower-volley-label {
+  position: relative;
 }
 
 /* Upgrade picker, pause and game over sit over the field. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { BASE, ENEMIES, TOWER, WALL_HP } from "@/lib/tower/sim/balance";
-import { castVolley, chooseUpgrade, createRun, giveUp, stats, step, STEP } from "@/lib/tower/sim/run";
+import { aimAt, castVolley, chooseUpgrade, createRun, giveUp, holdFire, stats, step, STEP } from "@/lib/tower/sim/run";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { emptyPerks, emptyUpgrades } from "@/lib/tower/sim/upgrades";
 import type { Enemy, EnemyKind, Run, UpgradeId } from "@/lib/tower/sim/types";
@@ -76,9 +76,10 @@ describe("createRun", () => {
 });
 
 describe("step", () => {
-  it("shoots down an enemy in range, clears the wave and offers upgrades", () => {
+  it("shoots down an enemy it's aimed at, clears the wave and offers upgrades", () => {
     const run = quietRun();
     enemyAt(run, TOWER.x, TOWER.y - 120);
+    aimAt(run, TOWER.x, TOWER.y - 50);
     runFor(run, 5);
     expect(run.kills).toBe(1);
     expect(run.phase).toBe("choosing");
@@ -86,12 +87,31 @@ describe("step", () => {
     expect(run.gold).toBe(ENEMIES.grunt.gold + 2);
   });
 
-  it("leaves enemies out of range alone", () => {
+  it("only shoots while the player holds, and only as far as the bow reaches", () => {
     const run = quietRun();
     const far = enemyAt(run, TOWER.x, TOWER.y - 300, "grunt", { speed: 0 });
-    runFor(run, 2);
-    expect(far.hp).toBe(far.maxHp);
+    runFor(run, 1);
     expect(run.arrows).toHaveLength(0);
+    aimAt(run, far.x, far.y);
+    runFor(run, 2);
+    expect(run.arrows.length).toBeGreaterThan(0);
+    expect(far.hp).toBe(far.maxHp);
+    holdFire(run);
+    runFor(run, 1);
+    expect(run.arrows).toHaveLength(0);
+  });
+
+  it("shoots along the aim and fans multishot out around it", () => {
+    const run = quietRun();
+    enemyAt(run, TOWER.x, 10, "grunt", { speed: 0 });
+    run.upgrades.multishot = 2;
+    aimAt(run, TOWER.x + 100, TOWER.y);
+    step(run, STEP);
+    const angles = run.arrows.map((arrow) => Math.atan2(arrow.vy, arrow.vx)).sort((a, b) => a - b);
+    expect(angles).toHaveLength(3);
+    expect(angles[1]).toBeCloseTo(0);
+    expect(angles[0]).toBeCloseTo(-angles[2]);
+    expect(angles[2]).toBeGreaterThan(0);
   });
 
   it("lets enemies at the wall wear it down until the run ends", () => {
@@ -122,6 +142,7 @@ describe("step", () => {
     run.upgrades.fire = 1;
     run.upgrades.frost = 1;
     const brute = enemyAt(run, TOWER.x, TOWER.y - 100, "brute", { speed: 0 });
+    aimAt(run, brute.x, brute.y);
     runFor(run, 0.5);
     expect(brute.burnLeft).toBeGreaterThan(0);
     expect(brute.slow).toBeCloseTo(0.15);
@@ -244,6 +265,7 @@ describe("determinism", () => {
       const run = createRun(1234);
       for (let tick = 0; tick < 60 * 90 && run.phase !== "over"; tick += 1) {
         if (run.phase === "choosing") chooseUpgrade(run, run.choices[0]);
+        if (tick % 10 === 0 && run.enemies[0]) aimAt(run, run.enemies[0].x, run.enemies[0].y);
         if (tick % 200 === 0 && run.enemies[0]) castVolley(run, run.enemies[0].x, run.enemies[0].y);
         step(run, STEP);
       }

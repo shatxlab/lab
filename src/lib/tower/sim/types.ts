@@ -131,8 +131,10 @@ export interface Run {
   hp: number;
   reloadLeft: number;
   volleyLeft: number;
-  /** Where the archer is facing, radians; only the renderer reads it. */
+  /** Where the archer is aiming, radians; the player's finger sets it. */
   aim: number;
+  /** True while the player holds the field, which is the only time the archer shoots. */
+  firing: boolean;
   enemies: Enemy[];
   arrows: Arrow[];
   volleys: VolleyArrow[];

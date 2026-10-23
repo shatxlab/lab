@@ -52,6 +52,19 @@ describe("TowerApp", () => {
     view.unmount();
   });
 
+  it("arms the volley from its button", async () => {
+    const view = await mount(<TowerApp />);
+    await act(async () => button(view.container, "Play").click());
+    const volley = button(view.container, "Volley");
+    expect(volley.disabled).toBe(false);
+    await act(async () => volley.click());
+    expect(volley.getAttribute("aria-pressed")).toBe("true");
+    expect(volley.textContent).toBe("Tap the field to drop it");
+    await act(async () => volley.click());
+    expect(volley.getAttribute("aria-pressed")).toBe("false");
+    view.unmount();
+  });
+
   it("opens a run with a head start on the upgrade picker", async () => {
     localStorage.setItem(TOWER_STORAGE_KEY, JSON.stringify({ gold: 0, best: 0, runs: 0, perks: { headStart: 1 } }));
     const view = await mount(<TowerApp />);

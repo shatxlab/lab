@@ -6,9 +6,9 @@ export const TOWER = { x: 180, y: 330, radius: 24 } as const;
 
 export const BASE = {
   maxHp: 100,
-  damage: 6,
-  reload: 0.55,
-  range: 165,
+  damage: 3.5,
+  reload: 0.32,
+  range: 200,
   arrowSpeed: 430,
   critChance: 0.05,
   critMultiplier: 2,

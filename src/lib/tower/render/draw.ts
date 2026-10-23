@@ -137,6 +137,18 @@ function drawGround(ctx: CanvasRenderingContext2D, run: Run): void {
 function drawTower(ctx: CanvasRenderingContext2D, run: Run, time: number): void {
   const { x, y, radius } = TOWER;
   const tower = stats(run);
+  if (run.firing) {
+    // Where the stream is going, out to the end of its reach.
+    ctx.save();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(run.aim) * (radius + 6), y + Math.sin(run.aim) * (radius + 6));
+    ctx.lineTo(x + Math.cos(run.aim) * tower.range, y + Math.sin(run.aim) * tower.range);
+    ctx.stroke();
+    ctx.restore();
+  }
   ellipse(ctx, x + 4, y + 6, radius + 2, radius + 1, COLORS.shadow);
   circle(ctx, x, y, radius, COLORS.stone);
   ctx.strokeStyle = COLORS.stoneDark;

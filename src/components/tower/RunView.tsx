@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { Pause } from "lucide-react";
 
 import type { TowerText } from "@/lib/tower/i18n";
 import { drawRun, fitView, toWorld, type View } from "@/lib/tower/render/draw";
-import { castVolley, chooseUpgrade, giveUp, nearestEnemy, stats, step, STEP } from "@/lib/tower/sim/run";
+import { aimAt, castVolley, chooseUpgrade, giveUp, holdFire, nearestEnemy, stats, step, STEP } from "@/lib/tower/sim/run";
 import { isBossWave } from "@/lib/tower/sim/waves";
 import type { Run, UpgradeId } from "@/lib/tower/sim/types";
 
@@ -13,7 +13,8 @@ interface Hud {
   hp: number;
   maxHp: number;
   gold: number;
-  volleyReady: boolean;
+  /** 0 just fired, 1 ready; in twentieths so the HUD only re-renders when the bar visibly moves. */
+  volleyCharge: number;
   choices: string;
 }
 
@@ -24,7 +25,7 @@ function snapshot(run: Run): Hud {
     hp: Math.ceil(run.hp),
     maxHp: stats(run).maxHp,
     gold: run.gold,
-    volleyReady: run.volleyLeft <= 0,
+    volleyCharge: Math.floor((1 - run.volleyLeft / stats(run).volleyCooldown) * 20) / 20,
     choices: run.choices.join(","),
   };
 }
@@ -56,6 +57,10 @@ export function RunView({
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   pausedRef.current = paused;
+  // The Volley button arms the volley; the next tap on the field drops it.
+  const [armed, setArmed] = useState(false);
+  // The one finger steering the stream; other fingers can still drop a volley.
+  const aimPointerRef = useRef<number | null>(null);
   const overRef = useRef(false);
 
   const refresh = useCallback(() => {
@@ -119,25 +124,59 @@ export function RunView({
     return () => cancelAnimationFrame(frame);
   }, [run, refresh]);
 
+  const pause = useCallback(() => {
+    holdFire(run);
+    aimPointerRef.current = null;
+    setPaused(true);
+  }, [run]);
+
+  // An armed volley doesn't carry over into the upgrade picker or the next wave.
+  useEffect(() => {
+    if (hud.phase !== "playing") setArmed(false);
+  }, [hud.phase]);
+
   // Switching apps or tabs pauses rather than letting the wave chew through the wall.
   useEffect(() => {
     const onHide = () => {
-      if (document.visibilityState === "hidden" && run.phase === "playing") setPaused(true);
+      if (document.visibilityState === "hidden" && run.phase === "playing") pause();
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [run]);
+  }, [run, pause]);
+
+  const worldPoint = (event: PointerEvent<HTMLCanvasElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return toWorld(viewRef.current, event.clientX - box.left, event.clientY - box.top);
+  };
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (paused) return;
-    const box = event.currentTarget.getBoundingClientRect();
-    const point = toWorld(viewRef.current, event.clientX - box.left, event.clientY - box.top);
-    castVolley(run, point.x, point.y);
+    if (paused || run.phase !== "playing") return;
+    const point = worldPoint(event);
+    if (armed) {
+      if (castVolley(run, point.x, point.y)) setArmed(false);
+      return;
+    }
+    if (aimPointerRef.current !== null) return;
+    aimPointerRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    aimAt(run, point.x, point.y);
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (event.pointerId !== aimPointerRef.current || paused) return;
+    const point = worldPoint(event);
+    aimAt(run, point.x, point.y);
+  };
+
+  const onPointerEnd = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (event.pointerId !== aimPointerRef.current) return;
+    aimPointerRef.current = null;
+    holdFire(run);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLCanvasElement>) => {
     if (event.key === "Escape") {
-      if (run.phase === "playing") setPaused(true);
+      if (run.phase === "playing") pause();
       return;
     }
     if (event.key !== " " && event.key !== "Enter") return;
@@ -167,7 +206,7 @@ export function RunView({
         <button
           type="button"
           className="tower-icon-button"
-          onClick={() => setPaused(true)}
+          onClick={pause}
           disabled={hud.phase !== "playing"}
           aria-label={text.pause}
         >
@@ -205,6 +244,10 @@ export function RunView({
           tabIndex={0}
           aria-label={text.fieldLabel}
           onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+          onLostPointerCapture={onPointerEnd}
           onKeyDown={onKeyDown}
         />
 
@@ -251,9 +294,19 @@ export function RunView({
         {hud.phase === "over" && children}
       </div>
 
-      <p className="tower-volley" data-ready={hud.volleyReady && hud.phase === "playing" ? "" : undefined}>
-        {hud.volleyReady ? text.volleyReady : text.volleyCharging}
-      </p>
+      <button
+        type="button"
+        className="tower-volley"
+        disabled={hud.phase !== "playing" || hud.volleyCharge < 1}
+        aria-pressed={armed}
+        onClick={() => setArmed((current) => !current)}
+        style={{ "--charge": hud.phase === "playing" ? hud.volleyCharge : 0 } as CSSProperties}
+      >
+        <span className="tower-volley-fill" aria-hidden="true" />
+        <span className="tower-volley-label">
+          {armed ? text.volleyArmed : hud.volleyCharge >= 1 ? text.volley : text.volleyCharging}
+        </span>
+      </button>
     </div>
   );
 }

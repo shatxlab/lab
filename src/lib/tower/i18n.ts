@@ -25,7 +25,8 @@ export interface TowerText {
   wave: (wave: number) => string;
   bossWave: string;
   wall: string;
-  volleyReady: string;
+  volley: string;
+  volleyArmed: string;
   volleyCharging: string;
   pause: string;
   paused: string;
@@ -49,10 +50,10 @@ export interface TowerText {
 export const TOWER_TEXT: Record<AppLang, TowerText> = {
   en: {
     title: "Lone Tower",
-    tagline: "One archer, one tower, enemies from every side. Hold out as long as you can.",
+    tagline: "One archer, one tower, enemies from every side. Aim, shoot, hold out as long as you can.",
     howTo: [
-      "Your archer shoots on their own.",
-      "Tap the field to rain a volley of arrows there.",
+      "Hold a finger on the field and your archer shoots that way.",
+      "Tap Volley, then tap the field to rain arrows there.",
       "After each wave, pick one of three upgrades.",
       "Gold from every run buys perks that last.",
     ],
@@ -71,7 +72,8 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
     wave: (wave) => `Wave ${wave}`,
     bossWave: "Boss",
     wall: "Wall",
-    volleyReady: "Volley ready: tap the field",
+    volley: "Volley",
+    volleyArmed: "Tap the field to drop it",
     volleyCharging: "Volley reloading",
     pause: "Pause",
     paused: "Paused",
@@ -87,7 +89,7 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
     newBest: "New best!",
     kills: (kills) => `${kills} enemies down`,
     goldEarned: (amount) => `+${amount} gold`,
-    fieldLabel: "Battlefield. Tap to rain a volley of arrows; Space aims it at the nearest enemy.",
+    fieldLabel: "Battlefield. Hold to shoot that way; Space drops a volley on the nearest enemy.",
     upgrades: {
       damage: { name: "Sharper tips", description: "+25% damage." },
       reload: { name: "Quick hands", description: "Shoot 12% faster." },
@@ -113,10 +115,10 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
   },
   ru: {
     title: "Одинокая башня",
-    tagline: "Один лучник, одна башня, враги со всех сторон. Держитесь сколько сможете.",
+    tagline: "Один лучник, одна башня, враги со всех сторон. Цельтесь, стреляйте и держитесь сколько сможете.",
     howTo: [
-      "Лучник стреляет сам.",
-      "Коснитесь поля, чтобы обрушить туда залп стрел.",
+      "Держите палец на поле, и лучник стреляет в ту сторону.",
+      "Нажмите «Залп», затем коснитесь поля, чтобы обрушить туда стрелы.",
       "После каждой волны выберите одно из трёх улучшений.",
       "Золото из каждого забега тратится на постоянные бонусы.",
     ],
@@ -135,7 +137,8 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
     wave: (wave) => `Волна ${wave}`,
     bossWave: "Босс",
     wall: "Стена",
-    volleyReady: "Залп готов: коснитесь поля",
+    volley: "Залп",
+    volleyArmed: "Коснитесь поля, куда его обрушить",
     volleyCharging: "Залп перезаряжается",
     pause: "Пауза",
     paused: "Пауза",
@@ -151,7 +154,7 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
     newBest: "Новый рекорд!",
     kills: (kills) => `Побеждено врагов: ${kills}`,
     goldEarned: (amount) => `+${amount} золота`,
-    fieldLabel: "Поле боя. Коснитесь, чтобы обрушить залп стрел; пробел направляет его в ближайшего врага.",
+    fieldLabel: "Поле боя. Удерживайте, чтобы стрелять в ту сторону; пробел обрушивает залп на ближайшего врага.",
     upgrades: {
       damage: { name: "Острые наконечники", description: "+25% урона." },
       reload: { name: "Быстрые руки", description: "Стрельба на 12% быстрее." },

@@ -10,7 +10,7 @@ import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '
 import { blinkingAt, hash, momentAt } from '../render-support/activity'
 import { KEEPSAKE_TOP, keepsakeFor, keepsakeX } from '../render-support/keepsakes'
 import { POSE_PAD, STEP_CYCLE, WALK_CYCLE, type Pose } from '../render-support/poses'
-import { CafeCrowd, CAFE_DOOR_X, CAFE_LANE, COUNTER_LEFT, COUNTER_TOP, SEATS, type CafeFigure } from '../render-support/cafe'
+import { CafeCrowd, CAFE_DOOR_X, CAFE_LANE, COUNTER_LEFT, COUNTER_TOP, SEATS, type Bubble, type CafeFigure, type Cup } from '../render-support/cafe'
 import { pathLength, pathToDoors, pointAlong, routePath, walkoutPath, type Point } from '../render-support/walkout'
 import { chooseErrand, chooseSpot, nextOutAt, poseAtSpot, SPOTS, spotFree, stayFor, type Errand, type Spot, type Stay } from '../render-support/breaks'
 import { BOOKSHELF_HEIGHT, bookshelfRects } from '../render-support/bookshelf'
@@ -199,6 +199,7 @@ class EmployeeSprite {
 class Figure {
   readonly container = new Container()
   private readonly body: Sprite
+  private readonly bubble = new Graphics()
   private readonly width: number
   private readonly height: number
   private drawn = ''
@@ -208,22 +209,79 @@ class Figure {
     this.width = texture.width
     this.height = texture.height
     this.body = new Sprite(texture)
-    this.container.addChild(this.body)
+    this.container.addChild(this.body, this.bubble)
   }
 
   /** Stands (or sits) them with their feet where `figure` says, facing its way, mirrored in place as an employee is. */
   draw(figure: CafeFigure, blink: boolean): void {
-    const key = `${figure.pose ?? ''}|${blink}|${figure.rightwards}`
+    const key = `${figure.pose ?? ''}|${blink}|${figure.rightwards}|${figure.bubble ?? ''}`
     if (key !== this.drawn) {
       this.drawn = key
       this.body.texture = this.look(figure.pose, blink)
       const left = this.body.texture.width === this.width ? 0 : POSE_PAD.left
       this.body.scale.x = figure.rightwards ? 1 : -1
       this.body.x = figure.rightwards ? -left : this.width + left
+      drawBubble(this.bubble.clear(), figure.bubble, figure.rightwards)
+      this.bubble.position.set(figure.rightwards ? Math.floor(this.width / 2) : Math.ceil(this.width / 2) - BUBBLE_W, -BUBBLE_H - 1)
     }
     this.container.position.set(Math.round(figure.x - this.width / 2), figure.feet - (this.height - 1))
     this.container.alpha = figure.alpha
   }
+}
+
+const BUBBLE_W = 11
+const BUBBLE_H = 10
+
+/**
+ * A speech bubble over someone's head, its tail on the side they face from: a cup for an order, a tick for the
+ * barista's yes to it, a heart for their thanks.
+ */
+function drawBubble(g: Graphics, bubble: Bubble | undefined, rightwards: boolean): void {
+  if (!bubble) return
+  // Drawn as if the tail is on the left, then turned round for someone facing left.
+  const at = (x: number, w: number) => (rightwards ? x : BUBBLE_W - x - w)
+  const px = (x: number, y: number, w = 1, h = 1) => g.rect(at(x, w), y, w, h)
+  px(1, 0, 9)
+  px(0, 1, 1, 6)
+  px(10, 1, 1, 6)
+  px(1, 7, 9)
+  px(2, 8)
+  px(1, 9)
+  g.fill(NIGHT)
+  px(1, 1, 9, 6)
+  px(2, 7)
+  g.fill(WHITE)
+  if (bubble === 'order') {
+    px(4, 1)
+    px(5, 2)
+    g.fill(MORTAR)
+    px(3, 3, 4, 3)
+    px(7, 4)
+    g.fill(WOOD)
+  } else if (bubble === 'ok') {
+    px(3, 3)
+    px(4, 4)
+    px(5, 5)
+    px(6, 4)
+    px(7, 3)
+    px(8, 2)
+    g.fill(LEAF)
+  } else {
+    px(3, 2, 2)
+    px(6, 2, 2)
+    px(3, 3, 5)
+    px(4, 4, 3)
+    px(5, 5)
+    g.fill(RUST)
+  }
+}
+
+/** A paper cup of coffee, four pixels by five: a dark lid on a white cup with a sleeve. */
+function drawCup(g: Graphics, { x, bottom, alpha }: Cup): void {
+  const left = x - 2
+  g.rect(left, bottom - 5, 4, 1).fill({ color: DARK, alpha })
+  g.rect(left, bottom - 4, 4, 4).fill({ color: WHITE, alpha })
+  g.rect(left, bottom - 3, 4, 2).fill({ color: SAND, alpha })
 }
 
 /** Whether a desk's screen is dark (nobody there), lit but still, or showing someone typing. */
@@ -434,6 +492,9 @@ export class OfficeScene {
   private readonly baristaLayer = new Container()
   private readonly counter = new Container()
   private readonly guestLayer = new Container()
+  /** The cups of coffee: the barista's behind the counter, the rest (on it, in guests' hands, on tables) over the guests. */
+  private readonly baristaCup = new Graphics()
+  private readonly cupLayer = new Graphics()
   private crowd = new CafeCrowd()
   private readonly figures = new Map<number, Figure>()
   private readonly cat = new Container()
@@ -515,7 +576,7 @@ export class OfficeScene {
     this.popups.addChild(this.dateChip)
 
     // People sit beside their desks, so they're drawn over them, hands reaching onto the keyboard.
-    this.world.addChild(this.background, this.baristaLayer, this.counter, this.board, this.officeBack, this.wall, this.chairs, this.desks, this.guestLayer, this.people, this.cat, this.dog)
+    this.world.addChild(this.background, this.baristaLayer, this.baristaCup, this.counter, this.board, this.officeBack, this.wall, this.chairs, this.desks, this.guestLayer, this.cupLayer, this.people, this.cat, this.dog)
 
     // The office is drawn into a texture, so its sprites can't take clicks themselves:
     // hit-test the shown image instead.
@@ -952,8 +1013,11 @@ export class OfficeScene {
 
   /** The café's barista and guests go about their business while the game runs, and stand still while it is paused. */
   private updateCafe(office: Office, dtMs: number, speed: number): void {
+    this.baristaCup.clear()
+    this.cupLayer.clear()
     if (office.kind !== 'cafe') return
     if (speed > 0) this.crowd.update(dtMs)
+    for (const cup of this.crowd.cups()) drawCup(cup.behindCounter ? this.baristaCup : this.cupLayer, cup)
     const shown = [{ figure: this.crowd.barista(), layer: this.baristaLayer }, ...this.crowd.guestsNow().map((figure) => ({ figure, layer: this.guestLayer }))]
     const looks = new Set(shown.map(({ figure }) => figure.look))
     for (const [look, sprite] of this.figures) {
@@ -1036,7 +1100,8 @@ export class OfficeScene {
     }
     g.fill(MORTAR)
 
-    // The tables, each a marble top on one leg, with a stool on the side the guest sits.
+    // The tables, each a marble top on one leg, with a stool on the side the guest sits. A guest's cup is put on
+    // the table by the crowd while they sit there, so an empty table is bare.
     const decor: [FrameName, number, number, boolean?][] = [
       ['plant', 2, 97],
       ['picture', 6, 70],
@@ -1047,7 +1112,6 @@ export class OfficeScene {
       g.rect(x - 3, feet - 8, 1, 8).rect(x + 3, feet - 8, 1, 8).fill(NIGHT)
       g.rect(table, feet - 15, 18, 2).fill(WHITE).rect(table, feet - 13, 18, 1).fill(BLOCK)
       g.rect(table + 8, feet - 12, 2, 11).rect(table + 4, feet - 1, 10, 1).fill(NIGHT)
-      decor.push(['mug', table + 5, feet - 22, !rightwards])
     }
     bg.addChild(g)
 
@@ -1064,8 +1128,9 @@ export class OfficeScene {
     for (let x = COUNTER_LEFT + 4; x < right - 4; x += 12) g.rect(x, COUNTER_TOP + 6, 8, 14)
     g.fill(RUST)
     g.rect(COUNTER_LEFT, (CAFE_LANE + 1) - 2, right - COUNTER_LEFT, 2).fill(NIGHT)
-    // The till at the end of the counter, its screen towards the barista.
-    g.rect(172, COUNTER_TOP - 7, 10, 7).fill(DARK).rect(173, COUNTER_TOP - 6, 6, 3).fill(CYAN)
+    // The till, its screen towards the barista standing on its left; the end of the counter is kept clear for the
+    // cups the barista hands over.
+    g.rect(194, COUNTER_TOP - 7, 10, 7).fill(DARK).rect(195, COUNTER_TOP - 6, 6, 3).fill(CYAN)
     // The espresso machine, side on: cups warming on its top, a chrome body on a dark base, two portafilters with
     // their handles out to the side and a cup under each, and the steam wand.
     g.rect(207, COUNTER_TOP - 19, 3, 2).rect(212, COUNTER_TOP - 19, 3, 2).rect(217, COUNTER_TOP - 19, 3, 2).fill(WHITE)

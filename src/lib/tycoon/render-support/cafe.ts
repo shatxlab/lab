@@ -4,9 +4,10 @@ import { pathLength, pointAlong, type Point } from './walkout'
 
 /**
  * The café the two founders start in, as it is seen: a barista behind the counter, and now and then someone who
- * comes in, queues, orders, waits for their cup and goes, or sits down with it at the table by the window for a
- * while. Everything is worked out from the time the café has been open alone, a guest's choices from their number,
- * so it plays the same way every time. Positions are the middle of a person's feet, in scene pixels.
+ * comes in, queues, says what they want, waits while the barista makes it and brings it to the end of the counter,
+ * picks it up, and goes with it, or sits down with it at a table for a while. Everything is worked out from the
+ * time the café has been open alone, a guest's choices from their number, so it plays the same way every time.
+ * Positions are the middle of a person's feet, in scene pixels.
  */
 
 /** The door (its middle, and the row a person's feet are on in its frame), and the lane people walk along. */
@@ -15,12 +16,19 @@ export const CAFE_DOOR_FEET = 113
 export const CAFE_LANE = 124
 /** People on their way out keep to a lane nearer the front, so they pass those coming in rather than walk through them. */
 export const CAFE_EXIT_LANE = 131
-/** The counter: its left end, and the top of its surface; the barista stands behind it, at the till or the machine. */
+/**
+ * The counter: its left end, and the top of its surface; the barista stands behind it, at the till or the machine.
+ * At the till they take the order and hand the cup over, setting it down at `PICKUP_X`, at the end of the counter,
+ * for the guest to take.
+ */
 export const COUNTER_LEFT = 170
 export const COUNTER_TOP = 100
 export const BARISTA_FEET = 106
-export const TILL_X = 194
+export const TILL_X = 186
 export const MACHINE_X = 216
+export const PICKUP_X = 173
+/** How far in front of the barista they hold a cup they carry. */
+const CARRY = 9
 /** Places in the queue, the first at the counter. */
 export const QUEUE_X = [160, 146, 132] as const
 /**
@@ -45,10 +53,16 @@ const FADE = 400
 /** Between one guest and the next, shortest and longest; never more than this many inside at once. */
 const ARRIVAL_MS: readonly [number, number] = [7000, 16000]
 const MAX_GUESTS = 4
-/** At the counter: ordering, the barista making the coffee, and handing it over. */
-const ORDER_MS = 1600
+/**
+ * At the counter: ordering (the guest says what they want, then the barista says yes), the barista making the
+ * coffee, and handing it over: the cup on the counter until the guest takes it, a first sip, and the barista's
+ * thanks.
+ */
+const ORDER_MS = 2000
 const BREW_MS = 3200
-const HAND_MS = 1200
+const PICKUP_MS = 600
+const FIRST_SIP_MS = 1000
+const THANKS_MS = 1200
 /** Of a hundred guests, how many sit down with their cup, and how long they stay. */
 const SITTERS = 30
 const SIT_MS: readonly [number, number] = [14000, 26000]
@@ -56,6 +70,9 @@ const SIT_MS: readonly [number, number] = [14000, 26000]
 /** Look ids for the café's people, far from any employee's, so they get looks of their own. */
 export const BARISTA_LOOK = 7_000_001
 const GUEST_LOOK = 7_100_000
+
+/** What someone says at the counter, in a speech bubble: the order, the barista's yes to it, and their thanks. */
+export type Bubble = 'order' | 'ok' | 'thanks'
 
 /** Someone in the café as drawn: who they look like, where their feet are, which way they face, in what pose, how faded. */
 export interface CafeFigure {
@@ -66,6 +83,18 @@ export interface CafeFigure {
   /** None: standing still. */
   pose: Pose | undefined
   alpha: number
+  bubble?: Bubble
+}
+
+/**
+ * A paper cup of coffee that is not at someone's lips: its middle, and the row just under it, in scene pixels.
+ * `behindCounter` is the one in the barista's hands, which passes behind the till.
+ */
+export interface Cup {
+  x: number
+  bottom: number
+  alpha: number
+  behindCounter?: boolean
 }
 
 type GuestPhase = 'walk' | 'queue' | 'order' | 'wait' | 'served' | 'sit' | 'leave'
@@ -81,8 +110,10 @@ interface Guest {
   timer: number
   age: number
   sits: boolean
-  /** The table they sit at, while they are on their way there or at it. */
+  /** The table they sit at, from when their cup is handed over, on their way there and at it. */
   seat: Seat | null
+  /** Whether they have their cup yet. */
+  cup: boolean
   x: number
   feet: number
   rightwards: boolean
@@ -127,6 +158,7 @@ export class CafeCrowd {
       age: 0,
       sits: hash(n, 0x5e) % 100 < SITTERS,
       seat: null,
+      cup: false,
       x: door.x,
       feet: door.y,
       rightwards: true,
@@ -176,7 +208,7 @@ export class CafeCrowd {
       const place = this.placeInQueue(guest)
       const target = QUEUE_X[Math.min(place, QUEUE_X.length - 1)]!
       if (Math.abs(guest.x - target) >= 0.5) this.walk(guest, [{ x: target, y: CAFE_LANE }], 'queue')
-      else if (place === 0 && this.serving === null) {
+      else if (place === 0 && this.serving === null && this.baristaPhase === 'till') {
         guest.phase = 'order'
         guest.timer = 0
         this.serving = guest
@@ -188,17 +220,13 @@ export class CafeCrowd {
       guest.timer = 0
       this.baristaPhase = 'toMachine'
       this.baristaTimer = 0
-    } else if (guest.phase === 'served' && guest.timer >= HAND_MS) {
+    } else if (guest.phase === 'served') {
+      guest.cup = guest.timer >= PICKUP_MS
+      if (guest.timer < PICKUP_MS + FIRST_SIP_MS) return
       this.serving = null
-      const taken = this.guests.flatMap((g) => (g.seat ? [g.seat] : []))
-      const free = SEATS.filter((seat) => !taken.includes(seat))
-      const seat = guest.sits && free.length > 0 ? free[hash(guest.n, 0x5ea7) % free.length]! : null
-      if (seat) {
-        guest.seat = seat
-        this.walk(guest, [{ x: seat.aisle, y: CAFE_LANE }, { x: seat.aisle, y: seat.feet }, { x: seat.x, y: seat.feet }], 'sit')
-      } else {
-        this.goHome(guest)
-      }
+      const seat = guest.seat
+      if (seat) this.walk(guest, [{ x: seat.aisle, y: CAFE_LANE }, { x: seat.aisle, y: seat.feet }, { x: seat.x, y: seat.feet }], 'sit')
+      else this.goHome(guest)
     } else if (guest.phase === 'sit' && guest.timer >= between(guest.n, 0x51, SIT_MS)) {
       const seat = guest.seat!
       guest.seat = null
@@ -213,6 +241,15 @@ export class CafeCrowd {
     guest.phase = 'leave'
   }
 
+  /** Hands the cup over: sets it down at the end of the counter for the guest, who now knows whether they will sit. */
+  private handOver(guest: Guest): void {
+    guest.phase = 'served'
+    guest.timer = 0
+    const taken = this.guests.flatMap((g) => (g.seat ? [g.seat] : []))
+    const free = SEATS.filter((seat) => !taken.includes(seat))
+    guest.seat = guest.sits && free.length > 0 ? free[hash(guest.n, 0x5ea7) % free.length]! : null
+  }
+
   private advanceBarista(dtMs: number): void {
     this.baristaTimer += dtMs
     const step = (dtMs / 1000) * WALK_SPEED
@@ -225,53 +262,78 @@ export class CafeCrowd {
       this.baristaX = Math.max(TILL_X, this.baristaX - step)
       if (this.baristaX <= TILL_X) {
         ;[this.baristaPhase, this.baristaTimer] = ['hand', 0]
-        if (this.serving) {
-          this.serving.phase = 'served'
-          this.serving.timer = 0
-        }
+        if (this.serving) this.handOver(this.serving)
       }
-    } else if (this.baristaPhase === 'hand' && this.baristaTimer >= HAND_MS) {
+    } else if (this.baristaPhase === 'hand' && this.baristaTimer >= THANKS_MS) {
       ;[this.baristaPhase, this.baristaTimer] = ['till', 0]
     }
   }
 
-  /** The barista, behind the counter: facing the till and whoever is at it, or the espresso machine. */
+  /**
+   * The barista, behind the counter: facing the till and whoever is at it, or the espresso machine. They say yes to
+   * an order once it is said, and thank the guest as they hand the cup over.
+   */
   barista(): CafeFigure {
-    const walking = this.baristaPhase === 'toMachine' || this.baristaPhase === 'toTill'
+    const phase = this.baristaPhase
+    const walking = phase === 'toMachine' || phase === 'toTill'
+    const ordering = this.serving?.phase === 'order' ? this.serving : null
     return {
       look: BARISTA_LOOK,
       x: Math.round(this.baristaX),
       feet: BARISTA_FEET,
-      rightwards: this.baristaPhase === 'toMachine' || this.baristaPhase === 'brew',
+      rightwards: phase === 'toMachine' || phase === 'brew',
       pose: walking ? STEP_CYCLE[Math.floor(this.baristaX / STRIDE) % STEP_CYCLE.length] : undefined,
       alpha: 1,
+      bubble: ordering && ordering.timer >= ORDER_MS / 2 ? 'ok' : phase === 'hand' ? 'thanks' : undefined,
     }
+  }
+
+  /**
+   * The cups not at anyone's lips: carried along the counter from the machine in the barista's hands, set down at
+   * its end, held at a guest's side, or on the table in front of whoever sits there (and only while they do).
+   */
+  cups(): Cup[] {
+    const cups: Cup[] = []
+    if (this.baristaPhase === 'toTill') cups.push({ x: Math.round(this.baristaX) - CARRY, bottom: COUNTER_TOP, alpha: 1, behindCounter: true })
+    for (const guest of this.guests) {
+      const figure = this.figureOf(guest)
+      if (guest.phase === 'served' && !guest.cup) cups.push({ x: PICKUP_X, bottom: COUNTER_TOP, alpha: 1 })
+      if (!guest.cup || figure.pose === 'drink' || figure.pose === 'sip') continue
+      if (figure.pose === 'sit' && guest.seat) {
+        const { x, feet, rightwards } = guest.seat
+        cups.push({ x: rightwards ? x + 12 : x - 12, bottom: feet - 15, alpha: 1 })
+      } else {
+        cups.push({ x: figure.x + (figure.rightwards ? 5 : -5), bottom: figure.feet - 5, alpha: figure.alpha })
+      }
+    }
+    return cups
   }
 
   /** The guests, back to front. */
   guestsNow(): CafeFigure[] {
-    return [...this.guests]
-      .sort((a, b) => a.feet - b.feet)
-      .map((guest) => {
-        const walking = guest.phase === 'walk' || guest.phase === 'leave'
-        const toDoor = pathLength(guest.path) - guest.walked
-        const pose: Pose | undefined = walking
-          ? STEP_CYCLE[Math.floor(guest.walked / STRIDE) % STEP_CYCLE.length]
-          : guest.phase === 'served'
-            ? 'drink'
-            : guest.phase === 'sit'
-              ? sitting(guest)
-              : undefined
-        return {
-          look: GUEST_LOOK + guest.n,
-          x: Math.round(guest.x),
-          feet: Math.round(guest.feet),
-          rightwards: guest.phase === 'sit' && guest.seat ? guest.seat.rightwards : guest.rightwards,
-          pose,
-          // They fade in through the door, and out of it again.
-          alpha: Math.min(1, guest.age / FADE, guest.phase === 'leave' ? ((toDoor / WALK_SPEED) * 1000) / FADE : 1),
-        }
-      })
+    return [...this.guests].sort((a, b) => a.feet - b.feet).map((guest) => this.figureOf(guest))
+  }
+
+  private figureOf(guest: Guest): CafeFigure {
+    const walking = guest.phase === 'walk' || guest.phase === 'leave'
+    const toDoor = pathLength(guest.path) - guest.walked
+    const pose: Pose | undefined = walking
+      ? STEP_CYCLE[Math.floor(guest.walked / STRIDE) % STEP_CYCLE.length]
+      : guest.phase === 'served' && guest.cup
+        ? 'drink'
+        : guest.phase === 'sit'
+          ? sitting(guest)
+          : undefined
+    return {
+      look: GUEST_LOOK + guest.n,
+      x: Math.round(guest.x),
+      feet: Math.round(guest.feet),
+      rightwards: guest.phase === 'sit' && guest.seat ? guest.seat.rightwards : guest.rightwards,
+      pose,
+      // They fade in through the door, and out of it again.
+      alpha: Math.min(1, guest.age / FADE, guest.phase === 'leave' ? ((toDoor / WALK_SPEED) * 1000) / FADE : 1),
+      bubble: guest.phase === 'order' && guest.timer < ORDER_MS / 2 ? 'order' : undefined,
+    }
   }
 
   /** How many guests are in, for tests. */

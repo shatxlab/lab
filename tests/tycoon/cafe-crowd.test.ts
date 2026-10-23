@@ -37,18 +37,17 @@ describe('the café crowd', () => {
     expect(drinking).toBe(true)
   })
 
-  it('takes the order in words, carries the cup back behind the counter, and sets it down at its end for the guest', () => {
+  it('takes the order, carries the cup back behind the counter, and sets it down at its end for the guest', () => {
     const crowd = new CafeCrowd()
     const seen: string[] = []
     const note = (what: string) => seen.at(-1) !== what && seen.push(what)
     run(crowd, 20000, (guests, barista, cups) => {
       if (guests.some((g) => g.bubble === 'order')) note('order')
-      if (barista.bubble === 'ok') note('ok')
       if (cups.some((c) => c.behindCounter)) note('carried')
       if (cups.some((c) => c.x === PICKUP_X && c.bottom === COUNTER_TOP) && barista.bubble === 'thanks') note('handed')
       if (guests.some((g) => g.pose === 'drink')) note('drink')
     })
-    expect(seen.slice(0, 5)).toEqual(['order', 'ok', 'carried', 'handed', 'drink'])
+    expect(seen.slice(0, 4)).toEqual(['order', 'carried', 'handed', 'drink'])
   })
 
   it('puts a cup on a table only while someone sits there, and has guests carry theirs when they walk', () => {

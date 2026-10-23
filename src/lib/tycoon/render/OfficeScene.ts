@@ -232,10 +232,7 @@ class Figure {
 const BUBBLE_W = 11
 const BUBBLE_H = 10
 
-/**
- * A speech bubble over someone's head, its tail on the side they face from: a cup for an order, a tick for the
- * barista's yes to it, a heart for their thanks.
- */
+/** A speech bubble over someone's head, its tail on the side they face from: a cup for an order, a heart for thanks. */
 function drawBubble(g: Graphics, bubble: Bubble | undefined, rightwards: boolean): void {
   if (!bubble) return
   // Drawn as if the tail is on the left, then turned round for someone facing left.
@@ -258,14 +255,6 @@ function drawBubble(g: Graphics, bubble: Bubble | undefined, rightwards: boolean
     px(3, 3, 4, 3)
     px(7, 4)
     g.fill(WOOD)
-  } else if (bubble === 'ok') {
-    px(3, 3)
-    px(4, 4)
-    px(5, 5)
-    px(6, 4)
-    px(7, 3)
-    px(8, 2)
-    g.fill(LEAF)
   } else {
     px(3, 2, 2)
     px(6, 2, 2)
@@ -276,12 +265,12 @@ function drawBubble(g: Graphics, bubble: Bubble | undefined, rightwards: boolean
   }
 }
 
-/** A paper cup of coffee, four pixels by five: a dark lid on a white cup with a sleeve. */
+/** A paper cup of coffee, four pixels by five: a dark lid on a white cup with an orange sleeve. */
 function drawCup(g: Graphics, { x, bottom, alpha }: Cup): void {
   const left = x - 2
   g.rect(left, bottom - 5, 4, 1).fill({ color: DARK, alpha })
   g.rect(left, bottom - 4, 4, 4).fill({ color: WHITE, alpha })
-  g.rect(left, bottom - 3, 4, 2).fill({ color: SAND, alpha })
+  g.rect(left, bottom - 3, 4, 2).fill({ color: WOOD, alpha })
 }
 
 /** Whether a desk's screen is dark (nobody there), lit but still, or showing someone typing. */
@@ -1325,8 +1314,8 @@ export class OfficeScene {
         this.stations.set(i, stations)
       }
       if (vacancy) this.dressVacantDesk(vacancy, deskX, py, right)
-      // At the café everyone has a cup beside the laptop.
-      else if (this.shown?.kind === 'cafe') this.desks.addChild(placed(atlas.frame('mug'), deskX + (right ? -1 : 10), py + 18))
+      // At the café everyone has a paper cup from the counter on the desk, standing beside the laptop, past its lid.
+      else if (this.shown?.kind === 'cafe') drawCup(this.desks.addChild(new Graphics()), { x: deskX + (right ? 3 : DESK_WIDTH - 3), bottom: py + 26, alpha: 1 })
     }
   }
 

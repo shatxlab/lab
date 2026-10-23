@@ -209,7 +209,7 @@ Each phase is playable on its own and ends with a playtest. Numbers are first gu
 - *The café scene* (`OfficeScene.buildCafe`, `buildCounter`; the crowd in `render-support/cafe.ts`): a green wall
   over panelling, a glass door, a shop window onto the street, a chalkboard menu and cup shelf, lamps, a checked
   floor, two tables. Rosa works the till and the espresso machine behind the counter; guests come in at the door,
-  queue, order (a speech bubble with a cup, and Rosa's tick), wait while she brews it and carries it back, take the
+  queue, order (a speech bubble with a cup), wait while she brews it and carries it back, take the
   cup she sets down at the end of the counter (with a heart), and leave with it by a lane nearer the front, or sit
   at a free table for a while, the cup on the table only while they sit there. The
   crowd runs on game running time, deterministic, and stands still while paused. The founders have mugs on their

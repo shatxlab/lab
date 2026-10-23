@@ -54,11 +54,10 @@ const FADE = 400
 const ARRIVAL_MS: readonly [number, number] = [7000, 16000]
 const MAX_GUESTS = 4
 /**
- * At the counter: ordering (the guest says what they want, then the barista says yes), the barista making the
- * coffee, and handing it over: the cup on the counter until the guest takes it, a first sip, and the barista's
- * thanks.
+ * At the counter: ordering (the guest says what they want), the barista making the coffee, and handing it over:
+ * the cup on the counter until the guest takes it, a first sip, and the barista's thanks.
  */
-const ORDER_MS = 2000
+const ORDER_MS = 1400
 const BREW_MS = 3200
 const PICKUP_MS = 600
 const FIRST_SIP_MS = 1000
@@ -71,8 +70,8 @@ const SIT_MS: readonly [number, number] = [14000, 26000]
 export const BARISTA_LOOK = 7_000_001
 const GUEST_LOOK = 7_100_000
 
-/** What someone says at the counter, in a speech bubble: the order, the barista's yes to it, and their thanks. */
-export type Bubble = 'order' | 'ok' | 'thanks'
+/** What someone says at the counter, in a speech bubble: the order, and the barista's thanks for it. */
+export type Bubble = 'order' | 'thanks'
 
 /** Someone in the café as drawn: who they look like, where their feet are, which way they face, in what pose, how faded. */
 export interface CafeFigure {
@@ -270,13 +269,12 @@ export class CafeCrowd {
   }
 
   /**
-   * The barista, behind the counter: facing the till and whoever is at it, or the espresso machine. They say yes to
-   * an order once it is said, and thank the guest as they hand the cup over.
+   * The barista, behind the counter: facing the till and whoever is at it, or the espresso machine. They thank the
+   * guest as they hand the cup over.
    */
   barista(): CafeFigure {
     const phase = this.baristaPhase
     const walking = phase === 'toMachine' || phase === 'toTill'
-    const ordering = this.serving?.phase === 'order' ? this.serving : null
     return {
       look: BARISTA_LOOK,
       x: Math.round(this.baristaX),
@@ -284,7 +282,7 @@ export class CafeCrowd {
       rightwards: phase === 'toMachine' || phase === 'brew',
       pose: walking ? STEP_CYCLE[Math.floor(this.baristaX / STRIDE) % STEP_CYCLE.length] : undefined,
       alpha: 1,
-      bubble: ordering && ordering.timer >= ORDER_MS / 2 ? 'ok' : phase === 'hand' ? 'thanks' : undefined,
+      bubble: phase === 'hand' ? 'thanks' : undefined,
     }
   }
 
@@ -332,7 +330,7 @@ export class CafeCrowd {
       pose,
       // They fade in through the door, and out of it again.
       alpha: Math.min(1, guest.age / FADE, guest.phase === 'leave' ? ((toDoor / WALK_SPEED) * 1000) / FADE : 1),
-      bubble: guest.phase === 'order' && guest.timer < ORDER_MS / 2 ? 'order' : undefined,
+      bubble: guest.phase === 'order' ? 'order' : undefined,
     }
   }
 

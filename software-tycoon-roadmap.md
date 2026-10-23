@@ -4,60 +4,38 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-23).** Phases 0 and A of the one-product pivot are built and pushed (`c291d25`, `c10fe99`; see
-"Built: Phase 0" and "Built: Phase A" under "Fourth feedback" below): the run starts at a café with you as the founder
-analyst, and a hit is earned by product–market fit rather than rolled. Saves are version 6. **Start with "Next steps"
-just below.**
+**Handover (2026-10-23, evening).** The one-product pivot is built end to end: phases 0 and A (the café and the hunt for a
+hit, pushed earlier), then B (the hit is the company), C (internal tools and companion products) and D (endings, Absorb, the
+journey) in this session, and a bot playthrough with a first retune (E). Saves are version 7. The work of this session is
+not committed yet (see "Built: Phases B to E" below). **Start with "Next steps".**
 
 ## Next steps (start here)
 
-The pivot is planned in phases 0 to E in "Build plan" under "Fourth feedback" below; 0 and A are built. The player
-agreed the direction and answered the plan's questions (the decisions are listed there: "Decided with the player",
-"Why hire analysts when you are one", "Moving up"). Each phase ends with a playtest, and the player wants to go
-through a phase's details before it is built: propose, get a yes, then build.
+**1. The player plays it (waiting on them).** Everything after the garage has only been played by a bot
+(`scripts/tycoon/playthrough.ts`) and looked at in screenshots, never by a person. Ask for a run log (Menu → Export run
+log; `lab-tycoon-run-*.json`, untracked and gitignored: read it, never commit it). Look at:
+- *The hunt* (café and garage): a bot that reads the true fit finds its first hit after 250 to 570 days (and often two or three more in the garage); a person reading it through
+  an analyst's eye will be slower. If the garage is too poor, `CONTRACT_PAY_PER_POINT` and `UNDISCOVERED_REACH` come first.
+- *Act 2 pace*: the bot goes from the move out to the IPO in about 3.5 to 5.5 years (6 to 8.5 years from the start). The numbers
+  that set it are in `sim/balance.ts`: `HIT_GROWTH_RATE` (0.003 a day, the biggest lever), `BASE_CAPACITY`, the capacity
+  and `pay` of the items in `data/workstreams.ts`, `HOSTING_PER_USER_DAY`, the stage goals in `data/stages.ts` and the
+  IPO gates `IPO_*`. Money stops mattering about a year after the move out (income runs 100 times the burn): if that
+  feels flat, make the late costs bite (hosting, the upkeep of tools, rent per floor) rather than slow the growth.
+- *The roadmap runs dry*: every item is built about 3 years after the move out, so the late game has nothing to queue
+  and money piles up. More items (per era) or repeatable ones are the natural next content.
+- *Is it clear?* Whether the player finds the workstream selectors (on the hit's dashboard and in Studio → Products), the
+  roadmap, the second-product slots ("Both slots are taken: retire a side product") and the Europe stream.
 
-**1. Playtest 0 and A (waiting on the player).** Ask for a run log (Menu → Export run log; `lab-tycoon-run-*.json`,
-untracked and gitignored: read it, never commit it). Look at:
-- How long the café takes (a bot: about 75 days, two minutes at 1x) and whether its events feel lively or repetitive.
-- How long the hunt for a hit takes (a bot: 240 to 970 days, 4 of 10 runs none in four years) and whether the fit
-  range, the "Not taking off: ..." line and the feedback make it clear what to build next.
-- Garage money: products that do not take off earn little ($5–40 a day in a crowded market); client work pays $18 a
-  point. If the garage is too poor, raise `UNDISCOVERED_REACH` first.
-- The knobs are in `sim/balance.ts`: `CAFE_*`, `GARAGE_*`, `FIT_*`, `UNDISCOVERED_*`, `TAKEOFF_MAX_CROWDING`,
-  `HIT_MARKET_SCALE`, `PIVOT_KEEP`, `GARAGE_PRODUCT_LIMIT`, `CONTRACT_PAY_PER_POINT`.
-
-**2. Phase B: the hit is the company.** Propose it to the player in this shape, settle the open points, then build in
-this order (each a commit, tests and typecheck green):
-- *B1 Moving out with the hit.* The move (`moveOut` in `sim/offices.ts`, the button in `TeamDialog.tsx`) asks which
-  garage products to keep, up to 2, as side products; the rest are sold to rivals (`sunsetProduct` in
-  `sim/sunset.ts` already sells or retires). Mark side products (e.g. `Product.role: 'hit' | 'side'`), so later
-  phases can tell them from the hit (`state.signatureId`) and from second products.
-- *B2 Workstreams instead of directions.* Today each floor owns a product and a direction (`Office.productId`,
-  `Office.direction`, `DIRECTIONS` and `DIRECTION_INFO` in `sim/teams.ts`, chosen in `TeamControls.tsx`; the floor
-  ships releases by itself in `teamDay`). Replace the directions with workstreams on the hit: Features (the queued
-  features: `queueFeatures`, `Product.nextFeatures`), Quality (what `polish` does now), Scale, Growth, Monetisation,
-  Europe (what `expand` does now: compliance, then `startLocalisation`). Each floor picks one; you, the hit's PM, set
-  the order of the roadmap. Give each workstream concrete items to queue (a data file, e.g. `data/workstreams.ts`).
-  `setDirection`, `Direction` and the direction UI go. This changes the save shape: bump `STATE_VERSION` to 7 with an
-  `upgradeFromV6` that maps old directions to workstreams.
-- *B3 Scale to millions.* A hit's market is no longer capped (`saturate(..., hit)` in `sim/products.ts` now allows
-  `HIT_MARKET_SCALE` times the cap): its ceiling comes from capacity (the Scale workstream), features, regions and the
-  era. Add capacity to the hit; past it, outages and churn. Server costs grow with users (`costsDay` in
-  `sim/economy.ts`). Monetisation raises what a user pays (`revenueForUsers`). `formatMoney` and `formatCount` in
-  `format.ts` stop at millions: add billions. Targets: first floor 100k–500k users, full headquarters 5–10M, both
-  buildings 20M+, $1M+ a day late on, $1B+ lifetime.
-- *B4 Pressure on the hit.* `fitOf` (`sim/fit.ts`) only takes off for missing expected features; for a hit, let fit
-  sag with staleness, bugs and rivals in its market, and churn follow it. Rivals already launch into markets
-  (`sim/rivals.ts`).
-- *B5 The hit's dashboard* as the main screen once out of the garage: users by region, fit, capacity, revenue per
-  user, churn.
-- Open points to settle with the player: the workstream items and their effects; how you set the roadmap order as PM
-  (a ranked list in the dashboard?); capacity and server-cost numbers; what side products are worth keeping for.
-
-**3. Then C, D, E** as in the build plan: internal tools and second products (Reach or Keep), endings (selling with a
-"this ends the game" confirmation, an IPO, retiring, bankruptcy), Absorb (the rival's best people take your empty
-desks only; its users move to the hit), the journey Café → Garage → First floor → Headquarters → Europe → Global, and
-you becoming CEO and your friend CTO at Europe, with one of your analysts as the hit's PM.
+**2. Known gaps and rough edges**
+- `scripts/tycoon/simulate.ts` (the old bots) and `scripts/tycoon/e2e.mjs` are stale. `playthrough.ts` replaces the
+  first for balance; the second needs a pass (founding dialog, the café, the garage).
+- The bot reads the true fit and sets an ideal roadmap, so its pace is a floor, not a forecast. Its first-floor logic is
+  also crude (it rotates one floor through the streams).
+- Companion products are launched from the roadmap (the Companions stream); they have no screen of their own beyond the
+  dashboard's line and the Products tab. Retiring a companion frees its slot.
+- A version 6 save loads with its directions mapped to workstreams, but it has no hit roadmap and may be past stages whose
+  goals changed; fine for a test, not worth migrating further.
+- Researches about running many products (licensing, the portfolio) were not reworked; they still exist.
 
 **Things to know before changing code.**
 - Verify with `npm test` and `npm run typecheck`; for UI, run `npm run dev -- --port 4321` (base path `/lab/tycoon/`)
@@ -190,6 +168,58 @@ Each phase is playable on its own and ends with a playtest. Numbers are first gu
    window with laptops and cups, and customers who come in now and then, queue, order, wait and leave with a cup to
    go (some sit down a while). Same pixel style; anything the PixelOffice pack lacks is drawn by hand like the Scrum
    board.
+
+**Built: Phases B to E (2026-10-23).** Decided with the player: a ranked roadmap, side products for income only until
+Phase C, and defaults for the numbers (recorded here, to retune from a real log).
+- *B1 Moving out with the hit* (`moveOut(state, keepIds)` in `sim/offices.ts`, the picker in `TeamDialog.tsx`): the hit
+  stays, up to `SIDE_PRODUCT_LIMIT` (2) other products come along as side products (`Product.role: 'side'`), the rest are
+  sold to rivals without the usual reputation and morale cost (`sunsetProduct(..., { planned: true })`). The floor that
+  was the garage works on the hit.
+- *B2 Workstreams* (`data/workstreams.ts`, `sim/teams.ts`, `sim/roadmap.ts`; `Direction` is gone, saves are version 7 with
+  `upgradeFromV6`): a floor works on one of Features (the queued features, else upkeep), Quality (the roadmap's quality
+  items, else polishing), Scale, Growth, Monetisation, Europe (compliance, then localising, then its items), Internal
+  tools or Companions. The hit's roadmap (`Product.roadmap`, `setRoadmap`, `RoadmapDialog.tsx`) is a ranked list of items;
+  a floor takes the highest one for its stream that is on offer (`minUsers`, localised for Europe, a free slot for a
+  companion), builds it as a release (`Project.itemId`, work scaled by the item's `work`) and it joins `Product.built`.
+  Floors work on the hit side by side: a floor's own release (`byTeam`) does not block another's (`productInWork(..., true)`).
+  New floors take the hit and the first free stream (Europe's on the European building).
+- *B3 Scale to millions* (`sim/scale.ts`): a hit holds `BASE_CAPACITY` (300k) users plus its Scale items (up to 60M more);
+  past it users are turned away, near it (`OUTAGE_LOAD`) outages strike (users, reputation, bugs). Its market cap is
+  `HIT_MARKET_SCALE` (300) times a normal one, so what stops it is capacity and its pull on the world: `Product.world`
+  multiplies its reach and grows `HIT_GROWTH_RATE` a day while it fits (`hitHealth`) and has room, faster with Growth work.
+  Servers cost `HOSTING_PER_USER_DAY` a user; Monetisation items raise what a user pays (`payFactor`, up to 4.8 times).
+  `formatMoney` and `formatCount` write billions.
+- *B4 Pressure* (`sim/fit.ts`): a hit's fit sags each day by what presses on it (staleness, open bugs, rivals in its market,
+  features the era expects, an unlooked-after companion; `fitPressure`) down from the fit its last release earned
+  (`Product.peakFit`), and recovers when nothing presses. Churn follows fit (`retention`), softened by Quality items.
+- *B5 The hit's dashboard* (`HitDashboard.tsx`, under the scene once out of the garage): users (and Europe's), income and
+  what a user pays, servers' load and capacity, the fit meter with what presses on it, a selector of each floor's
+  workstream, the companions, and the roadmap button.
+- *C Tools and companions* (`sim/tools.ts`, `sim/companions.ts`, `data/companions.ts`): internal tools are roadmap items of
+  the Tools stream with upkeep (admin panel: bugs fixed faster; analytics pipeline: insight; deploy pipeline: faster
+  teams; people portal: morale). Companions (six, each Reach or Keep, each suiting some kinds of hit) are launched from
+  the Companions stream, share `COMPANION_SLOTS` (2) with side products, start with a slice of the hit's users and need
+  a floor on Companions to look after them: healthy, a Reach one speeds the hit's growth, a Keep one keeps users and
+  lifts pay; neglected, one presses on the hit's fit. That floor is the price: people off the hit.
+- *D Endings, Absorb, the journey*: selling asks "Sure? This ends the run" in the offer dialog. The IPO (`ipoBlocker`,
+  `goPublic`, Menu) needs the Global stage's goals (10M users, $1B lifetime, a year in profit, `profitDays`) and ends the
+  run at `IPO_MULTIPLE` years of income. Absorb (`acquire`) now needs a hit and a rival that competes with it; half its
+  competing users move to the hit (`ABSORB_USERS_SHARE`), its best people take your empty desks in its region and only
+  those, products can be kept as second products; no office is opened. Absorbed studios no longer return when their
+  year comes (`absorbedNames`). The journey is Café, Garage, Indie, First floor (200k users, a Scale item, 12 people),
+  Headquarters (1M users, 2 floors, $30k a day), Europe (a building there, localised, 3M users, 3 floors) and Global
+  company (the IPO gates). Opening the European building makes you CEO and your friend CTO (`changeOfGuard`); the best
+  analyst becomes the hit's product manager; the CEO gathers no insight.
+- *E The playthrough* (`scripts/tycoon/playthrough.ts`, run it as its header says; `SAVE_DIR=<dir>` writes a save at each
+  stage, to load into the real UI by writing it to `localStorage['lab:tycoon:save']`): over 12 seeds the bot reaches the
+  IPO in 6.0 to 8.5 years, with its first hit after 250 to 570 days. What it found and fixed: one floor on one stream
+  could not build anything else (so a floor can now work next to another); a hit stalled for years at its servers' limit
+  when no floor was on Scale (the dashboard says "outages likely: build Scale"; the player has to act); absorbed studios
+  came back; the stage gates passed in days because one of them was reputation, now replaced by building servers; a bot
+  that keeps launching into a crowded market never finds a hit (it now reads the takeoff blocker and moves on).
+  `HIT_GROWTH_RATE` went 0.011, 0.008, 0.004 and ended at 0.003.
+- Screenshots were taken with the cached Playwright Chromium against `npm run dev -- --port 4321` (no page errors at
+  any stage from the café to the Global company, on desktop and a 390px phone).
 
 **Built: Phase 0 (2026-10-23).**
 - *The start* (`sim/founding.ts`, `components/tycoon/FoundingDialog.tsx`): a new run opens "A new studio" with your

@@ -4,9 +4,10 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-23).** Phase 0 of the one-product pivot is built (see "Built: Phase 0" under "Fourth feedback"
-below): a new run names you and the studio, you are the founder analyst with a developer friend, and the run starts at
-a café. Next is Phase A (fit instead of the hit roll); play the café first. Saves are now version 6.
+**Handover (2026-10-23).** Phases 0 and A of the one-product pivot are built (see "Built: Phase 0" and "Built:
+Phase A" under "Fourth feedback" below): the run starts at a café with you as the founder analyst, and a hit is earned
+by product–market fit rather than rolled. Next is a playtest of both, then Phase B (the hit is the company). Saves are
+version 6.
 
 **Earlier handover (2026-10-22, evening).** The player played the building build. The visual fixes from that are built (see
 "Fourth feedback: the building, routines, and one product" below); the bigger pivot it proposes (a long garage hunt
@@ -154,6 +155,41 @@ Each phase is playable on its own and ends with a playtest. Numbers are first gu
 - Not done: `scripts/tycoon/e2e.mjs` was already stale before this (it imports `render/characters.ts` and
   `render/layout.ts`, which moved to `render-support/`) and now also assumes the old start (no founding dialog, the
   garage, `START_MONEY`): it needs a pass before it can run again.
+
+**Built: Phase A (2026-10-23).**
+- *Fit* (`sim/fit.ts`): `Product.fit` (0–100, optional) is set by every release: the share of everything the audience
+  loves that the studio can build now (`bestLove`, by value × how much more than 1 they like it), less
+  `FIT_SHRUG_PENALTY` per feature they shrug at, from a `FIT_BASE` floor, times what quality allows
+  (`qualityAllowance`: all of it from 90). `fitOf` takes off what the era expects and the product lacks. A product
+  manager raises a release's fit (`pmFitFactor`, `PM_FIT_BONUS`; `PM_HIT_BONUS` is gone). A product for no audience
+  has no fit.
+- *Takeoff* (`takeoffBlocker`, `takeOff`, `fitDay` every day and at every release): fit ≥ `FIT_TAKEOFF` (75), market
+  not cold, crowding by others (`crowdingAround`) under `TAKEOFF_MAX_CROWDING` (1.2), and fresh. It becomes a hit and
+  the signature, its reach is given back and multiplied by `HIT_REACH`, and the users follow over the weeks. On the
+  first hit the founder analyst becomes its PM. Until then a product reaches only `undiscovered(fit)` of its reach
+  (`UNDISCOVERED_REACH` 0.7, more the better it fits); a launch campaign reaches everyone (`estimateReach(..., false)`).
+  A hit can hold `HIT_MARKET_SCALE` (4) times the market (`saturate(..., hit)`). The roll is gone:
+  `hitBreakdown`, `hitChance`, `launchesSinceHit`, `HIT_BASE_CHANCE` and the rest; rivals keep their own roll.
+- *Reading it* (`fitRange`, `components/tycoon/FitMeter.tsx`): the fit shows as a range as wide as the studio's eye
+  for users is poor (`FIT_BAND_MAX` 40 to `FIT_BAND_MIN` 4, by `readingSkill`, the best analyst's or PM's analysis),
+  sitting differently round the true value for each release. On the product card with why it has not taken off, in
+  the ship dialog with the market's demand and room. Feedback (loved, shrugged, wished for) now comes in sooner the
+  sharper the analyst (`feedbackFor`), and all at once for a surveyed audience.
+- *No market scan*: the Industry tab already shows each market's demand and crowding, so it was left out; insight
+  goes on surveys.
+- *Pivot* (`startPivot`, `pivotBlocker`, the "Pivot…" picker on the product card with the fit each audience would
+  give): an update's work without new features; when it ships the product is for the new audience, keeps
+  `PIVOT_KEEP` (a fifth) of its users, starts again as a launch, and cannot pivot again. Not for a hit.
+- *Garage limit*: `GARAGE_PRODUCT_LIMIT` (3) live products in the café and the garage, counting one being made.
+- *Journey*: the garage asks for 3 products shipped and a product that takes off; Indie studio only for the move;
+  the breakout stage's "3 lasting products" became "grow your hit to 50,000 users".
+- *Money*: client work pays `CONTRACT_PAY_PER_POINT` 18 (was 12), so a hire on client work about pays for themselves;
+  the café asks `GARAGE_READY_MONEY` $8,000 (was 6,000) to keep it about as long.
+- What a bot found (`hunt.ts` in the session scratchpad, not kept): a garage of four that launches guesses, adds what
+  the audience wishes for and takes client work when short found its hit after 240 to 970 days, and 4 of 10 found
+  none in four years, mostly by staying in the crowded web market; hits earned $300–770 a day after six months
+  against $200–250 of costs. Products that do not take off earn little ($5–40 a day in a crowded market): the first
+  thing to retune from a real run if the garage feels too poor.
 
 **Phase A: the hunt (garage).**
 4. *Fit, not a roll.* `Product.fit` 0–100, set at launch and moved by every update: `audienceFit` (what the audience

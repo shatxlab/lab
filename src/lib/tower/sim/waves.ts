@@ -1,4 +1,4 @@
-import { ARENA, BOSS_EVERY } from "./balance";
+import { ARENA, BOSS_EVERY, LANE_MARGIN } from "./balance";
 import { random, randomBetween, shuffle } from "./random";
 import type { EnemyKind, PendingSpawn } from "./types";
 
@@ -42,15 +42,7 @@ export function buildSpawns(wave: number, source: { rng: number }): PendingSpawn
   return spawns.sort((a, b) => a.at - b.at);
 }
 
-/** A random point on the arena's edge, with each side as likely as its length. */
-export function edgePoint(source: { rng: number }): { x: number; y: number } {
-  const { width, height } = ARENA;
-  let along = random(source) * 2 * (width + height);
-  if (along < width) return { x: along, y: 0 };
-  along -= width;
-  if (along < height) return { x: width, y: along };
-  along -= height;
-  if (along < width) return { x: width - along, y: height };
-  along -= width;
-  return { x: 0, y: height - along };
+/** Somewhere across the field, clear of the side edges: where an enemy appears or which bit of wall it heads for. */
+export function laneX(source: { rng: number }): number {
+  return LANE_MARGIN + random(source) * (ARENA.width - 2 * LANE_MARGIN);
 }

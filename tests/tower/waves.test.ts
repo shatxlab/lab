@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ARENA } from "@/lib/tower/sim/balance";
-import { buildSpawns, edgePoint, isBossWave, waveDuration, waveRoster } from "@/lib/tower/sim/waves";
+import { ARENA, LANE_MARGIN } from "@/lib/tower/sim/balance";
+import { buildSpawns, isBossWave, laneX, waveDuration, waveRoster } from "@/lib/tower/sim/waves";
 
 const total = (wave: number) => Object.values(waveRoster(wave)).reduce((sum, count) => sum + count, 0);
 
@@ -44,16 +44,13 @@ describe("buildSpawns", () => {
   });
 });
 
-describe("edgePoint", () => {
-  it("always lands on the arena's border", () => {
+describe("laneX", () => {
+  it("stays clear of the side edges", () => {
     const source = { rng: 1 };
     for (let index = 0; index < 200; index += 1) {
-      const { x, y } = edgePoint(source);
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(x).toBeLessThanOrEqual(ARENA.width);
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(y).toBeLessThanOrEqual(ARENA.height);
-      expect(x === 0 || x === ARENA.width || y === 0 || y === ARENA.height).toBe(true);
+      const x = laneX(source);
+      expect(x).toBeGreaterThanOrEqual(LANE_MARGIN);
+      expect(x).toBeLessThanOrEqual(ARENA.width - LANE_MARGIN);
     }
   });
 });

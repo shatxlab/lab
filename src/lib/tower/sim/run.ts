@@ -4,8 +4,10 @@ import {
   ENEMIES,
   MAX_CALTROPS,
   RICOCHET_RANGE,
+  LANE_MARGIN,
   TOWER,
   WALL_HP,
+  WALL_Y,
   WAVE_CLEAR_HEAL,
   BASE,
   hpScale,
@@ -14,7 +16,7 @@ import {
 import { random } from "./random";
 import { towerStats, type TowerStats } from "./stats";
 import { emptyPerks, emptyUpgrades, rollChoices } from "./upgrades";
-import { buildSpawns, edgePoint } from "./waves";
+import { buildSpawns, laneX } from "./waves";
 import type { Arrow, Effect, EffectKind, Enemy, EnemyKind, PerkLevels, Run, UpgradeId } from "./types";
 
 /** The fixed tick the page steps the sim with, so every device plays the same game. */
@@ -24,6 +26,8 @@ export const STEP = 1 / 60;
 const ARROW_REACH = 3;
 /** Radians between the arrows of one multishot. */
 const MULTISHOT_SPREAD = 0.1;
+/** The archer only faces the field: never back over the castle, never flat along the wall. */
+const AIM_LIMIT = 0.1;
 const DUST = "#d9c8a0";
 
 export function createRun(seed: number, perks: PerkLevels = emptyPerks()): Run {
@@ -70,8 +74,7 @@ export function step(run: Run, dt: number): void {
   run.waveTime += dt;
   while (run.spawns.length > 0 && run.spawns[0].at <= run.waveTime) {
     const spawn = run.spawns.shift()!;
-    const point = edgePoint(run);
-    spawnEnemy(run, spawn.kind, point.x, point.y);
+    spawnEnemy(run, spawn.kind, laneX(run), 0);
   }
   run.hp = Math.min(tower.maxHp, run.hp + tower.regen * dt);
   run.volleyLeft = Math.max(0, run.volleyLeft - dt);
@@ -93,8 +96,15 @@ export function step(run: Run, dt: number): void {
 
 /** The player is holding a finger (or the mouse button) on this spot: face it and keep shooting. */
 export function aimAt(run: Run, x: number, y: number): void {
-  run.aim = Math.atan2(y - TOWER.y, x - TOWER.x);
+  run.aim = fieldAngle(x, y);
   run.firing = true;
+}
+
+/** The angle from the tower to a point, turned back to face the field if it points behind the wall. */
+function fieldAngle(x: number, y: number): number {
+  const angle = Math.atan2(y - TOWER.y, x - TOWER.x);
+  if (angle > 0) return angle > Math.PI / 2 ? -Math.PI + AIM_LIMIT : -AIM_LIMIT;
+  return clamp(angle, -Math.PI + AIM_LIMIT, -AIM_LIMIT);
 }
 
 /** The finger lifted: stop shooting, keep facing the same way. */
@@ -126,7 +136,7 @@ export function castVolley(run: Run, x: number, y: number): boolean {
   }
   addEffect(run, "mark", centerX, centerY, tower.volleyRadius, 0.9, "#ffffff");
   run.volleyLeft = tower.volleyCooldown;
-  run.aim = Math.atan2(centerY - TOWER.y, centerX - TOWER.x);
+  run.aim = fieldAngle(centerX, centerY);
   return true;
 }
 
@@ -193,7 +203,7 @@ function finishWave(run: Run, tower: TowerStats): void {
   offerChoices(run);
 }
 
-function spawnEnemy(run: Run, kind: EnemyKind, x: number, y: number): Enemy {
+function spawnEnemy(run: Run, kind: EnemyKind, x: number, y: number, targetX = laneX(run)): Enemy {
   const def = ENEMIES[kind];
   const hp = def.hp * hpScale(run.wave);
   const enemy: Enemy = {
@@ -201,6 +211,7 @@ function spawnEnemy(run: Run, kind: EnemyKind, x: number, y: number): Enemy {
     kind,
     x,
     y,
+    targetX,
     hp,
     maxHp: hp,
     radius: def.radius,
@@ -347,27 +358,28 @@ function moveEnemies(run: Run, tower: TowerStats, dt: number): void {
     }
     if (enemy.hp <= 0) continue;
 
-    const dx = TOWER.x - enemy.x;
-    const dy = TOWER.y - enemy.y;
-    const distance = Math.hypot(dx, dy);
-    const reach = TOWER.radius + enemy.radius;
-    if (distance > reach) {
-      const move = Math.min(currentSpeed(run, enemy, tower) * dt, distance - reach);
+    if (!atWall(enemy)) {
+      const dx = enemy.targetX - enemy.x;
+      const dy = WALL_Y - enemy.radius - enemy.y;
+      const distance = Math.max(1e-6, Math.hypot(dx, dy));
+      const move = Math.min(currentSpeed(run, enemy, tower) * dt, distance);
       enemy.x += (dx / distance) * move;
       enemy.y += (dy / distance) * move;
       if (enemy.flying) {
         // Bats weave side to side on their way in.
         enemy.phase += dt * 4;
-        const weave = Math.cos(enemy.phase) * 28 * dt * Math.min(1, (distance - reach) / 60);
+        const weave = Math.cos(enemy.phase) * 28 * dt * Math.min(1, distance / 60);
         enemy.x += (-dy / distance) * weave;
         enemy.y += (dx / distance) * weave;
       }
+      enemy.x = clamp(enemy.x, enemy.radius, ARENA.width - enemy.radius);
+      enemy.y = Math.min(enemy.y, WALL_Y - enemy.radius);
     } else {
       enemy.attackTimer -= dt;
       if (enemy.attackTimer <= 0) {
         enemy.attackTimer += enemy.attackEvery;
         run.hp -= enemy.damage;
-        addEffect(run, "puff", enemy.x + (dx / distance) * enemy.radius, enemy.y + (dy / distance) * enemy.radius, 6, 0.3, "#ffffff");
+        addEffect(run, "puff", enemy.x, enemy.y + enemy.radius * 0.8, 6, 0.3, "#ffffff");
       }
     }
 
@@ -377,13 +389,18 @@ function moveEnemies(run: Run, tower: TowerStats, dt: number): void {
         enemy.summonTimer += BOSS_SUMMON.every;
         for (let index = 0; index < BOSS_SUMMON.count; index += 1) {
           const angle = (index / BOSS_SUMMON.count) * Math.PI * 2 + enemy.phase;
-          const x = clamp(enemy.x + Math.cos(angle) * (enemy.radius + 12), 0, ARENA.width);
-          const y = clamp(enemy.y + Math.sin(angle) * (enemy.radius + 12), 0, ARENA.height);
-          spawnEnemy(run, "grunt", x, y);
+          const x = clamp(enemy.x + Math.cos(angle) * (enemy.radius + 12), LANE_MARGIN, ARENA.width - LANE_MARGIN);
+          const y = clamp(enemy.y + Math.sin(angle) * (enemy.radius + 12), 0, WALL_Y - 30);
+          spawnEnemy(run, "grunt", x, y, clamp(enemy.targetX + (x - enemy.x) * 2, LANE_MARGIN, ARENA.width - LANE_MARGIN));
         }
       }
     }
   }
+}
+
+/** Up against the wall, or against the tower where it juts out of the wall. */
+function atWall(enemy: Enemy): boolean {
+  return enemy.y + enemy.radius >= WALL_Y - 0.01 || Math.hypot(enemy.x - TOWER.x, enemy.y - TOWER.y) <= TOWER.radius + enemy.radius;
 }
 
 function currentSpeed(run: Run, enemy: Enemy, tower: TowerStats): number {

@@ -50,7 +50,7 @@ export interface TowerText {
 export const TOWER_TEXT: Record<AppLang, TowerText> = {
   en: {
     title: "Lone Tower",
-    tagline: "One archer, one tower, enemies from every side. Aim, shoot, hold out as long as you can.",
+    tagline: "One archer on the castle tower, and the woods full of enemies. Aim, shoot, hold the wall as long as you can.",
     howTo: [
       "Hold a finger on the field and your archer shoots that way.",
       "Tap Volley, then tap the field to rain arrows there.",
@@ -115,7 +115,7 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
   },
   ru: {
     title: "Одинокая башня",
-    tagline: "Один лучник, одна башня, враги со всех сторон. Цельтесь, стреляйте и держитесь сколько сможете.",
+    tagline: "Один лучник на башне замка, а лес полон врагов. Цельтесь, стреляйте и держите стену сколько сможете.",
     howTo: [
       "Держите палец на поле, и лучник стреляет в ту сторону.",
       "Нажмите «Залп», затем коснитесь поля, чтобы обрушить туда стрелы.",

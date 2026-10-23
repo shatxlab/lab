@@ -1,15 +1,23 @@
 import type { EnemyKind, PerkId, UpgradeId } from "./types";
 
-/** The field in world units: a phone-shaped portrait arena with the tower in the middle. */
+/**
+ * The field in world units, a phone-shaped portrait arena. Enemies come out of
+ * the woods along the top and march down to the castle wall across the bottom;
+ * the archer's tower stands on the middle of that wall.
+ */
 export const ARENA = { width: 360, height: 640 } as const;
-export const TOWER = { x: 180, y: 330, radius: 24 } as const;
+/** The wall's front face: anything that reaches it is hitting the castle. */
+export const WALL_Y = 560;
+export const TOWER = { x: 180, y: WALL_Y, radius: 26 } as const;
+/** Enemies keep this far from the side edges, both where they appear and where they head. */
+export const LANE_MARGIN = 16;
 
 export const BASE = {
   maxHp: 100,
   damage: 3.5,
   reload: 0.32,
-  range: 200,
-  arrowSpeed: 430,
+  range: 330,
+  arrowSpeed: 520,
   critChance: 0.05,
   critMultiplier: 2,
   volleyArrows: 10,
@@ -39,11 +47,11 @@ export interface EnemyDef {
 }
 
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
-  grunt: { hp: 10, speed: 26, radius: 9, damage: 4, attackEvery: 1, flying: false, gold: 1, color: "#6fbf5a" },
-  runner: { hp: 6, speed: 56, radius: 7, damage: 3, attackEvery: 0.8, flying: false, gold: 1, color: "#f2c443" },
-  brute: { hp: 45, speed: 15, radius: 14, damage: 12, attackEvery: 1.4, flying: false, gold: 3, color: "#8a63c9" },
-  bat: { hp: 8, speed: 40, radius: 8, damage: 3, attackEvery: 0.9, flying: true, gold: 2, color: "#4a4466" },
-  boss: { hp: 120, speed: 11, radius: 24, damage: 14, attackEvery: 2, flying: false, gold: 25, color: "#d9534f" },
+  grunt: { hp: 10, speed: 34, radius: 9, damage: 4, attackEvery: 1, flying: false, gold: 1, color: "#6fbf5a" },
+  runner: { hp: 6, speed: 70, radius: 7, damage: 3, attackEvery: 0.8, flying: false, gold: 1, color: "#f2c443" },
+  brute: { hp: 45, speed: 20, radius: 14, damage: 12, attackEvery: 1.4, flying: false, gold: 3, color: "#8a63c9" },
+  bat: { hp: 8, speed: 50, radius: 8, damage: 3, attackEvery: 0.9, flying: true, gold: 2, color: "#4a4466" },
+  boss: { hp: 120, speed: 14, radius: 24, damage: 14, attackEvery: 2, flying: false, gold: 25, color: "#d9534f" },
 };
 
 /** Seconds between a boss's calls for help, and how many grunts answer. */

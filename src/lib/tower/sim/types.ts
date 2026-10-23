@@ -35,6 +35,8 @@ export interface Enemy {
   kind: EnemyKind;
   x: number;
   y: number;
+  /** Where along the wall it is heading. */
+  targetX: number;
   hp: number;
   maxHp: number;
   radius: number;

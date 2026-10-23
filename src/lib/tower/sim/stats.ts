@@ -35,7 +35,7 @@ export function towerStats(upgrades: UpgradeLevels, perks: PerkLevels): TowerSta
     regen: upgrades.regen,
     damage: BASE.damage * damageMultiplier,
     reload: BASE.reload * 0.88 ** upgrades.reload,
-    range: BASE.range + 20 * upgrades.range,
+    range: BASE.range + 40 * upgrades.range,
     arrowSpeed: BASE.arrowSpeed,
     multishot: 1 + upgrades.multishot,
     pierce: upgrades.pierce,

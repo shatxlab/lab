@@ -5,7 +5,7 @@
  * device pixel ratio and `drawRun` adds the arena fit on top, so nothing
  * here has to think about screen size.
  */
-import { ARENA, ENEMIES, TOWER } from "../sim/balance";
+import { ARENA, ENEMIES, TOWER, WALL_Y } from "../sim/balance";
 import { random } from "../sim/random";
 import { stats } from "../sim/run";
 import type { Caltrop, Effect, Enemy, Run, VolleyArrow } from "../sim/types";
@@ -21,11 +21,16 @@ export interface View {
 }
 
 const COLORS = {
-  outside: "#6ea552",
+  forest: "#3d6e33",
+  canopy: "#4f8a3f",
+  canopyLight: "#62a04e",
   grass: "#8cc56b",
   tuft: "#79b35a",
   flower: "#f4e9a6",
-  clearing: "#d3bb86",
+  courtyard: "#cdbd94",
+  cobble: "#bfae84",
+  wall: "#aaa294",
+  wallTop: "#c4bdb0",
   stone: "#b9b2a6",
   stoneDark: "#8c8478",
   merlon: "#d2cbbe",
@@ -70,6 +75,38 @@ interface Tuft {
   flower: boolean;
 }
 
+interface Tree {
+  x: number;
+  y: number;
+  radius: number;
+}
+
+interface House {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  roof: string;
+}
+
+// The town behind the wall, two houses either side of the tower.
+const HOUSES: House[] = [
+  { x: 14, y: 590, width: 62, height: 34, roof: "#b5523b" },
+  { x: 86, y: 602, width: 46, height: 28, roof: "#3f6fa0" },
+  { x: 228, y: 602, width: 46, height: 28, roof: "#b5523b" },
+  { x: 284, y: 590, width: 62, height: 34, roof: "#3f6fa0" },
+];
+
+// The woods the enemies come out of, along the top edge.
+const TREES: Tree[] = (() => {
+  const source = { rng: 7 };
+  const trees: Tree[] = [];
+  for (let x = -14; x < ARENA.width + 20; x += 20 + random(source) * 8) {
+    trees.push({ x, y: 2 + random(source) * 10, radius: 14 + random(source) * 7 });
+  }
+  return trees;
+})();
+
 // The same meadow every time: a fixed seed, not the run's.
 const TUFTS: Tuft[] = (() => {
   const source = { rng: 20261022 };
@@ -77,26 +114,35 @@ const TUFTS: Tuft[] = (() => {
   while (tufts.length < 70) {
     const x = random(source) * ARENA.width;
     const y = random(source) * ARENA.height;
-    if (Math.hypot(x - TOWER.x, y - TOWER.y) < 70) continue;
+    if (y > WALL_Y - 12 || y < 24) continue;
     tufts.push({ x, y, size: 3 + random(source) * 4, flower: random(source) < 0.2 });
   }
   return tufts;
 })();
 
 export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, time: number): void {
-  ctx.fillStyle = COLORS.outside;
-  ctx.fillRect(0, 0, view.width, view.height);
+  // Past the arena's edges the woods carry on above the wall and the courtyard below it.
+  const wallOnScreen = view.offsetY + WALL_Y * view.scale;
+  ctx.fillStyle = COLORS.forest;
+  ctx.fillRect(0, 0, view.width, wallOnScreen);
+  ctx.fillStyle = COLORS.courtyard;
+  ctx.fillRect(0, wallOnScreen, view.width, view.height - wallOnScreen);
   ctx.save();
   ctx.translate(view.offsetX, view.offsetY);
   ctx.scale(view.scale, view.scale);
+  // The wall runs the full width of the screen, not just the arena.
+  const left = -view.offsetX / view.scale;
+  const right = (view.width - view.offsetX) / view.scale;
 
   drawGround(ctx, run);
+  drawCastle(ctx, left, right);
   for (const caltrop of run.caltrops) drawCaltrop(ctx, caltrop);
   for (const effect of run.effects) if (effect.kind === "mark") drawEffect(ctx, effect);
   for (const enemy of run.enemies) if (!enemy.flying) drawEnemy(ctx, enemy, time);
   drawTower(ctx, run, time);
   for (const arrow of run.arrows) drawArrow(ctx, arrow.x, arrow.y, Math.atan2(arrow.vy, arrow.vx), arrow.crit ? COLORS.crit : COLORS.shaft);
   for (const enemy of run.enemies) if (enemy.flying) drawEnemy(ctx, enemy, time);
+  drawTreeline(ctx);
   for (const volley of run.volleys) drawVolleyArrow(ctx, volley);
   for (const effect of run.effects) if (effect.kind !== "mark") drawEffect(ctx, effect);
 
@@ -105,7 +151,7 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, tim
 
 function drawGround(ctx: CanvasRenderingContext2D, run: Run): void {
   ctx.fillStyle = COLORS.grass;
-  ctx.fillRect(0, 0, ARENA.width, ARENA.height);
+  ctx.fillRect(0, 0, ARENA.width, WALL_Y);
   for (const tuft of TUFTS) {
     if (tuft.flower) {
       circle(ctx, tuft.x, tuft.y, tuft.size * 0.45, COLORS.flower);
@@ -121,17 +167,59 @@ function drawGround(ctx: CanvasRenderingContext2D, run: Run): void {
     }
     ctx.stroke();
   }
-  circle(ctx, TOWER.x, TOWER.y, TOWER.radius + 26, COLORS.clearing);
-
-  // A faint ring where the archer can reach.
+  // A faint arc where the archer's arrows run out.
   ctx.save();
   ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 6]);
   ctx.beginPath();
-  ctx.arc(TOWER.x, TOWER.y, stats(run).range, 0, Math.PI * 2);
+  ctx.arc(TOWER.x, TOWER.y, stats(run).range, Math.PI, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
+}
+
+function drawCastle(ctx: CanvasRenderingContext2D, left: number, right: number): void {
+  ctx.fillStyle = COLORS.courtyard;
+  ctx.fillRect(left, WALL_Y, right - left, ARENA.height - WALL_Y + 400);
+  // Cobbles: a loose grid of small flat stones.
+  ctx.fillStyle = COLORS.cobble;
+  for (let y = WALL_Y + 22; y < ARENA.height + 40; y += 9) {
+    for (let x = left + ((y / 9) % 2) * 6; x < right; x += 12) ctx.fillRect(x, y, 7, 4);
+  }
+  for (const house of HOUSES) {
+    ellipse(ctx, house.x + house.width / 2 + 3, house.y + house.height / 2 + 4, house.width / 2 + 2, house.height / 2, COLORS.shadow);
+    ctx.fillStyle = house.roof;
+    ctx.fillRect(house.x, house.y, house.width, house.height);
+    // Two roof slopes meeting at the ridge: the lower one a shade darker.
+    ctx.fillStyle = shade(house.roof, -0.18);
+    ctx.fillRect(house.x, house.y + house.height / 2, house.width, house.height / 2);
+    ctx.strokeStyle = shade(house.roof, -0.35);
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(house.x, house.y, house.width, house.height);
+  }
+
+  // The wall: a walkway with battlements along the front face.
+  ctx.fillStyle = COLORS.wall;
+  ctx.fillRect(left, WALL_Y, right - left, 16);
+  ctx.fillStyle = COLORS.wallTop;
+  ctx.fillRect(left, WALL_Y + 4, right - left, 8);
+  ctx.fillStyle = COLORS.shadow;
+  ctx.fillRect(left, WALL_Y + 16, right - left, 4);
+  for (let x = Math.floor(left / 16) * 16; x < right; x += 16) {
+    ctx.fillStyle = COLORS.merlon;
+    ctx.fillRect(x + 2, WALL_Y - 3, 9, 7);
+    ctx.strokeStyle = COLORS.stoneDark;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 2, WALL_Y - 3, 9, 7);
+  }
+}
+
+function drawTreeline(ctx: CanvasRenderingContext2D): void {
+  for (const tree of TREES) circle(ctx, tree.x + 2, tree.y + 5, tree.radius, COLORS.forest);
+  for (const tree of TREES) {
+    circle(ctx, tree.x, tree.y, tree.radius, COLORS.canopy);
+    circle(ctx, tree.x - tree.radius * 0.3, tree.y - tree.radius * 0.3, tree.radius * 0.45, COLORS.canopyLight);
+  }
 }
 
 function drawTower(ctx: CanvasRenderingContext2D, run: Run, time: number): void {
@@ -204,7 +292,7 @@ function drawTower(ctx: CanvasRenderingContext2D, run: Run, time: number): void 
 function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy, time: number): void {
   const def = ENEMIES[enemy.kind];
   const { x, y, radius } = enemy;
-  const facing = Math.atan2(TOWER.y - y, TOWER.x - x);
+  const facing = Math.atan2(WALL_Y - y, enemy.targetX - x);
 
   if (enemy.flying) {
     ellipse(ctx, x + 8, y + 14, radius * 0.8, radius * 0.45, COLORS.shadow);

@@ -175,15 +175,15 @@ export const TOOLS: readonly ToolEntry[] = [
     },
     title: { en: "Lone Tower", ru: "Одинокая башня" },
     description: {
-      en: "Hold a lone archer tower against waves from every side: aim and shoot with your finger, rain volleys, pick an upgrade after each wave, and buy perks with the gold.",
-      ru: "Удержите одинокую башню лучника от волн врагов со всех сторон: цельтесь и стреляйте пальцем, обрушивайте залпы, выбирайте улучшение после каждой волны и покупайте бонусы за золото.",
+      en: "Hold the castle from its archer tower as waves march out of the woods: aim and shoot with your finger, rain volleys, pick an upgrade after each wave, and buy perks with the gold.",
+      ru: "Защитите замок с башни лучника от волн врагов из леса: цельтесь и стреляйте пальцем, обрушивайте залпы, выбирайте улучшение после каждой волны и покупайте бонусы за золото.",
     },
     keywords:
       "tower defense archer arrows waves roguelike upgrades casual arcade башня лучник стрелы волны защита улучшения аркада",
     seo: {
       title: "Lone Tower — a casual archer tower defense",
       description:
-        "Defend a lone archer tower against endless waves: aim and shoot, rain volleys of arrows, pick upgrades, beat your best wave. Free, offline, made for phones.",
+        "Defend the castle from its archer tower against endless waves: aim and shoot, rain volleys of arrows, pick upgrades, beat your best wave. Free, offline, made for phones.",
     },
   },
 ];

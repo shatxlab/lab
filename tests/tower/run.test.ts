@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE, ENEMIES, TOWER, WALL_HP } from "@/lib/tower/sim/balance";
+import { BASE, ENEMIES, TOWER, WALL_HP, WALL_Y } from "@/lib/tower/sim/balance";
 import { aimAt, castVolley, chooseUpgrade, createRun, giveUp, holdFire, stats, step, STEP } from "@/lib/tower/sim/run";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { emptyPerks, emptyUpgrades } from "@/lib/tower/sim/upgrades";
@@ -13,6 +13,7 @@ function enemyAt(run: Run, x: number, y: number, kind: EnemyKind = "grunt", over
     kind,
     x,
     y,
+    targetX: x,
     hp: def.hp,
     maxHp: def.hp,
     radius: def.radius,
@@ -89,7 +90,7 @@ describe("step", () => {
 
   it("only shoots while the player holds, and only as far as the bow reaches", () => {
     const run = quietRun();
-    const far = enemyAt(run, TOWER.x, TOWER.y - 300, "grunt", { speed: 0 });
+    const far = enemyAt(run, TOWER.x, TOWER.y - 500, "grunt", { speed: 0 });
     runFor(run, 1);
     expect(run.arrows).toHaveLength(0);
     aimAt(run, far.x, far.y);
@@ -105,13 +106,31 @@ describe("step", () => {
     const run = quietRun();
     enemyAt(run, TOWER.x, 10, "grunt", { speed: 0 });
     run.upgrades.multishot = 2;
-    aimAt(run, TOWER.x + 100, TOWER.y);
+    aimAt(run, TOWER.x, TOWER.y - 100);
     step(run, STEP);
     const angles = run.arrows.map((arrow) => Math.atan2(arrow.vy, arrow.vx)).sort((a, b) => a - b);
     expect(angles).toHaveLength(3);
-    expect(angles[1]).toBeCloseTo(0);
-    expect(angles[0]).toBeCloseTo(-angles[2]);
-    expect(angles[2]).toBeGreaterThan(0);
+    expect(angles[1]).toBeCloseTo(-Math.PI / 2);
+    expect(angles[2] - angles[1]).toBeCloseTo(angles[1] - angles[0]);
+  });
+
+  it("never turns the archer back over the castle", () => {
+    const run = quietRun();
+    aimAt(run, TOWER.x + 100, TOWER.y + 50);
+    expect(run.aim).toBeLessThan(0);
+    expect(run.aim).toBeGreaterThan(-Math.PI / 2);
+    aimAt(run, TOWER.x - 100, TOWER.y + 50);
+    expect(run.aim).toBeLessThan(-Math.PI / 2);
+  });
+
+  it("marches enemies down to their spot on the wall", () => {
+    const run = quietRun();
+    run.reloadLeft = Infinity;
+    const grunt = enemyAt(run, 40, 0, "grunt", { targetX: 80 });
+    runFor(run, 30);
+    expect(grunt.x).toBeCloseTo(80);
+    expect(grunt.y + grunt.radius).toBeCloseTo(WALL_Y);
+    expect(run.hp).toBeLessThan(BASE.maxHp);
   });
 
   it("lets enemies at the wall wear it down until the run ends", () => {
@@ -176,7 +195,7 @@ describe("castVolley", () => {
     const plain = quietRun();
     plain.reloadLeft = Infinity;
     enemyAt(plain, TOWER.x, 10, "grunt", { speed: 0 });
-    castVolley(plain, 300, 600);
+    castVolley(plain, 300, 400);
     runFor(plain, 1.5);
     expect(plain.caltrops).toHaveLength(0);
 
@@ -184,7 +203,7 @@ describe("castVolley", () => {
     spiked.reloadLeft = Infinity;
     spiked.upgrades.caltrops = 1;
     enemyAt(spiked, TOWER.x, 10, "grunt", { speed: 0 });
-    castVolley(spiked, 300, 600);
+    castVolley(spiked, 300, 400);
     runFor(spiked, 1.5);
     expect(spiked.caltrops).toHaveLength(BASE.volleyArrows);
   });

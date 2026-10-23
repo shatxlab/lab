@@ -1,5 +1,6 @@
 import { ERAS } from '@/lib/tycoon/data/eras'
 import { DAYS_PER_MONTH } from '@/lib/tycoon/sim/balance'
+import { STAGES } from '@/lib/tycoon/data/stages'
 import { startProject } from '@/lib/tycoon/sim/project'
 import { createInitialState } from '@/lib/tycoon/sim/state'
 import type { Employee, GameState, Product, Role, Skills } from '@/lib/tycoon/sim/types'
@@ -54,10 +55,13 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
 
 /**
  * A seeded state with the random starting staff replaced by `employees`, money to start projects, and no rivals, so a product's
- * users depend on nothing but itself. Tests about competition add rivals back.
+ * users depend on nothing but itself. Tests about competition add rivals back. The studio has left the café: it is in its
+ * garage, at the Garage startup stage (tests about the café start from `createInitialState`).
  */
 export function makeState(employees: Employee[] = [], seed = 1): GameState {
   const state = createInitialState(seed)
+  state.offices[0].kind = 'garage'
+  state.stage = GARAGE_STAGE
   state.employees = employees
   // Starting a product costs a budget; tests about projects shouldn't have to find the money first.
   state.money = 100_000
@@ -65,6 +69,9 @@ export function makeState(employees: Employee[] = [], seed = 1): GameState {
   state.rivalProducts = []
   return state
 }
+
+/** The Garage startup stage, where `makeState` puts the studio. */
+export const GARAGE_STAGE = STAGES.findIndex((s) => s.id === 'garage')
 
 /** The first day of the era with this index (see ERAS), for tests about later technology. */
 export function dayOfEra(index: number): number {

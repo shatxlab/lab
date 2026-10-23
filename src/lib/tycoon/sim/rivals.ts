@@ -45,6 +45,7 @@ import { levelForSkill } from './careers'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
 import { trailingIncome } from './economy'
 import { buildingName, closeSale, inGarage, openableRegions } from './offices'
+import { studioNameOf } from './founding'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
 import { interestSince, revenueForUsers } from './products'
@@ -252,7 +253,7 @@ export interface Standing {
 /** The industry ranking: every studio by what its products earn a day, the biggest first. */
 export function standings(state: GameState): Standing[] {
   const yourBest = [...state.products].sort((a, b) => b.users - a.users)[0]
-  const rows: Standing[] = [{ id: 0, name: 'Your studio', revenue: trailingIncome(state), reputation: state.reputation, best: yourBest?.name ?? null }]
+  const rows: Standing[] = [{ id: 0, name: studioNameOf(state), revenue: trailingIncome(state), reputation: state.reputation, best: yourBest?.name ?? null }]
   for (const rival of state.rivals) {
     const products = state.rivalProducts.filter((p) => p.rivalId === rival.id)
     const best = [...products].sort((a, b) => b.users - a.users)[0]

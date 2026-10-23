@@ -9,7 +9,7 @@ import { makeEmployee, makeProduct, makeState } from './helpers'
 function officeWith(count: number): GameState {
   const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })])
   state.offices[0].kind = 'office'
-  state.stage = 4
+  state.stage = 5
   state.day = 2000
   state.money = 1_000_000
   state.products = Array.from({ length: count }, (_, i) => makeProduct({ id: 10 + i, name: `P${i}`, releaseDay: 100, reach: 20_000, users: 20_000, updates: [{ day: 1900 }] }))

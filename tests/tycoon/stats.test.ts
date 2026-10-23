@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { getMilestone, MILESTONES, rewardLabel } from '@/lib/tycoon/data/milestones'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { RESEARCH } from '@/lib/tycoon/data/research'
-import { DAYS_PER_MONTH, HISTORY_LIMIT, OFFICE_KINDS, START_MONEY } from '@/lib/tycoon/sim/balance'
+import { DAYS_PER_MONTH, HISTORY_LIMIT, OFFICE_KINDS, CAFE_START_MONEY } from '@/lib/tycoon/sim/balance'
 import { historyWithNow, recordHistory, sampleNow } from '@/lib/tycoon/sim/history'
 import { achievedMilestones, checkMilestones } from '@/lib/tycoon/sim/milestones'
 import { shipProject, startProject } from '@/lib/tycoon/sim/project'
@@ -15,8 +15,9 @@ describe('history', () => {
   it('starts with a sample of day 0', () => {
     const state = createInitialState(1)
     expect(state.history).toHaveLength(1)
-    expect(state.history[0]).toMatchObject({ day: 0, money: START_MONEY, income: 0 })
-    expect(state.history[0].burn).toBeCloseTo((state.employees.reduce((s, e) => s + e.salary, 0) + OFFICE_KINDS.garage.rent) / DAYS_PER_MONTH)
+    expect(state.history[0]).toMatchObject({ day: 0, money: CAFE_START_MONEY, income: 0 })
+    // At the café the founders draw nothing: the coffee is all it costs.
+    expect(state.history[0].burn).toBeCloseTo(OFFICE_KINDS.cafe.rent / DAYS_PER_MONTH)
   })
 
   it('gains one sample per month, taken after that day\'s costs', () => {

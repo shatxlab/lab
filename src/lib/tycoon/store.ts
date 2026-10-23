@@ -9,7 +9,8 @@ import { acceptBuyout, declineBuyout, retireStudio } from '@/lib/tycoon/sim/exit
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
-import { assignTeam, getOffice, inGarage, moveOut, openOffice, transfer } from '@/lib/tycoon/sim/offices'
+import { assignTeam, getOffice, inGarage, moveOut, moveToGarage, openOffice, transfer } from '@/lib/tycoon/sim/offices'
+import { foundStudio } from '@/lib/tycoon/sim/founding'
 import { assignProduct, queueFeatures, setDirection } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
@@ -73,6 +74,7 @@ export type Dialog =
   | { kind: 'game-over' }
   /** A bigger company wants to buy the studio. */
   | { kind: 'offer' }
+  | { kind: 'founding' }
 
 export interface Toast {
   id: number
@@ -142,6 +144,10 @@ export interface Store {
   train(employeeId: number, discipline: Discipline): Result
   teamOuting(): Result
   fire(employeeId: number): Result
+  /** Names you and the studio, at the start. */
+  found(yourName: string, studioName: string): Result
+  /** Leaves the café for a garage. */
+  moveToGarage(): Result
   /** Leaves the garage for a real office. */
   moveOut(): Result
   /** Opens another office (in `region`, by default the first it could be in) and shows it. */
@@ -483,6 +489,14 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     fire(employeeId) {
       return changed(logged(() => decisions.fire(state, employeeId), () => fire(state, employeeId)))
+    },
+
+    found(yourName, studioName) {
+      return changed(logged(() => decisions.found(yourName, studioName), () => foundStudio(state, yourName, studioName)))
+    },
+
+    moveToGarage() {
+      return cue(changed(logged(() => decisions.moveToGarage(state), () => moveToGarage(state))), 'upgrade')
     },
 
     moveOut() {

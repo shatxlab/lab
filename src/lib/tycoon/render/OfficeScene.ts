@@ -10,6 +10,7 @@ import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '
 import { blinkingAt, hash, momentAt } from '../render-support/activity'
 import { KEEPSAKE_TOP, keepsakeFor, keepsakeX } from '../render-support/keepsakes'
 import { POSE_PAD, STEP_CYCLE, WALK_CYCLE, type Pose } from '../render-support/poses'
+import { CafeCrowd, CAFE_DOOR_X, CAFE_LANE, COUNTER_LEFT, COUNTER_TOP, SEATS, type CafeFigure } from '../render-support/cafe'
 import { pathLength, pathToDoors, pointAlong, routePath, walkoutPath, type Point } from '../render-support/walkout'
 import { chooseErrand, chooseSpot, nextOutAt, poseAtSpot, SPOTS, spotFree, stayFor, type Errand, type Spot, type Stay } from '../render-support/breaks'
 import { BOOKSHELF_HEIGHT, bookshelfRects } from '../render-support/bookshelf'
@@ -44,6 +45,15 @@ const WHITE = 0xf4f4f4
 const WOOD = 0xef7d57
 const RUST = 0xb13e53
 const SAND = 0xffcd75
+// And the café's.
+const TEAL = 0x257179
+const NAVY = 0x29366f
+const PLUM = 0x5d275d
+const SKY = 0x41a6f6
+const CYAN = 0x73eff7
+const LEAF = 0x38b764
+const LIME = 0xa7f070
+const NIGHT = 0x1a1c2c
 
 const colorNumber = (hex: string): number => Number.parseInt(hex.slice(1), 16)
 
@@ -182,6 +192,37 @@ class EmployeeSprite {
       // a little blue book
       this.marker.rect(-1, -1, 7, 6).fill(0x14141f).rect(0, 0, 5, 4).fill(0x6ec6ff).rect(0, 1, 5, 1).fill(0xf4f4f4)
     }
+  }
+}
+
+/** Someone who is not on the team: the café's barista or one of its guests, drawn where the café's crowd says. */
+class Figure {
+  readonly container = new Container()
+  private readonly body: Sprite
+  private readonly width: number
+  private readonly height: number
+  private drawn = ''
+
+  constructor(private readonly look: (pose?: Pose, blink?: boolean) => Texture) {
+    const texture = look()
+    this.width = texture.width
+    this.height = texture.height
+    this.body = new Sprite(texture)
+    this.container.addChild(this.body)
+  }
+
+  /** Stands (or sits) them with their feet where `figure` says, facing its way, mirrored in place as an employee is. */
+  draw(figure: CafeFigure, blink: boolean): void {
+    const key = `${figure.pose ?? ''}|${blink}|${figure.rightwards}`
+    if (key !== this.drawn) {
+      this.drawn = key
+      this.body.texture = this.look(figure.pose, blink)
+      const left = this.body.texture.width === this.width ? 0 : POSE_PAD.left
+      this.body.scale.x = figure.rightwards ? 1 : -1
+      this.body.x = figure.rightwards ? -left : this.width + left
+    }
+    this.container.position.set(Math.round(figure.x - this.width / 2), figure.feet - (this.height - 1))
+    this.container.alpha = figure.alpha
   }
 }
 
@@ -389,6 +430,12 @@ export class OfficeScene {
   /** What the room currently shows, to notice a switch, a move out of the garage, or a new theme. */
   private shown: { id: number; kind: OfficeKind; theme: number } | null = null
   private readonly live: Popup[] = []
+  /** The café: its barista behind the counter, the counter in front of them, and its guests; empty anywhere else. */
+  private readonly baristaLayer = new Container()
+  private readonly counter = new Container()
+  private readonly guestLayer = new Container()
+  private crowd = new CafeCrowd()
+  private readonly figures = new Map<number, Figure>()
   private readonly cat = new Container()
   private readonly catBlink = new Graphics()
   private readonly dog = new Container()
@@ -468,7 +515,7 @@ export class OfficeScene {
     this.popups.addChild(this.dateChip)
 
     // People sit beside their desks, so they're drawn over them, hands reaching onto the keyboard.
-    this.world.addChild(this.background, this.board, this.officeBack, this.wall, this.chairs, this.desks, this.people, this.cat, this.dog)
+    this.world.addChild(this.background, this.baristaLayer, this.counter, this.board, this.officeBack, this.wall, this.chairs, this.desks, this.guestLayer, this.people, this.cat, this.dog)
 
     // The office is drawn into a texture, so its sprites can't take clicks themselves:
     // hit-test the shown image instead.
@@ -515,8 +562,9 @@ export class OfficeScene {
         return
       }
     }
-    // The garage's two rows of two still show the whole garage: its door, pegboard and shelves.
-    const next = sceneLayout(this.areaW, this.areaH, this.bottom, this.shown?.kind === 'garage' ? MIN_VISIBLE_WIDTH : MIN_WIDTH[this.arrangement])
+    // The garage's two rows of two still show the whole garage: its door, pegboard and shelves; the café its door and counter.
+    const small = this.shown !== null && this.shown.kind !== 'office'
+    const next = sceneLayout(this.areaW, this.areaH, this.bottom, small ? MIN_VISIBLE_WIDTH : MIN_WIDTH[this.arrangement])
     const before = this.window
     this.window = next
     this.scale = next.scale
@@ -575,7 +623,8 @@ export class OfficeScene {
       this.placeDateChip()
     }
 
-    // The pets idle: the cat blinks now and then, the dog gives its tail a short wag.
+    // The pets idle: the cat blinks now and then, the dog gives its tail a short wag. The café has no dog.
+    this.dog.visible = office.kind !== 'cafe'
     this.catBlink.visible = (this.time + 1200) % 4200 < 150
     const wag = (this.time + 400) % 6500
     this.dogTail.rotation = wag < 800 ? Math.sin((wag / 800) * Math.PI * 3) * 0.35 : 0
@@ -597,6 +646,7 @@ export class OfficeScene {
     }
     for (const [desk, stations] of this.stations) for (const station of stations) station.update(modes.get(desk) ?? 'off', this.time)
     this.drawBoard(office)
+    this.updateCafe(office, dtMs, speed)
     if (this.options.breaks || this.options.standup) this.updateOutings(dtMs, this.options.breaks?.() ?? false, this.options.standup?.() ?? false)
     this.updatePopups(dtMs, speed)
     this.updateLeaving(dtMs)
@@ -860,6 +910,11 @@ export class OfficeScene {
     this.clearSprites()
     this.shown = { id: office.id, kind: office.kind, theme: office.theme }
     this.rebuildBackground()
+    this.crowd = new CafeCrowd()
+    for (const figure of this.figures.values()) figure.container.destroy({ children: true })
+    this.figures.clear()
+    for (const child of this.counter.removeChildren()) child.destroy({ children: true })
+    if (office.kind === 'cafe') this.counter.addChild(this.buildCounter())
 
     let seats = this.seatMaps.get(office.id)
     if (!seats) {
@@ -885,13 +940,146 @@ export class OfficeScene {
   private rebuildBackground(): void {
     for (const child of this.background.removeChildren()) child.destroy({ children: true })
     if (!this.shown) return
-    this.background.addChild(this.shown.kind === 'garage' ? this.buildGarage() : this.buildBackground(this.shown.theme))
+    const { kind, theme } = this.shown
+    this.background.addChild(kind === 'cafe' ? this.buildCafe() : kind === 'garage' ? this.buildGarage() : this.buildBackground(theme))
   }
 
   /** The window's edges in scene coordinates: the walls and floor have to reach this far. */
   private reach(): { left: number; right: number; bottom: number } {
     const { left, top, width, height } = this.window
     return { left, right: left + width, bottom: Math.max(top + height, FLOOR_TOP) }
+  }
+
+  /** The café's barista and guests go about their business while the game runs, and stand still while it is paused. */
+  private updateCafe(office: Office, dtMs: number, speed: number): void {
+    if (office.kind !== 'cafe') return
+    if (speed > 0) this.crowd.update(dtMs)
+    const shown = [{ figure: this.crowd.barista(), layer: this.baristaLayer }, ...this.crowd.guestsNow().map((figure) => ({ figure, layer: this.guestLayer }))]
+    const looks = new Set(shown.map(({ figure }) => figure.look))
+    for (const [look, sprite] of this.figures) {
+      if (looks.has(look)) continue
+      sprite.container.destroy({ children: true })
+      this.figures.delete(look)
+    }
+    for (const { figure, layer } of shown) {
+      let sprite = this.figures.get(figure.look)
+      if (!sprite) {
+        sprite = new Figure((pose, blink) => this.atlas.character(figure.look, pose, blink))
+        this.figures.set(figure.look, sprite)
+        layer.addChild(sprite.container)
+      }
+      sprite.draw(figure, speed > 0 && blinkingAt(figure.look, this.time))
+    }
+    // Back to front, so the guest nearer the window is behind the one nearer the desks.
+    this.guestLayer.children.sort((a, b) => a.y + a.height - (b.y + b.height))
+  }
+
+  /**
+   * The café: a green wall over wood panelling, a glass door and a shop window onto the street, a chalkboard menu and
+   * shelves of cups behind the counter, lamps on long cords, a checked floor, and a little table by the window.
+   */
+  private buildCafe(): Container {
+    const { atlas } = this
+    const bg = new Container()
+    const { left, right, bottom } = this.reach()
+    const width = right - left
+    const from = (period: number) => Math.floor(left / period) * period - period
+    const g = new Graphics()
+
+    // The wall, striped, over panelling with a rail along its top and a skirting board below.
+    g.rect(left, WALL_TOP, width, FLOOR_TOP - WALL_TOP).fill(TEAL)
+    for (let x = from(6); x < right; x += 6) g.rect(x, WALL_TOP, 1, 44)
+    g.fill({ color: NAVY, alpha: 0.35 })
+    g.rect(left, 92, width, FLOOR_TOP - 92).fill(RUST)
+    for (let x = from(16); x < right; x += 16) g.rect(x, 94, 1, 15)
+    g.fill(PLUM)
+    g.rect(left, 91, width, 1).fill(SAND).rect(left, 92, width, 1).fill(WOOD)
+    g.rect(left, FLOOR_TOP - 3, width, 3).fill(NIGHT)
+
+    // The glass door, with an "open" sign hung on it.
+    const door = CAFE_DOOR_X - 13
+    g.rect(door - 2, 76, 30, FLOOR_TOP - 76).fill(NIGHT)
+    g.rect(door, 78, 26, FLOOR_TOP - 78).fill(WOOD)
+    g.rect(door + 3, 81, 20, 18).fill(SKY).rect(door + 3, 81, 20, 3).fill(CYAN)
+    g.rect(door + 7, 86, 12, 5).fill(WHITE).rect(door + 8, 87, 10, 3).fill(RUST)
+    g.rect(door + 21, 98, 2, 4).fill(SAND)
+
+    // The shop window: the street outside, a hedge along it, and the sill.
+    g.rect(62, 58, 90, 38).fill(NIGHT)
+    g.rect(64, 60, 41, 34).rect(107, 60, 43, 34).fill(SKY)
+    g.rect(64, 60, 41, 6).rect(107, 60, 43, 6).fill(CYAN)
+    g.rect(64, 86, 41, 8).rect(107, 86, 43, 8).fill(LEAF)
+    for (let x = 65; x < 150; x += 7) g.rect(x, 84, 4, 3)
+    g.fill(LIME)
+    g.rect(60, 96, 94, 3).fill(SAND).rect(60, 99, 94, 1).fill(WOOD)
+
+    // The chalkboard menu over the counter: a cup, and lines of what there is.
+    g.rect(178, 54, 58, 26).fill(WOOD).rect(180, 56, 54, 22).fill(NIGHT)
+    g.rect(184, 61, 6, 5).rect(190, 62, 2, 2).fill(WHITE)
+    for (const [y, w] of [[60, 30], [64, 24], [68, 34], [72, 20]] as const) g.rect(196, y, w, 1).fill({ color: WHITE, alpha: 0.85 })
+    for (const y of [60, 64, 68, 72]) g.rect(230, y, 2, 1).fill(SAND)
+
+    // A shelf of cups and jars behind the counter.
+    g.rect(176, 84, 66, 2).fill(WOOD)
+    for (let x = 180; x < 206; x += 5) g.rect(x, 80, 3, 4)
+    g.fill(WHITE)
+    g.rect(212, 77, 5, 7).rect(220, 78, 5, 6).fill(SAND).rect(212, 77, 5, 2).rect(220, 78, 5, 2).fill(RUST)
+    g.rect(230, 79, 6, 5).fill(LEAF)
+
+    // Lamps on long cords.
+    for (const x of [86, 128, 206]) g.rect(x, WALL_TOP, 1, 6).fill(NIGHT).rect(x - 3, WALL_TOP + 6, 7, 3).fill(SAND).rect(x - 1, WALL_TOP + 9, 3, 1).fill(WHITE)
+
+    // A checked floor.
+    g.rect(left, FLOOR_TOP, width, bottom - FLOOR_TOP).fill(BLOCK)
+    for (let y = FLOOR_TOP; y < bottom; y += 8) {
+      for (let x = from(16) + ((y - FLOOR_TOP) % 16 === 0 ? 0 : 8); x < right; x += 16) g.rect(x, y, 8, Math.min(8, bottom - y))
+    }
+    g.fill(MORTAR)
+
+    // The tables, each a marble top on one leg, with a stool on the side the guest sits.
+    const decor: [FrameName, number, number, boolean?][] = [
+      ['plant', 2, 97],
+      ['picture', 6, 70],
+    ]
+    for (const { x, feet, rightwards } of SEATS) {
+      const table = rightwards ? x + 8 : x - 26
+      g.rect(x - 4, feet - 11, 9, 2).fill(WOOD).rect(x - 4, feet - 9, 9, 1).fill(RUST)
+      g.rect(x - 3, feet - 8, 1, 8).rect(x + 3, feet - 8, 1, 8).fill(NIGHT)
+      g.rect(table, feet - 15, 18, 2).fill(WHITE).rect(table, feet - 13, 18, 1).fill(BLOCK)
+      g.rect(table + 8, feet - 12, 2, 11).rect(table + 4, feet - 1, 10, 1).fill(NIGHT)
+      decor.push(['mug', table + 5, feet - 22, !rightwards])
+    }
+    bg.addChild(g)
+
+    for (const [name, x, y, flip] of decor) bg.addChild(placed(atlas.frame(name), x, y, flip))
+    return bg
+  }
+
+  /** The café counter, in front of the barista: a wooden front, a till, the espresso machine and a stack of cups. */
+  private buildCounter(): Graphics {
+    const g = new Graphics()
+    const right = COUNTER_LEFT + 80
+    g.rect(COUNTER_LEFT, COUNTER_TOP, right - COUNTER_LEFT, 3).fill(SAND)
+    g.rect(COUNTER_LEFT, COUNTER_TOP + 3, right - COUNTER_LEFT, (CAFE_LANE + 1) - COUNTER_TOP - 3).fill(WOOD)
+    for (let x = COUNTER_LEFT + 4; x < right - 4; x += 12) g.rect(x, COUNTER_TOP + 6, 8, 14)
+    g.fill(RUST)
+    g.rect(COUNTER_LEFT, (CAFE_LANE + 1) - 2, right - COUNTER_LEFT, 2).fill(NIGHT)
+    // The till at the end of the counter, its screen towards the barista.
+    g.rect(172, COUNTER_TOP - 7, 10, 7).fill(DARK).rect(173, COUNTER_TOP - 6, 6, 3).fill(CYAN)
+    // The espresso machine, side on: cups warming on its top, a chrome body on a dark base, two portafilters with
+    // their handles out to the side and a cup under each, and the steam wand.
+    g.rect(207, COUNTER_TOP - 19, 3, 2).rect(212, COUNTER_TOP - 19, 3, 2).rect(217, COUNTER_TOP - 19, 3, 2).fill(WHITE)
+    g.rect(205, COUNTER_TOP - 17, 22, 1).fill(DARK)
+    g.rect(205, COUNTER_TOP - 16, 22, 8).fill(BLOCK).rect(205, COUNTER_TOP - 16, 22, 1).fill(WHITE).rect(205, COUNTER_TOP - 9, 22, 1).fill(MORTAR)
+    g.rect(207, COUNTER_TOP - 14, 18, 1).fill({ color: WHITE, alpha: 0.6 })
+    g.rect(205, COUNTER_TOP - 8, 22, 1).fill(DARK)
+    for (const x of [208, 217]) g.rect(x, COUNTER_TOP - 7, 3, 2).rect(x + 3, COUNTER_TOP - 7, 3, 1).fill(NIGHT).rect(x, COUNTER_TOP - 4, 3, 3).fill(WHITE)
+    g.rect(205, COUNTER_TOP - 8, 2, 8).fill(MORTAR)
+    g.rect(205, COUNTER_TOP - 1, 22, 1).fill(NIGHT)
+    g.rect(228, COUNTER_TOP - 13, 1, 9).rect(228, COUNTER_TOP - 5, 2, 1).fill(NIGHT)
+    // A stack of cups to go.
+    g.rect(234, COUNTER_TOP - 9, 5, 9).fill(WHITE).rect(234, COUNTER_TOP - 9, 5, 2).fill(SAND)
+    return g
   }
 
   /**
@@ -1012,7 +1200,7 @@ export class OfficeScene {
    * always in two rows of two, with the pets below, like a corner of an office.
    */
   private arrangementFor(kind: OfficeKind | undefined): Arrangement {
-    return kind === 'garage' ? 'tall' : (this.options.arrangement?.() ?? 'wide')
+    return kind === 'garage' || kind === 'cafe' ? 'tall' : (this.options.arrangement?.() ?? 'wide')
   }
 
   /** (Re)builds partitions, chairs and desks for the given number of desks; a garage has no partitions. */
@@ -1056,7 +1244,7 @@ export class OfficeScene {
 
       const deskX = px + (right ? 40 : 19)
       this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
-      if (this.shown?.kind === 'garage' || !partitionInFront(this.arrangement, i >> 1, desks)) {
+      if (this.shown?.kind !== 'office' || !partitionInFront(this.arrangement, i >> 1, desks)) {
         this.desks.addChild(freestandingDesk(right)).position.set(deskX, py + 11)
       }
       if (!vacancy || hasComputer(vacancy)) {
@@ -1072,6 +1260,8 @@ export class OfficeScene {
         this.stations.set(i, stations)
       }
       if (vacancy) this.dressVacantDesk(vacancy, deskX, py, right)
+      // At the café everyone has a cup beside the laptop.
+      else if (this.shown?.kind === 'cafe') this.desks.addChild(placed(atlas.frame('mug'), deskX + (right ? -1 : 10), py + 18))
     }
   }
 

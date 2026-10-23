@@ -1,11 +1,12 @@
+import { formatMoney } from '@/lib/tycoon/format'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
-import { EU_OFFICE_COST, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
+import { CAFE_JOBS, EU_OFFICE_COST, GARAGE_DEPOSIT, GARAGE_READY_MONEY, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
 import { adjustMorale } from './morale'
 import { fail, isBuilder, OK, REGIONS, type Employee, type GameState, type Office, type Project, type Region, type Result } from './types'
 
 /** Journey stage at which the garage can be left behind, and at which more offices can open (indexes into STAGES). */
-export const MOVE_OUT_STAGE = 1
-export const NEW_OFFICE_STAGE = 3
+export const MOVE_OUT_STAGE = 2
+export const NEW_OFFICE_STAGE = 4
 
 export function officeSpec(office: Office): OfficeSpec {
   return OFFICE_KINDS[office.kind]
@@ -29,6 +30,7 @@ export function floorOf(state: GameState, office: Office): number {
 
 /** "Garage", "HQ", "Europe", or with more floors "HQ 2", "Europe 3": the building and the floor. */
 export function officeName(state: GameState, office: Office): string {
+  if (office.kind === 'cafe') return 'Café'
   if (office.kind === 'garage') return 'Garage'
   const region = regionOf(office)
   const name = buildingName(region)
@@ -131,17 +133,41 @@ export function productInWork(state: GameState, productId: number): boolean {
   return activeProjects(state).some(({ project }) => project.kind !== 'new' && project.parentId === productId)
 }
 
+/** True while the two founders still work from the café. */
+export function inCafe(state: GameState): boolean {
+  return state.offices.some((o) => o.kind === 'cafe')
+}
+
+/** Why the founders can't move from the café into the garage yet, or null when they can. */
+export function moveToGarageBlocker(state: GameState): string | null {
+  if (!inCafe(state)) return 'Already out of the café'
+  if (state.contractsDone < CAFE_JOBS) return `Deliver ${CAFE_JOBS} jobs for clients first`
+  return state.money < GARAGE_READY_MONEY ? `Save ${formatMoney(GARAGE_READY_MONEY)} first: the deposit, and a month for two new people` : null
+}
+
+/** Leaves the café for a garage: the same two and their project, with room for two more. */
+export function moveToGarage(state: GameState): Result {
+  const blocker = moveToGarageBlocker(state)
+  if (blocker) return fail(blocker)
+  const cafe = state.offices.find((o) => o.kind === 'cafe')!
+  state.money -= GARAGE_DEPOSIT
+  cafe.kind = 'garage'
+  adjustMorale(state, OFFICE_UPGRADE_MORALE)
+  return OK
+}
+
 /** Why the studio can't move out of its garage now, or null when it can. */
 export function moveOutBlocker(state: GameState): string | null {
+  if (inCafe(state)) return 'Move into the garage first'
   if (!state.offices.some((o) => o.kind === 'garage')) return 'Already in an office'
   if (state.stage < MOVE_OUT_STAGE) return 'The studio is not ready yet'
   if (state.signatureId === null) return 'Have a breakout hit first'
   return state.money < MOVE_OUT_COST ? 'Not enough money' : null
 }
 
-/** True while the studio is still in its garage. */
+/** True while the studio is still small: in its garage, or before that at the café. */
 export function inGarage(state: GameState): boolean {
-  return state.offices.some((o) => o.kind === 'garage')
+  return state.offices.some((o) => o.kind !== 'office')
 }
 
 /** Leaves the garage for a real office: the same team and project, with room for twelve. */
@@ -168,7 +194,7 @@ export function newOfficeCost(state: GameState, region: Region = openableRegions
 /** Why another floor can't be added now (in `region`, by default the first it could), or null when it can. */
 export function openOfficeBlocker(state: GameState, region?: Region): string | null {
   if (state.offices.length >= MAX_OFFICES) return 'Both buildings are full'
-  if (state.offices.some((o) => o.kind === 'garage')) return 'Move out of the garage first'
+  if (inGarage(state)) return 'Move out of the garage first'
   if (state.stage < NEW_OFFICE_STAGE) return 'The studio is not ready yet'
   const where = region ?? openableRegions(state)[0]
   if (!where || !openableRegions(state).includes(where)) return `${buildingName(where ?? 'us')} has all its ${REGION_OFFICE_LIMIT} floors`

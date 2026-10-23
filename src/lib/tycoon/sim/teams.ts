@@ -151,7 +151,7 @@ export function teamDay(state: GameState): void {
     }
     office.idleSince ??= state.day
     const product = ownedProduct(state, office)
-    if (!product || office.kind === 'garage' || teamOf(state, office).length === 0 || productInWork(state, product.id)) continue
+    if (!product || office.kind !== 'office' || teamOf(state, office).length === 0 || productInWork(state, product.id)) continue
     if (state.day < nextReleaseDay(state, office, product)) continue
     startRelease(state, office, product)
   }

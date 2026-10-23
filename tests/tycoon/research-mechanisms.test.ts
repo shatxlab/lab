@@ -59,7 +59,7 @@ describe('audience study', () => {
   const studyState = () => {
     const state = makeState([builder(1)])
     state.money = 1e7
-    state.stage = 1
+    state.stage = 2
     state.research.done.push('marketing_dept', 'user_research')
     return state
   }

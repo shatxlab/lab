@@ -190,7 +190,7 @@ describe('team commands', () => {
     expect(store.hire(store.state.candidates[0].id).ok).toBe(false) // the garage is full
     expect(store.fire(999).ok).toBe(false)
     store.state.money = 0
-    store.state.stage = 1
+    store.state.stage = 2
     expect(store.moveOut().ok).toBe(false)
     expect(store.openOffice().ok).toBe(false)
     expect(store.version.value).toBe(version)
@@ -202,7 +202,7 @@ describe('team commands', () => {
     expect(store.state.employees).toHaveLength(1)
 
     store.state.money = 1_000_000
-    store.state.stage = 3
+    store.state.stage = 4
     store.state.signatureId = 1
     expect(store.moveOut().ok).toBe(true)
     expect(deskCount(store.state)).toBe(12)

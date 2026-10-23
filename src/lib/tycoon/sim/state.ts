@@ -5,10 +5,12 @@ import { isKnownTrait } from '@/lib/tycoon/data/traits'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { STAGES } from '@/lib/tycoon/data/stages'
-import { LEVELS, OFFICE_KINDS, START_MONEY } from './balance'
+import { CAFE_START_MONEY, LEVELS, OFFICE_KINDS } from './balance'
 import { refreshContracts } from './contracts'
 import { createRivals, rivalsArrive } from './rivals'
-import { ALL_ROLES, generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
+import { ALL_ROLES, generateAnalyst, generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
+import { rollStudioName } from './founding'
+import { rand } from './rng'
 import { sampleNow } from './history'
 import { initialMarket } from './market'
 import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } from './types'
@@ -17,16 +19,17 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } 
  * Version 2 replaced fading income with users and bugs, version 3 brought offices, version 4 moved bug
  * fixing to a developer and tester pair, hid an update's new bugs for a while and added selling products.
  * Version 5 made the two people who start the studio founders: they never leave and draw half pay.
- * Version 3 and 4 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`); older ones can't be carried over.
+ * Version 6 put a café before the garage, a journey stage of its own, so every later stage moved up one.
+ * Version 3 to 5 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`); older ones can't be carried over.
  */
-export const STATE_VERSION = 5
+export const STATE_VERSION = 6
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
     version: STATE_VERSION,
     rng: seed >>> 0,
     day: 0,
-    money: START_MONEY,
+    money: CAFE_START_MONEY,
     reputation: 0,
     nextId: 1,
     employees: [],
@@ -68,15 +71,17 @@ export function createInitialState(seed: number): GameState {
     dayWork: [],
     events: [],
   }
-  const garage = { id: state.nextId++, kind: 'garage' as const, theme: 0, region: 'us' as const, project: null }
-  state.offices.push(garage)
-  for (const role of ['developer', 'designer'] as const) {
-    const person = { ...generateEmployee(state, role), officeId: garage.id, founder: true }
-    state.employees.push({ ...person, salary: salaryOf(person, state.day) })
+  // You and a friend start at a café table: you study users, your friend builds.
+  const cafe = { id: state.nextId++, kind: 'cafe' as const, theme: 0, region: 'us' as const, project: null }
+  state.offices.push(cafe)
+  for (const person of [generateAnalyst(state), generateEmployee(state, 'developer')]) {
+    const founder = { ...person, officeId: cafe.id, founder: true }
+    state.employees.push({ ...founder, salary: salaryOf(founder, state.day) })
   }
   refreshCandidates(state)
   refreshContracts(state)
   createRivals(state)
+  state.studioName = rollStudioName(state.rivals.map((r) => r.name), () => rand(state))
   state.history.push(sampleNow(state))
   return state
 }
@@ -324,6 +329,7 @@ function validState(v: unknown): v is GameState {
     v.surveyed.every((id) => typeof id === 'string') &&
     isNum(v.launchesSinceHit) &&
     (v.signatureId === null || isNum(v.signatureId)) &&
+    (v.studioName === undefined || typeof v.studioName === 'string') &&
     isNum(v.debtDays) &&
     isNum(v.lastEventDay) &&
     (v.recentEvents === undefined || (Array.isArray(v.recentEvents) && v.recentEvents.every((id) => typeof id === 'string'))) &&
@@ -408,7 +414,13 @@ function upgradeFromV3(raw: unknown): unknown {
 
 /** Version 4 to 5 only changes who the first two employees are, which needs the sim's salary rules: see `markFounders`. */
 function upgradeFromV4(raw: unknown): unknown {
-  return isObj(raw) && raw.version === 4 ? { ...raw, version: STATE_VERSION } : raw
+  return isObj(raw) && raw.version === 4 ? { ...raw, version: 5 } : raw
+}
+
+/** Version 5 to 6: the café became the first stage of the journey, so a studio from before is a stage further on. */
+function upgradeFromV5(raw: unknown): unknown {
+  if (!isObj(raw) || raw.version !== 5) return raw
+  return { ...raw, version: STATE_VERSION, stage: isNum(raw.stage) ? raw.stage + 1 : raw.stage }
 }
 
 /** The people hired on day 0 in a save from before founders existed become the founders. */
@@ -456,7 +468,7 @@ export function deserialize(json: string): GameState | null {
   try {
     const raw: unknown = JSON.parse(json)
     const from = isObj(raw) && typeof raw.version === 'number' ? raw.version : 0
-    const parsed = dropRemovedContent(upgradeFromV4(upgradeFromV3(raw)))
+    const parsed = dropRemovedContent(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw))))
     if (!validState(parsed)) return null
     const state: GameState = { ...parsed, dayWork: [], events: [] }
     if (from === 3) rivalsArrive(state, true) // the market grew since version 3: the studios due by now move in

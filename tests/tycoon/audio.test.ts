@@ -269,7 +269,7 @@ describe('the store asks for sounds at the right moments', () => {
     expect(sfx.played).toEqual(['hire']) // nothing for the failures
 
     store.state.money = 1_000_000
-    store.state.stage = 3
+    store.state.stage = 4
     store.openOffice()
     expect(sfx.played).toEqual(['hire', 'upgrade'])
   })
@@ -324,7 +324,7 @@ describe('the store asks for sounds at the right moments', () => {
     state.events.push({ type: 'notice', text: 'You bought Somebody.', sound: 'deal' })
     state.events.push({ type: 'breakout', productId: 1 })
     state.events.push({ type: 'era', era: 2 })
-    state.events.push({ type: 'stage', stage: 1 })
+    state.events.push({ type: 'stage', stage: 2 })
     for (let i = 0; i < 6; i++) store.tick(250)
     expect(sfx.played).toEqual(['deal', 'hit', 'era', 'milestone'])
     for (const name of ['hit', 'era', 'deal'] as const) expect(SOUNDS[name].length).toBeGreaterThan(0)

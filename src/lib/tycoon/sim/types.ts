@@ -336,7 +336,8 @@ export type SimEvent =
   | { type: 'notice'; text: string; sound?: NoticeSound }
 
 /** A garage at first; a real office after the move. More offices can open later. */
-export type OfficeKind = 'garage' | 'office'
+/** Where the studio works: a café table at first, then the garage, then rented floors. */
+export type OfficeKind = 'cafe' | 'garage' | 'office'
 
 /** One place of work: its own team (the employees with its id) and its own project. */
 export interface Office {
@@ -344,7 +345,7 @@ export interface Office {
   kind: OfficeKind
   /** Colour scheme of the room, so offices tell apart at a glance. */
   theme: number
-  /** Where it is: the garage and the first office are in the US. Absent in older saves, which are all US. */
+  /** Where it is: the café, the garage and the first office are in the US. Absent in older saves, which are all US. */
   region?: Region
   project: Project | null
   /** The product this floor's team looks after, releasing it as `direction` says (`sim/teams.ts`). */
@@ -453,6 +454,8 @@ export interface GameState {
   launchesSinceHit: number
   /** The studio's first hit, which it becomes known for; null until it has one. */
   signatureId: number | null
+  /** What the studio is called, chosen at the start; absent in older saves. */
+  studioName?: string
   /** Consecutive days with negative money. */
   debtDays: number
   /** Demand multiplier per product type id, around 1.0; applied when a product ships. */

@@ -2,7 +2,6 @@
 
 import type { Skills } from './types'
 
-export const START_MONEY = 8000
 export const DAYS_PER_MONTH = 30
 
 // Work
@@ -51,7 +50,7 @@ export const PROJECT_SIZES: Record<'small' | 'medium' | 'large' | 'flagship', Si
   small: { name: 'Small', work: 1, reach: 1, life: 1, reputation: 1, office: false, stage: 0 },
   medium: { name: 'Medium', work: 2, reach: 1.7, life: 1.25, reputation: 1.8, office: false, stage: 0 },
   large: { name: 'Large', work: 4, reach: 2.8, life: 1.6, reputation: 3.4, office: true, stage: 0 },
-  flagship: { name: 'Flagship', work: 8, reach: 4.8, life: 2, reputation: 6.4, office: true, stage: 2 },
+  flagship: { name: 'Flagship', work: 8, reach: 4.8, life: 2, reputation: 6.4, office: true, stage: 3 },
 }
 
 /** The halfway checkpoint of a Medium or bigger project comes up once overall progress passes this share. */
@@ -150,9 +149,9 @@ export const ACQUISITION_DAYS = 600
 export const ACQUISITION_FLOOR = 250000
 export const ACQUISITION_REPUTATION = 3
 /** Journey stage (index into STAGES) from which rivals can be absorbed: an established company, the same as for more offices. */
-export const ACQUISITION_STAGE = 3
+export const ACQUISITION_STAGE = 4
 /** Journey stage from which days at the top of the ranking count: an industry leader. */
-export const LEADER_STAGE = 4
+export const LEADER_STAGE = 5
 /** A day off the top costs this many of the days counted there, instead of starting the count again. */
 export const TOP_SLIP_DAYS = 3
 /**
@@ -534,10 +533,25 @@ export interface OfficeSpec {
   rent: number
 }
 
-export const OFFICE_KINDS: Record<'garage' | 'office', OfficeSpec> = {
+export const OFFICE_KINDS: Record<'cafe' | 'garage' | 'office', OfficeSpec> = {
+  /** A corner table: no rent, but the coffee. */
+  cafe: { name: 'Café', desks: 2, rent: 300 },
   garage: { name: 'Garage', desks: 4, rent: 150 },
   office: { name: 'Office', desks: 12, rent: 2400 },
 }
+
+// The café, where the two founders start
+/** What the two of you have saved when you start. */
+export const CAFE_START_MONEY = 2500
+/** The garage asks a deposit, and the money in the bank has to reach this first: the deposit and a month or so for two new people. */
+export const GARAGE_DEPOSIT = 1000
+export const GARAGE_READY_MONEY = 6000
+/** Client jobs the two of you deliver from the café before a garage is worth it: they are how the café pays. */
+export const CAFE_JOBS = 3
+/** Something happens at the café more often than at the studio later: from this day, this many days apart at least, with this chance a day. */
+export const CAFE_EVENT_MIN_DAY = 6
+export const CAFE_EVENT_COOLDOWN_DAYS = 15
+export const CAFE_EVENT_CHANCE_PER_DAY = 0.12
 
 /** Moving out of the garage into a real office. */
 export const MOVE_OUT_COST = 40000
@@ -559,5 +573,5 @@ export const SALE_REPUTATION_PENALTY = 3
 export const SALE_HIT_REPUTATION_PENALTY = 6
 
 // Founders
-/** The two people who start the studio draw this share of the market rate for their skills, in every era. */
+/** The two people who start the studio draw this share of the market rate for their skills, in every era: nothing in the café, where they live on savings. */
 export const FOUNDER_PAY_SHARE = 0.5

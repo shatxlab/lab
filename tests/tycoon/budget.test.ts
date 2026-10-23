@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BUDGET_PER_POINT, BUDGET_RESERVE_DAYS, DAYS_PER_MONTH, START_MONEY } from '@/lib/tycoon/sim/balance'
+import { BUDGET_PER_POINT, BUDGET_RESERVE_DAYS, DAYS_PER_MONTH, CAFE_START_MONEY } from '@/lib/tycoon/sim/balance'
 import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { budgetBlocker, growTarget, projectBudget, projectTarget, startProject, startUpdate } from '@/lib/tycoon/sim/project'
 import { createInitialState } from '@/lib/tycoon/sim/state'
@@ -21,9 +21,9 @@ describe('a project budget', () => {
     expect(Math.abs(medium - small * 2)).toBeLessThanOrEqual(50)
   })
 
-  it('is more than the garage starts with once a small product has a couple of features', () => {
+  it('is more than the café starts with once a small product has a couple of features', () => {
     const features = projectBudget(projectTarget('web_app', ['accounts', 'search'], 'new', 'small'))
-    expect(features).toBeGreaterThan(START_MONEY)
+    expect(features).toBeGreaterThan(CAFE_START_MONEY)
   })
 
   it('is paid when a new product starts', () => {

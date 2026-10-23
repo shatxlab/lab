@@ -95,7 +95,8 @@ export function pmOf(state: GameState, office: Office): Employee | undefined {
 /** Why this analyst can't become a product manager now, or null when they can. */
 export function pmBlocker(state: GameState, employee: Employee): string | null {
   if (employee.role !== 'analyst') return 'Only an analyst can become a product manager'
-  if (!isResearched(state, PM_RESEARCH)) return 'Research Product management first'
+  // A founder analyst needs no course in it: the studio is theirs to steer.
+  if (!employee.founder && !isResearched(state, PM_RESEARCH)) return 'Research Product management first'
   if (employee.level < ANALYST_MAX_LEVEL) return 'They need to be a senior analyst first'
   if ((employee.analysis ?? 0) < PM_MIN_ANALYSIS) return `Needs ${PM_MIN_ANALYSIS} analysis skill`
   const wait = PM_AFTER_DAYS - (state.day - employee.levelDay)

@@ -1,4 +1,4 @@
-import { TOP_SLIP_DAYS } from '@/lib/tycoon/sim/balance'
+import { CAFE_JOBS, GARAGE_READY_MONEY, TOP_SLIP_DAYS } from '@/lib/tycoon/sim/balance'
 import { trailingIncome } from '@/lib/tycoon/sim/economy'
 import { productRevenue } from '@/lib/tycoon/sim/products'
 import { playerRank, standings } from '@/lib/tycoon/sim/rivals'
@@ -41,14 +41,29 @@ const DAYS_AT_TOP = 360
 
 export const STAGES: readonly Stage[] = [
   {
+    id: 'cafe',
+    name: 'Two friends at a café',
+    blurb: 'You and a friend, two laptops and a corner table, taking whatever small jobs come along.',
+    unlocks: [],
+    goals: [
+      { id: 'cafe_jobs', label: `Deliver ${CAFE_JOBS} jobs for clients`, check: (s) => s.contractsDone >= CAFE_JOBS, progress: (s) => upTo(s.contractsDone, CAFE_JOBS) },
+      {
+        id: 'to_garage',
+        label: `Save $${count(GARAGE_READY_MONEY)} and move into a garage`,
+        check: (s) => s.offices.every((o) => o.kind !== 'cafe'),
+        progress: (s) => `$${upTo(Math.max(0, s.money), GARAGE_READY_MONEY)}`,
+      },
+    ],
+  },
+  {
     id: 'garage',
     name: 'Garage startup',
     blurb: 'A couple of people in a garage, making small things and trying to cover the rent.',
-    unlocks: [],
+    unlocks: ['A garage with four desks: room to hire two more people', 'Medium projects', 'Paying yourselves: half the market rate'],
     goals: [
       { id: 'ship_3', label: 'Ship 3 products', check: (s) => s.shippedCount >= 3, progress: (s) => upTo(s.shippedCount, 3) },
       { id: 'users_5k', label: 'Have 5,000 users on one product', check: (s) => mostUsers(s) >= 5000, progress: (s) => upTo(mostUsers(s), 5000) },
-      { id: 'client_jobs', label: 'Deliver 3 jobs for clients', check: (s) => s.contractsDone >= 3, progress: (s) => upTo(s.contractsDone, 3) },
+      { id: 'client_jobs', label: 'Deliver 5 jobs for clients', check: (s) => s.contractsDone >= 5, progress: (s) => upTo(s.contractsDone, 5) },
     ],
   },
   {
@@ -58,7 +73,7 @@ export const STAGES: readonly Stage[] = [
     unlocks: ['Moving out of the garage into a 12-desk office', 'Large projects, once you have moved'],
     goals: [
       { id: 'hit', label: 'Have a breakout hit (good launches make one likelier each time)', check: (s) => s.signatureId !== null },
-      { id: 'moved_out', label: 'Move into an office (needs the hit)', check: (s) => s.offices.every((o) => o.kind !== 'garage') },
+      { id: 'moved_out', label: 'Move into an office (needs the hit)', check: (s) => s.offices.every((o) => o.kind === 'office') },
     ],
   },
   {

@@ -34,6 +34,7 @@ export function featureLock(state: GameState, feature: Feature): string | null {
 /** Why a project size can't be started yet in this office (the first by default), or null when it can. */
 export function sizeLock(state: GameState, size: ProjectSize, office: Office = state.offices[0]): string | null {
   const spec = PROJECT_SIZES[size]
-  if (spec.office && office.kind === 'garage') return 'a real office'
+  if (spec.office && office.kind !== 'office') return 'a real office'
+  if (size !== 'small' && office.kind === 'cafe') return 'the garage'
   return state.stage >= spec.stage ? null : `a studio that is a ${getStage(spec.stage).name.toLowerCase()}`
 }

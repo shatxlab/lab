@@ -36,7 +36,7 @@ function richStore() {
   const state = createInitialState(9)
   state.money = 5_000_000
   state.day = 1500
-  state.stage = 3
+  state.stage = 4
   state.reputation = 80
   state.offices[0].kind = 'office'
   state.research.done.push(ANALYST_RESEARCH, PM_RESEARCH, ENTERPRISE_RESEARCH, LICENSING_RESEARCH, 'marketing_automation', 'incident_management')
@@ -175,7 +175,7 @@ describe('the tycoon screens render for a studio with everything in play', () =>
 
   it('the research dialog, with the audience study picker', () => {
     const store = richStore()
-    store.state.stage = 4
+    store.state.stage = 5
     const host = mount(store, <ResearchDialog />)
     expect(host.textContent).toContain('Audience study')
     expect(host.textContent).toContain('Enterprise sales')
@@ -183,7 +183,7 @@ describe('the tycoon screens render for a studio with everything in play', () =>
 
   it('the journey and milestones', () => {
     const store = richStore()
-    store.state.stage = 5
+    store.state.stage = 6
     const journey = mount(store, <JourneyTab />)
     expect(journey.textContent).toContain('Tech giant')
     act(() => root?.unmount())

@@ -15,7 +15,7 @@ import { makeEmployee, makeProduct, makeState, richState } from './helpers'
 function studio(seed = 5): GameState {
   const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 })], seed)
   state.offices[0].kind = 'office'
-  state.stage = 2
+  state.stage = 3
   state.money = 1_000_000
   return state
 }
@@ -48,7 +48,7 @@ describe('project sizes', () => {
     state.offices[0].kind = 'garage'
     expect(startProject(state, 'web_app', [], 'large')).toEqual({ ok: false, reason: 'Large projects need a real office' })
     state.offices[0].kind = 'office'
-    state.stage = 1
+    state.stage = 2
     expect(startProject(state, 'web_app', [], 'flagship')).toEqual({ ok: false, reason: 'Flagship projects need a studio that is a breakout studio' })
     expect(startProject(state, 'web_app', [], 'large').ok).toBe(true)
     expect(state.offices[0].project?.size).toBe('large')

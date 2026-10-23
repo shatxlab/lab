@@ -30,7 +30,7 @@ const builder = (id: number, officeId = 1) => ({ ...makeEmployee(id, { design: 4
 function twoOffices(): GameState {
   const state = makeState([builder(1)])
   state.offices[0].kind = 'office'
-  state.stage = 3
+  state.stage = 4
   state.money = 1e7
   openOffice(state)
   state.offices[1].region = 'us' // people move between offices of one region

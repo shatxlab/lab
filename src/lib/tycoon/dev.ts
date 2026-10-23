@@ -4,7 +4,7 @@ import { generateEmployee, ROLES } from '@/lib/tycoon/sim/hiring'
 import { freeDesks } from '@/lib/tycoon/sim/offices'
 import type { GameState } from '@/lib/tycoon/sim/types'
 
-const DEV_PARAMS = ['offices', 'money', 'rep', 'stage', 'clock'] as const
+const DEV_PARAMS = ['garage', 'offices', 'money', 'rep', 'stage', 'clock'] as const
 
 /** True when the URL asks for dev shortcuts; such sessions never read or write the real save. */
 export function hasDevParams(): boolean {
@@ -13,11 +13,16 @@ export function hasDevParams(): boolean {
 }
 
 /**
- * Dev-only shortcuts read from the URL: `?offices=2` (out of the garage into that many full offices),
- * `?money=1e6`, `?rep=60`, `?stage=3`. (`?clock=` is read by `devClock`.)
+ * Dev-only shortcuts read from the URL: `?garage` (out of the café into the garage, at its stage), `?offices=2` (out
+ * of the garage into that many full offices), `?money=1e6`, `?rep=60`, `?stage=3`. (`?clock=` is read by `devClock`.)
  */
 export function applyDevParams(state: GameState): void {
   const params = new URLSearchParams(location.search)
+
+  if (params.has('garage') && state.offices[0].kind === 'cafe') {
+    state.offices[0].kind = 'garage'
+    state.stage = Math.max(state.stage, STAGES.findIndex((s) => s.id === 'garage'))
+  }
 
   const offices = params.get('offices')
   if (offices !== null) {

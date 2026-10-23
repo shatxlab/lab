@@ -5,6 +5,7 @@ import { dailyIncome, monthlyBurn, monthlySalaries } from '@/lib/tycoon/sim/econ
 import { levelForSkill, primarySkill } from '@/lib/tycoon/sim/careers'
 import { fire, generateEmployee, hireCost, hiringOffice, ROLES, salaryOf } from '@/lib/tycoon/sim/hiring'
 import { getOffice } from '@/lib/tycoon/sim/offices'
+import { offerJob } from '@/lib/tycoon/sim/contracts'
 import { rivalFor } from '@/lib/tycoon/sim/rivals'
 import { estimateReach } from '@/lib/tycoon/sim/lifecycle'
 import { bugDensity, revenueForUsers, usersIn } from '@/lib/tycoon/sim/products'
@@ -586,6 +587,106 @@ export const RANDOM_EVENTS: readonly RandomEvent[] = [
   },
 ]
 
+/** The barista at the café, who gets to know the two of you. */
+export const BARISTA = 'Rosa'
+
+/** Your friend, the founder who builds. */
+const friendName = (s: GameState) => s.employees.find((e) => e.founder && e.role !== 'analyst' && e.role !== 'pm')?.name.split(' ')[0] ?? 'Your friend'
+
+/** What happens at the café, more often than the studio's events later on: `rollRandomEvent` draws only these there. */
+export const CAFE_EVENTS: readonly RandomEvent[] = [
+  {
+    id: 'cafe_lead',
+    title: 'A word from the barista',
+    weight: 2,
+    when: () => true,
+    text: () => `${BARISTA} slides your coffees over: "One of my regulars runs a bakery and needs someone for her website. I said I knew two people."`,
+    choices: ({ state }) => [
+      choice(state, {
+        label: 'Ask for her number',
+        note: 'a job on the board, paying a bit better',
+        apply: () => {
+          const job = offerJob(state, 1.25)
+          return `${job.client} wants ${job.title}: it is on the board.`
+        },
+      }),
+      choice(state, { label: 'Thank her, but you are busy', apply: () => `${BARISTA} shrugs and goes back to the espresso machine.` }),
+    ],
+  },
+  {
+    id: 'cafe_wifi',
+    title: 'The Wi-Fi is down',
+    weight: 1.5,
+    when: () => true,
+    text: () => 'The café router has given up again, and the barista has no idea when it will be back.',
+    choices: ({ state }) => [
+      choice(state, {
+        label: 'Two day passes at a coworking space',
+        cost: 80,
+        apply: () => 'A day among standing desks and kombucha taps, and the work goes on.',
+      }),
+      choice(state, {
+        label: 'Work offline',
+        note: 'work speed -50% for 4 days',
+        apply: () => {
+          addModifier(state, { source: 'cafe_wifi', stat: 'workSpeed', mult: 0.5, days: 4 })
+          return 'You tether to a phone for the important bits. Slow going.'
+        },
+      }),
+    ],
+  },
+  {
+    id: 'cafe_spill',
+    title: 'Coffee everywhere',
+    weight: 0.5,
+    when: () => true,
+    text: ({ state }) => `A latte tips over, all across ${friendName(state)}'s keyboard. The laptop goes dark.`,
+    choices: ({ state }) => [
+      choice(state, {
+        label: 'Buy a refurbished laptop',
+        cost: 350,
+        apply: () => `${friendName(state)} is back at it by the afternoon.`,
+      }),
+      choice(state, {
+        label: 'Dig out an old laptop',
+        note: 'work speed -20% for 12 days',
+        apply: () => {
+          addModifier(state, { source: 'cafe_spill', stat: 'workSpeed', mult: 0.8, days: 12 })
+          return 'It wheezes, but it boots.'
+        },
+      }),
+    ],
+  },
+  {
+    id: 'cafe_regular',
+    title: 'A curious regular',
+    weight: 1.5,
+    when: () => true,
+    text: () => 'A regular with a flat white leans over your table: "So what are you two building?"',
+    choices: ({ state }) => [
+      choice(state, {
+        label: 'Ask what they would pay for',
+        note: '+20 insight: what people want',
+        apply: () => {
+          state.insight += 20
+          return 'Half an hour later you have a page of notes about what people want.'
+        },
+      }),
+      choice(state, {
+        label: 'Pitch them your services',
+        note: 'they may know someone who needs a job done',
+        apply: () => {
+          if (rand(state) < 0.5) {
+            const job = offerJob(state)
+            return `They know someone: ${job.client} wants ${job.title}. It is on the board.`
+          }
+          return 'They nod politely and take their coffee to go.'
+        },
+      }),
+    ],
+  },
+]
+
 /**
  * Events offered at a point in a project rather than at random; `rollRandomEvent` decides when.
  * Their weight is unused.
@@ -622,7 +723,7 @@ export const CHECKPOINT_EVENTS: readonly RandomEvent[] = [
   },
 ]
 
-const BY_ID = new Map([...RANDOM_EVENTS, ...CHECKPOINT_EVENTS].map((e) => [e.id, e]))
+const BY_ID = new Map([...RANDOM_EVENTS, ...CAFE_EVENTS, ...CHECKPOINT_EVENTS].map((e) => [e.id, e]))
 
 export function getRandomEvent(id: string): RandomEvent | undefined {
   return BY_ID.get(id)

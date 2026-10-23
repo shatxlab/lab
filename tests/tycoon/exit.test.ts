@@ -12,6 +12,7 @@ import { makeProduct } from './helpers'
 /** A garage with a hit that earns well. */
 function garageWithHit(): GameState {
   const state = createInitialState(3)
+  state.offices[0].kind = 'garage'
   state.rivals = []
   state.rivalProducts = []
   state.products = [makeProduct({ id: 40, hit: true, users: 50_000, reach: 50_000 })]
@@ -77,7 +78,7 @@ describe('selling the studio', () => {
 
   it('stays open in a single rented floor, and is gone for good once the studio takes a second', () => {
     const state = garageWithHit()
-    state.stage = 3
+    state.stage = 4
     state.money = 1_000_000
     exitDay(state)
     expect(state.exit.pending).not.toBeNull()

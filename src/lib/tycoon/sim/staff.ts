@@ -34,7 +34,7 @@ import { monthlySalaries } from './economy'
 import { depart } from './knowledge'
 import { adjustMorale, clampMorale, moraleSpeed } from './morale'
 import { careerMorale } from './careers'
-import { officeOf } from './offices'
+import { inCafe, officeOf } from './offices'
 import { rand, randRange } from './rng'
 import { fail, OK, type Discipline, type Employee, type GameState, type ProjectSize, type Result } from './types'
 
@@ -181,6 +181,7 @@ export function outingCost(state: GameState): number {
 /** Why a team outing can't happen now, or null when it can. */
 export function outingBlocker(state: GameState): string | null {
   if (state.employees.length === 0) return 'Nobody to take'
+  if (inCafe(state)) return 'Not while you live on savings'
   const wait = OUTING_COOLDOWN_DAYS - (state.day - state.lastOutingDay)
   if (wait > 0) return `Again in ${wait} day${wait === 1 ? '' : 's'}`
   return state.money < outingCost(state) ? 'Not enough money' : null

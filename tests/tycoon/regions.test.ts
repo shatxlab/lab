@@ -28,7 +28,7 @@ const team = () => [makeEmployee(1, { design: 60, engineering: 60, qa: 60 }), ma
 function withEurope() {
   const state = makeState(team())
   state.offices[0].kind = 'office'
-  state.stage = 3
+  state.stage = 4
   state.money = 5_000_000
   state.day = 800
   openOffice(state)
@@ -39,7 +39,7 @@ describe('offices in two regions', () => {
   it('start in the US; Europe is a building of its own, offered first, and costs much more', () => {
     const state = makeState(team())
     state.offices[0].kind = 'office'
-    state.stage = 3
+    state.stage = 4
     state.money = 5_000_000
     expect(regionOf(state.offices[0])).toBe('us')
     expect(openableRegions(state)).toEqual(['eu', 'us'])

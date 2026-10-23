@@ -97,7 +97,7 @@ describe('a floor that looks after a product', () => {
 
   it("expanding meets Europe's data rules first, then localises", () => {
     const state = floorWithProduct()
-    state.stage = 3
+    state.stage = 4
     expect(openOffice(state, 'eu').ok).toBe(true)
     setDirection(state, state.offices[0].id, 'expand')
     run(state, TEAM_IDLE_DAYS + 1)
@@ -115,7 +115,7 @@ describe('a floor that looks after a product', () => {
     run(state, 30)
     expect(state.offices[0].project).toBeNull()
     state.offices[0].kind = 'office'
-    state.stage = 3
+    state.stage = 4
     openOffice(state, 'us')
     expect(assignProduct(state, state.offices[1].id, 50).ok).toBe(true)
     expect(state.offices[0].productId).toBeUndefined()

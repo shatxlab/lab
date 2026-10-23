@@ -19,9 +19,12 @@ describe('determinism', () => {
 })
 
 describe('createInitialState', () => {
-  it('starts with a developer, a designer, a hire pool, and no project', () => {
+  it('starts at a café with you (an analyst) and a developer friend, both founders, a hire pool, and no project', () => {
     const state = createInitialState(1)
-    expect(state.employees.map((e) => e.role).sort()).toEqual(['designer', 'developer'])
+    expect(state.offices.map((o) => o.kind)).toEqual(['cafe'])
+    expect(state.employees.map((e) => e.role).sort()).toEqual(['analyst', 'developer'])
+    expect(state.employees.every((e) => e.founder)).toBe(true)
+    expect(state.studioName).toBeTruthy()
     expect(state.candidates.length).toBeGreaterThan(0)
     expect(state.offices[0].project).toBeNull()
     expect(state.day).toBe(0)

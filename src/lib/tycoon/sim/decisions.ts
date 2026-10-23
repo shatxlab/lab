@@ -152,6 +152,14 @@ export const decisions = {
     return ['survey', `Studied ${getAudience(audienceId).name}`, { insight: Math.round(state.insight), audience: audienceId }]
   },
 
+  found(yourName: string, studioName: string): Decision {
+    return ['found', `Founded ${studioName.trim()}, with ${yourName.trim()} as its analyst`, { you: yourName.trim(), studio: studioName.trim() }]
+  },
+
+  moveToGarage(state: GameState): Decision {
+    return ['office.toGarage', 'Left the café for a garage', { money: Math.round(state.money), jobs: state.contractsDone }]
+  },
+
   moveOut(): Decision {
     return ['office.moveOut', 'Left the garage for an office']
   },

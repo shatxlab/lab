@@ -92,6 +92,14 @@ function makeOffer(state: GameState): ContractOffer {
   }
 }
 
+/** Puts one more job on the board straight away, past its usual limit, paying `payMult` times the going rate: a lead someone passed on. */
+export function offerJob(state: GameState, payMult = 1): ContractOffer {
+  const offer = makeOffer(state)
+  offer.pay = Math.round((offer.pay * payMult) / 50) * 50
+  state.contracts.push(offer)
+  return offer
+}
+
 /** The research that puts enterprise contracts on the board. */
 export const ENTERPRISE_RESEARCH = 'enterprise_sales'
 

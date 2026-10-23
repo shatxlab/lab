@@ -1,5 +1,8 @@
-import { getRandomEvent, RANDOM_EVENTS } from '@/lib/tycoon/data/events'
+import { CAFE_EVENTS, getRandomEvent, RANDOM_EVENTS } from '@/lib/tycoon/data/events'
 import {
+  CAFE_EVENT_CHANCE_PER_DAY,
+  CAFE_EVENT_COOLDOWN_DAYS,
+  CAFE_EVENT_MIN_DAY,
   EVENT_CHANCE_PER_DAY,
   EVENT_COOLDOWN_DAYS,
   EVENT_MIN_DAY,
@@ -7,7 +10,7 @@ import {
   INVESTOR_LIFELINE_DEBT_DAYS,
   ALPHA_PROGRESS,
 } from './balance'
-import { activeProjects } from './offices'
+import { activeProjects, inCafe } from './offices'
 import { rand } from './rng'
 import { overallProgress } from './scoring'
 import { fail, OK, type GameState, type Result } from './types'
@@ -40,11 +43,14 @@ export function rollRandomEvent(state: GameState): void {
       return
     }
   }
-  if (state.day < EVENT_MIN_DAY || state.day - state.lastEventDay < EVENT_COOLDOWN_DAYS) return
-  if (rand(state) >= EVENT_CHANCE_PER_DAY) return
+  // The café has its own, smaller happenings, and more of them: it is a short chapter.
+  const cafe = inCafe(state)
+  const [minDay, cooldown, chance] = cafe ? [CAFE_EVENT_MIN_DAY, CAFE_EVENT_COOLDOWN_DAYS, CAFE_EVENT_CHANCE_PER_DAY] : [EVENT_MIN_DAY, EVENT_COOLDOWN_DAYS, EVENT_CHANCE_PER_DAY]
+  if (state.day < minDay || state.day - state.lastEventDay < cooldown) return
+  if (rand(state) >= chance) return
 
   // Skip what came up lately, unless that leaves nothing at all.
-  const possible = RANDOM_EVENTS.filter((e) => e.when(state))
+  const possible = (cafe ? CAFE_EVENTS : RANDOM_EVENTS).filter((e) => e.when(state))
   const fresh = possible.filter((e) => !state.recentEvents?.includes(e.id))
   const eligible = fresh.length > 0 ? fresh : possible
   if (eligible.length === 0) return

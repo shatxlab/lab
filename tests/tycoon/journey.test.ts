@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { STAGES } from '@/lib/tycoon/data/stages'
+import { createInitialState } from '@/lib/tycoon/sim/state'
 import {
   CONTRACT_ABANDON_REPUTATION,
   CONTRACT_BOARD,
@@ -38,7 +39,7 @@ const finish = (state: GameState, office = 0) => {
 function grownStudio(): GameState {
   const state = makeState([makeEmployee(1, { design: 50, engineering: 50, qa: 50 }), makeEmployee(2, { design: 50, engineering: 50, qa: 50 })])
   state.offices[0].kind = 'office'
-  state.stage = 3
+  state.stage = 4
   state.money = 1_000_000
   return state
 }
@@ -55,7 +56,7 @@ describe('the garage and offices', () => {
     const state = makeState([makeEmployee(1)])
     state.money = MOVE_OUT_COST
     expect(moveOutBlocker(state)).toBe('The studio is not ready yet')
-    state.stage = 1
+    state.stage = 2
     expect(moveOutBlocker(state)).toBe('Have a breakout hit first')
     state.signatureId = 1
     expect(moveOut(state).ok).toBe(true)
@@ -68,9 +69,9 @@ describe('the garage and offices', () => {
 
   it('open more offices later, each dearer than the last, up to the limit', () => {
     const state = grownStudio()
-    state.stage = 2
-    expect(openOfficeBlocker(state)).toBe('The studio is not ready yet')
     state.stage = 3
+    expect(openOfficeBlocker(state)).toBe('The studio is not ready yet')
+    state.stage = 4
     state.money = 5_000_000
     expect(newOfficeCost(state)).toBe(EU_OFFICE_COST)
     expect(openOffice(state).ok).toBe(true)
@@ -128,7 +129,7 @@ describe('the garage and offices', () => {
   it('refuse a transfer into a full office', () => {
     const state = makeState([makeEmployee(1), makeEmployee(2), makeEmployee(3), makeEmployee(4)])
     state.offices[0].kind = 'office'
-    state.stage = 3
+    state.stage = 4
     state.money = 1_000_000
     openOffice(state)
     state.offices[1].region = 'us'
@@ -365,8 +366,9 @@ describe('breakout hits', () => {
 })
 
 describe('the journey', () => {
-  it('starts in the garage and has goals for every stage but the last', () => {
-    expect(makeState().stage).toBe(0)
+  it('starts at the café and has goals for every stage but the last', () => {
+    expect(createInitialState(1).stage).toBe(0)
+    expect(STAGES[0].id).toBe('cafe')
     for (const stage of STAGES) expect(stage.goals.length, stage.id).toBeGreaterThan(0)
   })
 
@@ -384,20 +386,20 @@ describe('the journey', () => {
     state.shippedCount = 3
     state.products.push(makeProduct({ users: 5000 }))
     expect(stageComplete(state)).toBe(false) // no client jobs yet
-    state.contractsDone = 2
+    state.contractsDone = 4
     expect(stageComplete(state)).toBe(false)
-    state.contractsDone = 3
+    state.contractsDone = 5
     expect(stageComplete(state)).toBe(true)
     checkStage(state)
-    expect(state.stage).toBe(1)
-    expect(state.events).toContainEqual({ type: 'stage', stage: 1 })
+    expect(state.stage).toBe(2)
+    expect(state.events).toContainEqual({ type: 'stage', stage: 2 })
     checkStage(state)
-    expect(state.stage).toBe(1) // the indie goals are not met yet
+    expect(state.stage).toBe(2) // the indie goals are not met yet
   })
 
   it('needs the move and a hit to become a breakout studio', () => {
     const state = makeState([makeEmployee(1)])
-    state.stage = 1
+    state.stage = 2
     state.offices[0].kind = 'office'
     expect(stageComplete(state)).toBe(false)
     state.products.push(makeProduct({ id: 7, hit: true }))
@@ -408,10 +410,10 @@ describe('the journey', () => {
   it('shows a stage dialog through the store', () => {
     const state = makeState([makeEmployee(1)])
     state.shippedCount = 3
-    state.contractsDone = 3
+    state.contractsDone = 5
     state.products.push(makeProduct({ users: 5000 }))
     const store = createStore(state, 1)
     for (let i = 0; i < 10 && store.dialog.value === null; i++) store.tick(2000)
-    expect(store.dialog.value).toEqual({ kind: 'stage', stage: 1 })
+    expect(store.dialog.value).toEqual({ kind: 'stage', stage: 2 })
   })
 })

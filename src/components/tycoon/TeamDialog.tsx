@@ -4,6 +4,7 @@ import {
   CANDIDATE_REFRESH_DAYS,
   ERA_WAGE_GROWTH,
   FOUNDER_PAY_SHARE,
+  GARAGE_DEPOSIT,
   LEAD_FREE_TEAM,
   LEAD_SPEED,
   MAX_OFFICES,
@@ -29,8 +30,10 @@ import {
   canBeSold,
   freeDesks,
   getOffice,
+  inCafe,
   monthlyRent,
   moveOutBlocker,
+  moveToGarageBlocker,
   newOfficeCost,
   officeName,
   officeSpec,
@@ -90,6 +93,8 @@ function Skills({ employee }: { employee: Employee }) {
 /** One person's row; with `actionsBelow` their controls get a row of their own (with several offices there are too many for one line). */
 function Person({ employee, action, showMorale, actionsBelow }: { employee: Employee; action: ReactNode; showMorale?: boolean; actionsBelow?: boolean }) {
   const trait = getTrait(employee.trait)
+  const state = useGame()
+  const unpaid = employee.founder === true && inCafe(state)
   return (
     <div className={`person ${showMorale ? '' : 'plain'} ${actionsBelow ? 'actions-below' : ''}`}>
       <div className="person-name">
@@ -103,7 +108,7 @@ function Person({ employee, action, showMorale, actionsBelow }: { employee: Empl
           )}
         </strong>
         <span className="muted">
-          {title(employee)} · {formatMoney(employee.salary)}/mo{employee.founder && ` (${Math.round(FOUNDER_PAY_SHARE * 100)}% of market)`}
+          {title(employee)} · {unpaid ? 'no pay yet: living on savings' : <>{formatMoney(employee.salary)}/mo{employee.founder && ` (${Math.round(FOUNDER_PAY_SHARE * 100)}% of market)`}</>}
         </span>
         <small className="trait" title={trait.description}>
           {trait.name}
@@ -138,8 +143,10 @@ export function TeamDialog() {
   const hireInto = hiringOffice(state, selected.id, region)
   const pool = state.candidates.filter((c) => (c.region ?? 'us') === region)
   const many = state.offices.length > 1
+  const cafe = inCafe(state)
   const garage = state.offices.find((o) => o.kind === 'garage')
   const moveOut = moveOutBlocker(state)
+  const toGarage = moveToGarageBlocker(state)
   const openRegions = openableRegions(state)
   const [openRegion, setOpenRegion] = useState<Region | ''>('')
   const openWhere: Region = openRegion !== '' && openRegions.includes(openRegion) ? openRegion : (openRegions[0] ?? 'us')
@@ -160,7 +167,7 @@ export function TeamDialog() {
     <Modal title={many ? 'Team & offices' : 'Team & office'} onClose={() => store.closeDialog()}>
       <section className="section">
         <div className="section-head">
-          <h3>{many ? 'Offices' : garage ? 'Garage' : 'Office'}</h3>
+          <h3>{many ? 'Offices' : cafe ? 'Café' : garage ? 'Garage' : 'Office'}</h3>
           <span className="muted">
             {state.employees.length}/{desks} desks · rent {formatMoney(monthlyRent(state))}/mo · payroll{' '}
             {formatMoney(monthlySalaries(state))}/mo
@@ -181,7 +188,23 @@ export function TeamDialog() {
               {office.id !== selected.id && <button onClick={() => store.selectOffice(office.id)}>Show</button>}
             </div>
           ))}
-        {garage ? (
+        {cafe ? (
+          <div className="upgrade">
+            <span>
+              Move into a garage: <strong>{OFFICE_KINDS.garage.desks} desks</strong>, rent {formatMoney(OFFICE_KINDS.garage.rent)}/mo, room to hire two more; you
+              two start paying yourselves
+              {toGarage && <small className="muted"> · {toGarage}</small>}
+            </span>
+            <button
+              disabled={toGarage !== null}
+              className={confirmMove ? 'danger' : ''}
+              onClick={() => (confirmMove ? report(store.moveToGarage()) : setConfirmMove(true))}
+              onBlur={() => setConfirmMove(false)}
+            >
+              {confirmMove ? 'Sure? Leave the café' : `Move · ${formatMoney(GARAGE_DEPOSIT)} deposit`}
+            </button>
+          </div>
+        ) : garage ? (
           <div className="upgrade">
             <span>
               Move out of the garage: <strong>{OFFICE_KINDS.office.desks} desks</strong>, rent {formatMoney(OFFICE_KINDS.office.rent)}/mo
@@ -251,7 +274,7 @@ export function TeamDialog() {
             Insight <strong>{Math.floor(state.insight)}</strong> · +{insightRate(state).toFixed(1)} a day. Spend it on studying an audience when you plan a product.
           </p>
         )}
-        {state.employees.length > 0 && (
+        {state.employees.length > 0 && !cafe && (
           <div className="outing">
             <span>
               <strong>Team outing</strong> <span className="muted">+{OUTING_MORALE} morale for everyone</span>

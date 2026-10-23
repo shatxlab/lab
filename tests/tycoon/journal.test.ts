@@ -20,6 +20,8 @@ describe('the run log', () => {
 
   it('records the player\'s decisions with what they saw', () => {
     const state = createInitialState(5)
+    state.offices[0].kind = 'garage' // room to hire
+    state.money = 100_000
     const store = createStore(state)
     expect(store.startProject('web_app', []).ok).toBe(true)
     const started = state.journal.find((e) => e.kind === 'project.start')
@@ -75,6 +77,7 @@ describe('the run log and launches', () => {
     let seen = false
     for (let seed = 1; seed <= 60 && !seen; seed++) {
       const state = createInitialState(seed)
+      state.money = 100_000
       state.launchesSinceHit = 100
       const store = createStore(state)
       expect(store.startProject('web_app', []).ok).toBe(true)

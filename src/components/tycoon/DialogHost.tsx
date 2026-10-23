@@ -3,6 +3,7 @@ import { useSignal, useStore } from './context'
 import { BreakoutDialog, EraDialog, GameOverDialog, OfferDialog, ReadyDialog, ResultDialog, StageDialog } from './dialogs'
 import { EmployeeDialog } from './EmployeeDialog'
 import { EventDialog } from './EventDialog'
+import { FoundingDialog } from './FoundingDialog'
 import { MenuDialog } from './MenuDialog'
 import { NewProjectDialog } from './NewProjectDialog'
 import { ResearchDialog } from './ResearchDialog'
@@ -56,6 +57,8 @@ export function DialogHost() {
       return <AbsorbDialog rivalId={dialog.rivalId} />
     case 'offer':
       return <OfferDialog />
+    case 'founding':
+      return <FoundingDialog />
     case 'game-over':
       return <GameOverDialog />
     default:

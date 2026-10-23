@@ -1,12 +1,14 @@
 import { BANKRUPT_AFTER_DEBT_DAYS, DAYS_PER_MONTH, INCOME_AVERAGE_DAYS } from './balance'
 import { statMultiplier } from './modifiers'
-import { monthlyRent } from './offices'
+import { inCafe, monthlyRent } from './offices'
 import { licenseIncome } from './licensing'
 import { productRevenue } from './products'
 import type { GameState } from './types'
 
+/** What the team is paid a month; in the café the founders live on their savings and draw nothing. */
 export function monthlySalaries(state: GameState): number {
-  return state.employees.reduce((sum, e) => sum + e.salary, 0) * statMultiplier(state, 'wage')
+  const cafe = inCafe(state)
+  return state.employees.reduce((sum, e) => sum + (cafe && e.founder ? 0 : e.salary), 0) * statMultiplier(state, 'wage')
 }
 
 /** Salaries + rent, per month. Costs are charged daily as 1/DAYS_PER_MONTH of this. */

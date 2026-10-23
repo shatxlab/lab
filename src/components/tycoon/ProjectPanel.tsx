@@ -78,13 +78,15 @@ export function ProjectPanel() {
     return (
       <section className="project idle">
         <span className="muted">
-          {owned && office.kind !== 'garage'
+          {owned && office.kind === 'office'
             ? `Looks after ${owned.name} (${DIRECTION_INFO[office.direction ?? DEFAULT_DIRECTION].name}): next, ${nextReleasePlan(state, office, owned)} in ${Math.max(0, nextReleaseDay(state, office, owned) - state.day)} days, unless you give the team something else.`
-            : 'No project in progress. The team is burning salary.'}
+            : office.kind === 'cafe'
+              ? 'Nothing on the go. Small jobs for clients pay for the coffee, and then for a garage.'
+              : 'No project in progress. The team is burning salary.'}
         </span>
           <div className="idle-actions">
           <button className="primary" onClick={() => store.openDialog({ kind: 'new-project', officeId: office.id })}>
-            Start a project
+            {office.kind === 'cafe' ? 'Find a job' : 'Start a project'}
           </button>
         </div>
       </section>

@@ -99,7 +99,8 @@ export function NewProjectDialog({ updateOf, officeId, grow = false, queue = fal
   const state = useGame()
   // A queue is for the team that looks after the product: its pace is what the estimate shows.
   const office = useOffice(officeId ?? (queue && updateOf !== undefined ? ownerOf(state, updateOf)?.id : undefined))
-  const [mode, setMode] = useState<'product' | 'client'>('product')
+  // At the café client work is what pays: the board comes first.
+  const [mode, setMode] = useState<'product' | 'client'>(office.kind === 'cafe' ? 'client' : 'product')
   const product = updateOf === undefined ? undefined : state.products.find((p) => p.id === updateOf)
   const isUpdate = product !== undefined
   const growsTo = isUpdate && grow ? nextSize(product.size) : null

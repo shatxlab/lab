@@ -1,7 +1,6 @@
-import { CAFE_JOBS, FIT_TAKEOFF, GARAGE_READY_MONEY, TOP_SLIP_DAYS } from '@/lib/tycoon/sim/balance'
+import { CAFE_JOBS, FIT_TAKEOFF, GARAGE_READY_MONEY, IPO_PROFIT_DAYS, IPO_REVENUE, IPO_USERS } from '@/lib/tycoon/sim/balance'
+import { getWorkItem } from '@/lib/tycoon/data/workstreams'
 import { trailingIncome } from '@/lib/tycoon/sim/economy'
-import { productRevenue } from '@/lib/tycoon/sim/products'
-import { playerRank, standings } from '@/lib/tycoon/sim/rivals'
 import type { GameState } from '@/lib/tycoon/sim/types'
 
 export interface StageGoal {
@@ -28,16 +27,8 @@ const count = (n: number) => Math.floor(n).toLocaleString('en-US')
 /** Users of the studio's hit, its signature product. */
 const hitUsers = (s: GameState) => s.products.find((p) => p.id === s.signatureId)?.users ?? 0
 
-/** What the next two studios in the ranking earn together. */
-const nextTwo = (s: GameState) =>
-  standings(s)
-    .filter((r) => r.id !== 0)
-    .slice(0, 2)
-    .reduce((sum, r) => sum + r.revenue, 0)
 const upTo = (value: number, goal: number) => `${count(Math.min(value, goal))} / ${count(goal)}`
 const realOffices = (s: GameState) => s.offices.filter((o) => o.kind === 'office').length
-/** Days at the top of the ranking that make an industry leader a tech giant. */
-const DAYS_AT_TOP = 360
 
 export const STAGES: readonly Stage[] = [
   {
@@ -74,58 +65,52 @@ export const STAGES: readonly Stage[] = [
   },
   {
     id: 'breakout',
-    name: 'Breakout studio',
-    blurb: 'You have a hit, and it is what people know you for.',
-    unlocks: ['Flagship projects'],
+    name: 'First floor',
+    blurb: 'The hit pays for a real office. Now make it big.',
+    unlocks: ['Flagship projects', 'Workstreams for the hit: Scale, Growth and Monetisation, ranked on its roadmap'],
     goals: [
-      { id: 'hit_50k', label: 'Grow your hit to 50,000 users', check: (s) => hitUsers(s) >= 50_000, progress: (s) => upTo(hitUsers(s), 50_000) },
-      { id: 'rep_70', label: 'Reach reputation 70', check: (s) => s.reputation >= 70, progress: (s) => upTo(s.reputation, 70) },
+      { id: 'hit_200k', label: 'Grow your hit to 200,000 users', check: (s) => hitUsers(s) >= 200_000, progress: (s) => upTo(hitUsers(s), 200_000) },
+      { id: 'first_scale', label: 'Build servers for your hit: finish a Scale item on its roadmap', check: (s) => (s.products.find((p) => p.id === s.signatureId)?.built ?? []).some((id) => getWorkItem(id)?.workstream === 'scale') },
       { id: 'team_12', label: 'Fill an office: a team of 12', check: (s) => s.employees.length >= 12, progress: (s) => upTo(s.employees.length, 12) },
     ],
   },
   {
     id: 'established',
-    name: 'Established company',
-    blurb: 'A company with products people rely on, and the money to grow.',
-    unlocks: ['More floors for headquarters, and a building in Europe', 'Absorbing rival studios: their team moves into a floor of yours'],
+    name: 'Headquarters',
+    blurb: 'A company built around one product, with a building to match.',
+    unlocks: [
+      'More floors for headquarters, and a building in Europe',
+      'Absorbing a rival that competes with your hit: its users move to the hit, its best people take your empty desks',
+      'Internal tools and companion products on the roadmap',
+    ],
     goals: [
+      { id: 'hit_1m', label: 'Grow your hit to 1 million users', check: (s) => hitUsers(s) >= 1_000_000, progress: (s) => upTo(hitUsers(s), 1_000_000) },
       { id: 'two_offices', label: 'Run 2 full floors: 24 people', check: (s) => realOffices(s) >= 2 && s.employees.length >= 24, progress: (s) => `${realOffices(s)} floors, ${s.employees.length} / 24 people` },
-      { id: 'top_3', label: 'Reach the top 3 of the industry ranking', check: (s) => playerRank(s) <= 3, progress: (s) => `#${playerRank(s)}` },
-      { id: 'income_15k', label: 'Earn $15,000 a day', check: (s) => trailingIncome(s) >= 15_000, progress: (s) => `$${upTo(trailingIncome(s), 15_000)}` },
+      { id: 'income_30k', label: 'Earn $30,000 a day', check: (s) => trailingIncome(s) >= 30_000, progress: (s) => `$${upTo(trailingIncome(s), 30_000)}` },
     ],
   },
   {
     id: 'leader',
-    name: 'Industry leader',
-    blurb: 'One of the names everyone in the business knows.',
-    unlocks: ['Being the one everyone else is measured against'],
+    name: 'Europe',
+    blurb: 'The hit has outgrown home. Take it across the Atlantic.',
+    unlocks: ['You become CEO and your friend CTO when the European office opens; one of your analysts becomes the hit\'s product manager'],
     goals: [
-      {
-        id: 'number_one',
-        label: `Hold #1 in the industry ranking for a year as a leader (a day below it takes ${TOP_SLIP_DAYS} back)`,
-        check: (s) => s.daysAtTop >= DAYS_AT_TOP,
-        progress: (s) => `${s.daysAtTop} / ${DAYS_AT_TOP} days · #${playerRank(s)} now`,
-      },
+      { id: 'eu_office', label: 'Open a building in Europe', check: (s) => s.offices.some((o) => o.region === 'eu'), progress: (s) => (s.offices.some((o) => o.region === 'eu') ? 'open' : 'not yet') },
+      { id: 'eu_localised', label: 'Localise your hit for Europe', check: (s) => (s.products.find((p) => p.id === s.signatureId)?.euShare ?? 0) > 0 },
+      { id: 'hit_3m', label: 'Grow your hit to 3 million users', check: (s) => hitUsers(s) >= 3_000_000, progress: (s) => upTo(hitUsers(s), 3_000_000) },
       { id: 'three_offices', label: 'Run 3 full floors: 36 people', check: (s) => realOffices(s) >= 3 && s.employees.length >= 36, progress: (s) => `${realOffices(s)} floors, ${s.employees.length} / 36 people` },
-      {
-        id: 'two_rivals',
-        label: 'Earn as much as the two biggest rivals put together',
-        check: (s) => trailingIncome(s) >= nextTwo(s),
-        progress: (s) => `$${count(trailingIncome(s))} vs $${count(nextTwo(s))} a day`,
-      },
     ],
   },
   {
     id: 'giant',
-    name: 'Tech giant',
-    blurb: 'The top of the industry. Now stay there: these are the marks of a company that lasts.',
-    unlocks: [],
-    // Nothing comes after this stage, so these are goals to chase, not gates.
+    name: 'Global company',
+    blurb: 'The hit is everywhere. These are the marks of a company ready to ring the bell.',
+    unlocks: ['Taking the company public: the last ending, and the biggest'],
+    // Nothing comes after this stage, so these are goals to chase, not gates; together they open the IPO.
     goals: [
-      { id: 'three_flagships', label: 'Have 3 Flagship products live', check: (s) => s.products.filter((p) => p.size === 'flagship').length >= 3, progress: (s) => upTo(s.products.filter((p) => p.size === 'flagship').length, 3) },
-      { id: 'decade_old', label: 'Keep a product over 10 years old earning $500 a day', check: (s) => s.products.some((p) => s.day - p.releaseDay >= 3600 && productRevenue(p) >= 500), progress: (s) => `${s.products.filter((p) => s.day - p.releaseDay >= 3600 && productRevenue(p) >= 500).length} / 1` },
-      { id: 'both_markets', label: 'Have a product with 20,000 users in each of the US and Europe', check: (s) => s.products.some((p) => (p.euUsers ?? 0) >= 20_000 && p.users - (p.euUsers ?? 0) >= 20_000), progress: (s) => `${s.products.filter((p) => (p.euUsers ?? 0) >= 20_000 && p.users - (p.euUsers ?? 0) >= 20_000).length} / 1` },
-      { id: 'four_offices', label: 'Run 4 full floors: 48 people', check: (s) => realOffices(s) >= 4 && s.employees.length >= 48, progress: (s) => `${realOffices(s)} floors, ${s.employees.length} / 48 people` },
+      { id: 'hit_10m', label: 'Grow your hit to 10 million users', check: (s) => hitUsers(s) >= IPO_USERS, progress: (s) => upTo(hitUsers(s), IPO_USERS) },
+      { id: 'billion', label: 'Earn $1 billion over the life of the company', check: (s) => s.lifetimeRevenue >= IPO_REVENUE, progress: (s) => `$${upTo(s.lifetimeRevenue, IPO_REVENUE)}` },
+      { id: 'profit_year', label: 'Make a profit for a year', check: (s) => (s.profitDays ?? 0) >= IPO_PROFIT_DAYS, progress: (s) => upTo(s.profitDays ?? 0, IPO_PROFIT_DAYS) },
     ],
   },
 ]

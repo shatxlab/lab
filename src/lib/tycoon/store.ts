@@ -5,13 +5,14 @@ import { surveyAudience } from '@/lib/tycoon/sim/insight'
 import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
-import { acceptBuyout, declineBuyout, retireStudio } from '@/lib/tycoon/sim/exit'
+import { acceptBuyout, declineBuyout, goPublic, retireStudio } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, inGarage, moveOut, moveToGarage, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { foundStudio } from '@/lib/tycoon/sim/founding'
-import { assignProduct, queueFeatures, setDirection } from '@/lib/tycoon/sim/teams'
+import { setRoadmap } from '@/lib/tycoon/sim/roadmap'
+import { assignProduct, queueFeatures, setWorkstream } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
 import { sunsetProduct } from '@/lib/tycoon/sim/sunset'
 import { shipProject, startLocalisation, startPivot, startProject, startUpdate, unlockedProductTypes } from '@/lib/tycoon/sim/project'
@@ -21,7 +22,7 @@ import { isReady } from '@/lib/tycoon/sim/scoring'
 import { decisions, type Decision } from '@/lib/tycoon/sim/decisions'
 import { logEntry, logSimEvent } from '@/lib/tycoon/sim/journal'
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
-import type { Direction, Discipline, GameState, ProjectSize, Region, Result, SimEvent, Tier } from '@/lib/tycoon/sim/types'
+import type { Discipline, GameState, ProjectSize, Region, Result, SimEvent, Tier, Workstream } from '@/lib/tycoon/sim/types'
 
 export type Speed = 0 | 1 | 2
 export const SPEEDS: readonly Speed[] = [0, 1, 2]
@@ -41,6 +42,7 @@ export type Dialog =
   | { kind: 'new-project'; officeId?: number; updateOf?: number; grow?: boolean }
   /** Picks the features a product's team adds in its next release. */
   | { kind: 'queue'; productId: number }
+  | { kind: 'roadmap'; productId: number }
   | { kind: 'ship'; officeId: number }
   | { kind: 'ready'; officeId: number }
   | { kind: 'event' }
@@ -151,7 +153,7 @@ export interface Store {
   /** Leaves the café for a garage. */
   moveToGarage(): Result
   /** Leaves the garage for a real office. */
-  moveOut(): Result
+  moveOut(keepIds?: number[]): Result
   /** Opens another office (in `region`, by default the first it could be in) and shows it. */
   openOffice(region?: Region): Result
   /** Moves someone to another office's team. */
@@ -161,7 +163,8 @@ export interface Store {
   /** Puts a floor's team on a product, or frees it with `null`. */
   assignProduct(officeId: number, productId: number | null): Result
   /** What a floor's team does with its product. */
-  setDirection(officeId: number, direction: Direction): Result
+  setWorkstream(officeId: number, workstream: Workstream): Result
+  setRoadmap(productId: number, itemIds: readonly string[]): Result
   /** Queues the features of a product's next release. */
   queueFeatures(productId: number, featureIds: readonly string[]): Result
   /** Makes a senior analyst the product manager of their office. */
@@ -176,6 +179,7 @@ export interface Store {
   declineBuyout(): Result
   /** Ends the run by retiring: the studio is judged by what it is worth. */
   retire(): Result
+  goPublic(): Result
 }
 
 export function createStore(state: GameState, initialSpeed: Speed = 1, options: { sfx?: SfxPlayer } = {}): Store {
@@ -510,8 +514,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return cue(changed(logged(() => decisions.moveToGarage(state), () => moveToGarage(state))), 'upgrade')
     },
 
-    moveOut() {
-      const result = cue(changed(logged(() => decisions.moveOut(), () => moveOut(state))), 'upgrade')
+    moveOut(keepIds = []) {
+      const result = cue(changed(logged(() => decisions.moveOut(state, keepIds), () => moveOut(state, keepIds))), 'upgrade')
       // The first look at the new place is from the street.
       if (result.ok) view.value = 'building'
       return result
@@ -535,8 +539,12 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return cue(changed(logged(() => decisions.assignProduct(state, officeId, productId), () => assignProduct(state, officeId, productId))), 'click')
     },
 
-    setDirection(officeId, direction) {
-      return cue(changed(logged(() => decisions.setDirection(state, officeId, direction), () => setDirection(state, officeId, direction))), 'click')
+    setWorkstream(officeId, workstream) {
+      return cue(changed(logged(() => decisions.setWorkstream(state, officeId, workstream), () => setWorkstream(state, officeId, workstream))), 'click')
+    },
+
+    setRoadmap(productId, itemIds) {
+      return cue(changed(logged(() => decisions.setRoadmap(state, productId, itemIds), () => setRoadmap(state, productId, itemIds))), 'click')
     },
 
 
@@ -568,6 +576,15 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     retire() {
       const result = retireStudio(state)
+      if (!result.ok) return result
+      dialog.value = { kind: 'game-over' }
+      bump()
+      sfx.play('milestone')
+      return result
+    },
+
+    goPublic() {
+      const result = goPublic(state)
       if (!result.ok) return result
       dialog.value = { kind: 'game-over' }
       bump()

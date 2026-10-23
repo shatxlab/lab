@@ -1,6 +1,7 @@
 import { formatMoney } from '@/lib/tycoon/format'
 import { audienceFor, audiencesOf } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
+import { getWorkItem, type WorkItem } from '@/lib/tycoon/data/workstreams'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import {
   BUDGET_PER_POINT,
@@ -24,6 +25,7 @@ import {
   UPDATE_TARGET_SHARE,
   WORK_SCALE,
 } from './balance'
+import { launchCompanion } from './companions'
 import { monthlyBurn } from './economy'
 import { officeRunning, pmFitFactor, pmReachFactor } from './direction'
 import { releaseFit, takeoffBlocker, takeOff, undiscovered } from './fit'
@@ -183,13 +185,13 @@ function checkFeatures(state: GameState, featureIds: readonly string[], max: num
 }
 
 /** Starts an update to a live product: a smaller project that wins back its users' interest and can add features. */
-export function startUpdate(state: GameState, productId: number, featureIds: readonly string[], officeId?: number, grow = false): Result {
+export function startUpdate(state: GameState, productId: number, featureIds: readonly string[], officeId?: number, grow = false, byTeam = false): Result {
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
-  const blocker = grow ? growBlocker(state, office, product) : updateBlocker(state, office, product)
+  const blocker = grow ? growBlocker(state, office, product) : updateBlocker(state, office, product, byTeam)
   if (blocker) return fail(blocker)
   const bigger = grow ? nextSize(product.size) : null
   const problem = checkFeatures(state, featureIds, grow ? GROW_MAX_FEATURES : UPDATE_MAX_FEATURES)
@@ -294,13 +296,13 @@ export function euGain(product: Pick<Product, 'productTypeId' | 'featureIds' | '
 }
 
 /** Starts localising a live product for Europe: a maintenance-sized release that opens the market there. It costs the budget of that work. */
-export function startLocalisation(state: GameState, productId: number, officeId?: number): Result {
+export function startLocalisation(state: GameState, productId: number, officeId?: number, byTeam = false): Result {
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
-  const blocker = localiseBlocker(state, office, product)
+  const blocker = localiseBlocker(state, office, product, byTeam)
   if (blocker) return fail(blocker)
   const target = projectTarget(product.productTypeId, [], 'update', product.size)
   const budget = projectBudget(target)
@@ -464,6 +466,29 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
   return OK
 }
 
+/** A roadmap item ships: it counts as built, and what it does at once (reach, fit, bugs, quality) is done; the rest is read from `itemEffects`. */
+function buildItem(state: GameState, product: Product, item: WorkItem): void {
+  const { effect } = item
+  product.roadmap = (product.roadmap ?? []).filter((id) => id !== item.id)
+  if (product.roadmap.length === 0) delete product.roadmap
+  if (item.companionId) {
+    const companion = launchCompanion(state, item.companionId)
+    if (companion) {
+      state.events.push({ type: 'notice', text: `${companion.name} is out: it will make ${product.name} bigger while a floor on Companions looks after it.`, sound: 'milestone' })
+    }
+    return
+  }
+  product.built = [...(product.built ?? []), item.id]
+  if (effect.reach) product.reach *= 1 + effect.reach
+  if (effect.fit) {
+    product.fit = Math.max(0, Math.min(100, (product.fit ?? 0) + effect.fit))
+    product.peakFit = Math.max(0, Math.min(100, (product.peakFit ?? product.fit) + effect.fit))
+  }
+  if (effect.bugs) product.bugs *= 1 - effect.bugs
+  if (effect.quality) product.quality = Math.min(100, product.quality + effect.quality)
+  state.events.push({ type: 'notice', text: `${item.name} is live on ${product.name}.`, sound: 'milestone' })
+}
+
 /** An update renews users' interest, adds its features, and ships a few bugs of its own. */
 function shipUpdate(state: GameState, office: Office, project: Project): Result {
   const product = state.products.find((p) => p.id === project.parentId)
@@ -475,6 +500,7 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   const fit = updateFit(state, product, project, quality)
   product.reach = reachAfterUpdate(state, product, project, quality)
   product.fit = fit
+  product.peakFit = fit
   if (project.pivotsTo) pivot(state, product, project.pivotsTo)
   if (project.grows) {
     product.reach *= (PROJECT_SIZES[project.grows].reach / PROJECT_SIZES[product.size].reach) * pmReachFactor(state, office)
@@ -482,6 +508,8 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
     product.size = project.grows
   }
   if (project.polishes) product.bugs *= 1 - POLISH_FIX_SHARE
+  const item = project.itemId ? getWorkItem(project.itemId) : undefined
+  if (item) buildItem(state, product, item)
   if (project.localises && euShareOf(product) === 0) {
     // Europe is a market of its own: the product gains reach there, and its first users arrive as a launch's do.
     const gain = euGain(product)

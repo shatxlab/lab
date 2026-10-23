@@ -2,16 +2,17 @@ import { getAudience } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
+import { getWorkItem, WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
 import { title } from './careers'
 import { describePendingEvent } from './events'
 import { nextSize, promotionCost, promotionEffect, promotionReturn } from './lifecycle'
 import { buildingName, newOfficeCost, officeName, officesIn, getOffice, openableRegions } from './offices'
-import { DIRECTION_INFO, ownedProduct } from './teams'
+import { ownedProduct } from './teams'
 import { projectBudget, projectFit, projectQuality, projectTarget, updateFit } from './project'
 import { acquisitionPrice } from './rivals'
 import { salePrice, sunsetOutcome } from './sunset'
 import { trainingCost } from './staff'
-import type { Direction, Discipline, Employee, GameState, ProjectSize, Region, Tier } from './types'
+import type { Discipline, Employee, GameState, ProjectSize, Region, Tier, Workstream } from './types'
 
 /** What a decision looks like in the log: a category, a line to read, and the numbers behind it. */
 export type Decision = [kind: string, text: string, data?: Record<string, string | number | boolean | string[]>]
@@ -167,8 +168,9 @@ export const decisions = {
     return ['office.toGarage', 'Left the café for a garage', { money: Math.round(state.money), jobs: state.contractsDone }]
   },
 
-  moveOut(): Decision {
-    return ['office.moveOut', 'Left the garage for an office']
+  moveOut(state: GameState, keepIds: number[]): Decision {
+    const kept = state.products.filter((p) => keepIds.includes(p.id)).map((p) => p.name)
+    return ['office.moveOut', 'Left the garage for an office', { kept: kept.join(', ') || 'none' }]
   },
 
   openOffice(state: GameState, region?: Region): Decision {
@@ -182,11 +184,16 @@ export const decisions = {
     return ['team.product', productId === null ? `${officeLabel(state, officeId)}'s team let its product go` : `${officeLabel(state, officeId)}'s team took on ${product?.name ?? 'a product'}`, { office: officeLabel(state, officeId) }]
   },
 
-  setDirection(state: GameState, officeId: number, direction: Direction): Decision {
+  setWorkstream(state: GameState, officeId: number, workstream: Workstream): Decision {
     const product = ownedProduct(state, getOffice(state, officeId)!)
-    return ['team.direction', `${officeLabel(state, officeId)}: ${DIRECTION_INFO[direction].name}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), direction }]
+    return ['team.workstream', `${officeLabel(state, officeId)}: ${WORKSTREAM_INFO[workstream].name}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), workstream }]
   },
 
+  setRoadmap(state: GameState, productId: number, itemIds: readonly string[]): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    const names = itemIds.map((id) => getWorkItem(id)?.name ?? id)
+    return ['product.roadmap', `${product?.name ?? 'The product'}'s roadmap: ${names.join(', ') || 'empty'}`, { items: [...itemIds] }]
+  },
 
   queueFeatures(state: GameState, productId: number, featureIds: readonly string[]): Decision {
     const product = state.products.find((p) => p.id === productId)

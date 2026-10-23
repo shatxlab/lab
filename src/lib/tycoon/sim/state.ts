@@ -20,9 +20,9 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } 
  * fixing to a developer and tester pair, hid an update's new bugs for a while and added selling products.
  * Version 5 made the two people who start the studio founders: they never leave and draw half pay.
  * Version 6 put a café before the garage, a journey stage of its own, so every later stage moved up one.
- * Version 3 to 5 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`); older ones can't be carried over.
+ * Version 3 to 6 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
  */
-export const STATE_VERSION = 6
+export const STATE_VERSION = 7
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
@@ -418,7 +418,19 @@ function upgradeFromV4(raw: unknown): unknown {
 /** Version 5 to 6: the café became the first stage of the journey, so a studio from before is a stage further on. */
 function upgradeFromV5(raw: unknown): unknown {
   if (!isObj(raw) || raw.version !== 5) return raw
-  return { ...raw, version: STATE_VERSION, stage: isNum(raw.stage) ? raw.stage + 1 : raw.stage }
+  return { ...raw, version: 6, stage: isNum(raw.stage) ? raw.stage + 1 : raw.stage }
+}
+
+/** Version 6 to 7: a floor works on a workstream, not a direction (grow and keep become features, polish quality, expand Europe). */
+function upgradeFromV6(raw: unknown): unknown {
+  if (!isObj(raw) || raw.version !== 6) return raw
+  const stream: Record<string, string> = { grow: 'features', keep: 'features', polish: 'quality', expand: 'europe' }
+  const floor = (office: unknown) => {
+    if (!isObj(office) || !('direction' in office)) return office
+    const { direction, ...rest } = office
+    return typeof direction === 'string' && stream[direction] ? { ...rest, workstream: stream[direction] } : rest
+  }
+  return { ...raw, version: STATE_VERSION, offices: Array.isArray(raw.offices) ? raw.offices.map(floor) : raw.offices }
 }
 
 /** The people hired on day 0 in a save from before founders existed become the founders. */
@@ -466,7 +478,7 @@ export function deserialize(json: string): GameState | null {
   try {
     const raw: unknown = JSON.parse(json)
     const from = isObj(raw) && typeof raw.version === 'number' ? raw.version : 0
-    const parsed = dropRemovedContent(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw))))
+    const parsed = dropRemovedContent(upgradeFromV6(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw)))))
     if (!validState(parsed)) return null
     const state: GameState = { ...parsed, dayWork: [], events: [] }
     if (from === 3) rivalsArrive(state, true) // the market grew since version 3: the studios due by now move in

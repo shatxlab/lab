@@ -34,9 +34,10 @@ function buyerFor(state: GameState, product: Product): Rival | undefined {
 /**
  * Takes a product off the portfolio. Below the user threshold it is simply retired: free, no consequences.
  * Above it, a rival buys it: you are paid, it joins that rival's products with its users, and the team
- * and the studio's name take a small hit. A bug-fixing job on it stops.
+ * and the studio's name take a small hit (unless the sale is planned, as at the move out of the garage).
+ * A bug-fixing job on it stops.
  */
-export function sunsetProduct(state: GameState, productId: number): Result {
+export function sunsetProduct(state: GameState, productId: number, options: { planned?: boolean } = {}): Result {
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
   const blocker = sunsetBlocker(state, product)
@@ -68,9 +69,11 @@ export function sunsetProduct(state: GameState, productId: number): Result {
     return OK
   }
   state.money += price
-  adjustMorale(state, -SALE_MORALE_PENALTY)
-  const penalty = product.hit ? SALE_HIT_REPUTATION_PENALTY : SALE_REPUTATION_PENALTY
-  state.reputation = Math.max(0, Math.min(REPUTATION_MAX, state.reputation - penalty))
+  if (!options.planned) {
+    adjustMorale(state, -SALE_MORALE_PENALTY)
+    const penalty = product.hit ? SALE_HIT_REPUTATION_PENALTY : SALE_REPUTATION_PENALTY
+    state.reputation = Math.max(0, Math.min(REPUTATION_MAX, state.reputation - penalty))
+  }
   if (buyer) {
     state.rivalProducts.push({
       id: product.id,
@@ -88,7 +91,7 @@ export function sunsetProduct(state: GameState, productId: number): Result {
   }
   state.events.push({
     type: 'notice',
-    text: `${product.name} was sold${buyer ? ` to ${buyer.name}` : ''}: ${formatMoney(price)} in the bank, and the team is a little sad to see it go.`,
+    text: `${product.name} was sold${buyer ? ` to ${buyer.name}` : ''}: ${formatMoney(price)} in the bank${options.planned ? '' : ', and the team is a little sad to see it go'}.`,
     sound: 'deal',
   })
   return OK

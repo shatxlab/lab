@@ -1,3 +1,4 @@
+import { toolEffects } from './tools'
 import { FIX_SPLIT, POINTS_PER_BUG, SKILL_GAIN } from './balance'
 import { fixingIds } from './offices'
 import { learn, type Subject } from './knowledge'
@@ -162,7 +163,7 @@ function autoFix(state: GameState): void {
 /** One person's day on a fixing job: only their own discipline counts, and it adds to their skill. */
 function work(state: GameState, fix: Fix, person: Employee, discipline: 'engineering' | 'qa', subject: Subject): void {
   const room = Math.max(fix.target[discipline] - fix.progress[discipline], 0)
-  const applied = Math.min(dailyContribution(person, state, subject)[discipline], room)
+  const applied = Math.min(dailyContribution(person, state, subject)[discipline] * (1 + toolEffects(state).fixes), room)
   if (applied > 0) learn(person, subject)
   fix.progress[discipline] += applied
   const gain = SKILL_GAIN * statMultiplier(state, 'skillGain') * employeeSkillGain(state, person)

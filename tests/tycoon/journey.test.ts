@@ -292,7 +292,8 @@ describe('the journey', () => {
   it('never ends the last stage: its goals are marks to chase, not a gate', () => {
     const state = makeState([makeEmployee(1)])
     state.stage = STAGES.length - 1
-    state.products = Array.from({ length: 3 }, (_, i) => makeProduct({ id: i + 1, size: 'flagship' }))
+    state.products = [makeProduct({ id: 1, hit: true, users: 12_000_000 })]
+    state.signatureId = 1
     expect(STAGES.at(-1)!.goals.some((g) => g.check(state))).toBe(true)
     expect(stageComplete(state)).toBe(false)
   })

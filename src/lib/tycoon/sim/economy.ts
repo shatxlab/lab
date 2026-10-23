@@ -3,7 +3,10 @@ import { statMultiplier } from './modifiers'
 import { inCafe, monthlyRent } from './offices'
 import { licenseIncome } from './licensing'
 import { productRevenue } from './products'
-import type { GameState } from './types'
+import { companionEffects } from './companions'
+import { hostingCost } from './scale'
+import { toolUpkeep } from './tools'
+import type { GameState, Product } from './types'
 
 /** What the team is paid a month; in the café the founders live on their savings and draw nothing. */
 export function monthlySalaries(state: GameState): number {
@@ -16,9 +19,14 @@ export function monthlyBurn(state: GameState): number {
   return monthlySalaries(state) + monthlyRent(state)
 }
 
+/** What a product earns per day, before studio-wide modifiers: the hit also earns the extra its Keep companions win. */
+export function productIncome(state: GameState, product: Product): number {
+  return productRevenue(product) * (product.id === state.signatureId ? 1 + companionEffects(state).pay : 1)
+}
+
 /** Revenue the current products bring in on the current day, after active modifiers. */
 export function dailyIncome(state: GameState): number {
-  const base = state.products.reduce((sum, p) => sum + productRevenue(p) + licenseIncome(state, p), 0)
+  const base = state.products.reduce((sum, p) => sum + productIncome(state, p) + licenseIncome(state, p), 0)
   return base * statMultiplier(state, 'revenue') + state.acquiredIncome
 }
 
@@ -29,7 +37,7 @@ export function trailingIncome(state: GameState): number {
 
 /** Net money per day at today's income and costs. */
 export function netPerDay(state: GameState): number {
-  return dailyIncome(state) - monthlyBurn(state) / DAYS_PER_MONTH
+  return dailyIncome(state) - monthlyBurn(state) / DAYS_PER_MONTH - hostingCost(state) - toolUpkeep(state)
 }
 
 /** Days the current cash lasts at today's net burn, or null if income covers costs. */
@@ -41,7 +49,7 @@ export function cashRunwayDays(state: GameState): number | null {
 export function revenueDay(state: GameState): void {
   const mult = statMultiplier(state, 'revenue')
   for (const product of state.products) {
-    const revenue = (productRevenue(product) + licenseIncome(state, product)) * mult
+    const revenue = (productIncome(state, product) + licenseIncome(state, product)) * mult
     product.totalRevenue += revenue
     state.money += revenue
     state.lifetimeRevenue += revenue
@@ -53,8 +61,13 @@ export function revenueDay(state: GameState): void {
   state.incomeAverage = state.incomeAverage === undefined ? today : state.incomeAverage + (today - state.incomeAverage) / INCOME_AVERAGE_DAYS
 }
 
+/** Counts the days in a row the company has made a profit, for the IPO. */
+export function profitDay(state: GameState): void {
+  state.profitDays = netPerDay(state) > 0 ? (state.profitDays ?? 0) + 1 : 0
+}
+
 export function costsDay(state: GameState): void {
-  state.money -= monthlyBurn(state) / DAYS_PER_MONTH
+  state.money -= monthlyBurn(state) / DAYS_PER_MONTH + hostingCost(state) + toolUpkeep(state)
 }
 
 export function checkBankruptcy(state: GameState): void {

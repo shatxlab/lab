@@ -39,6 +39,8 @@ export interface Employee {
   readySince: number | null
   /** One of the two people who started the studio: they never leave and draw less than market pay. */
   founder?: boolean
+  /** The founders' titles once the company is big: you are CEO and your friend CTO (`changeOfGuard`). */
+  title?: 'CEO' | 'CTO'
   /** The day a counter-offer last kept them; a rival leaves them alone for a while after. */
   keptDay?: number
   /** The region they were hired in: sets the wages they draw. Absent means the US. */
@@ -141,6 +143,8 @@ export interface Project {
   grows?: ProjectSize
   /** Localising a product: opens the European market when this update ships. */
   localises?: boolean
+  /** A roadmap item (`data/workstreams.ts`) this release builds; it counts as built for the product when it ships. */
+  itemId?: string
   /** A pivot: the product is for this audience once the release ships. */
   pivotsTo?: string
   /** A polishing release: it fixes most of the open bugs and ships fewer new ones. */
@@ -208,8 +212,20 @@ export interface Product {
   hit: boolean
   /** Its product–market fit as of its last release, 0..100; absent in older saves, where it is worked out when needed. */
   fit?: number
+  /** The fit its last release earned: what a hit's fit sags from and recovers towards (`sim/fit.ts`). Absent means `fit`. */
+  peakFit?: number
   /** True once it has pivoted to another audience: a product does that once. */
   pivoted?: boolean
+  /** A hit's pull on the world, a multiplier on its reach that grows while it is healthy and its servers have room (`sim/scale.ts`). Absent means 1. */
+  world?: number
+  /** The roadmap: ranked ids of the workstream items still to build (`data/workstreams.ts`); the floors take from the top. */
+  roadmap?: string[]
+  /** The workstream items built so far; their effects stack (`itemEffects`). */
+  built?: string[]
+  /** A side product (kept from the garage at move-out) earns what it earns; a Reach or Keep companion makes the hit bigger. Each takes one of the second-product slots. */
+  role?: 'side' | 'reach' | 'keep'
+  /** Which companion this is (`data/companions.ts`), for a product launched as one. */
+  companionId?: string
   totalRevenue: number
   updates: ProductUpdate[]
   /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
@@ -354,19 +370,20 @@ export interface Office {
   /** Where it is: the café, the garage and the first office are in the US. Absent in older saves, which are all US. */
   region?: Region
   project: Project | null
-  /** The product this floor's team looks after, releasing it as `direction` says (`sim/teams.ts`). */
+  /** The product this floor's team looks after, releasing it as its `workstream` says (`sim/teams.ts`). */
   productId?: number
-  direction?: Direction
+  workstream?: Workstream
   /** The day the team ran out of work, to give the player a few days before the next release starts by itself. */
   idleSince?: number
 }
 
 /**
- * What a team does with the product it looks after: add the features queued for it, polish it, keep it fresh
- * at the least cost, or take it to Europe (compliance first, then localising).
+ * What a floor works on for the product it looks after: its queued features, quality (bugs and speed), scale
+ * (the users the servers hold), growth, monetisation, or Europe; or on the studio's internal tools, or the companion
+ * products that make the hit bigger. Items for all but features come from the product's roadmap.
  */
-export type Direction = 'grow' | 'polish' | 'keep' | 'expand'
-export const DIRECTIONS: readonly Direction[] = ['grow', 'polish', 'keep', 'expand']
+export type Workstream = 'features' | 'quality' | 'scale' | 'growth' | 'monetisation' | 'europe' | 'tools' | 'companions'
+export const WORKSTREAMS: readonly Workstream[] = ['features', 'quality', 'scale', 'growth', 'monetisation', 'europe', 'tools', 'companions']
 
 /** A competing studio. Its products live in `GameState.rivalProducts`. */
 export interface Rival {
@@ -434,6 +451,10 @@ export interface GameState {
   rivalProducts: RivalProduct[]
   /** Days counted at the top of the industry ranking as a leader; a day below costs a few of them. */
   daysAtTop: number
+  /** Studios the company has absorbed: they do not move into the market again when their year comes. Absent means none. */
+  absorbedNames?: string[]
+  /** Days in a row the company has made a profit; goes public with the Global stage (`sim/exit.ts`). Absent means 0. */
+  profitDays?: number
   /** The day each product type's demand last made the news; absent in older saves. */
   marketNews?: Record<string, number>
   /** Every product name ever given out, yours and the rivals', lower case, so none comes back; absent in older saves. */
@@ -495,7 +516,7 @@ export interface GameState {
 }
 
 export interface Ending {
-  kind: 'bankrupt' | 'sold' | 'retired'
+  kind: 'bankrupt' | 'sold' | 'retired' | 'ipo'
   day: number
   /** What a sale paid. */
   price?: number

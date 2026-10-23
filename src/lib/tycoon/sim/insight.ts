@@ -1,3 +1,4 @@
+import { toolEffects } from './tools'
 import {
   ANALYSIS_GAIN,
   FEEDBACK_LOVED_DAYS,
@@ -17,14 +18,14 @@ export const isAnalyst = (employee: Pick<Employee, 'role'>): boolean => employee
 
 /** Insight this person gathers a day: their skill, their level and their mood count; a product manager spends most of the day steering. */
 export function insightOf(employee: Employee): number {
-  if (!isAnalyst(employee) || employee.training) return 0
+  if (!isAnalyst(employee) || employee.training || employee.title === 'CEO') return 0
   const share = employee.role === 'pm' ? PM_INSIGHT_SHARE : 1
   return (employee.analysis ?? 0) * INSIGHT_PER_SKILL * share * LEVELS[employee.level].speed * moraleSpeed(employee.morale)
 }
 
 /** Insight the whole studio gathers a day. */
 export function insightRate(state: GameState): number {
-  return state.employees.reduce((sum, e) => sum + insightOf(e), 0)
+  return state.employees.reduce((sum, e) => sum + insightOf(e), 0) + toolEffects(state).insight
 }
 
 /** True when the studio has anyone who studies users. */

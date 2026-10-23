@@ -7,7 +7,7 @@ import { bugFactor, productsDay } from '@/lib/tycoon/sim/products'
 import { shipProject, startProject } from '@/lib/tycoon/sim/project'
 import { moraleTarget } from '@/lib/tycoon/sim/staff'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
-import { assignProduct, ownerOf, queueBlocker, queueFeatures, setDirection, teamDay } from '@/lib/tycoon/sim/teams'
+import { assignProduct, ownerOf, queueBlocker, queueFeatures, setWorkstream, teamDay } from '@/lib/tycoon/sim/teams'
 import { DISCIPLINES, type GameState } from '@/lib/tycoon/sim/types'
 import { workDay } from '@/lib/tycoon/sim/work'
 import { makeEmployee, makeProduct, makeState } from './helpers'
@@ -64,7 +64,7 @@ describe('a floor that looks after a product', () => {
 
   it('grows the product with the features queued for it, and keeps it fresh when nothing is', () => {
     const state = floorWithProduct()
-    setDirection(state, state.offices[0].id, 'grow')
+    setWorkstream(state, state.offices[0].id, 'features')
     expect(queueFeatures(state, 50, ['dark_mode', 'search']).ok).toBe(true)
     run(state, TEAM_IDLE_DAYS + 1)
     expect(state.offices[0].project?.featureIds).toEqual(['dark_mode', 'search'])
@@ -85,7 +85,7 @@ describe('a floor that looks after a product', () => {
 
   it('polishing fixes most of the open bugs when it ships', () => {
     const state = floorWithProduct()
-    setDirection(state, state.offices[0].id, 'polish')
+    setWorkstream(state, state.offices[0].id, 'quality')
     run(state, TEAM_IDLE_DAYS + 1)
     const project = state.offices[0].project!
     expect(project.polishes).toBe(true)
@@ -99,7 +99,7 @@ describe('a floor that looks after a product', () => {
     const state = floorWithProduct()
     state.stage = 4
     expect(openOffice(state, 'eu').ok).toBe(true)
-    setDirection(state, state.offices[0].id, 'expand')
+    setWorkstream(state, state.offices[0].id, 'europe')
     run(state, TEAM_IDLE_DAYS + 1)
     expect(state.offices[0].project?.featureIds).toEqual([COMPLIANCE_FEATURE])
     state.products[0].featureIds.push(COMPLIANCE_FEATURE)
@@ -124,10 +124,10 @@ describe('a floor that looks after a product', () => {
 
   it('forgets a product that is gone, and keeps everything in a save', () => {
     const state = floorWithProduct()
-    setDirection(state, state.offices[0].id, 'grow')
+    setWorkstream(state, state.offices[0].id, 'features')
     queueFeatures(state, 50, ['dark_mode'])
     const restored = deserialize(serialize(state))!
-    expect(restored.offices[0]).toMatchObject({ productId: 50, direction: 'grow' })
+    expect(restored.offices[0]).toMatchObject({ productId: 50, workstream: 'features' })
     expect(restored.products[0].nextFeatures).toEqual(['dark_mode'])
     state.products = []
     teamDay(state)

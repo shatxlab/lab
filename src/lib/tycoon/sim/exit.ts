@@ -1,4 +1,5 @@
-import { DAYS_PER_MONTH, EXIT_BASE_MULTIPLE, EXIT_FIRST_OFFER_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_RAISE_PER_DECLINE, EXIT_WINDOW_DAYS } from './balance'
+import { STAGES } from '@/lib/tycoon/data/stages'
+import { DAYS_PER_MONTH, EXIT_BASE_MULTIPLE, EXIT_FIRST_OFFER_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_RAISE_PER_DECLINE, EXIT_WINDOW_DAYS, IPO_MULTIPLE } from './balance'
 import { trailingIncome } from './economy'
 import { logEntry, runSummary } from './journal'
 import { canBeSold } from './offices'
@@ -76,6 +77,33 @@ export function declineBuyout(state: GameState): Result {
   state.exit.declined += 1
   state.exit.nextDay = state.day + EXIT_GAP_DAYS
   logEntry(state, 'exit.declined', `Turned down ${offer.bidder}`, { price: offer.price })
+  return OK
+}
+
+/** The stage whose goals open the IPO: the last one, the Global company. */
+const IPO_STAGE = STAGES.length - 1
+
+/** Why the company can't go public yet, or null when it can: the Global stage, and everything it asks. */
+export function ipoBlocker(state: GameState): string | null {
+  if (state.gameOver) return 'The run is over'
+  if (state.stage < IPO_STAGE) return 'The company is not global yet'
+  const open = STAGES[IPO_STAGE].goals.find((g) => !g.check(state))
+  return open ? open.label : null
+}
+
+/** What the market values the company at when it goes public: the cash, and years of what it earns at a higher multiple than a buyer pays. */
+export function ipoValuation(state: GameState): number {
+  return Math.round(Math.max(0, state.money) + valuation(state, IPO_MULTIPLE))
+}
+
+/** Takes the company public: the bell rings and the run ends, judged by what the market says it is worth. */
+export function goPublic(state: GameState): Result {
+  const blocker = ipoBlocker(state)
+  if (blocker) return fail(blocker)
+  state.exit.pending = null
+  state.gameOver = true
+  state.ending = { kind: 'ipo', day: state.day, worth: ipoValuation(state) }
+  logEntry(state, 'end.ipo', 'Took the company public', { worth: state.ending.worth, ...runSummary(state) })
   return OK
 }
 

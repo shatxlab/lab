@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { AbsorbDialog } from '@/components/tycoon/AbsorbDialog'
 import { StoreContext } from '@/components/tycoon/context'
 import { EmployeeDialog } from '@/components/tycoon/EmployeeDialog'
+import { HitDashboard } from '@/components/tycoon/HitDashboard'
+import { RoadmapDialog } from '@/components/tycoon/RoadmapDialog'
 import { IndustryTab } from '@/components/tycoon/IndustryTab'
 import { NewProjectDialog } from '@/components/tycoon/NewProjectDialog'
 import { ProductsTab } from '@/components/tycoon/ProductsTab'
@@ -91,6 +93,9 @@ describe('the tycoon screens render for a studio with everything in play', () =>
   it('the absorb dialog lists the products to keep and the price', () => {
     const store = richStore()
     const rival = store.state.rivals.find((r) => (r.region ?? 'us') === 'us')!
+    // It competes with the hit, Anchor, a web app.
+    store.state.signatureId = 501
+    store.state.rivalProducts.push({ ...rivalProductsOf(store.state, rival)[0], id: 9999, productTypeId: 'web_app' })
     const host = mount(store, <AbsorbDialog rivalId={rival.id} />)
     expect(host.textContent).toContain(`Absorb ${rival.name}`)
     expect(host.textContent).toContain(rivalProductsOf(store.state, rival)[0].name)
@@ -137,9 +142,9 @@ describe('the tycoon screens render for a studio with everything in play', () =>
   it('the products tab shows the team that looks after a product, and the next release can be queued', () => {
     const store = richStore()
     store.state.offices[0].productId = 501
-    store.state.offices[0].direction = 'grow'
+    store.state.offices[0].workstream = 'features'
     const host = mount(store, <ProductsTab />)
-    expect(host.textContent).toContain('Direction')
+    expect(host.textContent).toContain('Works on')
     expect(host.textContent).toContain('Next release: nothing queued')
     act(() => root?.unmount())
     const queue = mount(store, <NewProjectDialog updateOf={501} queue />)
@@ -185,9 +190,41 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     const store = richStore()
     store.state.stage = 6
     const journey = mount(store, <JourneyTab />)
-    expect(journey.textContent).toContain('Tech giant')
+    expect(journey.textContent).toContain('Global company')
     act(() => root?.unmount())
     const milestones = mount(store, <MilestonesTab />)
     expect(milestones.textContent).toContain('Across the Atlantic')
+  })
+
+  it('the hit dashboard shows users, income, servers and fit, and opens the roadmap', () => {
+    const store = richStore()
+    store.state.signatureId = 501
+    store.state.products[0].fit = 82
+    const host = mount(store, <HitDashboard />)
+    expect(host.textContent).toContain('Anchor')
+    expect(host.textContent).toContain('% full')
+    expect(host.textContent).toContain('Income')
+    expect(host.textContent).toContain('keeps')
+    act(() => host.querySelector<HTMLButtonElement>('button')!.click())
+    expect(store.dialog.value).toMatchObject({ kind: 'roadmap', productId: 501 })
+  })
+
+  it('the roadmap dialog ranks items, with the ones not on offer yet saying why', () => {
+    const store = richStore()
+    const host = mount(store, <RoadmapDialog productId={501} />)
+    expect(host.textContent).toContain('Nothing planned')
+    act(() => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Add')!.click())
+    expect(store.state.products[0].roadmap?.length).toBe(1)
+  })
+
+  it('the move out of the garage lists the other products to keep or sell', () => {
+    const store = richStore()
+    store.state.offices = [store.state.offices[0]]
+    store.state.offices[0].kind = 'garage'
+    store.state.stage = 2
+    store.state.signatureId = 501
+    const host = mount(store, <TeamDialog />)
+    expect(host.textContent).toContain('Your hit comes with you')
+    expect(host.textContent).toContain('Titan')
   })
 })

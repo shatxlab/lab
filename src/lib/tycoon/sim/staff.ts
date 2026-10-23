@@ -1,3 +1,4 @@
+import { toolEffects } from './tools'
 import { getTrait, TRAITS, type Trait } from '@/lib/tycoon/data/traits'
 import {
   CANDIDATE_MORALE_MAX,
@@ -86,7 +87,7 @@ export function moraleTarget(state: GameState, employee: Employee): number {
   }
   target += Math.min(cheer, TEAM_MORALE_CAP)
   const office = officeOf(state, employee)
-  target += careerMorale(state, employee, office)
+  target += careerMorale(state, employee, office) + toolEffects(state).morale
   const project = office.project
   if (project) {
     const over = state.day - project.startDay - crunchDays(project.size)

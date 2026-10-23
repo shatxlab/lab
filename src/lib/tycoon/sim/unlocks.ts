@@ -36,5 +36,5 @@ export function sizeLock(state: GameState, size: ProjectSize, office: Office = s
   const spec = PROJECT_SIZES[size]
   if (spec.office && office.kind !== 'office') return 'a real office'
   if (size !== 'small' && office.kind === 'cafe') return 'the garage'
-  return state.stage >= spec.stage ? null : `a studio that is a ${getStage(spec.stage).name.toLowerCase()}`
+  return state.stage >= spec.stage ? null : `a studio at the "${getStage(spec.stage).name}" stage`
 }

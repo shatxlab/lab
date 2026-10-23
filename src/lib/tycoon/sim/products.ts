@@ -1,3 +1,6 @@
+import { companionEffects } from './companions'
+import { retention } from './fit'
+import { growWorld, loadDay, payFactor, worldOf } from './scale'
 import { audienceFor } from '@/lib/tycoon/data/audiences'
 import { EU_BUG_TOLERANCE, EU_COMPLAINT_FACTOR, EU_PAY, EU_TYPE_SIZE } from '@/lib/tycoon/data/regions'
 import { expectedFeatures } from '@/lib/tycoon/data/eras'
@@ -88,8 +91,13 @@ export function reachIn(product: Pick<Product, 'reach' | 'euShare'>, region: Reg
  * next to the type's audience there, never more than MARKET_CAP times it however big the reach.
  */
 export function saturate(productTypeId: string, users: number, region: Region = 'us', hit = false): number {
-  const cap = getProductType(productTypeId).audience * regionScale(productTypeId, region) * MARKET_CAP * (hit ? HIT_MARKET_SCALE : 1)
+  const cap = marketCap(productTypeId, region, hit)
   return cap * (1 - Math.exp(-users / cap))
+}
+
+/** The most users a market holds for one product, in a region: a hit holds far more than anything else. */
+export function marketCap(productTypeId: string, region: Region = 'us', hit = false): number {
+  return getProductType(productTypeId).audience * regionScale(productTypeId, region) * MARKET_CAP * (hit ? HIT_MARKET_SCALE : 1)
 }
 
 /** How much of its market a product takes up: its reach while it holds people's interest, against the market's room. */
@@ -167,10 +175,10 @@ const regionShare = (product: Product, region: Region): number => (region === 'e
  * won over, who stay while it is fresh and working.
  */
 export function targetUsersIn(state: GameState, product: Product, region: Region, weights = marketWeights(state)): number {
-  const reach = reachIn(product, region)
+  const reach = reachIn(product, region) * worldOf(product)
   if (reach <= 0) return 0
   const crowd = crowding(weights, product.productTypeId, ownWeight(product, state.day, region), region)
-  const kept = interest(product, state.day) * bugFactor(product, region)
+  const kept = interest(product, state.day) * bugFactor(product, region) * retention(product, product.id === state.signatureId ? companionEffects(state).retention : 0)
   const users = reach * kept * expectationFactor(product, state.day)
   const loyal = (product.loyalUsers ?? 0) * regionShare(product, region) * kept
   return saturate(product.productTypeId, users, region, product.hit) / (1 + crowd) + loyal
@@ -195,7 +203,7 @@ export function revenueForUsers(productTypeId: string, users: number, audienceId
 
 /** What the product earns per day right now, before studio-wide modifiers: its users in each region pay what people there pay. */
 export function productRevenue(product: Product): number {
-  return REGIONS.reduce((sum, region) => sum + revenueForUsers(product.productTypeId, usersIn(product, region), product.audienceId, region), 0)
+  return REGIONS.reduce((sum, region) => sum + revenueForUsers(product.productTypeId, usersIn(product, region), product.audienceId, region), 0) * payFactor(product)
 }
 
 /** Bugs a release of `project` ships with: more work means more bugs, and QA catches them. */
@@ -255,6 +263,8 @@ export function productsDay(state: GameState): void {
     const loyal = (product.loyalUsers ?? 0) * (1 - 1 / PROMO_LOYAL_DAYS) + boost * PROMO_KEEP
     if (loyal > 0) product.loyalUsers = loyal
 
+    loadDay(state, product)
+    growWorld(product, product.id === state.signatureId ? companionEffects(state).reach : 0)
     const before = bugDensity(product)
     surfaceBugs(product)
     product.bugs += bugsFoundPerDay(product)

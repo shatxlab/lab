@@ -1,24 +1,19 @@
 import { getFeature } from '@/lib/tycoon/data/features'
+import { WORKSTREAM_INFO, type WorkItem } from '@/lib/tycoon/data/workstreams'
 import { COMPLIANCE_FEATURE } from '@/lib/tycoon/data/regions'
 import { FRESH_DAYS, KEEP_FRESH_SHARE, POLISH_BUG_RISK, PROJECT_SIZES, TEAM_IDLE_DAYS, UPDATE_MAX_FEATURES, UPDATE_MIN_AGE_DAYS } from './balance'
 import { logEntry } from './journal'
 import { getOffice, hasEuropeOffice, officeName, productInWork, teamOf } from './offices'
-import { euShareOf, lastReleaseDay } from './products'
+import { euShareOf, interest, lastReleaseDay } from './products'
 import { shipProject, startLocalisation, startUpdate } from './project'
+import { companionsOf } from './companions'
+import { nextItem } from './roadmap'
 import { isReady } from './scoring'
 import { featureLock } from './unlocks'
-import { DIRECTIONS, fail, OK, type Direction, type GameState, type Office, type Product, type Result } from './types'
+import { DISCIPLINES, fail, OK, WORKSTREAMS, type GameState, type Office, type Product, type Result, type Workstream } from './types'
 
-/** What each direction means, for the player. */
-export const DIRECTION_INFO: Record<Direction, { name: string; blurb: string }> = {
-  grow: { name: 'Grow', blurb: 'Ships the features you queue for it, one release after another' },
-  polish: { name: 'Polish', blurb: 'Fixes most of the open bugs with every release, and ships fewer new ones' },
-  keep: { name: 'Keep it running', blurb: 'Only a cheap maintenance release when it is about to go stale' },
-  expand: { name: 'Expand to Europe', blurb: "Meets Europe's data rules, then localises it; after that, grows it" },
-}
-
-/** What a team does when nobody has said: keep its product fresh. */
-export const DEFAULT_DIRECTION: Direction = 'keep'
+/** What a floor works on when nobody has said: the product's queued features, or else keeping it fresh. */
+export const DEFAULT_WORKSTREAM: Workstream = 'features'
 
 /** The product a floor looks after, if it still exists. */
 export function ownedProduct(state: GameState, office: Office): Product | undefined {
@@ -41,15 +36,15 @@ export function assignProduct(state: GameState, officeId: number, productId: num
   if (!state.products.some((p) => p.id === productId)) return fail('Unknown product')
   for (const other of state.offices) if (other.productId === productId) delete other.productId
   office.productId = productId
-  office.direction ??= DEFAULT_DIRECTION
+  office.workstream ??= DEFAULT_WORKSTREAM
   return OK
 }
 
-export function setDirection(state: GameState, officeId: number, direction: Direction): Result {
+export function setWorkstream(state: GameState, officeId: number, workstream: Workstream): Result {
   const office = getOffice(state, officeId)
   if (!office) return fail('Unknown office')
-  if (!DIRECTIONS.includes(direction)) return fail('Unknown direction')
-  office.direction = direction
+  if (!WORKSTREAMS.includes(workstream)) return fail('Unknown workstream')
+  office.workstream = workstream
   return OK
 }
 
@@ -77,50 +72,105 @@ export function queueFeatures(state: GameState, productId: number, featureIds: r
   return OK
 }
 
-/** The day the team's next release may start, by its direction: as soon as an update is allowed, or near the end of the fresh time for one kept running. */
+/** What a floor's next release is, by its workstream: nothing ('idle') when its stream has no work for the product. */
+export type ReleasePlan =
+  | { kind: 'compliance' | 'localise' | 'polish' | 'features' | 'maintenance' }
+  | { kind: 'item'; item: WorkItem }
+  | { kind: 'care'; product: Product }
+  | { kind: 'idle'; why: string }
+
+export function releasePlan(state: GameState, office: Office, product: Product): ReleasePlan {
+  const stream = office.workstream ?? DEFAULT_WORKSTREAM
+  if (stream === 'features') return (product.nextFeatures ?? []).some((id) => !product.featureIds.includes(id)) ? { kind: 'features' } : { kind: 'maintenance' }
+  if (stream === 'europe') {
+    if (euShareOf(product) === 0) {
+      if (!hasEuropeOffice(state)) return { kind: 'idle', why: 'Needs an office in Europe' }
+      if (!product.featureIds.includes(COMPLIANCE_FEATURE)) {
+        return featureLock(state, getFeature(COMPLIANCE_FEATURE)) === null ? { kind: 'compliance' } : { kind: 'idle', why: "Europe's data rules are locked" }
+      }
+      return { kind: 'localise' }
+    }
+  }
+  const item = nextItem(state, product, stream)
+  if (item) return { kind: 'item', item }
+  if (stream === 'companions') {
+    const needy = companionsOf(state).filter((p) => !productInWork(state, p.id)).sort((a, b) => interest(a, state.day) - interest(b, state.day))[0]
+    if (needy && interest(needy, state.day) < 1) return { kind: 'care', product: needy }
+  }
+  if (stream === 'quality') return { kind: 'polish' }
+  return { kind: 'idle', why: `Nothing on the roadmap for ${WORKSTREAM_INFO[stream].name}` }
+}
+
+/** The day the team's next release may start: as soon as an update is allowed, or for plain upkeep near the end of the fresh time. */
 export function nextReleaseDay(state: GameState, office: Office, product: Product): number {
-  const direction = office.direction ?? DEFAULT_DIRECTION
+  const plan = releasePlan(state, office, product)
+  if (plan.kind === 'idle') return Number.MAX_SAFE_INTEGER
   const last = lastReleaseDay(product)
   const soonest = last + UPDATE_MIN_AGE_DAYS
   const keep = last + Math.round(FRESH_DAYS * PROJECT_SIZES[product.size].life * KEEP_FRESH_SHARE)
-  const wait = direction === 'keep' ? keep : soonest
-  return Math.max(wait, (office.idleSince ?? state.day) + TEAM_IDLE_DAYS)
+  return Math.max(plan.kind === 'maintenance' ? keep : soonest, (office.idleSince ?? state.day) + TEAM_IDLE_DAYS)
 }
 
 /** What the team will do next with its product, in a few words, for the panel. */
 export function nextReleasePlan(state: GameState, office: Office, product: Product): string {
-  const direction = office.direction ?? DEFAULT_DIRECTION
-  if (direction === 'expand' && euShareOf(product) === 0 && hasEuropeOffice(state)) {
-    return product.featureIds.includes(COMPLIANCE_FEATURE) ? 'localise it for Europe' : `add ${getFeature(COMPLIANCE_FEATURE).name} for Europe's data rules`
+  const plan = releasePlan(state, office, product)
+  switch (plan.kind) {
+    case 'compliance':
+      return `add ${getFeature(COMPLIANCE_FEATURE).name} for Europe's data rules`
+    case 'localise':
+      return 'localise it for Europe'
+    case 'polish':
+      return 'a polishing release'
+    case 'features':
+      return `a release with ${(product.nextFeatures ?? []).map((id) => getFeature(id).name).join(', ')}`
+    case 'item':
+      return plan.item.name
+    case 'care':
+      return `look after ${plan.product.name}`
+    case 'idle':
+      return plan.why
+    default:
+      return 'a maintenance release (queue features to grow it)'
   }
-  if (direction === 'polish') return 'a polishing release'
-  const queued = product.nextFeatures ?? []
-  if ((direction === 'grow' || direction === 'expand') && queued.length > 0) return `a release with ${queued.map((id) => getFeature(id).name).join(', ')}`
-  return direction === 'keep' ? 'a maintenance release' : 'a maintenance release (queue features to grow it)'
 }
 
-/** Starts the team's next release of its product, as its direction says. */
+/** Starts the team's next release of its product, as its workstream says. */
 function startRelease(state: GameState, office: Office, product: Product): Result {
-  const direction = office.direction ?? DEFAULT_DIRECTION
-  if (direction === 'expand' && euShareOf(product) === 0 && hasEuropeOffice(state)) {
-    if (!product.featureIds.includes(COMPLIANCE_FEATURE)) {
-      if (featureLock(state, getFeature(COMPLIANCE_FEATURE)) === null) return mark(startUpdate(state, product.id, [COMPLIANCE_FEATURE], office.id), office)
-    } else {
-      return mark(startLocalisation(state, product.id, office.id), office)
+  const plan = releasePlan(state, office, product)
+  switch (plan.kind) {
+    case 'idle':
+      return fail(plan.why)
+    case 'compliance':
+      return mark(startUpdate(state, product.id, [COMPLIANCE_FEATURE], office.id, false, true), office)
+    case 'localise':
+      return mark(startLocalisation(state, product.id, office.id, true), office)
+    case 'polish': {
+      const result = mark(startUpdate(state, product.id, [], office.id, false, true), office)
+      if (result.ok && office.project) {
+        office.project.polishes = true
+        office.project.bugRisk *= POLISH_BUG_RISK
+      }
+      return result
     }
-  }
-  if (direction === 'polish') {
-    const result = mark(startUpdate(state, product.id, [], office.id), office)
-    if (result.ok && office.project) {
-      office.project.polishes = true
-      office.project.bugRisk *= POLISH_BUG_RISK
+    case 'item': {
+      const result = mark(startUpdate(state, product.id, [], office.id, false, true), office)
+      if (result.ok && office.project) {
+        office.project.itemId = plan.item.id
+        for (const d of DISCIPLINES) office.project.target[d] *= plan.item.work
+      }
+      return result
     }
-    return result
+    case 'care':
+      return mark(startUpdate(state, plan.product.id, [], office.id, false, true), office)
+    case 'features': {
+      const queued = (product.nextFeatures ?? []).filter((id) => !product.featureIds.includes(id))
+      const result = mark(startUpdate(state, product.id, queued.slice(0, UPDATE_MAX_FEATURES), office.id, false, true), office)
+      if (result.ok && queued.length > 0) delete product.nextFeatures
+      return result
+    }
+    default:
+      return mark(startUpdate(state, product.id, [], office.id, false, true), office)
   }
-  const queued = direction === 'keep' ? [] : (product.nextFeatures ?? []).filter((id) => !product.featureIds.includes(id))
-  const result = mark(startUpdate(state, product.id, queued.slice(0, UPDATE_MAX_FEATURES), office.id), office)
-  if (result.ok && queued.length > 0) delete product.nextFeatures
-  return result
 }
 
 /** Marks the release just started as the team's own, so it ships by itself. */
@@ -151,7 +201,7 @@ export function teamDay(state: GameState): void {
     }
     office.idleSince ??= state.day
     const product = ownedProduct(state, office)
-    if (!product || office.kind !== 'office' || teamOf(state, office).length === 0 || productInWork(state, product.id)) continue
+    if (!product || office.kind !== 'office' || teamOf(state, office).length === 0 || productInWork(state, product.id, true)) continue
     if (state.day < nextReleaseDay(state, office, product)) continue
     startRelease(state, office, product)
   }

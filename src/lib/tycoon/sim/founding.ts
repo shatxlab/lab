@@ -19,6 +19,32 @@ export function you(state: GameState): Employee | undefined {
   return state.employees.find((e) => e.founder && (e.role === 'analyst' || e.role === 'pm'))
 }
 
+/**
+ * When the company opens in Europe, you become its CEO and your developer friend its CTO; one of your analysts (the
+ * best, by analysis) takes over as the hit's product manager. The CEO no longer gathers insight.
+ */
+export function changeOfGuard(state: GameState): void {
+  const ceo = you(state)
+  if (!ceo || ceo.title === 'CEO') return
+  const friend = state.employees.find((e) => e.founder && e !== ceo)
+  const successor = state.employees
+    .filter((e) => !e.founder && e.role === 'analyst' && !e.training)
+    .sort((a, b) => (b.analysis ?? 0) - (a.analysis ?? 0))[0]
+  ceo.title = 'CEO'
+  ceo.role = 'analyst'
+  if (friend) friend.title = 'CTO'
+  let text = `${ceo.name} is the CEO now${friend ? `, with ${friend.name} as CTO` : ''}.`
+  if (successor) {
+    successor.role = 'pm'
+    successor.level = Math.max(successor.level, 1)
+    successor.levelDay = state.day
+    text += ` ${successor.name} takes over as the hit's product manager.`
+  } else {
+    text += ' Nobody is left to steer the hit: hire analysts, and make one a product manager.'
+  }
+  state.events.push({ type: 'notice', text, sound: 'milestone' })
+}
+
 const from = (list: readonly string[], random: () => number) => list[Math.floor(random() * list.length)]!
 
 /**

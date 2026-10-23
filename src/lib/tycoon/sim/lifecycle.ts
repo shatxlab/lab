@@ -39,15 +39,15 @@ import { fail, OK, PROJECT_SIZE_IDS, TIERS, type GameState, type Office, type Pr
 const price = (amount: number, floor: number) => Math.max(floor, Math.round(amount / 50) * 50)
 
 /** Why `office` can't take on work on this product right now (an update or a fix), or null when it can. */
-export function productWorkBlocker(state: GameState, office: Office, product: Product): string | null {
+export function productWorkBlocker(state: GameState, office: Office, product: Product, byTeam = false): string | null {
   if (office.project) return 'A project is in progress'
   if (teamOf(state, office).length === 0) return 'Hire someone first'
-  return productInWork(state, product.id) ? 'Another team is working on it' : null
+  return productInWork(state, product.id, byTeam) ? 'Another team is working on it' : null
 }
 
 /** Why a product can't be updated by `office` right now, or null when it can. */
-export function updateBlocker(state: GameState, office: Office, product: Product): string | null {
-  const busy = productWorkBlocker(state, office, product)
+export function updateBlocker(state: GameState, office: Office, product: Product, byTeam = false): string | null {
+  const busy = productWorkBlocker(state, office, product, byTeam)
   if (busy) return busy
   const wait = UPDATE_MIN_AGE_DAYS - (state.day - lastReleaseDay(product))
   return wait > 0 ? `Wait ${wait} more day${wait === 1 ? '' : 's'}` : null
@@ -222,9 +222,9 @@ export function growBlocker(state: GameState, office: Office, product: Product):
 }
 
 /** Why `office` can't start localising `product` for Europe right now, or null when it can. */
-export function localiseBlocker(state: GameState, office: Office, product: Product): string | null {
+export function localiseBlocker(state: GameState, office: Office, product: Product, byTeam = false): string | null {
   if (euShareOf(product) > 0) return 'Already in Europe'
   if (!hasEuropeOffice(state)) return 'Needs an office in Europe'
   if (!product.featureIds.includes(COMPLIANCE_FEATURE)) return `Europe's data rules: it needs ${getFeature(COMPLIANCE_FEATURE).name} first`
-  return updateBlocker(state, office, product)
+  return updateBlocker(state, office, product, byTeam)
 }

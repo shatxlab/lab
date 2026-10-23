@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
-import { ABSORB_STAFF_BASE, ABSORB_STAFF_MAX, ABSORB_STAFF_PER_REPUTATION, PROJECT_SIZES } from '@/lib/tycoon/sim/balance'
-import { absorbSlots, acquisitionBlocker, acquisitionPrice, rivalProductsOf } from '@/lib/tycoon/sim/rivals'
+import { ABSORB_STAFF_BASE, ABSORB_STAFF_MAX, ABSORB_STAFF_PER_REPUTATION, ABSORB_USERS_SHARE, PROJECT_SIZES } from '@/lib/tycoon/sim/balance'
+import { absorbDesks, absorbSlots, acquisitionBlocker, acquisitionPrice, competingProducts, rivalProductsOf } from '@/lib/tycoon/sim/rivals'
 import { revenueForUsers } from '@/lib/tycoon/sim/products'
 import { useGame, useStore } from './context'
 import { formatCount, formatMoney } from '@/lib/tycoon/format'
 import { Modal } from './Modal'
 
-/** Absorbing a rival: its office and people become yours, and you choose which of its products come along. */
+/** Absorbing a rival that competes with the hit: its users move to the hit, its best people take empty desks, and you choose which products come along. */
 export function AbsorbDialog({ rivalId }: { rivalId: number }) {
   const store = useStore()
   const state = useGame()
@@ -32,6 +32,8 @@ export function AbsorbDialog({ rivalId }: { rivalId: number }) {
   const slots = absorbSlots(state)
   const blocker = acquisitionBlocker(state, rival)
   const people = Math.min(ABSORB_STAFF_MAX, ABSORB_STAFF_BASE + Math.floor(rival.reputation / ABSORB_STAFF_PER_REPUTATION))
+  const desks = absorbDesks(state, rival)
+  const moving = Math.round(competingProducts(state, rival).reduce((sum, p) => sum + p.users, 0) * ABSORB_USERS_SHARE)
   const toggle = (id: number) => setKept((current) => (current.includes(id) ? current.filter((x) => x !== id) : current.length < slots ? [...current, id] : current))
   const confirm = () => {
     const result = store.acquire(rival.id, kept)
@@ -42,14 +44,15 @@ export function AbsorbDialog({ rivalId }: { rivalId: number }) {
   return (
     <Modal title={`Absorb ${rival.name}`} onClose={() => store.closeDialog()}>
       <p className="muted">
-        The studio leaves the market. Its {REGION_NAME[region]} office becomes one of yours, in place of one you would have built, with about{' '}
-        <strong>{people} people</strong> who know {rival.focus.map((id) => getProductType(id).name.toLowerCase()).join(', ')}. Its other business adds to your income.
+        The studio leaves the market and its products compete with yours no more: about <strong>{formatCount(moving)} of its users</strong> move to your hit.
+        Of the roughly {people} people who know {rival.focus.map((id) => getProductType(id).name.toLowerCase()).join(', ')}, its best take your{' '}
+        <strong>{desks} empty {desks === 1 ? 'desk' : 'desks'}</strong> in {REGION_NAME[region]} and only those: with none, nobody comes. Its other business adds to your income.
       </p>
       <section className="section">
         <div className="section-head">
-          <h3>Products to keep</h3>
+          <h3>Products to keep as second products</h3>
           <span className="muted">
-            {kept.length}/{slots} places free in your portfolio
+            {kept.length}/{slots} second-product places free
           </span>
         </div>
         {products.length === 0 && <p className="muted">It has no products on the market.</p>}

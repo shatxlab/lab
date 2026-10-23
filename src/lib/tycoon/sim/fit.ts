@@ -4,6 +4,12 @@ import {
   FIT_BAND_MAX,
   FIT_BAND_MIN,
   FIT_BASE,
+  FIT_BUG_PRESSURE,
+  FIT_MISSING_PRESSURE,
+  FIT_RECOVERY,
+  FIT_RIVAL_PRESSURE,
+  FIT_STALE_PRESSURE,
+  HIT_RETENTION_FLOOR,
   FIT_QUALITY_FLOOR,
   FIT_QUALITY_FULL,
   FIT_SHRUG_PENALTY,
@@ -18,7 +24,9 @@ import {
 } from './balance'
 import { readingSkill } from './insight'
 import { marketDemand } from './market'
-import { crowdingAround, expectationFactor, interest } from './products'
+import { companionPressure } from './companions'
+import { itemEffects } from '@/lib/tycoon/data/workstreams'
+import { bugFactor, crowdingAround, expectationFactor, interest, missingFeatures } from './products'
 import { SHRUGGED_AT } from './scoring'
 import { featureLock } from './unlocks'
 import type { GameState, Product } from './types'
@@ -153,7 +161,53 @@ export function takeOff(state: GameState, product: Product): void {
   state.events.push({ type: 'breakout', productId: product.id })
 }
 
-/** Once a day: a product that fits well enough, in a market with room for it, takes off. */
+/** What presses on a hit's fit today, in points a day, by cause. */
+export interface FitPressure {
+  stale: number
+  bugs: number
+  rivals: number
+  missing: number
+  companions: number
+}
+
+export function fitPressure(state: GameState, product: Product): FitPressure {
+  return {
+    stale: FIT_STALE_PRESSURE * (1 - interest(product, state.day)),
+    bugs: FIT_BUG_PRESSURE * (1 - bugFactor(product)),
+    rivals: FIT_RIVAL_PRESSURE * Math.min(3, crowdingAround(state, product)),
+    missing: FIT_MISSING_PRESSURE * missingFeatures(product, state.day).length,
+    companions: product.id === state.signatureId ? companionPressure(state) : 0,
+  }
+}
+
+export const totalPressure = (p: FitPressure): number => p.stale + p.bugs + p.rivals + p.missing + p.companions
+
+/** Where a hit's fit would settle with no release: nowhere above the fit its last release earned. */
+export const peakFitOf = (product: Product): number => product.peakFit ?? product.fit ?? 0
+
+/** A day of pressure on a hit: its fit sags with it, and comes back slowly when nothing presses. */
+export function sagFit(state: GameState, product: Product): void {
+  if (!product.hit || product.fit === undefined) return
+  const pressure = totalPressure(fitPressure(state, product))
+  const peak = peakFitOf(product)
+  product.peakFit = peak
+  product.fit = Math.max(0, Math.min(peak, pressure > 0.02 ? product.fit - pressure : product.fit + FIT_RECOVERY))
+}
+
+/**
+ * The share of its users a hit keeps at its fit: all of them from the takeoff fit up, fewer below it. Work on retention
+ * (the churn of its built items) wins back part of what is lost.
+ */
+export function retention(product: Product, bonus = 0): number {
+  if (!product.hit || product.fit === undefined) return 1
+  const base = HIT_RETENTION_FLOOR + (1 - HIT_RETENTION_FLOOR) * Math.min(1, product.fit / FIT_TAKEOFF)
+  return base + (1 - base) * Math.min(1, itemEffects(product).churn + bonus)
+}
+
+/** Once a day: a product that fits well enough, in a market with room for it, takes off; a hit's fit feels the pressure on it. */
 export function fitDay(state: GameState): void {
-  for (const product of state.products) if (!product.hit && takeoffBlocker(state, product) === null) takeOff(state, product)
+  for (const product of state.products) {
+    if (product.hit) sagFit(state, product)
+    else if (takeoffBlocker(state, product) === null) takeOff(state, product)
+  }
 }

@@ -2,6 +2,7 @@
 export function formatMoney(amount: number): string {
   const sign = amount < 0 ? '-' : ''
   const abs = Math.abs(amount)
+  if (abs >= 1_000_000_000) return `${sign}$${(abs / 1_000_000_000).toFixed(2)}B`
   if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`
   return `${sign}$${Math.round(abs).toLocaleString('en-US')}`
 }
@@ -9,6 +10,7 @@ export function formatMoney(amount: number): string {
 /** "940", "14,800", "1.25M": a head count, for users. */
 export function formatCount(count: number): string {
   const n = Math.max(0, count)
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
   return Math.round(n).toLocaleString('en-US')
 }

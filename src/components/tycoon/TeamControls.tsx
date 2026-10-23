@@ -1,7 +1,8 @@
 import { getFeature } from '@/lib/tycoon/data/features'
 import { inGarage, officeName } from '@/lib/tycoon/sim/offices'
-import { DEFAULT_DIRECTION, DIRECTION_INFO, nextReleaseDay, nextReleasePlan, ownedProduct, ownerOf } from '@/lib/tycoon/sim/teams'
-import { DIRECTIONS, type Direction, type Product } from '@/lib/tycoon/sim/types'
+import { DEFAULT_WORKSTREAM, nextReleaseDay, nextReleasePlan, ownedProduct, ownerOf } from '@/lib/tycoon/sim/teams'
+import { WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
+import { WORKSTREAMS, type Product, type Workstream } from '@/lib/tycoon/sim/types'
 import { useGame, useStore } from './context'
 
 /** "in 3 days", "tomorrow", "now": how long until a day. */
@@ -16,7 +17,7 @@ export function ProductTeam({ product }: { product: Product }) {
   const state = useGame()
   if (inGarage(state)) return null
   const owner = ownerOf(state, product.id)
-  const direction = owner?.direction ?? DEFAULT_DIRECTION
+  const stream = owner?.workstream ?? DEFAULT_WORKSTREAM
   const queued = product.nextFeatures ?? []
 
   return (
@@ -44,12 +45,12 @@ export function ProductTeam({ product }: { product: Product }) {
       </label>
       {owner && (
         <>
-          <label title={DIRECTION_INFO[direction].blurb}>
-            Direction{' '}
-            <select value={direction} onChange={(e) => store.setDirection(owner.id, e.target.value as Direction)}>
-              {DIRECTIONS.map((d) => (
-                <option key={d} value={d}>
-                  {DIRECTION_INFO[d].name}
+          <label title={WORKSTREAM_INFO[stream].blurb}>
+            Works on{' '}
+            <select value={stream} onChange={(e) => store.setWorkstream(owner.id, e.target.value as Workstream)}>
+              {WORKSTREAMS.map((w) => (
+                <option key={w} value={w}>
+                  {WORKSTREAM_INFO[w].name}
                 </option>
               ))}
             </select>
@@ -57,13 +58,18 @@ export function ProductTeam({ product }: { product: Product }) {
           <button onClick={() => store.openDialog({ kind: 'queue', productId: product.id })} title="The features the team adds when it grows the product">
             Next release: {queued.length > 0 ? queued.map((id) => getFeature(id).name).join(', ') : 'nothing queued'}…
           </button>
+          <button onClick={() => store.openDialog({ kind: 'roadmap', productId: product.id })} title="The order the floors build scale, growth, monetisation and quality work in">
+            Roadmap: {(product.roadmap ?? []).length > 0 ? `${product.roadmap!.length} planned` : 'empty'}…
+          </button>
           <small className="muted">
             {owner.project?.parentId === product.id
               ? `${officeName(state, owner)} is working on it now.`
               : owner.project
                 ? `${officeName(state, owner)} is busy with ${owner.project.name}; it gets back to ${product.name} after.`
-                : `Next: ${nextReleasePlan(state, owner, product)}, ${until(nextReleaseDay(state, owner, product) - state.day)}.`}{' '}
-            {DIRECTION_INFO[direction].blurb}.
+                : nextReleaseDay(state, owner, product) === Number.MAX_SAFE_INTEGER
+                  ? `${nextReleasePlan(state, owner, product)}.`
+                  : `Next: ${nextReleasePlan(state, owner, product)}, ${until(nextReleaseDay(state, owner, product) - state.day)}.`}{' '}
+            {WORKSTREAM_INFO[stream].blurb}.
           </small>
         </>
       )}

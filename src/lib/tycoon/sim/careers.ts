@@ -1,3 +1,4 @@
+import { toolEffects } from './tools'
 import {
   ANALYST_MAX_LEVEL,
   DAYS_PER_MONTH,
@@ -42,6 +43,7 @@ export function roleName(employee: Employee): string {
 
 /** "Senior developer", "Lead tester", "Mid product manager"... */
 export function title(employee: Employee): string {
+  if (employee.title) return employee.title
   return `${LEVELS[employee.level].name} ${roleName(employee)}`
 }
 
@@ -124,7 +126,7 @@ export function becomePm(state: GameState, employeeId: number): Result {
 /** Output multiplier for a whole office: a Lead speeds it up; a big team without one gets in its own way. */
 export function teamSpeed(state: GameState, office: Office): number {
   const lead = leadOf(state, office) ? LEAD_SPEED : buildersIn(state, office) > LEAD_FREE_TEAM ? NO_LEAD_SPEED : 1
-  return lead
+  return lead * (1 + toolEffects(state).speed)
 }
 
 /** True when an office is big enough to need a Lead and has none. */

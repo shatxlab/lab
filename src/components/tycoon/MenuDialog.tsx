@@ -1,6 +1,9 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { withBase } from '@/lib/apps/paths'
 import { downloadJournal, downloadSave, importSaveFile, startNewGame } from '@/lib/tycoon/browser'
+import { STAGES } from '@/lib/tycoon/data/stages'
+import { formatMoney } from '@/lib/tycoon/format'
+import { ipoBlocker, ipoValuation } from '@/lib/tycoon/sim/exit'
 import { useGame, useSignal, useStore } from './context'
 import { Modal } from './Modal'
 
@@ -11,6 +14,8 @@ export function MenuDialog() {
   const fileInput = useRef<HTMLInputElement>(null)
   const [confirmNew, setConfirmNew] = useState(false)
   const [confirmRetire, setConfirmRetire] = useState(false)
+  const [confirmIpo, setConfirmIpo] = useState(false)
+  const ipo = ipoBlocker(state)
   const [message, setMessage] = useState('')
 
   const onFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +46,17 @@ export function MenuDialog() {
         <button onClick={() => downloadSave(state)}>Export save</button>
         <button onClick={() => downloadJournal(state)}>Export run log</button>
         <button onClick={() => fileInput.current?.click()}>Import save…</button>
+        {state.stage >= STAGES.length - 1 && (
+          <button
+            className={confirmIpo ? 'danger' : ''}
+            disabled={ipo !== null}
+            onClick={() => (confirmIpo ? store.goPublic() : setConfirmIpo(true))}
+            onBlur={() => setConfirmIpo(false)}
+            title={ipo ?? `Ring the bell: the company is valued at ${formatMoney(ipoValuation(state))} and the run ends`}
+          >
+            {ipo ? `Go public: ${ipo}` : confirmIpo ? `Really go public at ${formatMoney(ipoValuation(state))}? This ends the run` : 'Go public (IPO)'}
+          </button>
+        )}
         <button
           className={confirmRetire ? 'danger' : ''}
           onClick={() => (confirmRetire ? store.retire() : setConfirmRetire(true))}

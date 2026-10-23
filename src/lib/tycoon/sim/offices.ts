@@ -1,8 +1,10 @@
 import { formatMoney } from '@/lib/tycoon/format'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
-import { CAFE_JOBS, EU_OFFICE_COST, GARAGE_DEPOSIT, GARAGE_READY_MONEY, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
+import { CAFE_JOBS, EU_OFFICE_COST, GARAGE_DEPOSIT, GARAGE_READY_MONEY, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, SIDE_PRODUCT_LIMIT, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
+import { changeOfGuard } from './founding'
 import { adjustMorale } from './morale'
-import { fail, isBuilder, OK, REGIONS, type Employee, type GameState, type Office, type Project, type Region, type Result } from './types'
+import { sunsetBlocker, sunsetProduct } from './sunset'
+import { fail, isBuilder, OK, REGIONS, WORKSTREAMS, type Employee, type GameState, type Office, type Product, type Project, type Region, type Result } from './types'
 
 /** Journey stage at which the garage can be left behind, and at which more offices can open (indexes into STAGES). */
 export const MOVE_OUT_STAGE = 2
@@ -128,9 +130,12 @@ export function officeOf(state: GameState, employee: Employee): Office {
   return getOffice(state, employee.officeId) ?? state.offices[0]
 }
 
-/** True if some office is already updating this product. */
-export function productInWork(state: GameState, productId: number): boolean {
-  return activeProjects(state).some(({ project }) => project.kind !== 'new' && project.parentId === productId)
+/**
+ * True if some office is already updating this product. A floor's own workstream release (`byTeam`) does not count
+ * for another floor's: the floors of a building work on the hit side by side, each on its own workstream.
+ */
+export function productInWork(state: GameState, productId: number, byTeam = false): boolean {
+  return activeProjects(state).some(({ project }) => project.kind !== 'new' && project.parentId === productId && !(byTeam && project.byTeam))
 }
 
 /** True while the two founders still work from the café. */
@@ -170,13 +175,38 @@ export function inGarage(state: GameState): boolean {
   return state.offices.some((o) => o.kind !== 'office')
 }
 
-/** Leaves the garage for a real office: the same team and project, with room for twelve. */
-export function moveOut(state: GameState): Result {
-  const blocker = moveOutBlocker(state)
+/** The garage products besides the hit: the ones that can come along as side products, or be sold. */
+export function garageProducts(state: GameState): Product[] {
+  return state.products.filter((p) => p.id !== state.signatureId)
+}
+
+/** Why these products can't be the ones kept at the move out, or null when they can. */
+export function keepBlocker(state: GameState, keepIds: number[]): string | null {
+  const keep = new Set(keepIds)
+  if (keep.size > SIDE_PRODUCT_LIMIT) return `Keep at most ${SIDE_PRODUCT_LIMIT} products beside the hit`
+  const others = garageProducts(state)
+  if (others.some((p) => keep.has(p.id) === false && sunsetBlocker(state, p))) return 'A product being updated can not be sold: keep it or wait for the update'
+  return [...keep].every((id) => others.some((p) => p.id === id)) ? null : 'Keep products of the garage only'
+}
+
+/**
+ * Leaves the garage for a real office: the same team and project, with room for twelve. The hit stays; the
+ * products in `keepIds` (up to `SIDE_PRODUCT_LIMIT`) come along as side products; every other one is sold.
+ */
+export function moveOut(state: GameState, keepIds: number[] = []): Result {
+  const blocker = moveOutBlocker(state) ?? keepBlocker(state, keepIds)
   if (blocker) return fail(blocker)
   const garage = state.offices.find((o) => o.kind === 'garage')!
   state.money -= MOVE_OUT_COST
   garage.kind = 'office'
+  if (state.signatureId !== null) {
+    garage.productId = state.signatureId
+    garage.workstream ??= 'features'
+  }
+  for (const product of garageProducts(state)) {
+    if (keepIds.includes(product.id)) product.role = 'side'
+    else sunsetProduct(state, product.id, { planned: true })
+  }
   adjustMorale(state, OFFICE_UPGRADE_MORALE)
   return OK
 }
@@ -207,7 +237,16 @@ export function openOffice(state: GameState, region?: Region): Result {
   if (blocker) return fail(blocker)
   const where = region ?? openableRegions(state)[0]
   state.money -= newOfficeCost(state, where)
-  state.offices.push({ id: state.nextId++, kind: 'office', theme: state.offices.length, region: where, project: null })
+  const office: Office = { id: state.nextId++, kind: 'office', theme: state.offices.length, region: where, project: null }
+  // A new floor works on the hit, on the first workstream no other floor has (Europe's, if it is in Europe).
+  if (state.signatureId !== null) {
+    office.productId = state.signatureId
+    const taken = new Set(state.offices.filter((o) => o.productId === state.signatureId).map((o) => o.workstream ?? 'features'))
+    office.workstream = where === 'eu' ? 'europe' : (WORKSTREAMS.slice(0, 5).find((w) => !taken.has(w)) ?? 'features')
+  }
+  const firstInEurope = where === 'eu' && !hasEuropeOffice(state)
+  state.offices.push(office)
+  if (firstInEurope) changeOfGuard(state)
   closeSale(state)
   return OK
 }

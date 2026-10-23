@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
 import { buildingLayout, toScreen, TWO_BUILDINGS_MIN_WIDTH, WALL_BAND, type Box } from '@/lib/tycoon/render-support/building'
 import { REGION_OFFICE_LIMIT } from '@/lib/tycoon/sim/balance'
 import { buildingName, getOffice, inGarage, officeName, officesIn, openOfficeBlocker, regionOf, teamOf } from '@/lib/tycoon/sim/offices'
 import { overallProgress } from '@/lib/tycoon/sim/scoring'
-import { DEFAULT_DIRECTION, DIRECTION_INFO, ownedProduct } from '@/lib/tycoon/sim/teams'
+import { DEFAULT_WORKSTREAM, ownedProduct } from '@/lib/tycoon/sim/teams'
 import { REGIONS, type GameState, type Office, type Region } from '@/lib/tycoon/sim/types'
 import { useGame, useSignal, useStore } from './context'
 
@@ -34,7 +35,7 @@ function floorStatus(state: GameState, office: Office): string {
     return `${project.name}${project.kind === 'update' ? ' release' : ''} · ${done}`
   }
   const product = ownedProduct(state, office)
-  return product ? `${product.name} · ${DIRECTION_INFO[office.direction ?? DEFAULT_DIRECTION].name}` : 'idle'
+  return product ? `${product.name} · ${WORKSTREAM_INFO[office.workstream ?? DEFAULT_WORKSTREAM].name}` : 'idle'
 }
 
 /**

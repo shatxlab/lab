@@ -1810,3 +1810,64 @@
 .tycoon-root .pivot-option button {
   justify-self: start;
 }
+
+.tycoon-root .hit-dash {
+  padding: 6px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.tycoon-root .hit-dash-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.tycoon-root .hit-dash-head button {
+  margin-left: auto;
+}
+
+.tycoon-root .hit-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 6px 14px;
+  margin-top: 4px;
+}
+
+.tycoon-root .hit-dash-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tycoon-root .row-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.tycoon-root .keep-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 13px;
+}
+
+.tycoon-root .keep-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tycoon-root .hit-dash-floors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+}

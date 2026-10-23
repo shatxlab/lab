@@ -1,7 +1,8 @@
 import { CANDIDATE_REFRESH_DAYS, DAYS_PER_MONTH } from './balance'
+import { companionsDay } from './companions'
 import { fitDay } from './fit'
 import { contractsDay } from './contracts'
-import { checkBankruptcy, costsDay, revenueDay } from './economy'
+import { checkBankruptcy, costsDay, profitDay, revenueDay } from './economy'
 import { rollRandomEvent } from './events'
 import { recordHistory } from './history'
 import { journalDay, journalMonth } from './journal'
@@ -39,6 +40,7 @@ export function advanceDay(state: GameState): void {
   rivalsDay(state)
   productsDay(state)
   fitDay(state)
+  companionsDay(state)
   revenueDay(state)
   rankingDay(state)
   if (eraIndexAt(state.day) !== eraIndexAt(state.day - 1)) {
@@ -46,6 +48,7 @@ export function advanceDay(state: GameState): void {
     rivalArrives(state, eraIndexAt(state.day))
   }
   costsDay(state)
+  profitDay(state)
   autoPromoteDay(state)
   researchDay(state)
   trainingDay(state)

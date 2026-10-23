@@ -14,6 +14,7 @@ import {
   OFFICE_KINDS,
   OUTING_MORALE,
   REMOTE_SPEED,
+  SIDE_PRODUCT_LIMIT,
 } from '@/lib/tycoon/sim/balance'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
@@ -32,6 +33,8 @@ import {
   getOffice,
   inCafe,
   monthlyRent,
+  garageProducts,
+  keepBlocker,
   moveOutBlocker,
   moveToGarageBlocker,
   newOfficeCost,
@@ -44,6 +47,7 @@ import {
   teamOfficeId,
 } from '@/lib/tycoon/sim/offices'
 import { outingBlocker, outingCost } from '@/lib/tycoon/sim/staff'
+import { salePrice, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
 import { DISCIPLINES, isBuilder, REGIONS, type Employee, type Region, type Result } from '@/lib/tycoon/sim/types'
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { useGame, useOffice, useStore } from './context'
@@ -131,6 +135,7 @@ export function TeamDialog() {
   const state = useGame()
   const [confirmFire, setConfirmFire] = useState<number | null>(null)
   const [confirmMove, setConfirmMove] = useState(false)
+  const [keepIds, setKeepIds] = useState<number[]>([])
   const [message, setMessage] = useState('')
 
   const selected = useOffice()
@@ -145,7 +150,8 @@ export function TeamDialog() {
   const many = state.offices.length > 1
   const cafe = inCafe(state)
   const garage = state.offices.find((o) => o.kind === 'garage')
-  const moveOut = moveOutBlocker(state)
+  const moveOut = moveOutBlocker(state) ?? keepBlocker(state, keepIds)
+  const leaving = garageProducts(state)
   const toGarage = moveToGarageBlocker(state)
   const openRegions = openableRegions(state)
   const [openRegion, setOpenRegion] = useState<Region | ''>('')
@@ -205,6 +211,7 @@ export function TeamDialog() {
             </button>
           </div>
         ) : garage ? (
+          <>
           <div className="upgrade">
             <span>
               Move out of the garage: <strong>{OFFICE_KINDS.office.desks} desks</strong>, rent {formatMoney(OFFICE_KINDS.office.rent)}/mo
@@ -213,12 +220,35 @@ export function TeamDialog() {
             <button
               disabled={moveOut !== null}
               className={confirmMove ? 'danger' : ''}
-              onClick={() => (confirmMove ? report(store.moveOut()) : setConfirmMove(true))}
+              onClick={() => (confirmMove ? report(store.moveOut(keepIds)) : setConfirmMove(true))}
               onBlur={() => setConfirmMove(false)}
             >
               {confirmMove ? 'Sure? Leave the garage' : `Move · ${formatMoney(MOVE_OUT_COST)}`}
             </button>
           </div>
+          {leaving.length > 0 && (
+            <div className="keep-list">
+              <span>
+                Your hit comes with you. Keep up to {SIDE_PRODUCT_LIMIT} of your other products as side products (they earn what they earn); the rest
+                are sold to rivals.
+              </span>
+              {leaving.map((product) => {
+                const kept = keepIds.includes(product.id)
+                return (
+                  <label key={product.id}>
+                    <input
+                      type="checkbox"
+                      checked={kept}
+                      disabled={!kept && keepIds.length >= SIDE_PRODUCT_LIMIT}
+                      onChange={() => setKeepIds(kept ? keepIds.filter((id) => id !== product.id) : [...keepIds, product.id])}
+                    />{' '}
+                    {product.name} <small className="muted">{kept ? 'kept' : sunsetOutcome(product) === 'sold' ? `sold for ${formatMoney(salePrice(product))}` : 'retired'}</small>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+          </>
         ) : (
           state.offices.length < MAX_OFFICES && (
           <div className="upgrade">

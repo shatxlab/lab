@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { downloadJournal, startNewGame } from '@/lib/tycoon/browser'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { ERAS } from '@/lib/tycoon/data/eras'
@@ -122,14 +123,19 @@ export function GameOverDialog() {
   const ending = state.ending
   const sold = ending?.kind === 'sold'
   const retired = ending?.kind === 'retired'
+  const ipo = ending?.kind === 'ipo'
   const summary = runSummary(state)
   const years = Number(summary.years)
   const serving = longestServing(state)
   return (
-    <Modal title={sold ? 'Sold' : retired ? 'Your legacy' : 'Bankrupt'}>
+    <Modal title={sold ? 'Sold' : ipo ? 'The bell rings' : retired ? 'Your legacy' : 'Bankrupt'}>
       {sold ? (
         <p>
           <strong>{ending?.bidder}</strong> bought the studio for <strong>{formatMoney(ending?.price ?? 0)}</strong>. {formatDate(state.day)}.
+        </p>
+      ) : ipo ? (
+        <p>
+          The company goes public, valued at <strong>{formatMoney(ending?.worth ?? 0)}</strong>. {formatDate(state.day)}.
         </p>
       ) : retired ? (
         <p>You hand the company on. {formatDate(state.day)}.</p>
@@ -139,7 +145,7 @@ export function GameOverDialog() {
       <div className="result-grid">
         {ending && ending.kind !== 'bankrupt' && (
           <div className="stat">
-            <span className="label">{sold ? 'Final worth' : 'Worth'}</span>
+            <span className="label">{sold || ipo ? 'Final worth' : 'Worth'}</span>
             <span className="value">{formatMoney(ending.worth)}</span>
           </div>
         )}
@@ -194,6 +200,7 @@ export function OfferDialog() {
   const store = useStore()
   const state = useGame()
   const offer = state.exit.pending
+  const [confirm, setConfirm] = useState(false)
   if (!offer) return null
   return (
     <Modal title="An offer for the studio">
@@ -206,8 +213,8 @@ export function OfferDialog() {
       </p>
       <div className="actions">
         <button onClick={() => store.declineBuyout()}>Not yet</button>
-        <button className="primary" onClick={() => store.acceptBuyout()}>
-          Sell for {formatMoney(offer.price)}
+        <button className={confirm ? 'danger' : 'primary'} onClick={() => (confirm ? store.acceptBuyout() : setConfirm(true))}>
+          {confirm ? `Sure? This ends the run at ${formatMoney(offer.price)}` : `Sell for ${formatMoney(offer.price)}`}
         </button>
       </div>
     </Modal>

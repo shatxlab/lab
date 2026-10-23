@@ -160,6 +160,14 @@ export const TOP_SLIP_DAYS = 3
  */
 export const INCOME_AVERAGE_DAYS = 60
 /** An absorbed rival brings this many people, plus one for every this much reputation, up to the cap; each knows its kind of product and its products. */
+/** The share of the users of a rival's competing products that move to the hit when it is absorbed. */
+/** Going public needs the hit at this many users, this much earned over the company's life, and this many days in profit in a row. */
+export const IPO_USERS = 10_000_000
+export const IPO_REVENUE = 1_000_000_000
+export const IPO_PROFIT_DAYS = 360
+/** Years of income the market pays for a public company (a buyer pays `EXIT_BASE_MULTIPLE`). */
+export const IPO_MULTIPLE = 9
+export const ABSORB_USERS_SHARE = 0.5
 export const ABSORB_STAFF_BASE = 5
 export const ABSORB_STAFF_PER_REPUTATION = 25
 export const ABSORB_STAFF_MAX = 8
@@ -429,8 +437,48 @@ export const TAKEOFF_MAX_CROWDING = 1.2
 export const PIVOT_KEEP = 0.2
 /** The garage (and the café) can look after this many live products at once. */
 export const GARAGE_PRODUCT_LIMIT = 3
-/** A hit makes its own market: it can hold this many times the users a market holds for anything else. */
-export const HIT_MARKET_SCALE = 4
+/**
+ * A hit makes its own market: it can hold this many times the users a market holds for anything else. In practice what
+ * stops a hit is its servers (`BASE_CAPACITY`, `sim/scale.ts`) and its reach, not the market.
+ */
+export const HIT_MARKET_SCALE = 300
+/**
+ * A healthy hit keeps finding people: its pull on the world (`Product.world`) grows by this share a day, scaled by how
+ * well it fits (`hitHealth`) and by its Growth work, until its servers are full.
+ */
+export const HIT_GROWTH_RATE = 0.003
+/**
+ * Pressure on a hit's fit, in points a day: a stale product, open bugs, rivals in its market and features the era now
+ * expects. A release puts the fit back to what its features earn; between releases the fit only sags, and it
+ * recovers (`FIT_RECOVERY` a day) when nothing presses on it.
+ */
+export const FIT_STALE_PRESSURE = 0.25
+export const FIT_BUG_PRESSURE = 0.3
+export const FIT_RIVAL_PRESSURE = 0.08
+export const FIT_MISSING_PRESSURE = 0.06
+export const FIT_RECOVERY = 0.15
+/** Below the takeoff fit a hit keeps this share of its users at a fit of zero, rising to all of them at the takeoff fit: churn follows fit. */
+export const HIT_RETENTION_FLOOR = 0.4
+/** Second products: the slots they and side products share, the slice of the hit's users they start with, and what they do. */
+export const COMPANION_SLOTS = 2
+export const COMPANION_SHARE = 0.12
+/** A healthy Reach companion speeds the hit's growth by this share; a Keep one wins back this share of lost users and adds this much to what users pay. */
+export const COMPANION_REACH_BOOST = 0.4
+export const COMPANION_KEEP_RETENTION = 0.1
+export const COMPANION_KEEP_PAY = 0.15
+/** An unhealthy companion presses on the hit's fit by this many points a day. */
+export const COMPANION_CARE_FIT = 0.1
+/** The users a hit's servers hold before any Scale work; roadmap items add to it (`data/workstreams.ts`). */
+export const BASE_CAPACITY = 300_000
+/** From this share of its capacity, a hit risks an outage each day... */
+export const OUTAGE_LOAD = 0.92
+export const OUTAGE_CHANCE = 0.02
+/** ...which costs this share of its users for good, this much reputation, and a burst of bugs. */
+export const OUTAGE_USER_LOSS = 0.03
+export const OUTAGE_REPUTATION = 1
+export const OUTAGE_BUGS = 8
+/** What a hit's servers cost per user per day, on top of salaries. */
+export const HOSTING_PER_USER_DAY = 0.002
 /** Rivals' launches still roll for a hit, from this quality up. */
 export const HIT_MIN_QUALITY = 70
 /** A hit reaches this many times as many users, most for small products: a big launch was already aimed at most of its market... */
@@ -566,6 +614,8 @@ export const CAFE_EVENT_CHANCE_PER_DAY = 0.12
 
 /** Moving out of the garage into a real office. */
 export const MOVE_OUT_COST = 40000
+/** How many garage products besides the hit can come along when the studio moves out; the rest are sold. */
+export const SIDE_PRODUCT_LIMIT = 2 // fills the second-product slots (COMPANION_SLOTS) until retired
 /** Adding a floor: the first extra one costs this, each after that this much more again. */
 export const NEW_OFFICE_COST = 150000
 /** Floors in both buildings together. */

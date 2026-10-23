@@ -49,7 +49,7 @@ describe('project sizes', () => {
     expect(startProject(state, 'web_app', [], 'large')).toEqual({ ok: false, reason: 'Large projects need a real office' })
     state.offices[0].kind = 'office'
     state.stage = 2
-    expect(startProject(state, 'web_app', [], 'flagship')).toEqual({ ok: false, reason: 'Flagship projects need a studio that is a breakout studio' })
+    expect(startProject(state, 'web_app', [], 'flagship')).toEqual({ ok: false, reason: 'Flagship projects need a studio at the "First floor" stage' })
     expect(startProject(state, 'web_app', [], 'large').ok).toBe(true)
     expect(state.offices[0].project?.size).toBe('large')
 

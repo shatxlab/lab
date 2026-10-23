@@ -9,6 +9,7 @@ import {
   ACQUISITION_REPUTATION,
   ABSORB_SKILL_SPREAD,
   ABSORB_STAFF_BASE,
+  ABSORB_USERS_SHARE,
   ABSORB_STAFF_MAX,
   ABSORB_STAFF_PER_REPUTATION,
   ABSORB_PRODUCT_DAYS,
@@ -44,14 +45,16 @@ import { generateEmployee, ROLE_DISCIPLINE, ROLES, salaryOf } from './hiring'
 import { levelForSkill } from './careers'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
 import { trailingIncome } from './economy'
-import { buildingName, closeSale, inGarage, openableRegions } from './offices'
+import { freeSlots } from './companions'
+import { freeDesks, inGarage, regionOf } from './offices'
 import { studioNameOf } from './founding'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
-import { interestSince, revenueForUsers } from './products'
+import { formatCount } from '@/lib/tycoon/format'
+import { euShareOf, interestSince, revenueForUsers } from './products'
 import { pick, rand, randRange } from './rng'
 import { expectedFeatures } from '@/lib/tycoon/data/eras'
-import { fail, OK, PROJECT_SIZE_IDS, type Employee, type GameState, type Office, type ProjectSize, type Region, type Result, type Rival, type RivalProduct } from './types'
+import { DISCIPLINES, fail, OK, PROJECT_SIZE_IDS, type Employee, type GameState, type Product, type ProjectSize, type Region, type Result, type Rival, type RivalProduct } from './types'
 
 /** Rival products this far past their last update, with almost nobody left, are taken off the market. */
 const RETIRE_AFTER_DAYS = 720
@@ -148,7 +151,7 @@ const DAYS_PER_YEAR = 12 * DAYS_PER_MONTH
 export function rivalsArrive(state: GameState, quiet = false): void {
   for (const seed of RIVALS) {
     if (seed.arrivesYear === undefined || state.day < (seed.arrivesYear - 1) * DAYS_PER_YEAR) continue
-    if (state.rivals.some((r) => r.name === seed.name)) continue
+    if (state.rivals.some((r) => r.name === seed.name) || state.absorbedNames?.includes(seed.name)) continue
     const rival = addRival(state, seed, Math.min(seed.products, 1))
     if (!quiet) state.events.push({ type: 'notice', text: `${rival.name} has moved into the market.` })
   }
@@ -296,26 +299,40 @@ export function rivalProductsOf(state: GameState, rival: Rival): RivalProduct[] 
   return state.rivalProducts.filter((p) => p.rivalId === rival.id).sort((a, b) => b.users - a.users)
 }
 
-/** Portfolio places free for products that come with a rival. */
+/** Second-product places free for products that come with a rival. */
 export function absorbSlots(state: GameState): number {
-  const making = state.offices.filter((o) => o.project?.kind === 'new').length
-  return Math.max(0, PORTFOLIO_LIMIT - state.products.length - making)
+  return freeSlots(state)
 }
 
 /** The region the rival's office is in. */
 const regionOfRival = (rival: Rival): Region => rival.region ?? 'us'
 
-/** Why this rival can't be absorbed now, or null when it can. Its office takes the place of one the studio would have built. */
+/** The studio's hit, which an absorbed rival's users move to. */
+const hitOf = (state: GameState): Product | undefined => state.products.find((p) => p.id === state.signatureId)
+
+/** The rival's products that compete with the hit: the same kind of product. */
+export function competingProducts(state: GameState, rival: Rival): RivalProduct[] {
+  const hit = hitOf(state)
+  return hit ? rivalProductsOf(state, rival).filter((p) => p.productTypeId === hit.productTypeId) : []
+}
+
+/** Why this rival can't be absorbed now, or null when it can. Only a rival that competes with the hit is worth it. */
 export function acquisitionBlocker(state: GameState, rival: Rival): string | null {
   if (state.stage < ACQUISITION_STAGE) return 'Only an established company can absorb a rival'
   if (inGarage(state)) return 'Move out of the garage first'
-  // Its team moves into a floor of your building in its region.
-  if (!openableRegions(state).includes(regionOfRival(rival))) return `${buildingName(regionOfRival(rival))} has no floor left for its team`
+  const hit = hitOf(state)
+  if (!hit) return 'Needs a hit to bring its users to'
+  if (competingProducts(state, rival).length === 0) return `${rival.name} does not compete with ${hit.name}`
   return state.money < acquisitionPrice(state, rival) ? 'Not enough money' : null
 }
 
+/** Desks free for the rival's people: only real offices in its region, and only those that are empty. */
+export function absorbDesks(state: GameState, rival: Rival): number {
+  return state.offices.filter((o) => o.kind === 'office' && regionOf(o) === regionOfRival(rival)).reduce((sum, o) => sum + Math.max(0, freeDesks(state, o)), 0)
+}
+
 /** The people an absorbed studio brings: builders of its skill, who know the kind of product it makes and the products kept. */
-function absorbedStaff(state: GameState, rival: Rival, office: Office, kept: RivalProduct[]): Employee[] {
+function absorbedStaff(state: GameState, rival: Rival, kept: RivalProduct[]): Employee[] {
   const count = Math.min(ABSORB_STAFF_MAX, ABSORB_STAFF_BASE + Math.floor(rival.reputation / ABSORB_STAFF_PER_REPUTATION))
   const region = regionOfRival(rival)
   return Array.from({ length: count }, (_, i) => {
@@ -324,7 +341,6 @@ function absorbedStaff(state: GameState, rival: Rival, office: Office, kept: Riv
     const primary = ROLE_DISCIPLINE[role]
     person.skills[primary] = Math.round(clamp(rival.skill + randRange(state, -ABSORB_SKILL_SPREAD, ABSORB_SKILL_SPREAD), 30, 95))
     person.level = levelForSkill(person.skills[primary], HIRE_MAX_LEVEL)
-    person.officeId = office.id
     person.knowledge = { types: {}, products: {} }
     for (const type of rival.focus) person.knowledge.types[type] = ABSORB_TYPE_DAYS
     for (const product of kept) {
@@ -337,9 +353,10 @@ function absorbedStaff(state: GameState, rival: Rival, office: Office, kept: Riv
 }
 
 /**
- * Absorbs a rival studio: it leaves the market and the ranking, its other business adds to your income, its office
- * (in its region) opens as one of yours with its people, who know what it made, and you keep the products you
- * choose, which take places in the portfolio. The rest are gone with it.
+ * Absorbs a rival studio that competes with the hit: it leaves the market and the ranking, its other business adds
+ * to your income, a share of the users of its competing products move to the hit, and the rest of its products go
+ * with it. Its best people take your empty desks in its region, and only those: no free desks, nobody comes.
+ * You can keep its products as second products, as many as there are free places.
  */
 export function acquire(state: GameState, rivalId: number, keepIds: readonly number[] = []): Result {
   const rival = state.rivals.find((r) => r.id === rivalId)
@@ -349,14 +366,28 @@ export function acquire(state: GameState, rivalId: number, keepIds: readonly num
   const theirs = rivalProductsOf(state, rival)
   const kept = theirs.filter((p) => keepIds.includes(p.id))
   if (kept.length !== new Set(keepIds).size) return fail('Those products are not theirs')
-  if (kept.length > absorbSlots(state)) return fail(`Your portfolio has room for ${absorbSlots(state)} more`)
+  if (kept.length > absorbSlots(state)) return fail(`You have room for ${absorbSlots(state)} more second products`)
 
+  const hit = hitOf(state)!
   state.money -= acquisitionPrice(state, rival)
   const region = regionOfRival(rival)
-  const office: Office = { id: state.nextId++, kind: 'office', theme: state.offices.length, region, project: null }
-  state.offices.push(office)
-  closeSale(state)
-  state.employees.push(...absorbedStaff(state, rival, office, kept))
+
+  // Their users come to the hit.
+  const moved = Math.round(competingProducts(state, rival).reduce((sum, p) => sum + p.users, 0) * ABSORB_USERS_SHARE)
+  hit.users += moved
+  hit.reach += moved
+  if (region === 'eu' && euShareOf(hit) > 0) hit.euUsers = (hit.euUsers ?? 0) + moved
+
+  // Their best people, by skill, take the empty desks.
+  const desks = state.offices.filter((o) => o.kind === 'office' && regionOf(o) === region).flatMap((o) => Array.from({ length: Math.max(0, freeDesks(state, o)) }, () => o))
+  const best = absorbedStaff(state, rival, kept)
+    .sort((a, b) => Math.max(...DISCIPLINES.map((d) => b.skills[d])) - Math.max(...DISCIPLINES.map((d) => a.skills[d])))
+    .slice(0, desks.length)
+  best.forEach((person, i) => {
+    person.officeId = desks[i].id
+  })
+  state.employees.push(...best)
+
   for (const p of kept) {
     state.products.push({
       id: p.id,
@@ -372,7 +403,8 @@ export function acquire(state: GameState, rivalId: number, keepIds: readonly num
       ...(region === 'eu' ? { euShare: 1, euUsers: p.users } : {}),
       bugs: 5 * PROJECT_SIZES[p.size].work,
       pendingBugs: 0,
-      hit: p.hit,
+      hit: false,
+      role: 'side',
       totalRevenue: 0,
       updates: p.updatedDay > p.releaseDay ? [{ day: p.updatedDay }] : [],
       boostUntil: 0,
@@ -381,11 +413,12 @@ export function acquire(state: GameState, rivalId: number, keepIds: readonly num
   }
   state.rivalProducts = state.rivalProducts.filter((p) => p.rivalId !== rival.id)
   state.rivals = state.rivals.filter((r) => r.id !== rival.id)
+  state.absorbedNames = [...(state.absorbedNames ?? []), rival.name]
   state.acquiredIncome += rival.business
   state.reputation = Math.min(REPUTATION_MAX, state.reputation + ACQUISITION_REPUTATION)
   state.events.push({
     type: 'notice',
-    text: `You absorbed ${rival.name}. Its team moved into a new floor of ${buildingName(region)}${kept.length > 0 ? `, with ${kept.map((p) => p.name).join(', ')}` : ''}.`,
+    text: `You absorbed ${rival.name}: ${formatCount(moved)} of its users moved to ${hit.name}, and ${best.length === 0 ? 'nobody joined: there was no empty desk' : `${best.length} of its best people took empty desks`}${kept.length > 0 ? `. Kept: ${kept.map((p) => p.name).join(', ')}` : ''}.`,
     sound: 'deal',
   })
   return OK

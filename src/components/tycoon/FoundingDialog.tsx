@@ -22,10 +22,20 @@ export function FoundingDialog() {
 
   return (
     <Modal title="A new studio">
-      <p>
-        It starts at a corner table in a café: you, who can tell what people want, and your friend{' '}
-        <strong>{friend?.name ?? 'a developer'}</strong>, who can build it. {BARISTA} the barista keeps the coffee coming.
-      </p>
+      {(state.chapter ?? 1) > 1 && !friend ? (
+        <p>
+          Back at the corner table in the café, alone this time. {BARISTA} the barista keeps the coffee coming. Hire someone to build with you when you can.
+        </p>
+      ) : (state.chapter ?? 1) > 1 ? (
+        <p>
+          Back at the corner table in the café, with <strong>{friend?.name}</strong>. You know more than the first time. {BARISTA} the barista keeps the coffee coming.
+        </p>
+      ) : (
+        <p>
+          It starts at a corner table in a café: you, who can tell what people want, and your friend{' '}
+          <strong>{friend?.name ?? 'a developer'}</strong>, who can build it. {BARISTA} the barista keeps the coffee coming.
+        </p>
+      )}
       <form
         className="founding"
         onSubmit={(event) => {

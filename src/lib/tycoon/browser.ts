@@ -5,7 +5,8 @@
 //   - No service-worker registration or manifest logic lives here.
 // Kept: storage access, autosave registration, new-game reset, save export/import (UI stage wires these).
 
-import { clearSave, importSave, migrateLegacySave, type Autosave, type KeyValueStorage } from '@/lib/tycoon/save'
+import { clearSave, importSave, migrateLegacySave, saveGame, type Autosave, type KeyValueStorage } from '@/lib/tycoon/save'
+import { nextChapter } from '@/lib/tycoon/sim/chapters'
 import { exportJournal } from '@/lib/tycoon/sim/journal'
 import { deserialize, serialize } from '@/lib/tycoon/sim/state'
 import { fail, type GameState, type Result } from '@/lib/tycoon/sim/types'
@@ -37,6 +38,15 @@ export function startNewGame(): void {
   const storage = browserStorage()
   if (storage) clearSave(storage)
   location.reload()
+}
+
+/** Saves the next chapter of the career (see `sim/chapters.ts`) over the ended run and reloads into it. */
+export function startNextChapter(state: GameState): void {
+  const next = nextChapter(state)
+  const storage = browserStorage()
+  if (!next || !storage) return
+  autosave?.stop()
+  if (saveGame(next, storage)) location.reload()
 }
 
 export function downloadSave(state: GameState): void {

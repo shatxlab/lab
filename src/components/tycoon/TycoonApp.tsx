@@ -41,7 +41,7 @@ export default function TycoonApp() {
     // A resumed game starts paused (speed 0) so nothing happens before the player is ready.
     const next = createStore(state, 0, { sfx })
     // A new run starts by naming you and the studio; a dev sandbox skips straight to the game.
-    if (!saved && !sandbox) next.openDialog({ kind: 'founding' })
+    if ((!saved && !sandbox) || state.freshChapter) next.openDialog({ kind: 'founding' })
     setStore(next)
 
     if (storage) {

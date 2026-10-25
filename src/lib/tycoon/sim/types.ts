@@ -481,6 +481,14 @@ export interface GameState {
   signatureId: number | null
   /** What the studio is called, chosen at the start; absent in older saves. */
   studioName?: string
+  /** Which company of your career this is (1 for the first); absent in older saves. See `sim/chapters.ts`. */
+  chapter?: number
+  /** The companies you have ended before this one, oldest first. */
+  legacy?: LegacyEntry[]
+  /** The day this chapter began; absent in the first. */
+  chapterStartDay?: number
+  /** True from the start of a new chapter until you have named the new studio. */
+  freshChapter?: boolean
   /** Consecutive days with negative money. */
   debtDays: number
   /** Demand multiplier per product type id, around 1.0; applied when a product ships. */
@@ -513,6 +521,14 @@ export interface GameState {
   dayWork: DayWork[]
   /** Pending events for the UI; drained with `drainEvents`. */
   events: SimEvent[]
+}
+
+/** A company of your career that has ended. */
+export interface LegacyEntry {
+  studio: string
+  ending: Ending['kind']
+  worth: number
+  years: number
 }
 
 export interface Ending {

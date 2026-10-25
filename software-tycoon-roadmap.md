@@ -38,6 +38,78 @@ fields: see "Guide for the next session"). Look at:
   goals changed; fine for a test, not worth migrating further.
 - Researches about running many products (licensing, the portfolio) were not reworked; they still exist.
 
+## First player run, and the Spore direction (2026-10-25; design only, nothing built)
+
+The player's first run log (`lab-tycoon-run-2026-10-25.json`, 7.4 years, ended unfinished on "First floor") and what they said.
+
+### What the log shows
+- Café 1,210 days, garage 1,100 days, the hit (a fintech app, after a second survey) on day 2317. Three products shipped, two
+  dev tools retired at about $100 a day. Cash in the garage got down to one day left.
+- After the hit: income $45k a day against a burn of $1.3k, cash $5.4M unspent, one 12-person floor, no second office, no
+  companions (both slots free), 84k users after 350 days on "First floor" (goal 100k+). Load stayed at 14%.
+- The roadmap was left with Advertising and Analytics pipeline while the floor stood on *Features*: `nextItem` only looks at
+  items of the floor's own stream, so they would never be built. 20 workstream changes, 5 on day 2608 alone.
+
+### What the player said
+- **Café: keep.** Low bills let them buy research, and growing into a senior before making a hit feels right. It is the best
+  part: solo with a friend, both growing, dreaming about the future.
+- **Garage: fine, with shaping.** It makes you dream about the hit. Needs more *interaction* in research and building: picking
+  survey tags and then building "the same way as before" is not new insight.
+- **After the hit: the bottleneck.** "You don't dream any more. You reached the hit, you felt it." Nothing makes you want more.
+  The roadmap is a to-do list: pick everything, then sit and watch ("a pixel movie"). The roadmap/team-mode UX is confusing
+  (which feature goes where, why enable a team mode to build what I want). They stopped playing around day 2600.
+- **Scaling is a burden.** In real life a hit means dull day-to-day operations and a high risk of failing; the game should
+  feel hard but fun and give what real life does not. They prefer to stay a maker, and chose **deep work on the hit**.
+- **Spore as the model.** Each stage has its own main action, lasts exactly as long as that idea stays fresh, and is full.
+
+### Design direction (agreed in conversation, not scheduled)
+1. **A different verb per stage**, and each stage ends while it is still fresh. Draft:
+
+| Stage | Verb | What you do | Target length |
+|---|---|---|---|
+| Café | Craft | Contracts, research, growing yourself and a friend | as now (the player likes it) |
+| Garage | Discover | Find what a market wants through real choices (survey, shape, test with users), not tag-picking | shorter than 1,100 days |
+| First floor | Build the team | Hire and lead people; the people become characters | medium |
+| Headquarters | Deep work | The founder works on the hit's flagship pieces; leads run operations | medium |
+| Europe | Expand | Open a place, localise, new rules and rivals | medium |
+| Global company | Steer | Few big decisions: acquisitions, the IPO or a sale, the change of guard | short, with the ending |
+
+2. **Every stage needs a dream, not only a goal.** Café and garage have one (a hit; a dev tool people pay for). From the move
+   out there is none. The dream after the hit is the missing piece: open question below.
+3. **Operations should run themselves once set up**: leads with standing policies, only exceptions reach the player. The
+   roadmap stops being a watched queue. The one-list roadmap (no workstream modes; floors take the first buildable item;
+   queued features and Europe steps as rows; each row shows its effect and who builds it; optional per-floor focus; saves
+   v8) is the likely first step, and still stands as the UI base.
+4. **Patterns that remain candidates**: a funnel view of where users leak (read-only for the player), items with costs and
+   exclusive paths (so you cannot build everything), events that interrupt (rivals, regulators, spikes, poaching), and money
+   with somewhere to go (the hit funds making something new; Absorb already exists).
+
+### Open questions (ask before building)
+- **The dream after the hit (player's pick, 2026-10-25): a named rival to beat and a person with an arc**, plus **AI agents
+  on the team** so the game feels like 2026. Not chosen: a bigger vision, a product made by hand. To design: the rival (one
+  competitor with a face and a history that reacts to the player's moves; `sim/rivals.ts` has anonymous rivals today), the
+  person (the friend/lead, a hope and a story across stages, tied to the stage goals), and agents (cheap, tireless workers
+  the player configures and supervises: roles, autonomy, a cost per run, and failure modes such as a wrong fix or a runaway
+  bill; they are also how "operations run themselves" becomes play and something fun to watch).
+- Which stage to design in detail first. The player said the garage is not the biggest pain and only needs shaping; the
+  office stage is the bottleneck.
+- How the bot plays each new verb; its pace is a floor, not a forecast.
+- Do not retune numbers in `balance.ts` until the loop changes: the log's numbers are not the problem.
+
+### Build plan for this direction (agreed 2026-10-25: "develop it fully, then try a new run")
+Phases, each playable and tested before the next. Phase 1 is built (uncommitted).
+1. **Chapters (built).** `sim/chapters.ts`: a run is a career. A good ending (sold, IPO, retired) offers *Start something
+   new*: you and your friend, the research you finished, 60% of your reputation and a little money (1% of the worth, between
+   $15k and $150k) go back to a café; the rival world carries on (day, rivals, market, journal). Bankruptcy offers *Start
+   again, alone*: no friend, no team, half the research, 25% of the reputation, $5,000. `Legacy` lists the past companies. The
+   new chapter is saved and the page reloads into it (`browser.ts: startNextChapter`); `freshChapter` opens the naming dialog.
+   More ways to fail (the friend leaves, the hit dies, a hostile takeover) come with phase 3.
+2. **One roadmap list** (no workstream modes), then the funnel view. Fixes the confusing UX from the run log.
+3. **The friend's arc and a named nemesis rival**: the dream after the hit. Stage goals reference them.
+4. **AI agents** on the team: roles, autonomy, a cost per run, failure modes.
+5. **A verb per stage** (First floor: build the team; Headquarters: the founder's deep work) and shaping the garage's
+   discovery. Then a bot pass over 12 seeds, then a new human run.
+
 ## Guide for the next session (written 2026-10-23, before the player's first playthrough of phases B to E)
 
 Read this first if you are picking the game up after the player has played. It says what to read in a run log, which knob

@@ -81,5 +81,6 @@ export function foundStudio(state: GameState, yourName: string, studioName: stri
   if (blocker) return fail(blocker)
   you(state)!.name = yourName.trim()
   state.studioName = studioName.trim()
+  delete state.freshChapter
   return OK
 }

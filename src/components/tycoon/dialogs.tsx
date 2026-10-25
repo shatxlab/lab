@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { downloadJournal, startNewGame } from '@/lib/tycoon/browser'
+import { downloadJournal, startNewGame, startNextChapter } from '@/lib/tycoon/browser'
+import { chapterKind } from '@/lib/tycoon/sim/chapters'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { ERAS } from '@/lib/tycoon/data/eras'
 import { getFeature } from '@/lib/tycoon/data/features'
@@ -127,6 +128,7 @@ export function GameOverDialog() {
   const summary = runSummary(state)
   const years = Number(summary.years)
   const serving = longestServing(state)
+  const chapter = chapterKind(state)
   return (
     <Modal title={sold ? 'Sold' : ipo ? 'The bell rings' : retired ? 'Your legacy' : 'Bankrupt'}>
       {sold ? (
@@ -185,11 +187,29 @@ export function GameOverDialog() {
           Longest with you: {serving.join(', ')}.
         </p>
       )}
+      {chapter === 'continue' && (
+        <p className="muted">
+          You could stop here, or start something new with your friend, what you have learned and a little of the money. The studio stays behind.
+        </p>
+      )}
+      {chapter === 'restart' && (
+        <p className="muted">
+          The team is gone and so is your friend. You could start again at a café table, alone, with half of what you learned and a smaller name.
+        </p>
+      )}
       <div className="actions">
         <button onClick={() => downloadJournal(state)}>Export run log</button>
-        <button className="primary" onClick={startNewGame}>
-          New game
-        </button>
+        <button onClick={startNewGame}>New game</button>
+        {chapter === 'continue' && (
+          <button className="primary" onClick={() => startNextChapter(state)}>
+            Start something new
+          </button>
+        )}
+        {chapter === 'restart' && (
+          <button className="primary" onClick={() => startNextChapter(state)}>
+            Start again, alone
+          </button>
+        )}
       </div>
     </Modal>
   )

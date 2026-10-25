@@ -7,7 +7,7 @@ import { getOffice, hasEuropeOffice, officeName, productInWork, teamOf } from '.
 import { euShareOf, interest, lastReleaseDay } from './products'
 import { shipProject, startLocalisation, startUpdate } from './project'
 import { companionsOf } from './companions'
-import { nextItem } from './roadmap'
+import { nextStep } from './roadmap'
 import { isReady } from './scoring'
 import { featureLock } from './unlocks'
 import { DISCIPLINES, fail, OK, WORKSTREAMS, type GameState, type Office, type Product, type Result, type Workstream } from './types'
@@ -81,18 +81,19 @@ export type ReleasePlan =
 
 export function releasePlan(state: GameState, office: Office, product: Product): ReleasePlan {
   const stream = office.workstream ?? DEFAULT_WORKSTREAM
-  if (stream === 'features') return (product.nextFeatures ?? []).some((id) => !product.featureIds.includes(id)) ? { kind: 'features' } : { kind: 'maintenance' }
-  if (stream === 'europe') {
-    if (euShareOf(product) === 0) {
-      if (!hasEuropeOffice(state)) return { kind: 'idle', why: 'Needs an office in Europe' }
-      if (!product.featureIds.includes(COMPLIANCE_FEATURE)) {
-        return featureLock(state, getFeature(COMPLIANCE_FEATURE)) === null ? { kind: 'compliance' } : { kind: 'idle', why: "Europe's data rules are locked" }
-      }
-      return { kind: 'localise' }
+  const queued = (product.nextFeatures ?? []).some((id) => !product.featureIds.includes(id))
+  // The roadmap first: a floor takes the top row it may (all of them with no focus, those of its stream with one).
+  const step = nextStep(state, product, stream)
+  if (step?.kind === 'item') return { kind: 'item', item: step.item }
+  if (step) return { kind: step.kind === 'features' ? 'features' : step.kind }
+  if (stream === 'features') return queued ? { kind: 'features' } : { kind: 'maintenance' }
+  if (stream === 'europe' && euShareOf(product) === 0) {
+    if (!hasEuropeOffice(state)) return { kind: 'idle', why: 'Needs an office in Europe' }
+    if (!product.featureIds.includes(COMPLIANCE_FEATURE)) {
+      return featureLock(state, getFeature(COMPLIANCE_FEATURE)) === null ? { kind: 'compliance' } : { kind: 'idle', why: "Europe's data rules are locked" }
     }
+    return { kind: 'localise' }
   }
-  const item = nextItem(state, product, stream)
-  if (item) return { kind: 'item', item }
   if (stream === 'companions') {
     const needy = companionsOf(state).filter((p) => !productInWork(state, p.id)).sort((a, b) => interest(a, state.day) - interest(b, state.day))[0]
     if (needy && interest(needy, state.day) < 1) return { kind: 'care', product: needy }

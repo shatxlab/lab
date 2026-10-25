@@ -90,7 +90,7 @@ export const ALL_ITEMS: readonly WorkItem[] = [...WORK_ITEMS, ...COMPANION_ITEMS
 export const getWorkItem = (id: string): WorkItem | undefined => ALL_ITEMS.find((i) => i.id === id)
 
 export const WORKSTREAM_INFO: Record<Workstream, { name: string; blurb: string }> = {
-  features: { name: 'Features', blurb: 'Ships the features you queue for it, one release after another' },
+  features: { name: 'Anything', blurb: 'Takes the next row on the roadmap whatever it is, then the features you queue, then keeps the product fresh' },
   quality: { name: 'Quality', blurb: 'Fixes bugs and speeds the product up; with the roadmap empty, polishing releases' },
   scale: { name: 'Scale', blurb: 'Builds the servers that hold more users' },
   growth: { name: 'Growth', blurb: 'Onboarding, marketing and partners that bring in users' },
@@ -98,6 +98,25 @@ export const WORKSTREAM_INFO: Record<Workstream, { name: string; blurb: string }
   tools: { name: 'Internal tools', blurb: 'Tools for the studio itself: they earn nothing and cost to run, and make everything else easier' },
   companions: { name: 'Companions', blurb: 'Launches and looks after the products that make the hit bigger: a team off the hit is the price' },
   europe: { name: 'Europe', blurb: "Meets Europe's data rules, localises the product, then builds for European users" },
+}
+
+/** What an item does, in numbers, for the roadmap: "+10% reach · 5% fewer leave". */
+export function effectText(effect: ItemEffect): string {
+  const pct = (n: number) => `${Math.round(n * 100)}%`
+  const parts: string[] = []
+  if (effect.capacity) parts.push(`+${effect.capacity.toLocaleString('en-US')} users held`)
+  if (effect.reach) parts.push(`+${pct(effect.reach)} reach`)
+  if (effect.pay) parts.push(`+${pct(effect.pay)} pay`)
+  if (effect.churn) parts.push(`${pct(effect.churn)} fewer leave`)
+  if (effect.fit) parts.push(`${effect.fit > 0 ? '+' : '−'}${Math.abs(effect.fit)} fit`)
+  if (effect.bugs) parts.push(`${pct(effect.bugs)} of bugs fixed`)
+  if (effect.quality) parts.push(`+${effect.quality} quality`)
+  if (effect.fixes) parts.push(`${pct(effect.fixes)} faster fixes`)
+  if (effect.insight) parts.push(`+${effect.insight} insight a day`)
+  if (effect.speed) parts.push(`${pct(effect.speed)} faster work`)
+  if (effect.morale) parts.push(`+${effect.morale} morale`)
+  if (effect.upkeep) parts.push(`costs $${effect.upkeep} a day`)
+  return parts.join(' · ')
 }
 
 /** What a product's built items add up to. */

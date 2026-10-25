@@ -5,7 +5,7 @@ import { nextItem, setRoadmap } from '@/lib/tycoon/sim/roadmap'
 import { openOffice } from '@/lib/tycoon/sim/offices'
 import { shipProject } from '@/lib/tycoon/sim/project'
 import { deserialize, serialize, STATE_VERSION } from '@/lib/tycoon/sim/state'
-import { assignProduct, nextReleaseDay, releasePlan, setWorkstream, teamDay } from '@/lib/tycoon/sim/teams'
+import { assignProduct, nextReleaseDay, queueFeatures, releasePlan, setWorkstream, teamDay } from '@/lib/tycoon/sim/teams'
 import { DISCIPLINES, type GameState } from '@/lib/tycoon/sim/types'
 import { workDay } from '@/lib/tycoon/sim/work'
 import { makeEmployee, makeProduct, makeState } from './helpers'
@@ -69,6 +69,27 @@ describe('the roadmap and the workstreams', () => {
     expect(state.offices[0].project).toBeNull()
   })
 
+  it('a floor with no focus takes the first row it may, whatever the stream, and skips rows that wait', () => {
+    const state = hitFloor()
+    state.products[0].users = 60_000
+    expect(setRoadmap(state, 50, ['enterprise_deals', 'ads', 'load_balancer']).ok).toBe(true)
+    const plan = releasePlan(state, state.offices[0], state.products[0])
+    expect(plan).toMatchObject({ kind: 'item', item: { id: 'ads' } }) // enterprise deals wait for 2M users
+    state.offices[0].workstream = 'scale'
+    expect(releasePlan(state, state.offices[0], state.products[0])).toMatchObject({ kind: 'item', item: { id: 'load_balancer' } })
+  })
+
+  it('the feature release is a row: it goes where the player puts it, and waits while nothing is queued', () => {
+    const state = hitFloor()
+    state.products[0].users = 60_000
+    expect(setRoadmap(state, 50, ['features', 'ads']).ok).toBe(true)
+    expect(releasePlan(state, state.offices[0], state.products[0]).kind).toBe('item') // nothing queued yet
+    queueFeatures(state, 50, ['dark_mode'])
+    expect(releasePlan(state, state.offices[0], state.products[0]).kind).toBe('features')
+    state.offices[0].workstream = 'scale'
+    expect(releasePlan(state, state.offices[0], state.products[0]).kind).toBe('idle') // a focused floor never takes it
+  })
+
   it('refuses unknown, repeated or built items', () => {
     const state = hitFloor()
     expect(setRoadmap(state, 50, ['nope']).ok).toBe(false)
@@ -77,12 +98,12 @@ describe('the roadmap and the workstreams', () => {
     expect(setRoadmap(state, 50, ['cdn']).ok).toBe(false)
   })
 
-  it('a new floor works on the hit, on a stream no other floor has', () => {
+  it('a new floor works on the hit, taking whatever is next (Europe\'s work in Europe)', () => {
     const state = hitFloor()
     state.stage = 4
     state.offices[0].workstream = 'features'
     expect(openOffice(state, 'us').ok).toBe(true)
-    expect(state.offices[1]).toMatchObject({ productId: 50, workstream: 'quality' })
+    expect(state.offices[1]).toMatchObject({ productId: 50, workstream: 'features' })
     expect(openOffice(state, 'eu').ok).toBe(true)
     expect(state.offices[2]).toMatchObject({ productId: 50, workstream: 'europe' })
   })

@@ -144,7 +144,7 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     store.state.offices[0].productId = 501
     store.state.offices[0].workstream = 'features'
     const host = mount(store, <ProductsTab />)
-    expect(host.textContent).toContain('Works on')
+    expect(host.textContent).toContain('Focus (optional)')
     expect(host.textContent).toContain('Next release: nothing queued')
     act(() => root?.unmount())
     const queue = mount(store, <NewProjectDialog updateOf={501} queue />)

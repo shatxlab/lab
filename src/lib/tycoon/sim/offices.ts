@@ -4,7 +4,7 @@ import { CAFE_JOBS, EU_OFFICE_COST, GARAGE_DEPOSIT, GARAGE_READY_MONEY, MAX_OFFI
 import { changeOfGuard } from './founding'
 import { adjustMorale } from './morale'
 import { sunsetBlocker, sunsetProduct } from './sunset'
-import { fail, isBuilder, OK, REGIONS, WORKSTREAMS, type Employee, type GameState, type Office, type Product, type Project, type Region, type Result } from './types'
+import { fail, isBuilder, OK, REGIONS, type Employee, type GameState, type Office, type Product, type Project, type Region, type Result } from './types'
 
 /** Journey stage at which the garage can be left behind, and at which more offices can open (indexes into STAGES). */
 export const MOVE_OUT_STAGE = 2
@@ -238,11 +238,10 @@ export function openOffice(state: GameState, region?: Region): Result {
   const where = region ?? openableRegions(state)[0]
   state.money -= newOfficeCost(state, where)
   const office: Office = { id: state.nextId++, kind: 'office', theme: state.offices.length, region: where, project: null }
-  // A new floor works on the hit, on the first workstream no other floor has (Europe's, if it is in Europe).
+  // A new floor works on the hit, taking whatever is next on its roadmap (a floor in Europe is focused on Europe's work).
   if (state.signatureId !== null) {
     office.productId = state.signatureId
-    const taken = new Set(state.offices.filter((o) => o.productId === state.signatureId).map((o) => o.workstream ?? 'features'))
-    office.workstream = where === 'eu' ? 'europe' : (WORKSTREAMS.slice(0, 5).find((w) => !taken.has(w)) ?? 'features')
+    office.workstream = where === 'eu' ? 'europe' : 'features'
   }
   const firstInEurope = where === 'eu' && !hasEuropeOffice(state)
   state.offices.push(office)

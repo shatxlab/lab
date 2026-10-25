@@ -46,7 +46,7 @@ export function ProductTeam({ product }: { product: Product }) {
       {owner && (
         <>
           <label title={WORKSTREAM_INFO[stream].blurb}>
-            Works on{' '}
+            Focus (optional){' '}
             <select value={stream} onChange={(e) => store.setWorkstream(owner.id, e.target.value as Workstream)}>
               {WORKSTREAMS.map((w) => (
                 <option key={w} value={w}>
@@ -58,7 +58,7 @@ export function ProductTeam({ product }: { product: Product }) {
           <button onClick={() => store.openDialog({ kind: 'queue', productId: product.id })} title="The features the team adds when it grows the product">
             Next release: {queued.length > 0 ? queued.map((id) => getFeature(id).name).join(', ') : 'nothing queued'}…
           </button>
-          <button onClick={() => store.openDialog({ kind: 'roadmap', productId: product.id })} title="The order the floors build scale, growth, monetisation and quality work in">
+          <button onClick={() => store.openDialog({ kind: 'roadmap', productId: product.id })} title="The one list of work: each floor takes the first row it can start">
             Roadmap: {(product.roadmap ?? []).length > 0 ? `${product.roadmap!.length} planned` : 'empty'}…
           </button>
           <small className="muted">

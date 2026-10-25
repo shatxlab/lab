@@ -67,7 +67,7 @@ export function HitDashboard() {
           .filter((o) => o.kind === 'office' && o.productId === hit.id)
           .map((office) => (
             <label key={office.id} title={WORKSTREAM_INFO[office.workstream ?? DEFAULT_WORKSTREAM].blurb}>
-              <span className="muted">{officeName(state, office)}</span>{' '}
+              <span className="muted">{officeName(state, office)} focus</span>{' '}
               <select value={office.workstream ?? DEFAULT_WORKSTREAM} onChange={(e) => store.setWorkstream(office.id, e.target.value as Workstream)}>
                 {WORKSTREAMS.map((w) => (
                   <option key={w} value={w}>

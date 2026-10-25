@@ -104,7 +104,13 @@ Phases, each playable and tested before the next. Phase 1 is built (uncommitted)
    again, alone*: no friend, no team, half the research, 25% of the reputation, $5,000. `Legacy` lists the past companies. The
    new chapter is saved and the page reloads into it (`browser.ts: startNextChapter`); `freshChapter` opens the naming dialog.
    More ways to fail (the friend leaves, the hit dies, a hostile takeover) come with phase 3.
-2. **One roadmap list** (no workstream modes), then the funnel view. Fixes the confusing UX from the run log.
+2. **One roadmap list (built, funnel view not yet).** `sim/roadmap.ts: nextStep`: a floor takes the first row, in the player's
+   order, that is on offer and that no floor is building. Rows are items plus three steps (`features`, `compliance`, `localise`).
+   `Office.workstream` is now an optional *focus*: 'features' (the default, shown as "Anything") takes any row; any other value
+   takes only rows of that stream, as before, so saves need no migration. A new floor is on Anything (Europe's on Europe).
+   The roadmap dialog shows each row's effect in numbers, who is building it and who is next. The bot (12 years, seeds 1 to 6)
+   still reaches the IPO in 6.0 to 8.0 years. Not browser-checked, only the render tests. Still to do: the funnel view
+   (where users leak) on the hit's dashboard.
 3. **The friend's arc and a named nemesis rival**: the dream after the hit. Stage goals reference them.
 4. **AI agents** on the team: roles, autonomy, a cost per run, failure modes.
 5. **A verb per stage** (First floor: build the team; Headquarters: the founder's deep work) and shaping the garage's

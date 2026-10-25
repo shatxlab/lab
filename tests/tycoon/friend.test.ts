@@ -62,7 +62,7 @@ describe('the friend', () => {
     stayed.friendArc!.stage = 'together'
     stayed.friendArc!.bond = 100
     expect(courtFriend(stayed)).toBe(true)
-    expect(stayed.pendingEvent?.id).toBe('friend_offer')
+    expect((stayed as GameState).pendingEvent?.id).toBe('friend_offer')
     expect(resolveRandomEvent(stayed, 0).ok).toBe(true)
     expect(friendOf(stayed)).toBeDefined()
     expect(stayed.friendArc!.stage).toBe('together')
@@ -97,7 +97,7 @@ describe('the friend', () => {
     expect(state.pendingEvent).toBeNull()
     state.nemesesBeaten = 1
     friendMonth(state)
-    expect(state.pendingEvent?.id).toBe('friend_return')
+    expect((state as GameState).pendingEvent?.id).toBe('friend_return')
     expect(resolveRandomEvent(state, 0).ok).toBe(true)
     expect(friendOf(state)).toMatchObject({ name, title: 'CTO', founder: true })
     expect(state.friendArc).toMatchObject({ stage: 'returned', bond: 70 })

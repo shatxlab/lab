@@ -44,7 +44,7 @@ describe('chapters', () => {
     expect(next.reputation).toBe(48)
     expect(next.legacy).toMatchObject([{ studio: 'Copper Studios', ending: 'retired' }])
     expect(next.freshChapter).toBe(true)
-    expect(next.rivals).toBe(old.rivals)
+    expect(next.rivals).toEqual(old.rivals)
   })
 
   it('after a bad ending leave you alone with half of it, a smaller name and the starting money', () => {

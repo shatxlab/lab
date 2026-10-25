@@ -404,6 +404,8 @@ export interface Rival {
   /** Yearly growth of that business, up to its cap. */
   growth: number
   businessCap: number
+  /** For a nemesis: what it earns against you (1 is level). Its income is this times yours, not its own products'. */
+  ratio?: number
 }
 
 /** A rival's product: the same user model as yours, kept simpler (no bugs, no promotions). */
@@ -481,6 +483,14 @@ export interface GameState {
   signatureId: number | null
   /** What the studio is called, chosen at the start; absent in older saves. */
   studioName?: string
+  /** The rival that has made you its business, if there is one; see `sim/nemesis.ts`. */
+  nemesis?: Nemesis
+  /** How many nemeses you have beaten. */
+  nemesesBeaten?: number
+  /** The day the next one comes, after one is beaten. */
+  nextNemesisDay?: number
+  /** The day the studio's first hit took off. */
+  hitDay?: number
   /** Which company of your career this is (1 for the first); absent in older saves. See `sim/chapters.ts`. */
   chapter?: number
   /** The companies you have ended before this one, oldest first. */
@@ -521,6 +531,24 @@ export interface GameState {
   dayWork: DayWork[]
   /** Pending events for the UI; drained with `drainEvents`. */
   events: SimEvent[]
+}
+
+/** A named rival who came for the hit. Their income lives on the rival (`Rival.ratio`). */
+export interface Nemesis {
+  rivalId: number
+  /** The person who runs it, and why it is personal. */
+  founder: string
+  story: string
+  since: number
+  /** Days in a row you have out-earned them by the margin. */
+  leadDays: number
+  nextMoveDay: number
+  /** How many roadmap items the hit had built when last counted, to see what you finished this month. */
+  builtSeen: number
+  /** How many releases the hit had when last counted. */
+  updatesSeen?: number
+  /** The day you last struck back. */
+  struckDay?: number
 }
 
 /** A company of your career that has ended. */

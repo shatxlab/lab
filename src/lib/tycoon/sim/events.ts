@@ -15,7 +15,8 @@ import { rand } from './rng'
 import { overallProgress } from './scoring'
 import { fail, OK, type GameState, type Result } from './types'
 
-function offer(state: GameState, id: string, data?: Record<string, number>): void {
+/** Puts an event in front of the player now. */
+export function offerEvent(state: GameState, id: string, data?: Record<string, number>): void {
   const event = getRandomEvent(id)
   if (!event) return
   state.pendingEvent = { id, data: data ?? event.prepare?.(state) ?? {} }
@@ -33,13 +34,13 @@ export function rollRandomEvent(state: GameState): void {
   if (state.pendingEvent || state.gameOver) return
 
   if (state.debtDays === INVESTOR_LIFELINE_DEBT_DAYS && state.investorDeals === 0) {
-    offer(state, 'investor')
+    offerEvent(state, 'investor')
     return
   }
   for (const { office, project } of activeProjects(state)) {
     if (project.kind === 'new' && project.size !== 'small' && !project.alphaOffered && overallProgress(project) >= ALPHA_PROGRESS) {
       project.alphaOffered = true
-      offer(state, 'alpha_preview', { officeId: office.id })
+      offerEvent(state, 'alpha_preview', { officeId: office.id })
       return
     }
   }
@@ -56,7 +57,7 @@ export function rollRandomEvent(state: GameState): void {
   if (eligible.length === 0) return
   let pointer = rand(state) * eligible.reduce((sum, e) => sum + e.weight, 0)
   const chosen = eligible.find((e) => (pointer -= e.weight) < 0) ?? eligible[eligible.length - 1]
-  offer(state, chosen.id)
+  offerEvent(state, chosen.id)
 }
 
 export interface PendingEventView {

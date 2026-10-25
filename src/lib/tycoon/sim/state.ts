@@ -228,7 +228,8 @@ function validRival(v: unknown): boolean {
     isNum(v.nextLaunchDay) &&
     isNum(v.business) &&
     isNum(v.growth) &&
-    isNum(v.businessCap)
+    isNum(v.businessCap) &&
+    (v.ratio === undefined || isNum(v.ratio))
   )
 }
 

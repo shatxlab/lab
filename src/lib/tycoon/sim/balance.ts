@@ -636,3 +636,47 @@ export const SALE_HIT_REPUTATION_PENALTY = 6
 // Founders
 /** The two people who start the studio draw this share of the market rate for their skills, in every era: nothing in the café, where they live on savings. */
 export const FOUNDER_PAY_SHARE = 0.5
+
+// The nemesis: a rival with a name, a funded newcomer who comes for the hit
+/** Days after the hit breaks out before its rival shows up, and after one is beaten before the next does. */
+export const NEMESIS_FIRST_DAYS = 60
+export const NEMESIS_NEXT_DAYS = 240
+/** What they earn against you when they arrive (1 is level), the least and most it can drift to. */
+export const NEMESIS_START_RATIO = 1.15
+export const NEMESIS_MIN_RATIO = 0.3
+export const NEMESIS_MAX_RATIO = 2.2
+/** Each month they gain this much on you just by being hungry. */
+export const NEMESIS_AMBITION = 0.03
+/** Each month they gain this much for every point your hit's fit is under 90, up to the cap. */
+export const NEMESIS_WEAKNESS = 1 / 400
+export const NEMESIS_WEAKNESS_CAP = 0.1
+/** Each month you lose this much on them for every roadmap item you finished that month, up to the cap. */
+export const NEMESIS_PER_ITEM = 0.04
+export const NEMESIS_ITEM_CAP = 0.12
+/** A lookalike product they launch lifts them by this. */
+export const NEMESIS_CLONE_GAIN = 0.1
+/** Their reach for it, as a share of the hit's, and how far under the hit's quality it ships. */
+export const NEMESIS_CLONE_REACH = 0.4
+export const NEMESIS_CLONE_QUALITY_GAP = 3
+/** Days between their moves. */
+export const NEMESIS_MOVE_MIN_DAYS = 100
+export const NEMESIS_MOVE_MAX_DAYS = 160
+/** Their ad blitz cuts your revenue to this share for this many days. */
+export const NEMESIS_BLITZ_MULT = 0.92
+export const NEMESIS_BLITZ_DAYS = 40
+/** A rival's income is never counted under this for the ratio, so a small studio still has one to beat. */
+export const NEMESIS_MIN_INCOME = 2000
+/** You have beaten them when you earn this much more than they do, for this many days in a row. */
+export const NEMESIS_BEAT_RATIO = 0.8
+export const NEMESIS_BEAT_DAYS = 90
+/** Reputation you win for beating them. */
+export const NEMESIS_BEAT_REPUTATION = 8
+/** Each release you ship in a month holds them back a little, up to the cap; a hit at or over this fit holds them back more. */
+export const NEMESIS_PER_RELEASE = 0.015
+export const NEMESIS_RELEASE_CAP = 0.06
+export const NEMESIS_STRONG_FIT = 95
+export const NEMESIS_STRONG_FIT_GAIN = 0.02
+/** Striking back: costs this many days of what you earn, sets them back this much, and can be done again after this many days. */
+export const NEMESIS_STRIKE_DAYS = 25
+export const NEMESIS_STRIKE_SETBACK = 0.2
+export const NEMESIS_STRIKE_COOLDOWN = 60

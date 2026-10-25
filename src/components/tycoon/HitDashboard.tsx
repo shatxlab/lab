@@ -12,6 +12,8 @@ import { usersIn } from '@/lib/tycoon/sim/products'
 import { capacityOf, hostingCost, loadOf } from '@/lib/tycoon/sim/scale'
 import { releaseKey } from '@/lib/tycoon/sim/fit'
 import { statMultiplier } from '@/lib/tycoon/sim/modifiers'
+import { nemesisRival, nemesisStanding, strikeBackBlocker, strikeBackCost } from '@/lib/tycoon/sim/nemesis'
+import { NEMESIS_BEAT_DAYS } from '@/lib/tycoon/sim/balance'
 import { useGame, useStore } from './context'
 import { FitMeter } from './FitMeter'
 
@@ -62,6 +64,19 @@ export function HitDashboard() {
           </small>
         </div>
       </div>
+      {state.nemesis && nemesisRival(state) && nemesisStanding(state) && (
+        <div className="hit-dash-rival">
+          <strong>{nemesisRival(state)!.name}</strong>{' '}
+          <span className="muted">
+            {state.nemesis.founder} earns {formatMoney(nemesisStanding(state)!.theirs)}/day against your {formatMoney(nemesisStanding(state)!.yours)}.{' '}
+            {state.nemesis.leadDays > 0 ? `You have been ahead ${state.nemesis.leadDays} of ${NEMESIS_BEAT_DAYS} days.` : 'Finish roadmap items and keep fit high to pull ahead.'}
+          </span>
+          <small className="muted"> {state.nemesis.story}</small>{' '}
+          <button disabled={strikeBackBlocker(state) !== null} title={strikeBackBlocker(state) ?? 'A campaign aimed at their customers: sets them back'} onClick={() => store.strikeBack()}>
+            Strike back · {formatMoney(strikeBackCost(state))}
+          </button>
+        </div>
+      )}
       <div className="hit-dash-floors">
         {state.offices
           .filter((o) => o.kind === 'office' && o.productId === hit.id)

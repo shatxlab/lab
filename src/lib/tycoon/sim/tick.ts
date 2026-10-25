@@ -18,6 +18,7 @@ import { pruneModifiers } from './modifiers'
 import { researchDay } from './research'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { productsDay } from './products'
+import { nemesisDay, nemesisMonth } from './nemesis'
 import { rankingDay, rivalArrives, rivalsDay } from './rivals'
 import { checkStage } from './stages'
 import { moraleDay, trainingDay } from './staff'
@@ -38,6 +39,7 @@ export function advanceDay(state: GameState): void {
   workDay(state)
   teamDay(state)
   rivalsDay(state)
+  nemesisDay(state)
   productsDay(state)
   fitDay(state)
   companionsDay(state)
@@ -60,6 +62,7 @@ export function advanceDay(state: GameState): void {
   if (state.day % DAYS_PER_MONTH === 0) {
     for (const employee of state.employees) employee.salary = salaryOf(employee, state.day)
     updateMarket(state)
+    nemesisMonth(state)
     recordHistory(state)
     journalMonth(state)
   }

@@ -691,6 +691,46 @@ export const CAFE_EVENTS: readonly RandomEvent[] = [
  * Events offered at a point in a project rather than at random; `rollRandomEvent` decides when.
  * Their weight is unused.
  */
+/** Events that other systems put in front of the player (the nemesis, the friend); they are never rolled at random. */
+export const SCRIPTED_EVENTS: readonly RandomEvent[] = [
+  {
+    id: 'nemesis_poach',
+    title: 'A rival wants your best',
+    weight: 1,
+    // Offered by the nemesis's moves (`sim/nemesis.ts`), never rolled.
+    when: (s) => s.nemesis !== undefined,
+    text: ({ state, data }) =>
+      `${nameOf(state, data.employeeId)} has an offer from ${state.rivals.find((r) => r.id === data.rivalId)?.name ?? 'your rival'}: ${state.nemesis?.founder ?? 'their founder'} is calling people one by one.`,
+    choices: ({ state, data }) => {
+      const employee = state.employees.find((e) => e.id === data.employeeId)
+      const name = nameOf(state, data.employeeId)
+      const rival = state.rivals.find((r) => r.id === data.rivalId)
+      return [
+        choice(state, {
+          label: 'Match it and say why they matter',
+          cost: roundTo((employee?.salary ?? 0) * 4, 50),
+          note: 'a retention bonus; they stay and the team notices',
+          apply: () => {
+            adjustMorale(state, 10, employee?.id)
+            if (employee) employee.keptDay = state.day
+            return `${name} stays, and tells the others why.`
+          },
+        }),
+        choice(state, {
+          label: 'Let them go',
+          note: 'they join your rival, who gains on you',
+          apply: () => {
+            if (employee) fire(state, employee.id)
+            adjustMorale(state, -8)
+            if (rival?.ratio !== undefined) rival.ratio += 0.08
+            return `${name} left for ${rival?.name ?? 'your rival'}.`
+          },
+        }),
+      ]
+    },
+  },
+]
+
 export const CHECKPOINT_EVENTS: readonly RandomEvent[] = [
   {
     id: 'alpha_preview',
@@ -723,7 +763,7 @@ export const CHECKPOINT_EVENTS: readonly RandomEvent[] = [
   },
 ]
 
-const BY_ID = new Map([...RANDOM_EVENTS, ...CAFE_EVENTS, ...CHECKPOINT_EVENTS].map((e) => [e.id, e]))
+const BY_ID = new Map([...RANDOM_EVENTS, ...CAFE_EVENTS, ...CHECKPOINT_EVENTS, ...SCRIPTED_EVENTS].map((e) => [e.id, e]))
 
 export function getRandomEvent(id: string): RandomEvent | undefined {
   return BY_ID.get(id)

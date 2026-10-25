@@ -4,6 +4,7 @@ import { rollStudioName, you } from './founding'
 import { refreshCandidates } from './hiring'
 import { logEntry } from './journal'
 import { sampleNow } from './history'
+import { rivalRevenue } from './rivals'
 import { studioWorth } from './exit'
 import { rand } from './rng'
 import { createInitialState } from './state'
@@ -71,7 +72,13 @@ export function nextChapter(state: GameState): GameState | null {
   next.day = state.day
   next.lastEventDay = state.day
   next.lastOutingDay = state.day - 1000
-  next.rivals = state.rivals
+  // A nemesis was measured against your old studio: in the new chapter they are just a studio with the income they had.
+  next.rivals = state.rivals.map((r) => {
+    if (r.ratio === undefined) return r
+    const { ratio: _ratio, ...rest } = r
+    const business = Math.round(rivalRevenue(state, r))
+    return { ...rest, business, businessCap: business * 2, growth: 0.2 }
+  })
   next.rivalProducts = state.rivalProducts
   next.absorbedNames = state.absorbedNames
   next.market = state.market

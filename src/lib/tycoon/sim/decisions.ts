@@ -2,6 +2,7 @@ import { getAudience } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
+import { strikeBackCost } from './nemesis'
 import { getWorkItem, WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
 import { title } from './careers'
 import { describePendingEvent } from './events'
@@ -149,6 +150,11 @@ export const decisions = {
   becomePm(state: GameState, employeeId: number): Decision {
     const e = state.employees.find((x) => x.id === employeeId)
     return ['employee.pm', `${e ? person(e) : 'An analyst'} became a product manager`, e ? { analysis: Math.round(e.analysis ?? 0), office: officeLabel(state, e.officeId) } : undefined]
+  },
+
+  strikeBack(state: GameState): Decision {
+    const rival = state.rivals.find((r) => r.id === state.nemesis?.rivalId)
+    return ['nemesis.strike', `Went after ${rival?.name ?? 'the rival'}'s customers`, { cost: strikeBackCost(state), ratio: Math.round((rival?.ratio ?? 0) * 100) / 100 }]
   },
 
   survey(state: GameState, audienceId: string): Decision {

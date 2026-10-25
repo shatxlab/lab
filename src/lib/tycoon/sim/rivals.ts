@@ -5,6 +5,7 @@ import { ERAS } from '@/lib/tycoon/data/eras'
 import { NEWCOMERS, RIVALS, type RivalSeed } from '@/lib/tycoon/data/rivals'
 import {
   ACQUISITION_DAYS,
+  NEMESIS_MIN_INCOME,
   ACQUISITION_FLOOR,
   ACQUISITION_REPUTATION,
   ABSORB_SKILL_SPREAD,
@@ -88,7 +89,7 @@ function launchGap(state: GameState, size: ProjectSize): number {
 }
 
 /** A product the rival puts out: mostly in the markets it likes, at about its skill, now and then a hit. */
-function makeProduct(state: GameState, rival: Rival, releaseDay: number): RivalProduct {
+export function makeProduct(state: GameState, rival: Rival, releaseDay: number): RivalProduct {
   const era = eraIndexAt(Math.max(releaseDay, 0))
   const open = PRODUCT_TYPES.filter((t) => t.era <= era)
   const liked = open.filter((t) => rival.focus.includes(t.id))
@@ -283,7 +284,8 @@ export function rankingDay(state: GameState): void {
 }
 
 /** What a rival earns per day: its products, and its business beyond them. */
-function rivalRevenue(state: GameState, rival: Rival): number {
+export function rivalRevenue(state: GameState, rival: Rival): number {
+  if (rival.ratio !== undefined) return rival.ratio * Math.max(trailingIncome(state), NEMESIS_MIN_INCOME)
   const products = state.rivalProducts.filter((p) => p.rivalId === rival.id)
   return rival.business + products.reduce((sum, p) => sum + revenueForUsers(p.productTypeId, p.users), 0)
 }

@@ -37,6 +37,7 @@ import { capacityOf, loadOf } from '../../src/lib/tycoon/sim/scale.ts'
 import { createInitialState } from '../../src/lib/tycoon/sim/state.ts'
 import { sunsetBlocker, sunsetProduct } from '../../src/lib/tycoon/sim/sunset.ts'
 import { setWorkstream } from '../../src/lib/tycoon/sim/teams.ts'
+import { nemesisRival, strikeBack, strikeBackBlocker, strikeBackCost } from '../../src/lib/tycoon/sim/nemesis.ts'
 import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
 import { featureLock } from '../../src/lib/tycoon/sim/unlocks.ts'
 import { estimateDays } from '../../src/lib/tycoon/sim/work.ts'
@@ -203,6 +204,11 @@ function act2(h: Product): void {
     const region = state.stage >= 5 && officesIn(state, 'eu').length === 0 ? 'eu' : officesIn(state, 'us').length < 5 ? 'us' : undefined
     const r = openOffice(state, region)
     if (r.ok) say(`opens a floor (${state.offices.length} offices)`)
+  }
+  // The rival: strike back whenever it is allowed and they are not already behind.
+  if (state.nemesis && strikeBackBlocker(state) === null && (nemesisRival(state)?.ratio ?? 0) > 0.75 && state.money > 4 * strikeBackCost(state)) {
+    strikeBack(state)
+    say(`strikes back at ${nemesisRival(state)?.name}`)
   }
   // Europe: localise once an office is there (the Europe stream does it by itself).
   const target = state.rivals.find((r) => acquisitionBlocker(state, r) === null && state.money > acquisitionPrice(state, r) + reserve * 2)

@@ -112,6 +112,16 @@ Phases, each playable and tested before the next. Phase 1 is built (uncommitted)
    still reaches the IPO in 6.0 to 8.0 years. Not browser-checked, only the render tests. Still to do: the funnel view
    (where users leak) on the hit's dashboard.
 3. **The friend's arc and a named nemesis rival**: the dream after the hit. Stage goals reference them.
+   - *3a, the nemesis (built).* `sim/nemesis.ts`, `data/nemesis.ts`: 60 days after the hit a funded newcomer (a named founder, a
+     story) comes for it. Its income is `Rival.ratio` times yours (starts at 1.15, so it is ahead). Monthly it gains
+     (+0.03 ambition, up to +0.1 where the hit's fit is under 90) and falls back for releases you ship (-0.015 each, cap
+     -0.06), roadmap items you finish (-0.04 each, cap -0.12) and a hit at fit 95+ (-0.02). Every 100 to 160 days it moves: a
+     lookalike product (crowds the hit's market and lifts it by 0.1), a poaching offer (an event; letting them go lifts it by
+     0.08) or an ad blitz (revenue x0.92 for 40 days). You can *Strike back* (25 days of income, sets them back 0.2, every 60
+     days): the first thing money buys late. Beaten when ratio <= 0.8 for 90 days in a row, or absorbed; the next comes 240
+     days later. The Europe stage asks for it ("Overtake your rival"). Seeds 1 to 6: the bot's IPO moved from 6.0 to 8.0
+     years to 6.8 to 8.8. Scripted events (`SCRIPTED_EVENTS`) are never rolled at random.
+   - *3b, the friend's arc, and 3c, more ways to fail:* not built yet.
 4. **AI agents** on the team: roles, autonomy, a cost per run, failure modes.
 5. **A verb per stage** (First floor: build the team; Headquarters: the founder's deep work) and shaping the garage's
    discovery. Then a bot pass over 12 seeds, then a new human run.

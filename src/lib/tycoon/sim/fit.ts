@@ -149,6 +149,7 @@ export function takeOff(state: GameState, product: Product): void {
   product.hit = true
   if (state.signatureId === null) {
     state.signatureId = product.id
+    state.hitDay = state.day
     // The founder who studies users steers it from now on.
     const founder = state.employees.find((e) => e.founder && e.role === 'analyst')
     if (founder) {

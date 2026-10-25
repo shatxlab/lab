@@ -98,6 +98,12 @@ export const STAGES: readonly Stage[] = [
       { id: 'eu_office', label: 'Open a building in Europe', check: (s) => s.offices.some((o) => o.region === 'eu'), progress: (s) => (s.offices.some((o) => o.region === 'eu') ? 'open' : 'not yet') },
       { id: 'eu_localised', label: 'Localise your hit for Europe', check: (s) => (s.products.find((p) => p.id === s.signatureId)?.euShare ?? 0) > 0 },
       { id: 'hit_3m', label: 'Grow your hit to 3 million users', check: (s) => hitUsers(s) >= 3_000_000, progress: (s) => upTo(hitUsers(s), 3_000_000) },
+      {
+        id: 'nemesis',
+        label: 'Overtake your rival: out-earn them by a fifth for 90 days',
+        check: (s) => (s.nemesesBeaten ?? 0) > 0,
+        progress: (s) => ((s.nemesesBeaten ?? 0) > 0 ? 'beaten' : s.nemesis ? `${s.nemesis.leadDays} / 90 days ahead` : 'no rival yet'),
+      },
       { id: 'three_offices', label: 'Run 3 full floors: 36 people', check: (s) => realOffices(s) >= 3 && s.employees.length >= 36, progress: (s) => `${realOffices(s)} floors, ${s.employees.length} / 36 people` },
     ],
   },

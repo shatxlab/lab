@@ -478,7 +478,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       const result = logged(() => decisions.resolveEvent(state, index), () => resolveRandomEvent(state, index))
       if (!result.ok) return result
       handleEvents(drainLogged())
-      dialog.value = queue.shift() ?? null
+      dialog.value = state.gameOver ? { kind: 'game-over' } : (queue.shift() ?? null)
       bump()
       sfx.play('click')
       return result

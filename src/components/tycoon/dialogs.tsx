@@ -125,12 +125,13 @@ export function GameOverDialog() {
   const sold = ending?.kind === 'sold'
   const retired = ending?.kind === 'retired'
   const ipo = ending?.kind === 'ipo'
+  const ousted = ending?.kind === 'ousted'
   const summary = runSummary(state)
   const years = Number(summary.years)
   const serving = longestServing(state)
   const chapter = chapterKind(state)
   return (
-    <Modal title={sold ? 'Sold' : ipo ? 'The bell rings' : retired ? 'Your legacy' : 'Bankrupt'}>
+    <Modal title={sold ? 'Sold' : ipo ? 'The bell rings' : retired ? 'Your legacy' : ousted ? 'Ousted' : 'Bankrupt'}>
       {sold ? (
         <p>
           <strong>{ending?.bidder}</strong> bought the studio for <strong>{formatMoney(ending?.price ?? 0)}</strong>. {formatDate(state.day)}.
@@ -141,11 +142,13 @@ export function GameOverDialog() {
         </p>
       ) : retired ? (
         <p>You hand the company on. {formatDate(state.day)}.</p>
+      ) : ousted ? (
+        <p>The people stopped believing in you, and you stepped down. {formatDate(state.day)}.</p>
       ) : (
         <p>The money ran out and stayed out. {formatDate(state.day)}.</p>
       )}
       <div className="result-grid">
-        {ending && ending.kind !== 'bankrupt' && (
+        {ending && ending.kind !== 'bankrupt' && ending.kind !== 'ousted' && (
           <div className="stat">
             <span className="label">{sold || ipo ? 'Final worth' : 'Worth'}</span>
             <span className="value">{formatMoney(ending.worth)}</span>

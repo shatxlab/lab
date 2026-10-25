@@ -680,3 +680,37 @@ export const NEMESIS_STRONG_FIT_GAIN = 0.02
 export const NEMESIS_STRIKE_DAYS = 25
 export const NEMESIS_STRIKE_SETBACK = 0.2
 export const NEMESIS_STRIKE_COOLDOWN = 60
+
+// The friend
+/** The friend starts at this, 0 to 100: how much they would give up for you. It moves with the team's mood and with what you choose. */
+export const FRIEND_START_BOND = 60
+/** The month they sketch their own idea: days after the hit, and the least stage. */
+export const FRIEND_IDEA_DAYS = 120
+/** Backing their idea costs this many months of their pay, and gives this much bond; the weekend version is free and gives less. */
+export const FRIEND_BACK_MONTHS = 6
+export const FRIEND_BACK_BOND = 15
+export const FRIEND_WEEKEND_BOND = 8
+export const FRIEND_REFUSE_BOND = -10
+/** Each month the bond moves by this when the team is happy (morale over the first number) or unhappy (under the second). */
+export const FRIEND_MOOD_GAIN = 2
+export const FRIEND_HAPPY_MORALE = 75
+export const FRIEND_UNHAPPY_MORALE = 55
+/** The chance they stay when you talk, match the offer or leave it to them: bond over 100, plus this. */
+export const FRIEND_STAY_TALK = 0.1
+export const FRIEND_STAY_MATCH = 0.5
+export const FRIEND_STAY_LEAVE = -0.1
+/** Matching their offer costs this many months of their pay. */
+export const FRIEND_MATCH_MONTHS = 12
+/** When they go, the rival gains this and everyone loses this much morale. */
+export const FRIEND_LEAVE_RIVAL_GAIN = 0.25
+export const FRIEND_LEAVE_MORALE = 10
+
+// Losing the company
+/** The team is this unhappy (average morale under it) while the rival earns this much more than you (ratio over it), this many months running, and the company loses confidence in you. */
+export const CRISIS_MORALE = 45
+export const CRISIS_RATIO = 1.4
+export const CRISIS_MONTHS = 3
+/** Rallying the company costs this share of the cash, lifts morale by this and sets the rival back by this. */
+export const RALLY_CASH_SHARE = 0.25
+export const RALLY_MORALE = 20
+export const RALLY_SETBACK = 0.2

@@ -77,6 +77,13 @@ export function HitDashboard() {
           </button>
         </div>
       )}
+      {state.friendArc && (
+        <small className="muted">
+          {state.friendArc.stage === 'gone'
+            ? `${state.friendArc.left?.name ?? 'Your friend'} left to join your rival. They might write one day.`
+            : `${state.employees.find((e) => e.founder && e.title === 'CTO')?.name ?? 'Your friend'}: ${state.friendArc.bond >= 70 ? 'closer than ever' : state.friendArc.bond >= 40 ? 'still with you' : 'drifting'}.`}
+        </small>
+      )}
       <div className="hit-dash-floors">
         {state.offices
           .filter((o) => o.kind === 'office' && o.productId === hit.id)

@@ -1,5 +1,6 @@
 import { formatMoney as $ } from '@/lib/tycoon/format'
 import { getProductType } from './productTypes'
+import { FRIEND_BACK_BOND, FRIEND_BACK_MONTHS, FRIEND_MATCH_MONTHS, FRIEND_REFUSE_BOND, FRIEND_STAY_LEAVE, FRIEND_STAY_MATCH, FRIEND_STAY_TALK, FRIEND_WEEKEND_BOND } from '@/lib/tycoon/sim/balance'
 import { DAYS_PER_MONTH, HIRE_MAX_LEVEL, INVESTOR_MONTHS_OF_BURN, OVERSHOOT_CAP, POACH_IMMUNITY_DAYS, PROJECT_SIZES, REPUTATION_MAX } from '@/lib/tycoon/sim/balance'
 import { dailyIncome, monthlyBurn, monthlySalaries } from '@/lib/tycoon/sim/economy'
 import { levelForSkill, primarySkill } from '@/lib/tycoon/sim/careers'
@@ -13,6 +14,8 @@ import { EU_BREACH_FINE_DAYS } from './regions'
 import { projectQuality } from '@/lib/tycoon/sim/project'
 import { isReady } from '@/lib/tycoon/sim/scoring'
 import { adjustMorale } from '@/lib/tycoon/sim/morale'
+import { changeBond, friendLeaves, friendOf, friendReturns, friendStays } from '@/lib/tycoon/sim/friend'
+import { rally, rallyCost, stepDown } from '@/lib/tycoon/sim/crisis'
 import { addModifier } from '@/lib/tycoon/sim/modifiers'
 import { pick, rand } from '@/lib/tycoon/sim/rng'
 import { DISCIPLINES, type Discipline, type GameState, type Office, type Project } from '@/lib/tycoon/sim/types'
@@ -693,6 +696,140 @@ export const CAFE_EVENTS: readonly RandomEvent[] = [
  */
 /** Events that other systems put in front of the player (the nemesis, the friend); they are never rolled at random. */
 export const SCRIPTED_EVENTS: readonly RandomEvent[] = [
+  {
+    id: 'friend_idea',
+    title: 'Your friend has an idea',
+    weight: 1,
+    when: (s) => friendOf(s) !== undefined,
+    text: ({ state }) =>
+      `${friendOf(state)?.name ?? 'Your friend'} has been sketching something of their own on the back of napkins again, the way you used to at the café. They have not asked for anything. They just keep not saying it.`,
+    choices: ({ state }) => {
+      const friend = friendOf(state)
+      const name = friend?.name ?? 'Your friend'
+      return [
+        choice(state, {
+          label: 'Back it: a small side project',
+          cost: roundTo((friend?.salary ?? 0) * FRIEND_BACK_MONTHS, 50),
+          note: 'they build it on company time',
+          apply: () => {
+            changeBond(state, FRIEND_BACK_BOND)
+            adjustMorale(state, 6, friend?.id)
+            return `${name} lights up. It is the first time in a while.`
+          },
+        }),
+        choice(state, {
+          label: 'Build it together on weekends',
+          note: 'free, and a little tiring for everyone',
+          apply: () => {
+            changeBond(state, FRIEND_WEEKEND_BOND)
+            adjustMorale(state, -3)
+            return `Saturdays at the café table again. ${name} is happy; the others notice you are tired.`
+          },
+        }),
+        choice(state, {
+          label: 'Not now: the hit needs you',
+          apply: () => {
+            changeBond(state, FRIEND_REFUSE_BOND)
+            return `${name} nods and puts the napkins away.`
+          },
+        }),
+      ]
+    },
+  },
+
+  {
+    id: 'friend_offer',
+    title: 'They want your friend',
+    weight: 1,
+    when: (s) => friendOf(s) !== undefined && s.nemesis !== undefined,
+    text: ({ state, data }) => {
+      const friend = state.employees.find((e) => e.id === data.friendId)
+      const rival = state.rivals.find((r) => r.id === data.rivalId)
+      return `${state.nemesis?.founder ?? 'Your rival'} of ${rival?.name ?? 'the rival'} has offered ${friend?.name ?? 'your friend'} a CTO seat and a share of the company. ${friend?.name ?? 'They'} has not said no.`
+    },
+    choices: ({ state, data }) => {
+      const friend = state.employees.find((e) => e.id === data.friendId)
+      const name = friend?.name ?? 'Your friend'
+      const stays = (extra: number) => rand(state) < (state.friendArc?.bond ?? 0) / 100 + extra
+      const resolve = (extra: number, stayText: string): string => {
+        if (stays(extra)) {
+          friendStays(state)
+          return stayText
+        }
+        friendLeaves(state)
+        return `${name} left. You could see it coming and still did not.`
+      }
+      return [
+        choice(state, {
+          label: 'Sit down together and talk',
+          note: 'free; it depends on how close you have stayed',
+          apply: () => resolve(FRIEND_STAY_TALK, `${name} stays. You talked until the café would have closed.`),
+        }),
+        choice(state, {
+          label: 'Match it, with a raise and a bigger title',
+          cost: roundTo((friend?.salary ?? 0) * FRIEND_MATCH_MONTHS, 50),
+          note: 'much likelier to work, but not a promise',
+          apply: () => resolve(FRIEND_STAY_MATCH, `${name} takes the raise and stays.`),
+        }),
+        choice(state, {
+          label: 'Say it is their call',
+          note: 'free, and a gamble',
+          apply: () => resolve(FRIEND_STAY_LEAVE, `${name} stays. They said later that they were glad you did not beg.`),
+        }),
+      ]
+    },
+  },
+
+  {
+    id: 'friend_return',
+    title: 'A letter from your friend',
+    weight: 1,
+    when: (s) => s.friendArc?.left !== undefined,
+    text: ({ state }) =>
+      `${state.friendArc?.left?.name ?? 'Your friend'} wrote to you. It is short: the rival is not what they hoped, and they miss the café table. They do not ask for the job back.`,
+    choices: ({ state }) => [
+      choice(state, {
+        label: 'Welcome them back as CTO',
+        note: 'they come back with what they learned',
+        apply: () => {
+          friendReturns(state)
+          return 'You pour two coffees. Some things are worth more than being right.'
+        },
+      }),
+      choice(state, {
+        label: 'Wish them well',
+        note: 'the door closes for good',
+        apply: () => {
+          if (state.friendArc) delete state.friendArc.left
+          return 'You write back kindly. It is the last you hear for a long time.'
+        },
+      }),
+    ],
+  },
+
+  {
+    id: 'no_confidence',
+    title: 'They have stopped believing',
+    weight: 1,
+    when: (s) => s.nemesis !== undefined,
+    text: ({ state }) =>
+      `The people have lost faith. The mood is low, ${state.nemesis?.founder ?? 'your rival'} is pulling ahead, and the best of them are quietly sending out résumés. The leads want to talk to you about whether you are the right one to run this.`,
+    choices: ({ state }) => [
+      choice(state, {
+        label: 'Rally the company',
+        cost: rallyCost(state),
+        blocked: state.rallied ? 'You rallied them once already' : undefined,
+        note: 'a bonus for everyone, a plan, and a push against the rival',
+        apply: () => rally(state),
+      }),
+      choice(state, {
+        label: 'Step down',
+        note: 'the run ends: you leave with next to nothing',
+        apply: () => stepDown(state),
+      }),
+    ],
+  },
+
   {
     id: 'nemesis_poach',
     title: 'A rival wants your best',

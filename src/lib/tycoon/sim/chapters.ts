@@ -21,7 +21,7 @@ export type ChapterKind = 'continue' | 'restart'
 
 export function chapterKind(state: GameState): ChapterKind | null {
   if (!state.ending) return null
-  return state.ending.kind === 'bankrupt' ? 'restart' : 'continue'
+  return state.ending.kind === 'bankrupt' || state.ending.kind === 'ousted' ? 'restart' : 'continue'
 }
 
 /** The share of what the studio was worth that you start the next one with, and the least and most. */

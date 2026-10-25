@@ -33,6 +33,7 @@ import {
   REPUTATION_MAX,
 } from './balance'
 import { offerEvent } from './events'
+import { courtFriend } from './friend'
 import { rollPersonName, rollStudioName } from './founding'
 import { logEntry } from './journal'
 import { addModifier } from './modifiers'
@@ -129,7 +130,8 @@ function poach(state: GameState, rival: Rival): boolean {
 /** One of their moves, now and then. Returns false if it had to wait. */
 function move(state: GameState, rival: Rival, hit: Product): boolean {
   const roll = rand(state)
-  if (roll < 0.45) {
+  if (roll < 0.15 && courtFriend(state)) return true
+  if (roll < 0.5) {
     clone(state, rival, hit)
     return true
   }

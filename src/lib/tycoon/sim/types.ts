@@ -487,6 +487,11 @@ export interface GameState {
   nemesis?: Nemesis
   /** How many nemeses you have beaten. */
   nemesesBeaten?: number
+  /** Your oldest friend and what became of them; see `sim/friend.ts`. */
+  friendArc?: FriendArc
+  /** Months in a row the company has doubted you, and whether you have rallied it once; see `sim/crisis.ts`. */
+  doubtMonths?: number
+  rallied?: boolean
   /** The day the next one comes, after one is beaten. */
   nextNemesisDay?: number
   /** The day the studio's first hit took off. */
@@ -533,6 +538,19 @@ export interface GameState {
   events: SimEvent[]
 }
 
+/** The story of your friend, the other founder. */
+export interface FriendArc {
+  stage: 'together' | 'restless' | 'courted' | 'gone' | 'returned'
+  /** 0 to 100. */
+  bond: number
+  /** Whether they have told you about their own idea. */
+  ideaTold?: boolean
+  /** Who they were when they left, to come back as. */
+  left?: Employee
+  /** The nemeses beaten when they left: they write again once another falls. */
+  beatenAtLeave?: number
+}
+
 /** A named rival who came for the hit. Their income lives on the rival (`Rival.ratio`). */
 export interface Nemesis {
   rivalId: number
@@ -560,7 +578,7 @@ export interface LegacyEntry {
 }
 
 export interface Ending {
-  kind: 'bankrupt' | 'sold' | 'retired' | 'ipo'
+  kind: 'bankrupt' | 'ousted' | 'sold' | 'retired' | 'ipo'
   day: number
   /** What a sale paid. */
   price?: number

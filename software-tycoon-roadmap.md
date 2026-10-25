@@ -121,7 +121,16 @@ Phases, each playable and tested before the next. Phase 1 is built (uncommitted)
      days): the first thing money buys late. Beaten when ratio <= 0.8 for 90 days in a row, or absorbed; the next comes 240
      days later. The Europe stage asks for it ("Overtake your rival"). Seeds 1 to 6: the bot's IPO moved from 6.0 to 8.0
      years to 6.8 to 8.8. Scripted events (`SCRIPTED_EVENTS`) are never rolled at random.
-   - *3b, the friend's arc, and 3c, more ways to fail:* not built yet.
+   - *3b, the friend's arc (built).* `sim/friend.ts`, four scripted events in `data/events.ts`. `friendArc` has a bond (0 to
+     100, starts 60, +2 or -2 a month with the team's mood). 120 days after the hit they tell you about their own idea (back
+     it, weekends, or not now). The nemesis may court them (15% of its moves): talk, match (12 months' pay) or their call;
+     they stay with a chance of bond/100 plus 0.1, 0.5 or -0.1. If they go, the rival gains 0.25 and the team loses morale;
+     once another rival falls they write, and you can take them back as CTO.
+   - *3c, losing the company (built).* `sim/crisis.ts`: team morale under 45 and the rival at 1.4 or more, three months in a
+     row, puts a vote of no confidence to you. Rally once (25% of the cash, +20 morale, rival -0.2) or step down: the new
+     ending `ousted`, which restarts you alone like bankruptcy. Bankruptcy alone could not end a rich company.
+   - Bot, seeds 1 to 6: the IPO at 6.0 to 9.1 years. Not played by a person yet; the numbers in `balance.ts` under "The
+     friend" and "Losing the company" are a first guess.
 4. **AI agents** on the team: roles, autonomy, a cost per run, failure modes.
 5. **A verb per stage** (First floor: build the team; Headquarters: the founder's deep work) and shaping the garage's
    discovery. Then a bot pass over 12 seeds, then a new human run.

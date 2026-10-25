@@ -714,3 +714,21 @@ export const CRISIS_MONTHS = 3
 export const RALLY_CASH_SHARE = 0.25
 export const RALLY_MORALE = 20
 export const RALLY_SETBACK = 0.2
+
+// AI agents
+/** An agent's bill grows with the team it serves: one plus a share of this many people. */
+export const AGENT_COST_PEOPLE = 8
+/** Safeguards that cut the chance of an incident: finished roadmap items on the hit, and the most they can cut. */
+export const AGENT_OVERSIGHT: Record<string, number> = { observability: 0.3, test_automation: 0.2, chaos_testing: 0.15 }
+export const AGENT_OVERSIGHT_CAP = 0.6
+/** Rolling back an incident costs this many days of everything the agents cost. */
+export const AGENT_ROLLBACK_DAYS = 12
+/** What an incident does if you let it ride. */
+export const AGENT_BUGS = 10
+export const AGENT_QUALITY_LOSS = 3
+export const AGENT_INSIGHT_LOSS = 20
+export const AGENT_FIT_LOSS = 4
+/** Of the incidents, this share also run up the bill (a loop that never stops): the bill multiplies for these days. */
+export const AGENT_RUNAWAY_SHARE = 0.25
+export const AGENT_RUNAWAY_MULT = 3
+export const AGENT_RUNAWAY_DAYS = 20

@@ -131,7 +131,14 @@ Phases, each playable and tested before the next. Phase 1 is built (uncommitted)
      ending `ousted`, which restarts you alone like bankruptcy. Bankruptcy alone could not end a rich company.
    - Bot, seeds 1 to 6: the IPO at 6.0 to 9.1 years. Not played by a person yet; the numbers in `balance.ts` under "The
      friend" and "Losing the company" are a first guess.
-4. **AI agents** on the team: roles, autonomy, a cost per run, failure modes.
+4. **AI agents (built).** The player chose *tool*, not hire. `sim/agents.ts`, `data/agents.ts`, Studio → Agents. Four kinds, each
+   with a dial: Off, Suggests, Acts-you-review, Unattended (power 0.4, 0.8, 1.4; cost x1, 2.2, 4; incident risk 0, 6%,
+   22% a month). Code copilot (every team faster) and Research analyst (insight) from the AI wave, Bug triager (faster fixes)
+   from the next era, Support agent (fewer of the hit's users leave) from the agent era, when all of them are 25% sharper.
+   Their effects add to `toolEffects` and their bill to `toolUpkeep` (grows with the team). An incident (`agent_incident`)
+   is cut by monitoring, test automation and resilience work on the hit (up to 60%): roll back (12 days of the bill), let it
+   ride (bugs, quality, insight or fit; a quarter also run the bill x3 for 20 days) or pull the plug. Bot seeds 1 to 6: the
+   IPO at 6.0 to 9.0 years, unchanged. Numbers are a first guess; no person has played this.
 5. **A verb per stage** (First floor: build the team; Headquarters: the founder's deep work) and shaping the garage's
    discovery. Then a bot pass over 12 seeds, then a new human run.
 

@@ -1,3 +1,4 @@
+import { agentEffects } from './agents'
 import { companionEffects } from './companions'
 import { retention } from './fit'
 import { growWorld, loadDay, payFactor, worldOf } from './scale'
@@ -178,7 +179,7 @@ export function targetUsersIn(state: GameState, product: Product, region: Region
   const reach = reachIn(product, region) * worldOf(product)
   if (reach <= 0) return 0
   const crowd = crowding(weights, product.productTypeId, ownWeight(product, state.day, region), region)
-  const kept = interest(product, state.day) * bugFactor(product, region) * retention(product, product.id === state.signatureId ? companionEffects(state).retention : 0)
+  const kept = interest(product, state.day) * bugFactor(product, region) * retention(product, product.id === state.signatureId ? companionEffects(state).retention + agentEffects(state).churn : 0)
   const users = reach * kept * expectationFactor(product, state.day)
   const loyal = (product.loyalUsers ?? 0) * regionShare(product, region) * kept
   return saturate(product.productTypeId, users, region, product.hit) / (1 + crowd) + loyal

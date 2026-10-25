@@ -487,6 +487,10 @@ export interface GameState {
   nemesis?: Nemesis
   /** How many nemeses you have beaten. */
   nemesesBeaten?: number
+  /** How much freedom each AI agent has (0 to 3); a missing one is off. See `sim/agents.ts`. */
+  agents?: Record<string, number>
+  /** For a while the agents' bill is multiplied: a runaway loop. */
+  billSpike?: { until: number; mult: number }
   /** Your oldest friend and what became of them; see `sim/friend.ts`. */
   friendArc?: FriendArc
   /** Months in a row the company has doubted you, and whether you have rallied it once; see `sim/crisis.ts`. */

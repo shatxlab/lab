@@ -2,6 +2,7 @@ import { getAudience } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
+import { AUTONOMY, getAgentKind } from '@/lib/tycoon/data/agents'
 import { strikeBackCost } from './nemesis'
 import { getWorkItem, WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
 import { title } from './careers'
@@ -150,6 +151,11 @@ export const decisions = {
   becomePm(state: GameState, employeeId: number): Decision {
     const e = state.employees.find((x) => x.id === employeeId)
     return ['employee.pm', `${e ? person(e) : 'An analyst'} became a product manager`, e ? { analysis: Math.round(e.analysis ?? 0), office: officeLabel(state, e.officeId) } : undefined]
+  },
+
+  setAgent(state: GameState, kindId: string, level: number): Decision {
+    const kind = getAgentKind(kindId)
+    return ['agent.set', `${kind?.name ?? 'An agent'}: ${AUTONOMY[level]?.name ?? level}`, { kind: kindId, level, before: state.agents?.[kindId] ?? 0, employees: state.employees.length }]
   },
 
   strikeBack(state: GameState): Decision {

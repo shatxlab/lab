@@ -18,6 +18,7 @@ import { pruneModifiers } from './modifiers'
 import { researchDay } from './research'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { productsDay } from './products'
+import { agentsMonth } from './agents'
 import { crisisMonth } from './crisis'
 import { friendMonth } from './friend'
 import { nemesisDay, nemesisMonth } from './nemesis'
@@ -67,6 +68,7 @@ export function advanceDay(state: GameState): void {
     nemesisMonth(state)
     friendMonth(state)
     crisisMonth(state)
+    agentsMonth(state)
     recordHistory(state)
     journalMonth(state)
   }

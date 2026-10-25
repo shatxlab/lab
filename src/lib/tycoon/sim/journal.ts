@@ -6,6 +6,7 @@ import { productRevenue } from './products'
 import { statMultiplier } from './modifiers'
 import { playerRank } from './rivals'
 import { describePendingEvent } from './events'
+import { agentEffects, agentFields } from './agents'
 import { nemesisFields } from './nemesis'
 import { companionEffects, freeSlots } from './companions'
 import { fitPressure, peakFitOf, retention } from './fit'
@@ -83,6 +84,7 @@ export function journalMonth(state: GameState): void {
     // The hit (Act 2): what to read to judge its pace, its servers, its fit and what presses on it.
     ...(hit ? hitFields(state, hit) : {}),
     ...nemesisFields(state),
+    ...agentFields(state),
     productList: state.products.map((p) => {
       const income = Math.round(productRevenue(p) * revenueMult)
       const regions = p.euUsers ? `, ${Math.round(p.euUsers)} in Europe` : ''
@@ -102,7 +104,7 @@ function hitFields(state: GameState, hit: Product): Data {
     hitEuUsers: Math.round(hit.euUsers ?? 0),
     hitFit: Math.round(hit.fit ?? 0),
     hitPeakFit: Math.round(peakFitOf(hit)),
-    hitRetention: Math.round(retention(hit, companionEffects(state).retention) * 100),
+    hitRetention: Math.round(retention(hit, companionEffects(state).retention + agentEffects(state).churn) * 100),
     hitReach: Math.round(hit.reach),
     hitWorld: Math.round(worldOf(hit) * 100) / 100,
     hitCapacity: capacityOf(hit),

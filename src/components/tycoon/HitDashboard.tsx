@@ -7,7 +7,8 @@ import { inGarage, officeName } from '@/lib/tycoon/sim/offices'
 import { DEFAULT_WORKSTREAM } from '@/lib/tycoon/sim/teams'
 import { WORKSTREAMS, type Workstream } from '@/lib/tycoon/sim/types'
 import { productIncome } from '@/lib/tycoon/sim/economy'
-import { companionsOf, freeSlots } from '@/lib/tycoon/sim/companions'
+import { agentEffects } from '@/lib/tycoon/sim/agents'
+import { companionEffects, companionsOf, freeSlots } from '@/lib/tycoon/sim/companions'
 import { usersIn } from '@/lib/tycoon/sim/products'
 import { capacityOf, hostingCost, loadOf } from '@/lib/tycoon/sim/scale'
 import { releaseKey } from '@/lib/tycoon/sim/fit'
@@ -30,7 +31,7 @@ export function HitDashboard() {
   const load = loadOf(hit)
   const pressure = fitPressure(state, hit)
   const worst = (Object.keys(CAUSES) as (keyof typeof CAUSES)[]).reduce((a, b) => (pressure[b] > pressure[a] ? b : a))
-  const kept = Math.round(retention(hit) * 100)
+  const kept = Math.round(retention(hit, companionEffects(state).retention + agentEffects(state).churn) * 100)
   const eu = usersIn(hit, 'eu')
   const loadTone = load >= 1 ? 'bad' : load >= 0.8 ? 'warn' : 'good'
 

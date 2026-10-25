@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AgentsTab } from './AgentsTab'
 import { IndustryTab } from './IndustryTab'
 import { JourneyTab } from './JourneyTab'
 import { Modal } from './Modal'
@@ -7,11 +8,12 @@ import { ProductsTab } from './ProductsTab'
 import { StatsTab } from './StatsTab'
 import { useStore } from './context'
 
-type Tab = 'journey' | 'products' | 'industry' | 'stats' | 'milestones'
+type Tab = 'journey' | 'products' | 'agents' | 'industry' | 'stats' | 'milestones'
 
 const TABS: readonly { id: Tab; label: string }[] = [
   { id: 'journey', label: 'Journey' },
   { id: 'products', label: 'Products' },
+  { id: 'agents', label: 'Agents' },
   { id: 'industry', label: 'Industry' },
   { id: 'stats', label: 'Stats' },
   { id: 'milestones', label: 'Milestones' },
@@ -34,6 +36,7 @@ export function StudioDialog({ tab: initial = 'products' }: { tab?: Tab }) {
       <div className="tab-panel" role="tabpanel">
         {tab === 'journey' && <JourneyTab />}
         {tab === 'products' && <ProductsTab />}
+        {tab === 'agents' && <AgentsTab />}
         {tab === 'industry' && <IndustryTab />}
         {tab === 'stats' && <StatsTab />}
         {tab === 'milestones' && <MilestonesTab />}

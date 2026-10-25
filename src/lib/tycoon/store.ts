@@ -5,6 +5,7 @@ import { surveyAudience } from '@/lib/tycoon/sim/insight'
 import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
+import { setAutonomy } from '@/lib/tycoon/sim/agents'
 import { strikeBack } from '@/lib/tycoon/sim/nemesis'
 import { acceptBuyout, declineBuyout, goPublic, retireStudio } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
@@ -174,6 +175,8 @@ export interface Store {
   survey(audienceId: string): Result
   /** Absorbs a rival studio: its office and people are yours, and so are the products listed (they take portfolio places). */
   acquire(rivalId: number, keepProductIds?: readonly number[]): Result
+  /** Sets how much freedom an AI agent has: 0 (off) to 3 (unattended). */
+  setAgent(kindId: string, level: number): Result
   /** Spends weeks of income on a campaign against your rival's customers. */
   strikeBack(): Result
   /** Sells the studio to the company that made an offer: the run ends. */
@@ -566,6 +569,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     survey(audienceId) {
       return cue(changed(logged(() => decisions.survey(state, audienceId), () => surveyAudience(state, audienceId))), 'click')
+    },
+
+    setAgent(kindId, level) {
+      return cue(changed(logged(() => decisions.setAgent(state, kindId, level), () => setAutonomy(state, kindId, level))), 'click')
     },
 
     strikeBack() {

@@ -36,6 +36,7 @@ import { absorbDesks, acquire, acquisitionBlocker, acquisitionPrice, rivalProduc
 import { capacityOf, loadOf } from '../../src/lib/tycoon/sim/scale.ts'
 import { createInitialState } from '../../src/lib/tycoon/sim/state.ts'
 import { sunsetBlocker, sunsetProduct } from '../../src/lib/tycoon/sim/sunset.ts'
+import { agentCost, availableAgents, levelOf, setAutonomy } from '../../src/lib/tycoon/sim/agents.ts'
 import { setWorkstream } from '../../src/lib/tycoon/sim/teams.ts'
 import { nemesisRival, strikeBack, strikeBackBlocker, strikeBackCost } from '../../src/lib/tycoon/sim/nemesis.ts'
 import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
@@ -218,6 +219,13 @@ function act2(h: Product): void {
   }
 }
 
+/** Agents: turns each one on at "acts, you review" once it exists and the studio can afford a month of it. */
+function agents(): void {
+  for (const kind of availableAgents(state)) {
+    if (levelOf(state, kind.id) === 0 && state.money > 30 * agentCost(state, kind, 2) + 6 * monthlyBurn(state)) setAutonomy(state, kind.id, 2)
+  }
+}
+
 function research(): void {
   if (state.research.active) return
   const reserve = 6 * monthlyBurn(state)
@@ -277,6 +285,7 @@ function botStep(): void {
   }
   const h = hit()
   research()
+  agents()
   if (h) freeASlot(h)
   if (h) act2(h)
   if (h && ipoBlocker(state) === null) {

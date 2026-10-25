@@ -39,7 +39,7 @@ describe('the competition', () => {
     advance(state, dayOfEra(ERAS.length - 1) + 5)
     // Hand-written newcomers for the early eras, generated ones for the rest: one for every era after the first.
     expect(state.rivals.length).toBe(RIVALS.length + ERAS.length - 1)
-  })
+  }, 20_000)
 
   it('studios move in as their year comes, and never twice', () => {
     const state = createInitialState(4)

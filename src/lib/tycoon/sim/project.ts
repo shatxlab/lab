@@ -530,3 +530,10 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   state.events.push({ type: 'shipped', productId: product.id, update: true, reach: product.reach, bugs, quality })
   return OK
 }
+
+/** Adds or takes out a feature of a new product while it is being built: the target follows, the work done stays. */
+export function reshapeProject(project: Project, change: { add?: string; remove?: string }): void {
+  if (change.remove) project.featureIds = project.featureIds.filter((id) => id !== change.remove)
+  if (change.add && !project.featureIds.includes(change.add)) project.featureIds.push(change.add)
+  project.target = projectTarget(project.productTypeId, project.featureIds, 'new', project.size)
+}

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { describePendingEvent } from '@/lib/tycoon/sim/events'
 import { cashRunwayDays, dailyIncome, netPerDay } from '@/lib/tycoon/sim/economy'
 import { deskCount } from '@/lib/tycoon/sim/offices'
 import { startProject } from '@/lib/tycoon/sim/project'
@@ -19,7 +20,11 @@ function tickDays(store: ReturnType<typeof createStore>, days: number): void {
 
 /** Ticks in small frames until the project is ready (or `maxDays` pass). */
 function runUntilDialog(store: ReturnType<typeof createStore>, maxDays = 200): void {
-  for (let i = 0; i < maxDays * 6 && store.dialog.value === null; i++) store.tick(MS_PER_DAY / 6)
+  for (let i = 0; i < maxDays * 6 && store.dialog.value === null; i++) {
+    store.tick(MS_PER_DAY / 6)
+    // A small product half built stops for its first users: stay the course, and carry on.
+    if (store.state.pendingEvent?.id === 'first_users') store.resolveEvent(describePendingEvent(store.state)!.choices.length - 1)
+  }
 }
 
 describe('store.tick', () => {

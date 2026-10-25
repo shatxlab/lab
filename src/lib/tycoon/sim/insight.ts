@@ -10,8 +10,13 @@ import {
   SURVEY_COST,
 } from './balance'
 import { moraleSpeed } from './morale'
-import { audienceFeedback, type Feedback } from './scoring'
-import { fail, OK, type Employee, type GameState, type Product, type Result } from './types'
+import { audienceFeedback, LOVED_AT, SHRUGGED_AT, type Feedback } from './scoring'
+import { audienceFor } from '@/lib/tycoon/data/audiences'
+import { getFeature } from '@/lib/tycoon/data/features'
+import { you } from './founding'
+import { rand } from './rng'
+import { featureLock } from './unlocks'
+import { fail, OK, type Employee, type GameState, type Product, type Project, type Result } from './types'
 
 /** Analysts and product managers: the people who study users. */
 export const isAnalyst = (employee: Pick<Employee, 'role'>): boolean => employee.role === 'analyst' || employee.role === 'pm'
@@ -25,7 +30,9 @@ export function insightOf(employee: Employee): number {
 
 /** Insight the whole studio gathers a day. */
 export function insightRate(state: GameState): number {
-  return state.employees.reduce((sum, e) => sum + insightOf(e), 0) + toolEffects(state).insight
+  // Deep in a piece of work, you gather no insight yourself.
+  const busy = state.deepWork ? you(state) : undefined
+  return state.employees.reduce((sum, e) => sum + (e === busy ? 0 : insightOf(e)), 0) + toolEffects(state).insight
 }
 
 /** True when the studio has anyone who studies users. */
@@ -86,4 +93,20 @@ export function feedbackFor(state: GameState, product: Product): Feedback & { wa
     missed: missed ? full.missed : [],
     waiting: (!loved && full.loved.length > 0) || (!shrugged && full.shrugged.length > 0) || (!missed && full.missed.length > 0),
   }
+}
+
+/**
+ * What the first users say about a small product that is half built: one feature they ask for that it lacks (the one they
+ * love most, or, if the studio reads users poorly, the next one), and one in it they shrug at. Either may be missing.
+ */
+export function usersSay(state: GameState, project: Pick<Project, 'productTypeId' | 'audienceId' | 'featureIds'>): { asked?: string; cut?: string } {
+  const likes = audienceFor(project.productTypeId, project.audienceId).likes
+  const wanted = Object.entries(likes)
+    .filter(([id, weight]) => weight >= LOVED_AT && !project.featureIds.includes(id) && getFeature(id).suits.includes(project.productTypeId) && featureLock(state, getFeature(id)) === null)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => id)
+  // A sharper eye hears the loudest request; a poor one can mistake the second for it.
+  const asked = wanted.length > 1 && rand(state) > 0.55 + readingSkill(state) / 250 ? wanted[1] : wanted[0]
+  const cut = project.featureIds.find((id) => (likes[id] ?? 1) <= SHRUGGED_AT)
+  return { asked, cut }
 }

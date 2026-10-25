@@ -139,8 +139,19 @@ Phases, each playable and tested before the next. Phase 1 is built (uncommitted)
    is cut by monitoring, test automation and resilience work on the hit (up to 60%): roll back (12 days of the bill), let it
    ride (bugs, quality, insight or fit; a quarter also run the bill x3 for 20 days) or pull the plug. Bot seeds 1 to 6: the
    IPO at 6.0 to 9.0 years, unchanged. Numbers are a first guess; no person has played this.
-5. **A verb per stage** (First floor: build the team; Headquarters: the founder's deep work) and shaping the garage's
-   discovery. Then a bot pass over 12 seeds, then a new human run.
+5. **A verb per stage (partly built).**
+   - *Garage, Discover (built, small):* a small new product that is half built gets the `first_users` checkpoint: a handful of
+     users have tried it and say one feature they keep asking for (the audience's most loved one it lacks; a poor eye for
+     users can mistake the second) and one they shrug at. Add it (the target grows, the work done stays), drop it, or stay
+     the course (`reshapeProject`, `usersSay`). Medium and bigger products still get the alpha checkpoint.
+   - *Headquarters, Deep work (built):* `sim/deepwork.ts`, `data/deepwork.ts`, on the hit's dashboard. Four pieces of work by
+     your own hands (signature feature, rewrite the core, study your rival, tell the story; 30 to 60 days). You gather no
+     insight meanwhile. Halfway you steer: stay, go bold, bring in a contractor (8 days of income) or ask your friend to pair
+     (bond 50+). At the end a roll (0.5 + skill/250, +0.15 help, -0.2 bold) decides; either way the skill you used grows
+     (+3, or +1.5). Rewards in the work's `reward` text.
+   - *First floor, Build the team (not built).* Idea: people as characters with a one-to-one each month. Skipped: the nemesis,
+     the friend and the agents cover the stage for now. Ask the player after they have played.
+   - Bot over 12 seeds: IPO in 6.0 to 9.0 years (the bot uses neither deep work nor the checkpoint beyond the first choice).
 
 ## Guide for the next session (written 2026-10-23, before the player's first playthrough of phases B to E)
 

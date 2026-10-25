@@ -10,6 +10,8 @@ import {
   INVESTOR_LIFELINE_DEBT_DAYS,
   ALPHA_PROGRESS,
 } from './balance'
+import { FEATURES } from '@/lib/tycoon/data/features'
+import { usersSay } from './insight'
 import { activeProjects, inCafe } from './offices'
 import { rand } from './rng'
 import { overallProgress } from './scoring'
@@ -41,6 +43,14 @@ export function rollRandomEvent(state: GameState): void {
     if (project.kind === 'new' && project.size !== 'small' && !project.alphaOffered && overallProgress(project) >= ALPHA_PROGRESS) {
       project.alphaOffered = true
       offerEvent(state, 'alpha_preview', { officeId: office.id })
+      return
+    }
+    // A small product, half built: the first users say what they would add or drop.
+    if (project.kind === 'new' && project.size === 'small' && !project.alphaOffered && overallProgress(project) >= ALPHA_PROGRESS) {
+      project.alphaOffered = true
+      const said = usersSay(state, project)
+      if (!said.asked && !said.cut) continue
+      offerEvent(state, 'first_users', { officeId: office.id, asked: said.asked ? FEATURES.findIndex((f) => f.id === said.asked) : -1, cut: said.cut ? FEATURES.findIndex((f) => f.id === said.cut) : -1 })
       return
     }
   }

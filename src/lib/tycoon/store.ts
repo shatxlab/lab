@@ -5,6 +5,7 @@ import { surveyAudience } from '@/lib/tycoon/sim/insight'
 import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
+import { startDeepWork } from '@/lib/tycoon/sim/deepwork'
 import { setAutonomy } from '@/lib/tycoon/sim/agents'
 import { strikeBack } from '@/lib/tycoon/sim/nemesis'
 import { acceptBuyout, declineBuyout, goPublic, retireStudio } from '@/lib/tycoon/sim/exit'
@@ -175,6 +176,8 @@ export interface Store {
   survey(audienceId: string): Result
   /** Absorbs a rival studio: its office and people are yours, and so are the products listed (they take portfolio places). */
   acquire(rivalId: number, keepProductIds?: readonly number[]): Result
+  /** Starts a piece of deep work: you build part of the hit by hand. */
+  startDeepWork(kindId: string): Result
   /** Sets how much freedom an AI agent has: 0 (off) to 3 (unattended). */
   setAgent(kindId: string, level: number): Result
   /** Spends weeks of income on a campaign against your rival's customers. */
@@ -569,6 +572,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     survey(audienceId) {
       return cue(changed(logged(() => decisions.survey(state, audienceId), () => surveyAudience(state, audienceId))), 'click')
+    },
+
+    startDeepWork(kindId) {
+      return cue(changed(logged(() => decisions.startDeepWork(state, kindId), () => startDeepWork(state, kindId))), 'click')
     },
 
     setAgent(kindId, level) {

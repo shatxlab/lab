@@ -2,6 +2,7 @@ import { getAudience } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
+import { getDeepWork } from '@/lib/tycoon/data/deepwork'
 import { AUTONOMY, getAgentKind } from '@/lib/tycoon/data/agents'
 import { strikeBackCost } from './nemesis'
 import { getWorkItem, WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
@@ -151,6 +152,11 @@ export const decisions = {
   becomePm(state: GameState, employeeId: number): Decision {
     const e = state.employees.find((x) => x.id === employeeId)
     return ['employee.pm', `${e ? person(e) : 'An analyst'} became a product manager`, e ? { analysis: Math.round(e.analysis ?? 0), office: officeLabel(state, e.officeId) } : undefined]
+  },
+
+  startDeepWork(state: GameState, kindId: string): Decision {
+    const kind = getDeepWork(kindId)
+    return ['deepwork.pick', `Chose deep work: ${kind?.name ?? kindId}`, { kind: kindId, days: kind?.days ?? 0, insight: Math.round(state.insight) }]
   },
 
   setAgent(state: GameState, kindId: string, level: number): Decision {

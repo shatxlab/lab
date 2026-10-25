@@ -15,6 +15,8 @@ import { releaseKey } from '@/lib/tycoon/sim/fit'
 import { statMultiplier } from '@/lib/tycoon/sim/modifiers'
 import { nemesisRival, nemesisStanding, strikeBackBlocker, strikeBackCost } from '@/lib/tycoon/sim/nemesis'
 import { NEMESIS_BEAT_DAYS } from '@/lib/tycoon/sim/balance'
+import { DEEP_WORK, getDeepWork } from '@/lib/tycoon/data/deepwork'
+import { deepWorkBlocker, deepWorkChance } from '@/lib/tycoon/sim/deepwork'
 import { useGame, useStore } from './context'
 import { FitMeter } from './FitMeter'
 
@@ -78,6 +80,26 @@ export function HitDashboard() {
           </button>
         </div>
       )}
+      <div className="hit-dash-deep">
+        {state.deepWork ? (
+          <small>
+            <strong>Deep work:</strong> {getDeepWork(state.deepWork.kind)?.name}, day {Math.min(state.deepWork.days, state.day - state.deepWork.startDay)} of {state.deepWork.days}. About{' '}
+            {Math.round(deepWorkChance(state) * 100)}% to work out. You gather no insight meanwhile.
+          </small>
+        ) : (
+          <>
+            <small className="muted">Deep work, by your own hands:</small>{' '}
+            {DEEP_WORK.map((kind) => {
+              const blocker = deepWorkBlocker(state, kind.id)
+              return (
+                <button key={kind.id} disabled={blocker !== null} title={`${kind.blurb} ${kind.days} days. Works: ${kind.reward}. Does not: ${kind.failure}.${blocker ? ` (${blocker})` : ''}`} onClick={() => store.startDeepWork(kind.id)}>
+                  {kind.name} · {kind.days}d
+                </button>
+              )
+            })}
+          </>
+        )}
+      </div>
       {state.friendArc && (
         <small className="muted">
           {state.friendArc.stage === 'gone'

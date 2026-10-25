@@ -62,6 +62,11 @@ describe('rollRandomEvent', () => {
       drainEvents(state)
       state.money = Math.max(state.money, 50_000) // keep the studio healthy so the roll isn't about debt
       if (!state.pendingEvent) continue
+      // A checkpoint is about a project half built, not a random happening: it is answered and not counted.
+      if (state.pendingEvent.id === 'first_users' || state.pendingEvent.id === 'alpha_preview') {
+        resolveRandomEvent(state, describePendingEvent(state)!.choices.length - 1)
+        continue
+      }
       seen.push({ day: state.day, id: state.pendingEvent.id })
       const view = describePendingEvent(state)!
       resolveRandomEvent(state, Math.max(0, view.choices.findIndex((c) => !c.disabled)))

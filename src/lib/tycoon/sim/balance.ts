@@ -732,3 +732,19 @@ export const AGENT_FIT_LOSS = 4
 export const AGENT_RUNAWAY_SHARE = 0.25
 export const AGENT_RUNAWAY_MULT = 3
 export const AGENT_RUNAWAY_DAYS = 20
+
+// Deep work: the founder builds the hit's flagship pieces by hand
+/** The chance of success is this, plus your skill over the divisor, plus help, minus the bold penalty; never outside the limits. */
+export const DEEP_BASE_CHANCE = 0.5
+export const DEEP_SKILL_DIVISOR = 250
+export const DEEP_BOLD_PENALTY = 0.2
+export const DEEP_HELP_BONUS = 0.15
+export const DEEP_MIN_CHANCE = 0.15
+export const DEEP_MAX_CHANCE = 0.95
+/** Your skill grows by this much from a piece of deep work that works out, and by half of it from one that does not. */
+export const DEEP_SKILL_GAIN = 3
+/** A contractor costs this many days of what you earn. */
+export const DEEP_CONTRACTOR_DAYS = 8
+/** Asking your friend to pair needs at least this bond, and strengthens it by this much. */
+export const DEEP_FRIEND_BOND_MIN = 50
+export const DEEP_FRIEND_BOND_GAIN = 4

@@ -487,6 +487,8 @@ export interface GameState {
   nemesis?: Nemesis
   /** How many nemeses you have beaten. */
   nemesesBeaten?: number
+  /** The piece of deep work you are on, if any; see `sim/deepwork.ts`. */
+  deepWork?: DeepWork
   /** How much freedom each AI agent has (0 to 3); a missing one is off. See `sim/agents.ts`. */
   agents?: Record<string, number>
   /** For a while the agents' bill is multiplied: a runaway loop. */
@@ -540,6 +542,18 @@ export interface GameState {
   dayWork: DayWork[]
   /** Pending events for the UI; drained with `drainEvents`. */
   events: SimEvent[]
+}
+
+/** The founder's own hands-on work on the hit. */
+export interface DeepWork {
+  kind: string
+  startDay: number
+  days: number
+  /** Set at the halfway checkpoint. */
+  checkpointDone?: boolean
+  bold?: boolean
+  /** A contractor or your friend lends a hand. */
+  helped?: boolean
 }
 
 /** The story of your friend, the other founder. */

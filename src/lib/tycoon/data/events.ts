@@ -1,5 +1,6 @@
 import { formatMoney as $ } from '@/lib/tycoon/format'
 import { getProductType } from './productTypes'
+import { FEATURES } from './features'
 import { FRIEND_BACK_BOND, FRIEND_BACK_MONTHS, FRIEND_MATCH_MONTHS, FRIEND_REFUSE_BOND, FRIEND_STAY_LEAVE, FRIEND_STAY_MATCH, FRIEND_STAY_TALK, FRIEND_WEEKEND_BOND } from '@/lib/tycoon/sim/balance'
 import { DAYS_PER_MONTH, HIRE_MAX_LEVEL, INVESTOR_MONTHS_OF_BURN, OVERSHOOT_CAP, POACH_IMMUNITY_DAYS, PROJECT_SIZES, REPUTATION_MAX } from '@/lib/tycoon/sim/balance'
 import { dailyIncome, monthlyBurn, monthlySalaries } from '@/lib/tycoon/sim/economy'
@@ -11,12 +12,14 @@ import { rivalFor } from '@/lib/tycoon/sim/rivals'
 import { estimateReach } from '@/lib/tycoon/sim/lifecycle'
 import { bugDensity, revenueForUsers, usersIn } from '@/lib/tycoon/sim/products'
 import { EU_BREACH_FINE_DAYS } from './regions'
-import { projectQuality } from '@/lib/tycoon/sim/project'
+import { projectQuality, reshapeProject } from '@/lib/tycoon/sim/project'
 import { isReady } from '@/lib/tycoon/sim/scoring'
 import { adjustMorale } from '@/lib/tycoon/sim/morale'
 import { changeBond, friendLeaves, friendOf, friendReturns, friendStays } from '@/lib/tycoon/sim/friend'
 import { rally, rallyCost, stepDown } from '@/lib/tycoon/sim/crisis'
 import { incidentHits, rollbackCost } from '@/lib/tycoon/sim/agents'
+import { contractorCost, pairBlocker, steerDeepWork } from '@/lib/tycoon/sim/deepwork'
+import { DEEP_WORK } from './deepwork'
 import { AGENT_KINDS } from './agents'
 import { addModifier } from '@/lib/tycoon/sim/modifiers'
 import { pick, rand } from '@/lib/tycoon/sim/rng'
@@ -699,6 +702,50 @@ export const CAFE_EVENTS: readonly RandomEvent[] = [
 /** Events that other systems put in front of the player (the nemesis, the friend); they are never rolled at random. */
 export const SCRIPTED_EVENTS: readonly RandomEvent[] = [
   {
+    id: 'deep_work_checkpoint',
+    title: 'Halfway through',
+    weight: 1,
+    when: (s) => s.deepWork !== undefined,
+    text: ({ data }) => `You are halfway through "${DEEP_WORK[data.kind]?.name.toLowerCase() ?? 'the work'}". It is harder than it looked and better than you feared. How do you go on?`,
+    choices: ({ state }) => [
+      choice(state, {
+        label: 'Stay the course',
+        note: 'no change to the odds',
+        apply: () => {
+          steerDeepWork(state, 'steady')
+          return 'You put your head down.'
+        },
+      }),
+      choice(state, {
+        label: 'Go bold',
+        note: 'a bigger result if it works, much likelier not to',
+        apply: () => {
+          steerDeepWork(state, 'bold')
+          return 'You tear up the safe version and start the real one.'
+        },
+      }),
+      choice(state, {
+        label: 'Bring in a contractor',
+        cost: contractorCost(state),
+        note: 'likelier to work out',
+        apply: () => {
+          steerDeepWork(state, 'help-contractor')
+          return 'A contractor takes the dull half.'
+        },
+      }),
+      choice(state, {
+        label: 'Ask your friend to pair with you',
+        blocked: pairBlocker(state) ?? undefined,
+        note: 'free; likelier to work out, and it draws you closer',
+        apply: () => {
+          steerDeepWork(state, 'help-friend')
+          return `${friendOf(state)?.name ?? 'Your friend'} pulls a chair up beside you. Like the café.`
+        },
+      }),
+    ],
+  },
+
+  {
     id: 'agent_incident',
     title: 'An agent went off script',
     weight: 1,
@@ -906,6 +953,52 @@ export const SCRIPTED_EVENTS: readonly RandomEvent[] = [
 ]
 
 export const CHECKPOINT_EVENTS: readonly RandomEvent[] = [
+  {
+    id: 'first_users',
+    title: 'The first users',
+    weight: 0,
+    when: (s) => s.offices.some((o) => o.project !== null),
+    text: ({ state, data }) => {
+      const asked = FEATURES[data.asked]
+      const cut = FEATURES[data.cut]
+      const said = [asked ? `keep asking for ${asked.name.toLowerCase()}` : '', cut ? `do not touch ${cut.name.toLowerCase()}` : ''].filter(Boolean).join(', and they ')
+      return `${projectName(state, data)} is half built, and a handful of people have tried it. They ${said}.`
+    },
+    choices: ({ state, data }) => {
+      const asked = FEATURES[data.asked]
+      const cut = FEATURES[data.cut]
+      const project = eventProject(state, data)
+      const extra = asked ? Math.round(DISCIPLINES.reduce((sum, d) => sum + asked.cost[d], 0)) : 0
+      const out: EventChoice[] = []
+      if (asked) {
+        out.push(
+          choice(state, {
+            label: `Add ${asked.name}`,
+            note: `about ${extra} more work; they asked for it`,
+            apply: () => {
+              if (project) reshapeProject(project, { add: asked.id })
+              return `${asked.name} goes in. The build grows, and so does the reason to use it.`
+            },
+          }),
+        )
+      }
+      if (cut) {
+        out.push(
+          choice(state, {
+            label: `Drop ${cut.name}`,
+            note: 'less to build; nobody cares for it',
+            apply: () => {
+              if (project) reshapeProject(project, { remove: cut.id })
+              return `${cut.name} comes out. The rest ships sooner.`
+            },
+          }),
+        )
+      }
+      out.push(choice(state, { label: 'Stay the course', apply: () => 'You keep to the plan.' }))
+      return out
+    },
+  },
+
   {
     id: 'alpha_preview',
     title: 'Alpha build',

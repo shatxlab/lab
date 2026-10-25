@@ -173,6 +173,22 @@ describe('development events', () => {
     expect(small.pendingEvent?.id).not.toBe('alpha_preview')
   })
 
+  it('put the first users in front of a small new product, halfway: add what they ask for, drop what they shrug at', () => {
+    const state = midway(ALPHA_PROGRESS, 'small')
+    rollRandomEvent(state)
+    expect(state.pendingEvent?.id).toBe('first_users')
+    const view = describePendingEvent(state)!
+    expect(view.text).toMatch(/keep asking for/)
+    const project = state.offices[0].project!
+    const before = { features: [...project.featureIds], target: { ...project.target }, progress: { ...project.progress } }
+    expect(resolveRandomEvent(state, 0).ok).toBe(true)
+    expect(project.featureIds.length).toBe(before.features.length + 1)
+    expect(project.target.engineering + project.target.design + project.target.qa).toBeGreaterThan(before.target.engineering + before.target.design + before.target.qa)
+    expect(project.progress).toEqual(before.progress)
+    rollRandomEvent(state)
+    expect(state.pendingEvent?.id).not.toBe('first_users')
+  })
+
   it('let the alpha buy users with money, or users and fewer bugs with more work', () => {
     const press = midway(0.5)
     rollRandomEvent(press)

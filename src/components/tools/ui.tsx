@@ -19,16 +19,18 @@ type ToolPageProps = {
   children: React.ReactNode;
   /** Wider layout for tools with side-by-side panes. */
   wide?: boolean;
+  /** Fill the viewport width (data grids); wins over `wide`. */
+  full?: boolean;
 };
 
 /** Page frame: heading, one-line tagline and the language-paint guard. */
-export function ToolPage({ title, tagline, children, wide = false }: ToolPageProps) {
+export function ToolPage({ title, tagline, children, wide = false, full = false }: ToolPageProps) {
   const readyRef = useLangReady<HTMLDivElement>();
   return (
     <div
       ref={readyRef}
       data-lang-sensitive=""
-      className={cn("mx-auto flex w-full flex-1 flex-col gap-5 px-[18px] py-8", wide ? "max-w-6xl" : "max-w-3xl")}
+      className={cn("mx-auto flex w-full flex-1 flex-col gap-5 px-[18px] py-8", full ? "max-w-none" : wide ? "max-w-6xl" : "max-w-3xl")}
     >
       <header className="flex flex-col gap-1.5">
         <h1 className="text-2xl font-bold text-(--fg)">{title}</h1>

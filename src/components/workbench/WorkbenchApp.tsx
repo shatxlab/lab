@@ -577,7 +577,7 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
   );
 
   return (
-    <ToolPage title={wb(lang, "title")} tagline={wb(lang, "tagline")} wide>
+    <ToolPage title={wb(lang, "title")} tagline={wb(lang, "tagline")} wide full={!empty && selected?.kind === "sheet"}>
       <InputBar lang={lang} onFiles={addFiles} onText={addText} compact={!empty} />
 
       {empty ? (

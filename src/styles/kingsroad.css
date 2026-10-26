@@ -1,0 +1,265 @@
+/*
+ * Kingsroad styling: Lone Tower's (tower.css, loaded alongside) plus the
+ * road picker, the build sheet and the bar under the field. Scoped under
+ * .kr-root, which also carries .tower-root for the shared look.
+ */
+
+/* ---------------------------------------------------------------- menu */
+
+.kr-root .kr-menu-heading {
+  margin: 1.25rem 0 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tower-muted);
+}
+
+.kr-maps {
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.kr-map {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.75rem;
+  padding: 0.8rem 0.95rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: #ffffff;
+  color: var(--tower-ink);
+  text-align: left;
+  box-shadow: inset 0 0 0 2px var(--tower-line), 0 3px 0 var(--tower-line);
+}
+
+.kr-map:hover:not(:disabled),
+.kr-map:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--tower-accent), 0 3px 0 var(--tower-accent);
+}
+
+.kr-map-name {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.kr-map-description {
+  grid-column: 1 / -1;
+  color: var(--tower-muted);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.kr-map-waves {
+  grid-column: 1 / -1;
+  color: var(--tower-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.kr-stars {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  color: rgba(43, 36, 24, 0.2);
+}
+
+.kr-stars[data-large="true"] {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+}
+
+.kr-stars svg[data-on="true"] {
+  color: #f5b400;
+  fill: #f5c542;
+}
+
+/* ----------------------------------------------------------------- run */
+
+.kr-hud-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kr-root .tower-icon-button[data-active="true"] {
+  background: var(--tower-accent);
+  color: var(--tower-accent-ink);
+}
+
+.kr-root .tower-canvas[data-aiming="true"] {
+  cursor: crosshair;
+}
+
+.kr-bar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.kr-wave {
+  flex: 1.5;
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.kr-volley {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0 0.5rem;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+/* Reloading is shown by the fill, not by fading the whole button out. */
+.kr-root .kr-volley:disabled {
+  opacity: 1;
+}
+
+.kr-volley[data-aiming="true"] .tower-volley-fill {
+  background: #ffd27a;
+}
+
+.kr-volley[data-aiming="true"] {
+  color: var(--tower-ink);
+}
+
+/* The build and upgrade sheet sits over the field, away from the plot it's about. */
+.kr-sheet {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border-radius: 0.9rem;
+  background: var(--tower-panel);
+  color: var(--tower-ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.kr-sheet[data-side="bottom"] {
+  bottom: 0.5rem;
+}
+
+.kr-sheet[data-side="top"] {
+  top: 0.5rem;
+}
+
+.kr-sheet p {
+  margin: 0;
+}
+
+.kr-sheet-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--tower-muted);
+}
+
+.kr-sheet-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: 2rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.kr-sheet-title .kr-icon {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.kr-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.kr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.2rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: #ffffff;
+  color: var(--tower-ink);
+  box-shadow: inset 0 0 0 2px var(--tower-line);
+}
+
+.kr-card[aria-pressed="true"],
+.kr-card:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--tower-accent);
+}
+
+.kr-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  flex: none;
+}
+
+.kr-card-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.kr-card-cost {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #a5571a;
+}
+
+.kr-card-cost[data-short="true"] {
+  color: var(--tower-bad);
+}
+
+.kr-sheet-detail {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.kr-sheet-description {
+  margin-top: 0.3rem;
+  color: var(--tower-muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.kr-sheet-stats {
+  color: var(--tower-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.kr-sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}

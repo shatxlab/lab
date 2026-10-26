@@ -186,6 +186,27 @@ export const TOOLS: readonly ToolEntry[] = [
         "Defend the castle from its archer tower against endless waves: aim and shoot, rain volleys of arrows, pick upgrades, beat your best wave. Free, offline, made for phones.",
     },
   },
+  {
+    id: "kingsroad",
+    path: "/kingsroad",
+    category: "games",
+    files: {
+      en: "single-player · made for phones · saves locally",
+      ru: "одиночная · для телефона · сохраняется локально",
+    },
+    title: { en: "Kingsroad", ru: "Королевский тракт" },
+    description: {
+      en: "Lone Tower's horde marches down a winding road to the castle gate: build archers, catapults, frost mages and ballistas beside it, upgrade them, and win stars on three roads.",
+      ru: "Орда из «Одинокой башни» идёт по извилистой дороге к воротам замка: стройте вдоль неё лучников, катапульты, ледяных магов и баллисты, улучшайте их и зарабатывайте звёзды на трёх дорогах.",
+    },
+    keywords:
+      "tower defense defence td build towers road path waves archer catapult ballista mage strategy casual башни защита дорога волны лучники катапульта баллиста маг стратегия",
+    seo: {
+      title: "Kingsroad — a tower defence game for phones",
+      description:
+        "Build towers along the king's road and hold the gate: archers, catapults, frost mages and ballistas against a marching horde. Free, offline, made for phones.",
+    },
+  },
 ];
 
 export function toolHref(tool: ToolEntry): string {

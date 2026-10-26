@@ -9,7 +9,7 @@ export function emptyUpgrades(): UpgradeLevels {
 }
 
 export function emptyPerks(): PerkLevels {
-  return { fortify: 0, fletching: 0, tactics: 0, headStart: 0 };
+  return { fortify: 0, fletching: 0, quickDraw: 0, tactics: 0, headStart: 0 };
 }
 
 export function isMaxed(upgrades: UpgradeLevels, id: UpgradeId): boolean {

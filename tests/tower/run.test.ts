@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE, ENEMIES, TOWER, WALL_HP, WALL_Y } from "@/lib/tower/sim/balance";
+import { BASE, ENEMIES, MIN_VOLLEY_COOLDOWN, TOWER, WALL_HP, WALL_Y } from "@/lib/tower/sim/balance";
 import { aimAt, castVolley, chooseUpgrade, createRun, giveUp, holdFire, stats, step, STEP } from "@/lib/tower/sim/run";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { emptyPerks, emptyUpgrades } from "@/lib/tower/sim/upgrades";
@@ -268,13 +268,13 @@ describe("chooseUpgrade", () => {
 describe("towerStats", () => {
   it("stacks upgrades and perks", () => {
     const upgrades = { ...emptyUpgrades(), damage: 2, reload: 1, multishot: 2, volleyCooldown: 3 };
-    const perks = { ...emptyPerks(), fletching: 1, fortify: 2, tactics: 3 };
+    const perks = { ...emptyPerks(), fletching: 1, fortify: 2, quickDraw: 2, tactics: 4 };
     const tower = towerStats(upgrades, perks);
     expect(tower.damage).toBeCloseTo(BASE.damage * 1.5 * 1.08);
-    expect(tower.reload).toBeCloseTo(BASE.reload * 0.88);
+    expect(tower.reload).toBeCloseTo((BASE.reload * 0.88) / 1.1);
     expect(tower.multishot).toBe(3);
     expect(tower.maxHp).toBe(BASE.maxHp + 30);
-    expect(tower.volleyCooldown).toBe(2);
+    expect(tower.volleyCooldown).toBe(MIN_VOLLEY_COOLDOWN);
   });
 });
 

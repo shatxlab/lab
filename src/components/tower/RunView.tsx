@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { Pause } from "lucide-react";
 
-import type { TowerText } from "@/lib/tower/i18n";
+import { createTapTracker, pressEnd, pressStart } from "@/lib/tower/double-tap";
+import { statChange, type TowerText } from "@/lib/tower/i18n";
 import { drawRun, fitView, toWorld, type View } from "@/lib/tower/render/draw";
 import { aimAt, castVolley, chooseUpgrade, giveUp, holdFire, nearestEnemy, stats, step, STEP } from "@/lib/tower/sim/run";
+import { towerStats } from "@/lib/tower/sim/stats";
 import { isBossWave } from "@/lib/tower/sim/waves";
 import type { Run, UpgradeId } from "@/lib/tower/sim/types";
 
@@ -57,8 +59,8 @@ export function RunView({
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   pausedRef.current = paused;
-  // The Volley button arms the volley; the next tap on the field drops it.
-  const [armed, setArmed] = useState(false);
+  // Every finger on the field, watched for a double tap that drops the volley.
+  const tapsRef = useRef(createTapTracker());
   // The one finger steering the stream; other fingers can still drop a volley.
   const aimPointerRef = useRef<number | null>(null);
   const overRef = useRef(false);
@@ -130,11 +132,6 @@ export function RunView({
     setPaused(true);
   }, [run]);
 
-  // An armed volley doesn't carry over into the upgrade picker or the next wave.
-  useEffect(() => {
-    if (hud.phase !== "playing") setArmed(false);
-  }, [hud.phase]);
-
   // Switching apps or tabs pauses rather than letting the wave chew through the wall.
   useEffect(() => {
     const onHide = () => {
@@ -152,9 +149,9 @@ export function RunView({
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
     if (paused || run.phase !== "playing") return;
     const point = worldPoint(event);
-    if (armed) {
-      if (castVolley(run, point.x, point.y)) setArmed(false);
-      return;
+    // A double tap drops the volley there; held, the second press goes on shooting like any other.
+    if (pressStart(tapsRef.current, event.pointerId, event.timeStamp, event.clientX, event.clientY)) {
+      if (castVolley(run, point.x, point.y)) refresh();
     }
     if (aimPointerRef.current !== null) return;
     aimPointerRef.current = event.pointerId;
@@ -169,6 +166,7 @@ export function RunView({
   };
 
   const onPointerEnd = (event: PointerEvent<HTMLCanvasElement>) => {
+    pressEnd(tapsRef.current, event.pointerId, event.timeStamp, event.clientX, event.clientY);
     if (event.pointerId !== aimPointerRef.current) return;
     aimPointerRef.current = null;
     holdFire(run);
@@ -182,7 +180,7 @@ export function RunView({
     if (event.key !== " " && event.key !== "Enter") return;
     event.preventDefault();
     const target = nearestEnemy(run);
-    if (target && !paused) castVolley(run, target.x, target.y);
+    if (target && !paused && castVolley(run, target.x, target.y)) refresh();
   };
 
   const pick = (id: UpgradeId) => {
@@ -268,6 +266,7 @@ export function RunView({
                     <span className="tower-choice-name">{text.upgrades[id].name}</span>
                     <span className="tower-choice-level">{text.levelUp(run.upgrades[id], run.upgrades[id] + 1)}</span>
                     <span className="tower-choice-description">{text.upgrades[id].description}</span>
+                    <span className="tower-choice-stats">{upgradeChange(text, run, id)}</span>
                   </button>
                 ))}
               </div>
@@ -294,19 +293,22 @@ export function RunView({
         {hud.phase === "over" && children}
       </div>
 
-      <button
-        type="button"
+      <div
         className="tower-volley"
-        disabled={hud.phase !== "playing" || hud.volleyCharge < 1}
-        aria-pressed={armed}
-        onClick={() => setArmed((current) => !current)}
+        data-ready={hud.phase === "playing" && hud.volleyCharge >= 1}
         style={{ "--charge": hud.phase === "playing" ? hud.volleyCharge : 0 } as CSSProperties}
       >
         <span className="tower-volley-fill" aria-hidden="true" />
-        <span className="tower-volley-label">
-          {armed ? text.volleyArmed : hud.volleyCharge >= 1 ? text.volley : text.volleyCharging}
+        <span className="tower-volley-label" aria-live="polite">
+          {hud.volleyCharge >= 1 ? text.volleyReady : text.volleyCharging}
         </span>
-      </button>
+      </div>
     </div>
   );
+}
+
+/** The card's numbers as they are now and after taking this upgrade; a new one shows only where it starts. */
+function upgradeChange(text: TowerText, run: Run, id: UpgradeId): string {
+  const after = text.upgradeStats[id](towerStats({ ...run.upgrades, [id]: run.upgrades[id] + 1 }, run.perks));
+  return statChange(run.upgrades[id] === 0 ? after : text.upgradeStats[id](stats(run)), after);
 }

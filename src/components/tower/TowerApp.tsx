@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
-import { TOWER_TEXT, type TowerText } from "@/lib/tower/i18n";
+import { statChange, TOWER_TEXT, type TowerText } from "@/lib/tower/i18n";
 import { bankRun, buyPerk, defaultSave, perkCost, readSave, writeSave, type TowerSave } from "@/lib/tower/meta";
 import { PERK_IDS } from "@/lib/tower/sim/balance";
+import { towerStats } from "@/lib/tower/sim/stats";
+import { emptyUpgrades } from "@/lib/tower/sim/upgrades";
 import { createRun } from "@/lib/tower/sim/run";
-import type { Run } from "@/lib/tower/sim/types";
+import type { PerkId, PerkLevels, Run } from "@/lib/tower/sim/types";
 
 import { RunView } from "./RunView";
 
@@ -161,6 +163,7 @@ function PerksScreen({
                     {text.perks[id].name} <span className="tower-perk-level">{text.level(save.perks[id])}</span>
                   </p>
                   <p className="tower-perk-description">{text.perks[id].description}</p>
+                  <p className="tower-perk-stats">{perkChange(text, save.perks, id, cost !== null)}</p>
                 </div>
                 <button
                   type="button"
@@ -200,4 +203,12 @@ function TowerMark() {
       <path d="M 5.6 -7.1 A 8 8 0 0 1 5.6 7.1" fill="none" stroke="#6b4423" strokeWidth="2" />
     </svg>
   );
+}
+
+/** What the perk gives now and at its next level; a fresh one shows its first level, a maxed one its total. */
+function perkChange(text: TowerText, perks: PerkLevels, id: PerkId, canLevel: boolean): string {
+  const at = (level: number) => text.perkStats[id](towerStats(emptyUpgrades(), { ...perks, [id]: level }), level);
+  const level = perks[id];
+  if (!canLevel) return statChange(at(level), at(level));
+  return statChange(level === 0 ? at(1) : at(level), at(level + 1));
 }

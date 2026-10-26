@@ -20,7 +20,7 @@ describe("normalizeSave", () => {
     expect(save.gold).toBe(12);
     expect(save.best).toBe(0);
     expect(save.runs).toBe(0);
-    expect(save.perks).toEqual({ fortify: PERKS.fortify.max, fletching: 0, tactics: 1, headStart: 0 });
+    expect(save.perks).toEqual({ fortify: PERKS.fortify.max, fletching: 0, quickDraw: 0, tactics: 1, headStart: 0 });
   });
 });
 
@@ -39,14 +39,26 @@ describe("storage", () => {
 describe("perks", () => {
   it("costs more each level and stops at the max", () => {
     const save = { ...defaultSave(), gold: 1000 };
-    expect(perkCost(save.perks, "fortify")).toBe(15);
+    expect(perkCost(save.perks, "fortify")).toBe(20);
     const once = buyPerk(save, "fortify")!;
-    expect(once.gold).toBe(985);
+    expect(once.gold).toBe(980);
     expect(once.perks.fortify).toBe(1);
     expect(perkCost(once.perks, "fortify")).toBe(30);
     const maxed = { ...save, perks: { ...save.perks, headStart: PERKS.headStart.max } };
     expect(perkCost(maxed.perks, "headStart")).toBeNull();
     expect(buyPerk(maxed, "headStart")).toBeNull();
+  });
+
+  it("leave plenty to save for after the first runs", () => {
+    let total = 0;
+    for (const id of Object.keys(PERKS) as (keyof typeof PERKS)[]) {
+      for (let level = 0; level < PERKS[id].max; level += 1) {
+        const cost = PERKS[id].cost(level);
+        if (level > 0) expect(cost).toBeGreaterThan(PERKS[id].cost(level - 1));
+        total += cost;
+      }
+    }
+    expect(total).toBeGreaterThan(10_000);
   });
 
   it("can't be bought without the gold", () => {

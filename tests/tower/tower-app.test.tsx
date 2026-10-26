@@ -52,16 +52,22 @@ describe("TowerApp", () => {
     view.unmount();
   });
 
-  it("arms the volley from its button", async () => {
+  it("drops the volley on a double tap of the field", async () => {
     const view = await mount(<TowerApp />);
     await act(async () => button(view.container, "Play").click());
-    const volley = button(view.container, "Volley");
-    expect(volley.disabled).toBe(false);
-    await act(async () => volley.click());
-    expect(volley.getAttribute("aria-pressed")).toBe("true");
-    expect(volley.textContent).toBe("Tap the field to drop it");
-    await act(async () => volley.click());
-    expect(volley.getAttribute("aria-pressed")).toBe("false");
+    const meter = view.container.querySelector(".tower-volley")!;
+    expect(meter.textContent).toBe("Volley ready: double-tap the field");
+    const canvas = view.container.querySelector("canvas")!;
+    const press = (type: string) =>
+      canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, clientX: 50, clientY: 50 }));
+    await act(async () => {
+      press("pointerdown");
+      press("pointerup");
+      press("pointerdown");
+      press("pointerup");
+    });
+    expect(meter.textContent).toBe("Volley reloading");
+    expect(meter.getAttribute("data-ready")).toBe("false");
     view.unmount();
   });
 
@@ -77,14 +83,16 @@ describe("TowerApp", () => {
   });
 
   it("buys perks with banked gold", async () => {
-    localStorage.setItem(TOWER_STORAGE_KEY, JSON.stringify({ gold: 20, best: 1, runs: 1, perks: {} }));
+    localStorage.setItem(TOWER_STORAGE_KEY, JSON.stringify({ gold: 25, best: 1, runs: 1, perks: {} }));
     const view = await mount(<TowerApp />);
     await act(async () => button(view.container, "Perks").click());
     expect(button(view.container, "Buy · 20").disabled).toBe(false);
-    expect(button(view.container, "Buy · 60").disabled).toBe(true);
-    await act(async () => button(view.container, "Buy · 15").click());
+    expect(button(view.container, "Buy · 30").disabled).toBe(true);
+    expect(view.container.textContent).toContain("Wall +15 HP");
+    await act(async () => button(view.container, "Buy · 20").click());
     expect(readSave()).toMatchObject({ gold: 5, perks: { fortify: 1 } });
     expect(view.container.textContent).toContain("5 gold");
+    expect(view.container.textContent).toContain("Wall +15 HP → +30 HP");
     view.unmount();
   });
 });

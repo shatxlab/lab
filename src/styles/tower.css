@@ -206,6 +206,13 @@
   font-size: 0.9rem;
 }
 
+.tower-perk-stats {
+  margin-top: 0.2rem;
+  color: var(--tower-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 /* ----------------------------------------------------------------- run */
 
 .tower-run {
@@ -315,18 +322,15 @@
 .tower-volley {
   position: relative;
   min-height: 3rem;
-  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 0.8rem;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.12);
-  color: inherit;
+  color: rgba(251, 245, 230, 0.6);
   font-weight: 700;
   font-size: 1.05rem;
-}
-
-.tower-volley:disabled {
-  opacity: 1;
-  color: rgba(251, 245, 230, 0.6);
 }
 
 /* Fills left to right as the volley reloads. */
@@ -339,16 +343,12 @@
   transition: transform 120ms linear;
 }
 
-.tower-volley:not(:disabled) .tower-volley-fill {
+.tower-volley[data-ready="true"] {
+  color: inherit;
+}
+
+.tower-volley[data-ready="true"] .tower-volley-fill {
   background: var(--tower-accent);
-}
-
-.tower-volley[aria-pressed="true"] .tower-volley-fill {
-  background: #ffd27a;
-}
-
-.tower-volley[aria-pressed="true"] {
-  color: var(--tower-ink);
 }
 
 .tower-volley-label {
@@ -421,6 +421,13 @@
   color: var(--tower-muted);
   font-size: 0.92rem;
   line-height: 1.35;
+}
+
+.tower-choice-stats {
+  grid-column: 1 / -1;
+  color: var(--tower-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .tower-result {

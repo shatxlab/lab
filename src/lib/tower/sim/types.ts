@@ -26,7 +26,7 @@ export type UpgradeId =
   | "caltrops";
 
 /** Permanent bonuses bought with gold between runs. */
-export type PerkId = "fortify" | "fletching" | "tactics" | "headStart";
+export type PerkId = "fortify" | "fletching" | "quickDraw" | "tactics" | "headStart";
 
 export type Phase = "playing" | "choosing" | "over";
 

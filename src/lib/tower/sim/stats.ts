@@ -1,4 +1,4 @@
-import { BASE, WALL_HP } from "./balance";
+import { BASE, MIN_VOLLEY_COOLDOWN, PERK_STEP, WALL_HP } from "./balance";
 import type { PerkLevels, UpgradeLevels } from "./types";
 
 export interface TowerStats {
@@ -29,12 +29,12 @@ export interface TowerStats {
 
 /** What the tower can do with these upgrades and perks; recomputed whenever it's needed. */
 export function towerStats(upgrades: UpgradeLevels, perks: PerkLevels): TowerStats {
-  const damageMultiplier = (1 + 0.25 * upgrades.damage) * (1 + 0.08 * perks.fletching);
+  const damageMultiplier = (1 + 0.25 * upgrades.damage) * (1 + PERK_STEP.fletching * perks.fletching);
   return {
-    maxHp: BASE.maxHp + WALL_HP * upgrades.wall + 15 * perks.fortify,
+    maxHp: BASE.maxHp + WALL_HP * upgrades.wall + PERK_STEP.fortify * perks.fortify,
     regen: upgrades.regen,
     damage: BASE.damage * damageMultiplier,
-    reload: BASE.reload * 0.88 ** upgrades.reload,
+    reload: (BASE.reload * 0.88 ** upgrades.reload) / (1 + PERK_STEP.quickDraw * perks.quickDraw),
     range: BASE.range + 40 * upgrades.range,
     arrowSpeed: BASE.arrowSpeed,
     multishot: 1 + upgrades.multishot,
@@ -48,7 +48,10 @@ export function towerStats(upgrades: UpgradeLevels, perks: PerkLevels): TowerSta
     volleyArrows: BASE.volleyArrows + 5 * upgrades.volleySize,
     volleyRadius: BASE.volleyRadius + 8 * upgrades.volleySize,
     volleyDamage: BASE.volleyDamage * damageMultiplier,
-    volleyCooldown: Math.max(2, BASE.volleyCooldown - 1.2 * upgrades.volleyCooldown - 0.5 * perks.tactics),
+    volleyCooldown: Math.max(
+      MIN_VOLLEY_COOLDOWN,
+      BASE.volleyCooldown - 1.2 * upgrades.volleyCooldown - PERK_STEP.tactics * perks.tactics,
+    ),
     caltropSlow: upgrades.caltrops === 0 ? 0 : 0.15 + 0.1 * upgrades.caltrops,
     caltropLife: 3 + 3 * upgrades.caltrops,
   };

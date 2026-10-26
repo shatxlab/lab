@@ -465,15 +465,17 @@ function drawSoldier(ctx: CanvasRenderingContext2D, enemy: Enemy, color: string,
     circle(ctx, radius * 0.5, -radius * 0.75, shield * 0.35, steel);
   }
 
+  if (kind === "brute" || kind === "boss") {
+    drawHeavy(ctx, kind, radius, color);
+    return;
+  }
+
   // Shoulders and torso.
-  const shoulders = kind === "brute" || kind === "boss" ? 0.95 : kind === "runner" ? 0.6 : 0.78;
+  const shoulders = kind === "runner" ? 0.6 : 0.78;
   ellipse(ctx, 0, 0, radius * 0.5, radius * (shoulders + 0.12), color);
   ctx.strokeStyle = dark;
   ctx.lineWidth = 1.4;
   ctx.stroke();
-  if (kind === "brute" || kind === "boss") {
-    for (const side of [-1, 1]) circle(ctx, 0, side * radius * 0.85, radius * 0.28, steel);
-  }
 
   // Helmet.
   const head = radius * (kind === "runner" ? 0.34 : 0.4);
@@ -481,34 +483,100 @@ function drawSoldier(ctx: CanvasRenderingContext2D, enemy: Enemy, color: string,
   ctx.strokeStyle = shade(steel, -0.35);
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  if (kind === "brute") {
+}
+
+/**
+ * The brute's and the warlord's upper body: a broad back, shoulder plates that
+ * curve over the edge of it, and a head pushed forward of the shoulder line, so
+ * the three never read as a row of equal balls.
+ */
+function drawHeavy(ctx: CanvasRenderingContext2D, kind: "brute" | "boss", radius: number, color: string): void {
+  const dark = shade(color, -0.35);
+  const brute = kind === "brute";
+
+  // Back and chest: wider than deep, rounder than the footmen's.
+  ellipse(ctx, -radius * 0.05, 0, radius * 0.56, radius * 0.86, color);
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // The shadowed spine where the back curves away from the light.
+  ellipse(ctx, -radius * 0.28, 0, radius * 0.18, radius * 0.5, shade(color, -0.15));
+
+  // Shoulder plates: curved bands hugging the outline over each shoulder.
+  for (const side of [-1, 1]) {
+    const plate = brute ? "#5b4636" : shade(color, -0.3);
+    const rim = brute ? "#3a2c22" : COLORS.crown;
+    shoulderBand(ctx, radius, side, 1.08, 0.62, 0.55, plate, rim);
+    if (brute) {
+      // Studs along the leather.
+      for (const along of [-0.3, 0, 0.3]) {
+        const angle = side * (Math.PI / 2) + along;
+        circle(ctx, -radius * 0.05 + Math.cos(angle) * radius * 0.5, Math.sin(angle) * radius * 0.73, radius * 0.055, "#b8bfc9");
+      }
+    } else {
+      // A narrower plate on top: layered armour.
+      shoulderBand(ctx, radius, side, 0.95, 0.75, 0.38, shade(color, -0.12), shade(color, -0.45));
+    }
+  }
+
+  // The head, forward of the shoulders and smaller than either plate.
+  const head = radius * 0.3;
+  const headX = radius * 0.14;
+  if (brute) {
+    // Horns first, out to the sides and curling forward at the tips.
     ctx.fillStyle = "#efe6d2";
     for (const side of [-1, 1]) {
       ctx.beginPath();
-      ctx.moveTo(0, side * head * 0.8);
-      ctx.lineTo(radius * 0.3, side * head * 1.8);
-      ctx.lineTo(radius * 0.2, side * head * 0.5);
+      ctx.moveTo(headX - head * 0.35, side * head * 0.75);
+      ctx.quadraticCurveTo(headX - head * 0.6, side * head * 2.6, headX + head * 1.3, side * head * 2.5);
+      ctx.quadraticCurveTo(headX + head * 0.1, side * head * 1.8, headX + head * 0.35, side * head * 0.75);
       ctx.closePath();
       ctx.fill();
     }
+    circle(ctx, headX, 0, head, "#6d6873");
+    ctx.strokeStyle = "#45414b";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    return;
   }
-  if (kind === "boss") {
-    ctx.fillStyle = COLORS.crown;
-    ctx.beginPath();
-    ctx.moveTo(-radius * 0.15, -head);
-    ctx.lineTo(-radius * 0.15, head);
-    for (const [px, py] of [
-      [radius * 0.3, head],
-      [radius * 0.12, head * 0.5],
-      [radius * 0.3, 0],
-      [radius * 0.12, -head * 0.5],
-      [radius * 0.3, -head],
-    ]) {
-      ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
+  // The warlord: a dark helm ringed by a crown, seen from above.
+  circle(ctx, headX, 0, head, "#5a2a2e");
+  ctx.strokeStyle = COLORS.crown;
+  ctx.lineWidth = radius * 0.1;
+  ctx.beginPath();
+  ctx.arc(headX, 0, head * 0.95, 0, Math.PI * 2);
+  ctx.stroke();
+  for (let index = 0; index < 5; index += 1) {
+    const angle = (index / 5) * Math.PI * 2;
+    circle(ctx, headX + Math.cos(angle) * head * 0.95, Math.sin(angle) * head * 0.95, radius * 0.07, "#fff4c2");
   }
+}
+
+/**
+ * A band along the heavy torso's outline, centred on one shoulder: between the
+ * outline scaled by `outer` and by `inner`, `spread` radians either side.
+ */
+function shoulderBand(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  side: number,
+  outer: number,
+  inner: number,
+  spread: number,
+  fill: string,
+  rim: string,
+): void {
+  const centre = side * (Math.PI / 2);
+  const cx = -radius * 0.05;
+  ctx.beginPath();
+  ctx.ellipse(cx, 0, radius * 0.56 * outer, radius * 0.86 * outer, 0, centre - spread, centre + spread);
+  ctx.ellipse(cx, 0, radius * 0.56 * inner, radius * 0.86 * inner, 0, centre + spread, centre - spread, true);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 1.3;
+  ctx.stroke();
 }
 
 function drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, color: string, length = 12): void {

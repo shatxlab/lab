@@ -95,11 +95,33 @@ export interface PerkDef {
   cost: (level: number) => number;
 }
 
+/** A price that grows by `growth` each level, rounded to a tidy 5. */
+function growing(first: number, growth: number): (level: number) => number {
+  return (level) => Math.round((first * growth ** level) / 5) * 5;
+}
+
+/**
+ * Every perk costs more each level, and the whole tree adds up to roughly
+ * twenty decent runs of gold, so there is still something to save for long
+ * after the first few levels.
+ */
 export const PERKS: Record<PerkId, PerkDef> = {
-  fortify: { max: 5, cost: (level) => 15 + 15 * level },
-  fletching: { max: 5, cost: (level) => 20 + 20 * level },
-  tactics: { max: 3, cost: (level) => 30 + 30 * level },
-  headStart: { max: 2, cost: (level) => (level === 0 ? 60 : 150) },
+  fortify: { max: 10, cost: growing(20, 1.55) },
+  fletching: { max: 10, cost: growing(30, 1.6) },
+  quickDraw: { max: 8, cost: growing(40, 1.6) },
+  tactics: { max: 4, cost: growing(50, 1.8) },
+  headStart: { max: 3, cost: (level) => [80, 250, 700][level] },
 };
+
+/** What one level of each perk adds. */
+export const PERK_STEP = {
+  fortify: 15,
+  fletching: 0.08,
+  quickDraw: 0.05,
+  tactics: 0.5,
+} as const;
+
+/** The volley never reloads faster than this, whatever is stacked on it. */
+export const MIN_VOLLEY_COOLDOWN = 1.5;
 
 export const PERK_IDS = Object.keys(PERKS) as PerkId[];

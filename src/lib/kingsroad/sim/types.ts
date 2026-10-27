@@ -13,7 +13,7 @@ export type { Effect, EnemyKind, VolleyArrow };
 
 export type TowerKind = "archer" | "catapult" | "frost" | "ballista";
 
-export type MapId = "meadow" | "ford" | "crossroads";
+export type MapId = "meadow" | "ford" | "crossroads" | "switchback" | "rivers" | "serpent" | "saltire" | "gorge" | "trident" | "citadel";
 
 /** `ready` is the calm before the first wave, while the first towers go up. */
 export type Status = "ready" | "playing" | "won" | "lost";

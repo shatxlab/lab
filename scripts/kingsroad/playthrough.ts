@@ -14,7 +14,7 @@ import { MAPS } from '../../src/lib/kingsroad/sim/maps.ts'
 import { roadWithin } from '../../src/lib/kingsroad/sim/path.ts'
 import type { Game, MapId, TowerKind } from '../../src/lib/kingsroad/sim/types.ts'
 
-const PLAN: TowerKind[] = ['archer', 'catapult', 'archer', 'frost', 'ballista', 'archer', 'catapult', 'ballista', 'frost', 'archer', 'catapult', 'ballista', 'archer', 'catapult']
+const PLAN: TowerKind[] = ["archer", "catapult", "archer", "frost", "ballista", "archer", "catapult", "ballista", "frost", "archer", "catapult", "ballista", "archer", "catapult", "frost", "ballista", "archer", "catapult"]
 
 /** The level the bot wants every tower at by this wave. */
 function targetLevel(wave: number): number {

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { MAPS } from "@/lib/kingsroad/sim/maps";
+
 import {
   defaultSave,
   isUnlocked,
@@ -20,7 +22,7 @@ function memoryStorage(): KingsroadStorage & { data: Map<string, string> } {
 describe("kingsroad save", () => {
   it("starts with no stars and only the first road open", () => {
     const save = defaultSave();
-    expect(save.stars).toEqual({ meadow: 0, ford: 0, crossroads: 0 });
+    expect(save.stars).toEqual(Object.fromEntries(MAPS.map((map) => [map.id, 0])));
     expect(isUnlocked(save, "meadow")).toBe(true);
     expect(isUnlocked(save, "ford")).toBe(false);
     expect(isUnlocked(save, "crossroads")).toBe(false);
@@ -31,7 +33,8 @@ describe("kingsroad save", () => {
     expect(isUnlocked(save, "ford")).toBe(true);
     expect(isUnlocked(save, "crossroads")).toBe(false);
     expect(nextMap("meadow")).toBe("ford");
-    expect(nextMap("crossroads")).toBeNull();
+    expect(nextMap("crossroads")).toBe("switchback");
+    expect(nextMap("citadel")).toBeNull();
   });
 
   it("keeps the best stars", () => {
@@ -52,10 +55,11 @@ describe("kingsroad save", () => {
   it("shrugs off a damaged or tampered save", () => {
     expect(normalizeSave(null)).toEqual(defaultSave());
     expect(normalizeSave({ stars: "lots" })).toEqual(defaultSave());
-    expect(normalizeSave({ stars: { meadow: 9, ford: -2, crossroads: 1.7, atlantis: 3 } }).stars).toEqual({
+    expect(normalizeSave({ stars: { meadow: 9, ford: -2, crossroads: 1.7, atlantis: 3 } }).stars).toMatchObject({
       meadow: 3,
       ford: 0,
       crossroads: 1,
+      switchback: 0,
     });
     const storage = memoryStorage();
     storage.setItem(KINGSROAD_STORAGE_KEY, "{not json");

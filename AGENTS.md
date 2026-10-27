@@ -25,6 +25,11 @@
   "Next steps" and "Guide for the next session" before changing anything in `src/lib/tycoon/`.
 - `scripts/tycoon/playthrough.ts` plays the whole game with a bot (usage in its header): run it over several seeds after balance changes.
 
+## Football
+
+- `football-roadmap.md` is the football game's TODOs, design record and retune playbook: read it before changing `src/lib/football/`.
+- `scripts/football/playthrough.ts` plays whole matches with a bot (usage in its header); `scripts/football/sprite-sheet.ts` dumps the sprites to a PNG to look at.
+
 ## Copy
 
 - The Focus app's user-facing strings live in `src/lib/focus/i18n.ts`, with English and Russian in the same object. Update both languages together.

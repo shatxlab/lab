@@ -1,0 +1,11 @@
+---
+import ToolsLayout from "@/layouts/ToolsLayout.astro";
+import FootballApp from "@/components/football/FootballApp";
+import "@/styles/tower.css";
+import "@/styles/football.css";
+---
+
+<ToolsLayout tool="football" immersive>
+  {/* client:only: the game reads localStorage and draws on a canvas, nothing to prerender. */}
+  <FootballApp client:only="react" />
+</ToolsLayout>

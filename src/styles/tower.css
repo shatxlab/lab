@@ -61,12 +61,20 @@
   flex: 1;
   overflow-y: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   background:
     radial-gradient(circle at 50% 0%, rgba(140, 197, 107, 0.35), transparent 28rem),
     var(--tower-bg);
+}
+
+/*
+ * Centred with auto margins, not align-items/justify-content: when a panel is taller than the screen, centring
+ * pushes the overflow off the top where scrolling can't reach it. Auto margins centre when there's room and fall
+ * back to the top, scrolling, when there isn't.
+ */
+.tower-screen > .tower-panel,
+.tower-overlay > .tower-panel {
+  margin: auto;
 }
 
 .tower-panel {
@@ -363,8 +371,6 @@
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 1rem;
   background: rgba(20, 30, 15, 0.55);
   overflow-y: auto;

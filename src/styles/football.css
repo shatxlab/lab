@@ -86,6 +86,11 @@
 .fb-kickoff {
   width: 100%;
   margin-top: 1.2rem;
+  /* The menu is long on a phone: the button stays in reach however far it's scrolled. */
+  position: sticky;
+  bottom: 0.25rem;
+  z-index: 1;
+  box-shadow: 0 0 0 0.5rem var(--tower-panel), 0 3px 0 0.5rem var(--tower-panel);
 }
 
 /* ----------------------------------------------------------- scoreboard */

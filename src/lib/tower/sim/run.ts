@@ -272,11 +272,14 @@ function moveArrows(run: Run, tower: TowerStats, dt: number): void {
       if (Math.hypot(enemy.x - arrow.x, enemy.y - arrow.y) > enemy.radius + ARROW_REACH) continue;
       hitEnemy(enemy, tower, arrow.damage);
       arrow.hitIds.push(enemy.id);
+      // Bounce first so pierce never eats into ricochet: flying on straight would leave the
+      // arrow where nothing is in range to bounce to. Pierce is the fallback when it can't.
+      if (arrow.ricochetLeft > 0 && ricochet(run, arrow, tower)) break;
       if (arrow.pierceLeft > 0) {
         arrow.pierceLeft -= 1;
         continue;
       }
-      spent = arrow.ricochetLeft === 0 || !ricochet(run, arrow, tower);
+      spent = true;
       break;
     }
     if (spent) continue;

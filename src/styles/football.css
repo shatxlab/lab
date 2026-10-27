@@ -337,6 +337,22 @@
   box-shadow: inset 0 0 0 2px var(--tower-accent), inset 6px 0 0 var(--odds, var(--tower-line));
 }
 
+.fb-choice-text {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.fb-choice-title {
+  font-size: 0.98rem;
+}
+
+.fb-choice small {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--tower-muted);
+}
+
 .fb-choice kbd {
   flex: none;
   display: grid;
@@ -520,4 +536,92 @@
   background: #fbf5e6;
   color: var(--tower-ink);
   box-shadow: none;
+}
+
+/* ------------------------------------------------------------- the aim */
+
+.fb-aim-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--tower-muted);
+}
+
+.fb-aim {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.fb-aim-end {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tower-muted);
+}
+
+.fb-aim-end:last-child {
+  text-align: right;
+}
+
+.fb-aim-bar {
+  position: relative;
+  display: block;
+  height: 1.6rem;
+  border-radius: 0.8rem;
+  box-shadow: inset 0 0 0 2px rgba(26, 28, 44, 0.35);
+}
+
+.fb-aim-marker {
+  position: absolute;
+  top: -0.2rem;
+  left: 50%;
+  width: 0.5rem;
+  height: 2rem;
+  margin-left: -0.25rem;
+  border-radius: 0.3rem;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px #1a1c2c;
+}
+
+.fb-aim-go {
+  min-height: 3.2rem;
+  font-size: 1.15rem;
+}
+
+/* The word over the pitch after a shot is saved or missed, or a pass cut out. */
+.fb-flash {
+  position: absolute;
+  top: 12%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  font-size: clamp(1.4rem, 4.5vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: #ff9a8a;
+  text-shadow: 0 3px 0 #1a1c2c, 0 0 14px rgba(0, 0, 0, 0.5);
+  animation: fb-flash 1.3s ease-out both;
+}
+
+.fb-flash[data-good="true"] {
+  color: #8ee89a;
+}
+
+@keyframes fb-flash {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-0.6rem);
+    opacity: 0;
+  }
 }

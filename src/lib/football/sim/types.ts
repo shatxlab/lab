@@ -85,6 +85,8 @@ export interface Choice {
   chance: number;
   /** How much the bot likes it. */
   score: number;
+  /** What it's worth if it comes off: the goal chance the man who ends up with the ball would have. Only moments fill it in. */
+  reward?: number;
 }
 
 /** The game pauses on one of these while the player picks what the man on the ball does. */
@@ -127,6 +129,8 @@ export interface Match {
   moment: Moment | null;
   /** Seconds until the next moment may come up. */
   momentCd: number;
+  /** The last call was a pass: whoever it lands with gets a call straight away, so an attack can be played as a chain. */
+  chain: boolean;
   /** The side the player calls moments for; null when the bot plays both. */
   human: Team | null;
   over: boolean;

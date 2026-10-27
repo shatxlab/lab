@@ -108,6 +108,11 @@ function MenuScreen({
         <TowerMark />
         <h1>{text.title}</h1>
         <p className="tower-tagline">{text.tagline}</p>
+        <ul className="tower-howto">
+          {text.howTo.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
         <p className="tower-meta">
           <span>{text.best(save.best)}</span>
           <span>{text.gold(save.gold)}</span>
@@ -120,11 +125,6 @@ function MenuScreen({
             {text.perksTitle}
           </button>
         </div>
-        <ul className="tower-howto">
-          {text.howTo.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
         <a className="tower-home" href={withBase("/")}>
           {text.home}
         </a>

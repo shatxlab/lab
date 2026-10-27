@@ -99,6 +99,12 @@ function MenuScreen({
         <h1>{text.title}</h1>
         <p className="tower-tagline">{text.tagline}</p>
 
+        <ul className="tower-howto">
+          {text.howTo.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+        <p className="fb-landscape">{text.landscapeNote}</p>
         <h2 className="fb-heading">{text.chooseKit}</h2>
         <div className="fb-kits" role="radiogroup" aria-label={text.chooseKit}>
           {KITS.map((kit, index) => (
@@ -133,12 +139,6 @@ function MenuScreen({
         <button type="button" className="tower-button fb-kickoff" onClick={onPlay}>
           {text.kickOff}
         </button>
-        <p className="fb-landscape">{text.landscapeNote}</p>
-        <ul className="tower-howto">
-          {text.howTo.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
         <a className="tower-home" href={withBase("/")}>
           {text.home}
         </a>

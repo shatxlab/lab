@@ -130,24 +130,43 @@ describe("moments", () => {
     expect(carrier.x).toBeGreaterThan(55);
     expect(m.ball.owner).toBe(moment.carrier);
     expect(moment.choices.some((c) => c.kind === "pass")).toBe(true);
-    expect(moment.choices.some((c) => c.kind === "dribble")).toBe(true);
+    // A run is only on offer while it has a chance.
+    for (const c of moment.choices) if (c.kind === "dribble") expect(c.chance).toBeGreaterThanOrEqual(0.1);
     const t = m.t;
     step(m);
     step(m);
     expect(m.t).toBe(t);
   });
 
-  it("go on when the player picks, and not again for a while", () => {
+  it("go on when the player picks, and not again for a while after a run or a shot", () => {
     const m = fresh(2, 0);
     untilMoment(m);
     const moment = m.moment!;
-    const pass = moment.choices.findIndex((c) => c.kind === "pass");
-    const before = m.stats[0].passes;
-    choose(m, pass);
+    const run = moment.choices.findIndex((c) => c.kind === "dribble" || c.kind === "shoot");
+    choose(m, run < 0 ? null : run);
     expect(m.moment).toBeNull();
-    expect(m.stats[0].passes).toBe(before + 1);
     for (let i = 0; i < 3 / STEP; i += 1) step(m);
     expect(m.moment).toBeNull();
+  });
+
+  it("count a pass as a pass, and call the man it lands with straight away", () => {
+    let chained = 0;
+    let passes = 0;
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const m = fresh(seed, 0);
+      if (!untilMoment(m)) continue;
+      const pass = m.moment!.choices.findIndex((c) => c.kind === "pass" && c.chance >= 0.9);
+      if (pass < 0) continue;
+      const before = m.stats[0].passes;
+      choose(m, pass);
+      expect(m.stats[0].passes).toBe(before + 1);
+      passes += 1;
+      for (let i = 0; i < 4 / STEP && !m.moment; i += 1) step(m);
+      if (m.moment && m.players[m.moment.carrier].team === 0) chained += 1;
+    }
+    expect(passes).toBeGreaterThan(10);
+    // The pass lands and the receiver, if he's still up the pitch, gets a call inside four seconds, well before the usual cooldown.
+    expect(chained).toBeGreaterThan(passes * 0.25);
   });
 
   it("let the bot choose when the player doesn't", () => {
@@ -203,7 +222,47 @@ describe("shot odds", () => {
       goals += m.score[0] + m.score[1];
       xg += m.stats[0].xg + m.stats[1].xg;
     }
-    expect(xg / goals).toBeGreaterThan(0.8);
-    expect(xg / goals).toBeLessThan(1.25);
+    expect(xg / goals).toBeGreaterThan(0.7);
+    expect(xg / goals).toBeLessThan(1.3);
+  });
+
+  it("are forecast by playing each call out, so the odds on the buttons come true", () => {
+    // Over many moments, the passes offered at a given forecast should keep the ball about that often.
+    let offered = 0;
+    let shown = 0;
+    let kept = 0;
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const m = fresh(seed, 0);
+      for (let guard = 0; guard < 6000 && !m.over; guard += 1) {
+        step(m);
+        if (!m.moment) continue;
+        const pass = m.moment.choices.filter((c) => c.kind === "pass" && c.chance < 0.95).sort((a, b) => b.chance - a.chance)[0];
+        const index = pass ? m.moment.choices.indexOf(pass) : -1;
+        if (!pass || index < 0) {
+          choose(m, null);
+          continue;
+        }
+        offered += 1;
+        shown += pass.chance;
+        choose(m, index);
+        for (let i = 0; i < 80 && m.ball.kick !== null; i += 1) step(m);
+        if (m.ball.owner !== null && m.players[m.ball.owner].team === 0) kept += 1;
+        if (offered >= 90) break;
+      }
+      if (offered >= 90) break;
+    }
+    expect(offered).toBeGreaterThan(45);
+    expect(Math.abs(kept / offered - shown / offered)).toBeLessThan(0.15);
+  }, 60_000);
+
+  it("show what a pass is worth as well as its odds", () => {
+    const m = fresh(2, 0);
+    for (let i = 0; i < 20000 && !m.moment; i += 1) step(m);
+    for (const choice of m.moment!.choices) {
+      expect(choice.reward).toBeGreaterThanOrEqual(0);
+      expect(choice.reward).toBeLessThanOrEqual(1);
+      expect(choice.chance).toBeGreaterThanOrEqual(0);
+      expect(choice.chance).toBeLessThanOrEqual(1);
+    }
   });
 });

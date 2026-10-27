@@ -1,6 +1,8 @@
 import { random } from "@/lib/tower/sim/random";
 import {
+  AIMED_SPREAD,
   BALL_FRICTION,
+  CHAIN_COOLDOWN,
   FOLLOW,
   GOAL_HALF,
   H,
@@ -13,6 +15,8 @@ import {
   PASS_SPEED_MAX,
   PICKUP_RANGE,
   PUSH,
+  REACH_CENTRE,
+  REACH_LOSS,
   SHOT_SPEED,
   SLOTS,
   speedOf,
@@ -81,6 +85,7 @@ export function createMatch(sides: [Side, Side], seed: number, human: Team | nul
     score: [0, 0],
     restart: null,
     moment: null,
+    chain: false,
     momentCd: MOMENT_COOLDOWN / 2,
     human,
     over: false,
@@ -210,6 +215,20 @@ function passChance(m: Match, from: Body, to: Body): number {
 /** How far from his line of the ball a keeper gets to it. */
 const keeperReach = (keeping: number): number => 2.2 + keeping * 0.5;
 
+/** The keeper's reach for a ball crossing the line this far from the middle of the goal: less towards the posts. */
+const reachAt = (keeping: number, offset: number): number => keeperReach(keeping) * (REACH_CENTRE - REACH_LOSS * Math.min(1, Math.abs(offset) / GOAL_HALF));
+
+/**
+ * Where the keeper stands, in the units of the aim (-1 and 1 are the posts), and how far either side of that he
+ * all but certainly stops it. He follows the ball's height, so he tends to stand towards the side the shot comes
+ * from and the far side is the open one; measured on whole matches, shots score about a tenth of the time aimed
+ * at him and about a third of the time aimed a goal-width away.
+ */
+export function keeperCover(m: Match, from: number): { centre: number; half: number } {
+  const keeper = m.players[indexOf(other(m.players[from].team), 0)];
+  return { centre: (keeper.y - MID) / GOAL_HALF, half: Math.max(0.3, Math.min(0.6, 0.28 + keeper.stats.keeping * 0.03)) };
+}
+
 /** Spread of a shot's aim, in units across the goal mouth. */
 function shotSpread(p: Body, d: number): number {
   return (12 - p.stats.shooting) * 0.7 + d * 0.12;
@@ -224,7 +243,7 @@ export function shotChance(m: Match, p: Body): number {
   const aim = 3.5;
   const onTarget = cdf((GOAL_HALF - aim) / spread) - cdf((-GOAL_HALF - aim) / spread);
   const flight = d / SHOT_SPEED;
-  const reach = keeperReach(keeper.stats.keeping) + speedOf(keeper.stats, "GK") * flight * 0.6;
+  const reach = reachAt(keeper.stats.keeping, aim) + speedOf(keeper.stats, "GK") * flight * 0.6;
   const saved = clamp(reach / 10.5, 0.08, 0.9);
   let blocked = 0;
   for (const o of m.players) {
@@ -296,12 +315,15 @@ function kickPass(m: Match, from: number, to: number): void {
   release(m, from, ((tx - p.x) / len) * speed, ((ty - p.y) / len) * speed, "pass", to);
 }
 
-function kickShot(m: Match, from: number): void {
+/** `aim` is where across the goal mouth the player put it: -1 is one post, 1 the other, beyond that is wide. */
+function kickShot(m: Match, from: number, aim?: number): void {
   const p = m.players[from];
   const goalX = goalLine(p.team);
   const d = dist(p.x, p.y, goalX, MID);
-  const aim = (random(m) < 0.5 ? -1 : 1) * 3.5;
-  const ty = MID + aim + gauss(m) * shotSpread(p, d);
+  const ty =
+    aim === undefined
+      ? MID + (random(m) < 0.5 ? -1 : 1) * 3.5 + gauss(m) * shotSpread(p, d)
+      : MID + clamp(aim, -1.5, 1.5) * GOAL_HALF + gauss(m) * shotSpread(p, d) * AIMED_SPREAD;
   const len = dist(p.x, p.y, goalX, ty) || 1;
   m.stats[p.team].shots += 1;
   m.stats[p.team].xg += shotChance(m, p);
@@ -309,27 +331,107 @@ function kickShot(m: Match, from: number): void {
   release(m, from, ((goalX - p.x) / len) * SHOT_SPEED, ((ty - p.y) / len) * SHOT_SPEED, "shot", null);
 }
 
-function apply(m: Match, i: number, choice: Choice): void {
+function apply(m: Match, i: number, choice: Choice, aim?: number): void {
   const p = m.players[i];
-  if (choice.kind === "shoot") kickShot(m, i);
+  if (choice.kind === "shoot") kickShot(m, i, aim);
   else if (choice.kind === "pass" && choice.to !== undefined) kickPass(m, i, choice.to);
   else p.thinkIn = 0.4 + random(m) * 0.15;
 }
 
-/** What a moment offers the player: the shot if there is one, the three best passes, and running with it. */
-function shortlist(choices: Choice[]): Choice[] {
-  const passes = choices
-    .filter((choice) => choice.kind === "pass")
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-  return [...choices.filter((choice) => choice.kind === "shoot"), ...passes, ...choices.filter((choice) => choice.kind === "dribble")];
+/** A copy of the match to play forward without touching the real one. Everything the sim changes is copied. */
+function cloneMatch(m: Match, seed: number): Match {
+  return {
+    ...m,
+    rng: seed,
+    human: null,
+    moment: null,
+    chain: false,
+    events: [],
+    players: m.players.map((p) => ({ ...p })),
+    ball: { ...m.ball, touched: [...m.ball.touched] },
+    score: [m.score[0], m.score[1]],
+    restart: m.restart ? { ...m.restart } : null,
+    stats: [{ ...m.stats[0] }, { ...m.stats[1] }],
+  };
+}
+
+const FORECAST_RUNS = 12;
+
+/**
+ * The odds of a choice, found by playing it out on copies of the match: a pass that ends with the ball still
+ * ours, a shot that ends in a goal, a run that doesn't lose the ball in the next second and a half. It's the sim
+ * itself answering, defenders chasing and all, so the numbers on the buttons are what happens.
+ */
+function forecast(m: Match, i: number, choice: Choice): number {
+  const team = m.players[i].team;
+  let kept = 0;
+  for (let run = 0; run < FORECAST_RUNS; run += 1) {
+    const c = cloneMatch(m, m.rng + 7919 * (run + 1));
+    const goals = c.score[team];
+    apply(c, i, choice);
+    if (choice.kind === "dribble") c.players[i].thinkIn = 1.5;
+    const steps = choice.kind === "dribble" ? 30 : 60;
+    let ok = false;
+    for (let n = 0; n < steps; n += 1) {
+      step(c);
+      if (c.score[team] > goals) {
+        ok = choice.kind === "shoot";
+        break;
+      }
+      if (choice.kind !== "dribble" && c.ball.kick === null) {
+        ok = choice.kind === "pass" && !c.restart && c.ball.owner !== null && c.players[c.ball.owner].team === team;
+        break;
+      }
+      if (choice.kind === "dribble" && n === steps - 1) ok = c.ball.owner !== null && c.players[c.ball.owner].team === team;
+    }
+    if (ok) kept += 1;
+  }
+  return kept / FORECAST_RUNS;
+}
+
+/**
+ * What a moment offers the player. Every candidate is forecast, then the offer is a real trade-off rather than
+ * three versions of the same pass: the safest ball, the one that leads to the best chance if it lands, and the
+ * best of the two together; plus the shot, if there is one, and running with it.
+ */
+function offerFor(m: Match, i: number, choices: Choice[]): Choice[] {
+  const p = m.players[i];
+  const candidates = [
+    ...choices.filter((choice) => choice.kind === "shoot"),
+    ...choices.filter((choice) => choice.kind === "dribble"),
+    ...choices
+      .filter((choice) => choice.kind === "pass")
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6),
+  ];
+  for (const choice of candidates) {
+    const guess = Math.max(0.05, choice.chance);
+    choice.chance = forecast(m, i, choice);
+    choice.score *= choice.chance / guess;
+    choice.reward = choice.kind === "pass" && choice.to !== undefined ? shotChance(m, m.players[choice.to]) : choice.kind === "shoot" ? choice.chance : 0;
+  }
+  const passes = candidates.filter((choice) => choice.kind === "pass");
+  const gain = (choice: Choice): number => (m.players[choice.to ?? i].x - p.x) * dirOf(p.team);
+  const top = (rank: (choice: Choice) => number): Choice | undefined => passes.reduce<Choice | undefined>((a, b) => (!a || rank(b) > rank(a) ? b : a), undefined);
+  const picked: Choice[] = [];
+  const add = (choice: Choice | undefined) => {
+    if (choice && !picked.includes(choice)) picked.push(choice);
+  };
+  add(top((choice) => choice.chance + gain(choice) * 0.002));
+  add(top((choice) => (choice.reward ?? 0) + choice.chance * 0.01));
+  add(top((choice) => choice.chance * (choice.reward ?? 0) + (picked.includes(choice) ? -1 : 0)));
+  for (const choice of [...passes].sort((a, b) => b.score - a.score)) if (picked.length < 3) add(choice);
+  picked.sort((a, b) => b.chance - a.chance);
+  // A run with no hope isn't worth a button; the shot stays, because aiming it changes its odds.
+  const run = candidates.filter((choice) => choice.kind === "dribble" && (choice.chance >= 0.1 || picked.length === 0));
+  return [...candidates.filter((choice) => choice.kind === "shoot"), ...picked, ...run];
 }
 
 function decide(m: Match, i: number): void {
   const p = m.players[i];
   const choices = options(m, i);
   if (m.human === p.team && m.momentCd <= 0 && p.role !== "GK" && frame(p.team, p.x) >= MOMENT_FROM) {
-    m.moment = { carrier: i, choices: shortlist(choices) };
+    m.moment = { carrier: i, choices: offerFor(m, i, choices) };
     m.momentCd = MOMENT_COOLDOWN;
     return;
   }
@@ -339,14 +441,17 @@ function decide(m: Match, i: number): void {
 
 /**
  * Settle the moment the game is paused on. `index` is the choice the player made; null lets the bot pick (when
- * the player's time runs out, say).
+ * the player's time runs out, say). A shot takes the `aim` the player set, or the bot's if there is none.
  */
-export function choose(m: Match, index: number | null): void {
+export function choose(m: Match, index: number | null, aim?: number): void {
   const moment = m.moment;
   if (!moment) return;
   m.moment = null;
   const choice = (index !== null ? moment.choices[index] : undefined) ?? best(moment.choices);
-  if (m.ball.owner === moment.carrier) apply(m, moment.carrier, choice);
+  if (m.ball.owner === moment.carrier) {
+    apply(m, moment.carrier, choice, aim);
+    m.chain = choice.kind === "pass";
+  }
 }
 
 // ---- Possession, restarts, goals ----
@@ -354,6 +459,10 @@ export function choose(m: Match, index: number | null): void {
 function takeBall(m: Match, i: number): void {
   const ball = m.ball;
   const p = m.players[i];
+  if (m.chain) {
+    m.chain = false;
+    if (m.human === p.team) m.momentCd = Math.min(m.momentCd, CHAIN_COOLDOWN);
+  }
   if (ball.kick === "pass" && ball.last !== null && m.players[ball.last].team === p.team) m.stats[p.team].passesDone += 1;
   ball.owner = i;
   ball.target = null;
@@ -444,7 +553,7 @@ function outOfPlay(m: Match): void {
     if (crossed) {
       const keeper = m.players[indexOf(defending, 0)];
       const flight = ball.kick === "shot";
-      const reach = keeperReach(keeper.stats.keeping);
+      const reach = reachAt(keeper.stats.keeping, ball.y - MID);
       if (Math.abs(keeper.y - ball.y) < reach) {
         if (flight) log(m, "save", defending, indexOf(defending, 0));
         takeBall(m, indexOf(defending, 0));
@@ -557,12 +666,12 @@ function playBall(m: Match, dt: number): void {
       if (o.team === kicker.team || ball.touched.includes(i) || o.stun > 0) continue;
       if (dist(o.x, o.y, ball.x, ball.y) > 1.6) continue;
       ball.touched.push(i);
-      if (ball.kick === "pass" && random(m) < 0.25 + o.stats.tackling * 0.04) {
+      if (ball.kick === "pass" && random(m) < 0.12 + o.stats.tackling * 0.03) {
         log(m, "intercept", o.team, i);
         takeBall(m, i);
         return;
       }
-      if (ball.kick === "shot" && o.role !== "GK" && random(m) < 0.15 + o.stats.tackling * 0.03) {
+      if (ball.kick === "shot" && o.role !== "GK" && random(m) < 0.12 + o.stats.tackling * 0.02) {
         log(m, "block", o.team, i);
         const angle = random(m) * Math.PI * 2;
         ball.vx = Math.cos(angle) * 14;

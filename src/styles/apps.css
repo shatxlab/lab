@@ -38,8 +38,24 @@ body {
   color: var(--fg);
 }
 
-/* Tools header: translucent surface so content blurs through the sticky bar. */
+/*
+ * The viewport covers the whole screen (viewport-fit=cover), so an installed app draws under the status bar, the
+ * home indicator and a sideways phone's notch: everything that sits at an edge pads itself by the safe-area inset.
+ */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+body:not(.lab-immersive) {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Tools header: translucent surface so content blurs through the sticky bar, and room above it for the status bar. */
 .lab-header {
+  box-sizing: border-box;
+  height: calc(58px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
 }
 

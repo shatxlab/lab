@@ -30,7 +30,17 @@ export interface FootballText {
   speed: string;
   leave: string;
   yourCall: string;
+  /** A button's title, and under it what the odds mean. */
   choice: (choice: Choice, name: string) => string;
+  choiceMeta: (choice: Choice) => string;
+  aimTitle: string;
+  aimHint: string;
+  aimGo: string;
+  aimTop: string;
+  aimBottom: string;
+  aimBack: string;
+  /** The word that flashes over the pitch after a shot or a pass goes wrong or right; `ours` is whether it was our side's move. */
+  flash: (kind: EventKind, ours: boolean) => string;
   letThemDecide: string;
   goal: (name: string) => string;
   won: string;
@@ -52,9 +62,9 @@ export const FOOTBALL_TEXT: Record<AppLang, FootballText> = {
     title: "Sunday League",
     tagline: "Eight-a-side pixel football. Your lads play the match; you make the calls that decide it.",
     howTo: [
-      "Your side plays on its own. When it gets the ball in a dangerous place, the game stops and it's your call.",
-      "Pick a shot, a pass to a teammate, or running on with the ball. The numbers are your odds.",
-      "On a phone, tap a button or a teammate. On a keyboard, press 1 to 5, or Space to let the lads decide.",
+      "Your side plays on its own and the quiet bits fly by. When you win the ball up the pitch, the game stops and it's your call.",
+      "Each pass shows how likely it is to land and the chance it leads to. The safe ball, or the dangerous one? Take a shot and aim it yourself: tap when the marker is away from the keeper.",
+      "On a phone, tap a button or a teammate. On a keyboard, press 1 to 5, and Space to lock your aim or let the lads decide.",
     ],
     home: "Home",
     kickOff: "Kick off",
@@ -92,12 +102,29 @@ export const FOOTBALL_TEXT: Record<AppLang, FootballText> = {
     speed: "Game speed",
     leave: "Leave the match",
     yourCall: "Your call",
-    choice: (choice, name) => {
-      const odds = pct(choice.chance);
-      if (choice.kind === "shoot") return `Shoot · ${odds}`;
-      if (choice.kind === "pass") return `Pass to ${name} · ${odds}`;
-      return `Run with it · ${odds}`;
+    choice: (choice, name) => (choice.kind === "shoot" ? "Shoot" : choice.kind === "pass" ? `Pass to ${name}` : "Run with it"),
+    choiceMeta: (choice) => {
+      if (choice.kind === "shoot") return `Goal ${pct(choice.chance)} · you aim it`;
+      if (choice.kind === "pass") return `Lands ${pct(choice.chance)} · then a ${pct(choice.reward ?? 0)} chance`;
+      return `Keeps it ${pct(choice.chance)}`;
     },
+    aimTitle: "Aim your shot",
+    aimHint: "Tap when the marker is in the green, away from the keeper (red). Past the post it's wide.",
+    aimGo: "Shoot!",
+    aimTop: "Top post",
+    aimBottom: "Bottom post",
+    aimBack: "Back",
+    flash: (kind, ours) =>
+      ({
+        goal: "GOAL!",
+        save: ours ? "Great save!" : "Saved!",
+        miss: ours ? "Wide!" : "Off target!",
+        tackle: ours ? "Tackle!" : "Lost it!",
+        intercept: ours ? "Cut out!" : "Intercepted!",
+        block: "Blocked!",
+        half: "",
+        full: "",
+      })[kind],
     letThemDecide: "Space: let the lads decide",
     goal: (name) => `GOAL! ${name}`,
     won: "Full time: a win!",
@@ -115,9 +142,9 @@ export const FOOTBALL_TEXT: Record<AppLang, FootballText> = {
     title: "Воскресная лига",
     tagline: "Пиксельный футбол «восемь на восемь». Ребята играют сами, а решающие моменты решаете вы.",
     howTo: [
-      "Ваша команда играет сама. Когда она получает мяч в опасном месте, игра останавливается, и решение за вами.",
-      "Выберите удар, передачу партнёру или рывок с мячом. Числа — это ваши шансы.",
-      "На телефоне коснитесь кнопки или партнёра. С клавиатуры — клавиши 1–5, а пробел отдаёт решение ребятам.",
+      "Ваша команда играет сама, а спокойные моменты пролетают быстро. Когда вы отбираете мяч ближе к чужим воротам, игра останавливается и решение за вами.",
+      "У каждого паса показано, дойдёт ли он и какой шанс создаст. Надёжный пас или рискованный? Ударьте и прицельтесь сами: нажмите, когда маркер далеко от вратаря.",
+      "На телефоне коснитесь кнопки или партнёра. С клавиатуры — клавиши 1–5, а пробел фиксирует прицел или отдаёт решение ребятам.",
     ],
     home: "На главную",
     kickOff: "Начать матч",
@@ -155,12 +182,29 @@ export const FOOTBALL_TEXT: Record<AppLang, FootballText> = {
     speed: "Скорость игры",
     leave: "Покинуть матч",
     yourCall: "Ваше решение",
-    choice: (choice, name) => {
-      const odds = pct(choice.chance);
-      if (choice.kind === "shoot") return `Удар · ${odds}`;
-      if (choice.kind === "pass") return `Пас: ${name} · ${odds}`;
-      return `Рывок с мячом · ${odds}`;
+    choice: (choice, name) => (choice.kind === "shoot" ? "Удар" : choice.kind === "pass" ? `Пас: ${name}` : "Рывок с мячом"),
+    choiceMeta: (choice) => {
+      if (choice.kind === "shoot") return `Гол ${pct(choice.chance)} · целитесь сами`;
+      if (choice.kind === "pass") return `Дойдёт ${pct(choice.chance)} · дальше шанс ${pct(choice.reward ?? 0)}`;
+      return `Сохранит мяч ${pct(choice.chance)}`;
     },
+    aimTitle: "Прицельтесь",
+    aimHint: "Нажмите, когда маркер в зелёной зоне, подальше от вратаря (красная). За штангой — мимо.",
+    aimGo: "Удар!",
+    aimTop: "Верхняя штанга",
+    aimBottom: "Нижняя штанга",
+    aimBack: "Назад",
+    flash: (kind, ours) =>
+      ({
+        goal: "ГОЛ!",
+        save: ours ? "Отличный сейв!" : "Сейв!",
+        miss: ours ? "Мимо!" : "Они промахнулись!",
+        tackle: ours ? "Отбор!" : "Потеряли!",
+        intercept: ours ? "Перехват!" : "Перехватили!",
+        block: "Блок!",
+        half: "",
+        full: "",
+      })[kind],
     letThemDecide: "Пробел: пусть решат ребята",
     goal: (name) => `ГОЛ! ${name}`,
     won: "Матч окончен: победа!",

@@ -105,6 +105,11 @@ function MenuScreen({ text, save, onPlay }: { text: KingsroadText; save: Kingsro
         <RoadMark />
         <h1>{text.title}</h1>
         <p className="tower-tagline">{text.tagline}</p>
+        <ul className="tower-howto">
+          {text.howTo.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
         <h2 className="kr-menu-heading">{text.chooseRoad}</h2>
         <ul className="kr-maps">
           {MAPS.map((map) => {
@@ -122,11 +127,6 @@ function MenuScreen({ text, save, onPlay }: { text: KingsroadText; save: Kingsro
               </li>
             );
           })}
-        </ul>
-        <ul className="tower-howto">
-          {text.howTo.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
         </ul>
         <a className="tower-home" href={withBase("/")}>
           {text.home}

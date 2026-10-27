@@ -2,17 +2,41 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent, type Pointer
 import { FastForward, Pause } from "lucide-react";
 
 import type { FootballText } from "@/lib/football/i18n";
-import { CELEBRATION, fitView, pickAt, Stage, type View } from "@/lib/football/render/draw";
+import { AIM_COLOURS, CELEBRATION, fitView, pickAt, Stage, type View } from "@/lib/football/render/draw";
 import { KITS } from "@/lib/football/render/sprites";
-import { MATCH_SECONDS } from "@/lib/football/sim/balance";
-import { choose, step, STEP } from "@/lib/football/sim/match";
-import type { Match, Moment } from "@/lib/football/sim/types";
+import { AIM_LIMIT, AIM_RANGE, aimAt, aimZones, MATCH_SECONDS, W } from "@/lib/football/sim/balance";
+import { choose, keeperCover, step, STEP } from "@/lib/football/sim/match";
+import type { EventKind, Match, Moment } from "@/lib/football/sim/types";
 
 /** How long the player has to call a moment before the lads decide for themselves. */
 export const MOMENT_SECONDS = 7;
 
 /** Longest frame gap the sim catches up on; after that it just runs slower instead of lurching. */
 const MAX_CATCH_UP = 0.1;
+
+/**
+ * How fast the match runs, against the player's own 1x or 2x. The quiet middle of the pitch flies by, since
+ * nothing there is the player's call, and a shot in the air slows right down.
+ */
+const CALM_SPEED = 2.5;
+const SHOT_SPEED = 0.35;
+
+/** What a shot, save or interception flashes over the pitch for, in seconds. */
+const FLASH_SECONDS = 1.3;
+const FLASHED: readonly EventKind[] = ["save", "miss", "block", "intercept"];
+
+function runSpeed(m: Match): number {
+  if (m.ball.kick === "shot") return SHOT_SPEED;
+  const along = (m.ball.x / W) * 100;
+  return along > 18 && along < 58 && !m.restart ? CALM_SPEED : 1;
+}
+
+const barPosition = (aim: number): string => `${((aim + AIM_RANGE) / (2 * AIM_RANGE)) * 100}%`;
+/** The bar the marker sweeps along: red where the keeper is, amber near, green open, grey past the posts. */
+const aimGradient = (cover: { centre: number; half: number }): string =>
+  `linear-gradient(to right, ${aimZones(cover.centre, cover.half)
+    .map((zone) => `${AIM_COLOURS[zone.tone]} ${barPosition(zone.from)} ${barPosition(zone.to)}`)
+    .join(", ")})`;
 
 interface Hud {
   minute: number;
@@ -23,13 +47,17 @@ interface Hud {
   events: number;
   /** The goal being celebrated, if one is. */
   banner: string | null;
+  /** A word for the shot, save or interception that just happened, and whether it went our way. */
+  flash: { text: string; good: boolean } | null;
 }
 
-function snapshot(m: Match, banner: string | null): Hud {
-  return { minute: Math.min(90, Math.floor((m.t / MATCH_SECONDS) * 90)), home: m.score[0], away: m.score[1], over: m.over, events: m.events.length, banner };
+function snapshot(m: Match, banner: string | null, flash: Hud["flash"]): Hud {
+  return { minute: Math.min(90, Math.floor((m.t / MATCH_SECONDS) * 90)), home: m.score[0], away: m.score[1], over: m.over, events: m.events.length, banner, flash };
 }
 
-const sameHud = (a: Hud, b: Hud): boolean => (Object.keys(a) as (keyof Hud)[]).every((key) => a[key] === b[key]);
+const sameFlash = (a: Hud["flash"], b: Hud["flash"]): boolean => a?.text === b?.text && a?.good === b?.good;
+const sameHud = (a: Hud, b: Hud): boolean =>
+  (Object.keys(a) as (keyof Hud)[]).every((key) => (key === "flash" ? sameFlash(a.flash, b.flash) : a[key] === b[key]));
 
 /** True while the screen is taller than it is wide. */
 function usePortrait(): boolean {
@@ -65,11 +93,12 @@ export function MatchView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>(fitView(1, 1));
   const stageRef = useRef(new Stage());
-  const [hud, setHud] = useState<Hud>(() => snapshot(match, null));
+  const [hud, setHud] = useState<Hud>(() => snapshot(match, null, null));
   const [moment, setMoment] = useState<Moment | null>(null);
   const [hover, setHover] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
   const [fast, setFast] = useState(false);
+  const [aiming, setAiming] = useState<number | null>(null);
   const portrait = usePortrait();
   // The loop reads these every frame without re-subscribing.
   // The match is landscape only: turned upright, it holds still until it's turned back.
@@ -83,17 +112,48 @@ export function MatchView({
   momentRef.current = moment;
   const momentLeft = useRef(0);
   const overRef = useRef(false);
-  const goalsSeen = useRef(0);
+  // The shot being aimed (index of its choice), when it began, and where the marker is now.
+  const aimingRef = useRef<number | null>(null);
+  aimingRef.current = aiming;
+  const aimStart = useRef(0);
+  const aimValue = useRef(0);
+  // Where the keeper stands against the shot being aimed. He doesn't move while the game is held.
+  const [cover, setCover] = useState({ centre: 0, half: 0.5 });
+  const coverRef = useRef(cover);
+  coverRef.current = cover;
+  const markerRef = useRef<HTMLSpanElement>(null);
+  const eventsSeen = useRef(0);
+  const flashRef = useRef<{ text: string; good: boolean; until: number } | null>(null);
 
   const resolve = useCallback(
-    (index: number | null) => {
+    (index: number | null, aim?: number) => {
       if (!match.moment) return;
-      choose(match, index);
+      choose(match, index, aim);
       setMoment(null);
       setHover(null);
+      setAiming(null);
     },
     [match],
   );
+
+  /** A choice is picked: a shot goes on to be aimed, anything else is done. */
+  const pick = useCallback(
+    (index: number) => {
+      const choice = match.moment?.choices[index];
+      if (!choice) return;
+      if (choice.kind === "shoot" && match.moment) {
+        aimStart.current = performance.now();
+        setCover(keeperCover(match, match.moment.carrier));
+        setAiming(index);
+      } else resolve(index);
+    },
+    [match, resolve],
+  );
+
+  /** The tap that fixes the aim where the marker is. */
+  const lockAim = useCallback(() => {
+    if (aimingRef.current !== null) resolve(aimingRef.current, aimValue.current);
+  }, [resolve]);
 
   // Keep the canvas backing store at device resolution and the pitch fitted to it.
   useEffect(() => {
@@ -134,12 +194,17 @@ export function MatchView({
           momentLeft.current = MOMENT_SECONDS;
           setMoment(match.moment);
         }
-        if (!pausedRef.current) {
+        if (aimingRef.current !== null) {
+          const seconds = (now - aimStart.current) / 1000;
+          aimValue.current = aimAt(seconds);
+          if (markerRef.current) markerRef.current.style.left = barPosition(aimValue.current);
+          if (seconds > AIM_LIMIT && !pausedRef.current) resolve(aimingRef.current);
+        } else if (!pausedRef.current) {
           momentLeft.current -= elapsed;
           if (momentLeft.current <= 0) resolve(null);
         }
       } else if (!pausedRef.current && !celebrating && !match.over) {
-        pending += elapsed * (fastRef.current ? 2 : 1);
+        pending += elapsed * (fastRef.current ? 2 : 1) * runSpeed(match);
         while (pending >= STEP) {
           step(match, STEP);
           pending -= STEP;
@@ -149,18 +214,25 @@ export function MatchView({
       } else {
         pending = 0;
       }
+      // A word over the pitch for a shot saved or missed, a pass cut out, a shot blocked.
+      for (const event of match.events.slice(eventsSeen.current)) {
+        if (!FLASHED.includes(event.kind)) continue;
+        const ours = event.team === 0;
+        flashRef.current = { text: text.flash(event.kind, ours), good: event.kind === "miss" ? !ours : ours, until: clock + FLASH_SECONDS };
+      }
+      eventsSeen.current = match.events.length;
       if (ctx && canvas) {
         const ratio = canvas.width / Math.max(1, viewRef.current.width);
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        stage.draw(ctx, match, viewRef.current, match.moment, hoverRef.current, clock);
+        stage.draw(ctx, match, viewRef.current, match.moment, hoverRef.current, clock, aimingRef.current !== null ? { value: aimValue.current, ...coverRef.current } : null);
       }
       let banner: string | null = null;
       if (stage.celebrating(clock) !== null) {
         const goal = [...match.events].reverse().find((event) => event.kind === "goal");
         banner = text.goal(goal?.who !== undefined ? match.players[goal.who].name : "");
       }
-      goalsSeen.current = match.score[0] + match.score[1];
-      const next = snapshot(match, banner);
+      const live = flashRef.current && flashRef.current.until > clock ? flashRef.current : null;
+      const next = snapshot(match, banner, live && { text: live.text, good: live.good });
       setHud((current) => (sameHud(current, next) ? current : next));
       if (match.over && !overRef.current) {
         overRef.current = true;
@@ -189,7 +261,7 @@ export function MatchView({
     return () => document.removeEventListener("visibilitychange", onHide);
   }, []);
 
-  // Keyboard: 1 to 9 pick a choice, Space lets the lads decide, P or Escape pauses.
+  // Keyboard: 1 to 9 pick a choice, Space or Enter locks the aim (or lets the lads decide), P or Escape pauses.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (overRef.current) return;
@@ -199,10 +271,17 @@ export function MatchView({
         return;
       }
       if (!current || pausedRef.current) return;
+      if (aimingRef.current !== null) {
+        if (event.key === " " || event.key === "Enter") {
+          event.preventDefault();
+          lockAim();
+        }
+        return;
+      }
       const number = Number(event.key);
       if (Number.isInteger(number) && number >= 1 && number <= current.choices.length) {
         event.preventDefault();
-        resolve(number - 1);
+        pick(number - 1);
       } else if (event.key === " ") {
         event.preventDefault();
         resolve(null);
@@ -210,7 +289,7 @@ export function MatchView({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [resolve]);
+  }, [resolve, pick, lockAim]);
 
   const pointerIndex = (event: PointerEvent<HTMLCanvasElement> | MouseEvent<HTMLCanvasElement>): number | null => {
     const current = momentRef.current;
@@ -221,8 +300,12 @@ export function MatchView({
 
   const onFieldClick = (event: MouseEvent<HTMLCanvasElement>) => {
     if (paused || !momentRef.current) return;
+    if (aimingRef.current !== null) {
+      lockAim();
+      return;
+    }
     const index = pointerIndex(event);
-    if (index !== null) resolve(index);
+    if (index !== null) pick(index);
   };
 
   const names = (index: number): string => match.players[index]?.name ?? "";
@@ -278,6 +361,11 @@ export function MatchView({
           onPointerMove={(event) => setHover(pointerIndex(event))}
           onPointerLeave={() => setHover(null)}
         />
+        {hud.flash && !hud.banner && (
+          <div className="fb-flash" data-good={hud.flash.good} aria-hidden="true">
+            {hud.flash.text}
+          </div>
+        )}
         {hud.banner && (
           <div className="fb-banner" aria-hidden="true" style={{ animationDuration: `${CELEBRATION}s` }}>
             {hud.banner}
@@ -287,7 +375,27 @@ export function MatchView({
       </div>
 
       <div className="fb-panel" data-active={moment !== null}>
-        {moment ? (
+        {moment && aiming !== null ? (
+          <>
+            <div className="fb-panel-head">
+              <strong>{text.aimTitle}</strong>
+            </div>
+            <p className="fb-aim-hint">{text.aimHint}</p>
+            <div className="fb-aim" aria-hidden="true">
+              <span className="fb-aim-end">{text.aimTop}</span>
+              <span className="fb-aim-bar" style={{ background: aimGradient(cover) }}>
+                <span className="fb-aim-marker" ref={markerRef} />
+              </span>
+              <span className="fb-aim-end">{text.aimBottom}</span>
+            </div>
+            <button type="button" className="tower-button fb-aim-go" onClick={lockAim} autoFocus>
+              {text.aimGo}
+            </button>
+            <button type="button" className="tower-button tower-button-small tower-button-quiet" onClick={() => setAiming(null)}>
+              {text.aimBack}
+            </button>
+          </>
+        ) : moment ? (
           <>
             <div className="fb-panel-head">
               <strong>{text.yourCall}</strong>
@@ -307,14 +415,17 @@ export function MatchView({
                   className="fb-choice"
                   data-kind={choice.kind}
                   data-odds={choice.chance >= 0.65 ? "high" : choice.chance >= 0.35 ? "mid" : "low"}
-                  onClick={() => resolve(index)}
+                  onClick={() => pick(index)}
                   onPointerEnter={() => setHover(index)}
                   onPointerLeave={() => setHover(null)}
                   onFocus={() => setHover(index)}
                   onBlur={() => setHover(null)}
                 >
                   <kbd aria-hidden="true">{index + 1}</kbd>
-                  {text.choice(choice, choice.to === undefined ? "" : names(choice.to))}
+                  <span className="fb-choice-text">
+                    <span className="fb-choice-title">{text.choice(choice, choice.to === undefined ? "" : names(choice.to))}</span>
+                    <small>{text.choiceMeta(choice)}</small>
+                  </span>
                 </button>
               ))}
             </div>

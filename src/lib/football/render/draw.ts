@@ -5,7 +5,7 @@
  * The sim knows nothing about animation, so a `Stage` watches it frame by frame: it works out which way each
  * man faces, how far into his stride he is, and when a kick, a slide, a dive or a celebration is under way.
  */
-import { GOAL_HALF, H, MID, W } from "../sim/balance";
+import { aimZones, GOAL_HALF, H, MID, W, type AimTone } from "../sim/balance";
 import type { Match, Moment } from "../sim/types";
 import { ballPixels, BALL_SIZE, figureFor, RUN_CYCLE, SPRITE_H, SPRITE_W, type Pose } from "./sprites";
 
@@ -191,7 +191,7 @@ export class Stage {
     return surface;
   }
 
-  draw(ctx: CanvasRenderingContext2D, m: Match, view: View, moment: Moment | null, hover: number | null, now: number): void {
+  draw(ctx: CanvasRenderingContext2D, m: Match, view: View, moment: Moment | null, hover: number | null, now: number, aim: AimView | null = null): void {
     const dt = this.tick(now);
     this.watch(m, dt);
     ctx.fillStyle = "#3f7a3a";
@@ -246,7 +246,8 @@ export class Stage {
       ctx.restore();
     }
     if (!ballDrawn) drawBall();
-    if (moment) drawMomentLabels(ctx, m, moment, hover, view);
+    if (moment && aim !== null) drawAim(ctx, m, moment, aim, view);
+    else if (moment) drawMomentLabels(ctx, m, moment, hover, view);
   }
 }
 
@@ -318,6 +319,46 @@ function drawPitch(ctx: CanvasRenderingContext2D, view: View): void {
 }
 
 // ---- The moment overlay ----
+
+/** The colours of the aim's stretches, on the pitch and in the panel. */
+export const AIM_COLOURS: Record<AimTone, string> = { wide: "#6b6f82", covered: "#ff7a6a", near: "#f5c542", open: "#6fdc7a" };
+
+/** What the aim needs drawing: where the marker is now, and where the keeper stands. */
+export interface AimView {
+  value: number;
+  centre: number;
+  half: number;
+}
+
+/** The sweeping marker in the goal mouth the shot is going to, and a line to it from the man shooting. */
+function drawAim(ctx: CanvasRenderingContext2D, m: Match, moment: Moment, aim: AimView, view: View): void {
+  const carrier = m.players[moment.carrier];
+  const goalX = carrier.team === 0 ? W : 0;
+  const barX = goalX + (carrier.team === 0 ? 1.7 : -1.7);
+  const thick = Math.max(4, view.scale * 1.1);
+  for (const zone of aimZones(aim.centre, aim.half)) {
+    ctx.fillStyle = AIM_COLOURS[zone.tone];
+    const top = sy(view, MID + zone.from * GOAL_HALF);
+    ctx.fillRect(sx(view, barX) - thick / 2, top, thick, sy(view, MID + zone.to * GOAL_HALF) - top);
+  }
+  const y = sy(view, MID + aim.value * GOAL_HALF);
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = Math.max(1.5, view.sprite);
+  ctx.setLineDash([view.sprite * 3, view.sprite * 2]);
+  ctx.beginPath();
+  ctx.moveTo(sx(view, carrier.x), sy(view, carrier.y));
+  ctx.lineTo(sx(view, goalX), y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#1a1c2c";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(sx(view, barX), y, Math.max(4, view.scale * 1.3), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
 
 function chanceColour(chance: number): string {
   return chance >= 0.65 ? "#6fdc7a" : chance >= 0.35 ? "#f5c542" : "#ff7a6a";

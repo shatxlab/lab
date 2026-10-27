@@ -151,8 +151,61 @@ export interface Project {
   polishes?: boolean
   /** A release the product's own team started (`sim/teams.ts`): it ships by itself when every bar is full. */
   byTeam?: boolean
+  /** The spec a floor's product manager wrote for this release (`sim/cycle.ts`); it names the version and sets how much rework the build needs. */
+  spec?: ReleaseSpec
   /** Client work: who it is for, what it pays on delivery, and when it is due. Null for everything else. */
   contract: ContractTerms | null
+}
+
+/** Which part of a version number a release moves: a patch for upkeep, a minor for a feature or item, a major for something big. */
+export type Bump = 'major' | 'minor' | 'patch'
+
+/** What a finished spec says about the release being built from it. */
+export interface ReleaseSpec {
+  /** The requirement being built, e.g. "Multiplayer". */
+  title: string
+  bump: Bump
+  /** How clear the spec was, 0..100: it sets the rework and the bugs of the build, and a little of the reach it wins. */
+  clarity: number
+}
+
+/** A requirement a floor's product manager proposes for the next release. `id` is a feature id, a roadmap item id or a step. */
+export interface Proposal {
+  kind: 'feature' | 'item' | 'polish' | 'compliance' | 'localise'
+  id: string
+  /** Why the analysts think so, in a sentence, from the product's own numbers. */
+  why: string
+}
+
+/** A floor's spec in the making: the analysts read the product, the product manager writes it, then the player chooses. */
+export interface Spec {
+  phase: 'writing' | 'choose'
+  startDay: number
+  /** Days the writing takes; the choice then waits for the player. */
+  days: number
+  clarity: number
+  /** Set once the writing is done. */
+  proposals: Proposal[]
+  /** The day the choice was put to the player; the product manager picks for them after a while. */
+  askedDay?: number
+}
+
+/** A line in a product's release history. */
+export interface ReleaseNote {
+  version: string
+  /** The requirement, or "" for upkeep. */
+  title: string
+  day: number
+  /** Floor name, for the log. */
+  by: string
+  clarity?: number
+  reachBefore: number
+  reachAfter: number
+  fitBefore: number
+  fitAfter: number
+  qualityBefore: number
+  qualityAfter: number
+  bugsShipped: number
 }
 
 export interface ContractTerms {
@@ -231,6 +284,10 @@ export interface Product {
   /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
   boostUntil: number
   boostUsers: number
+  /** Semantic version of the last release: 1.0.0 at launch; absent in older saves, which start there. */
+  version?: [number, number, number]
+  /** The last releases, newest last (`sim/releases.ts`). */
+  releases?: ReleaseNote[]
   /** Features queued for the next release by the team that looks after it. Absent when none are. */
   nextFeatures?: string[]
   /** Users earlier promotions won over for good, slowly drifting away; part of what the product heads toward. Absent in older saves. */
@@ -375,6 +432,8 @@ export interface Office {
   workstream?: Workstream
   /** The day the team ran out of work, to give the player a few days before the next release starts by itself. */
   idleSince?: number
+  /** The spec this floor's product manager is writing, or waiting on the player to choose from (`sim/cycle.ts`). */
+  spec?: Spec
 }
 
 /**

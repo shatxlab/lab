@@ -6,7 +6,8 @@ import { AbsorbDialog } from '@/components/tycoon/AbsorbDialog'
 import { StoreContext } from '@/components/tycoon/context'
 import { EmployeeDialog } from '@/components/tycoon/EmployeeDialog'
 import { HitDashboard } from '@/components/tycoon/HitDashboard'
-import { RoadmapDialog } from '@/components/tycoon/RoadmapDialog'
+import { ReleasesDialog } from '@/components/tycoon/ReleasesDialog'
+import { SpecPanel } from '@/components/tycoon/SpecPanel'
 import { IndustryTab } from '@/components/tycoon/IndustryTab'
 import { NewProjectDialog } from '@/components/tycoon/NewProjectDialog'
 import { ProductsTab } from '@/components/tycoon/ProductsTab'
@@ -144,8 +145,8 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     store.state.offices[0].productId = 501
     store.state.offices[0].workstream = 'features'
     const host = mount(store, <ProductsTab />)
-    expect(host.textContent).toContain('Focus (optional)')
-    expect(host.textContent).toContain('Next release: nothing queued')
+    expect(host.textContent).toContain('Releases…')
+    expect(host.textContent).not.toContain('Focus')
     act(() => root?.unmount())
     const queue = mount(store, <NewProjectDialog updateOf={501} queue />)
     expect(queue.textContent).toContain('Next release of Anchor')
@@ -206,15 +207,38 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     expect(host.textContent).toContain('Income')
     expect(host.textContent).toContain('keeps')
     act(() => host.querySelector<HTMLButtonElement>('button')!.click())
-    expect(store.dialog.value).toMatchObject({ kind: 'roadmap', productId: 501 })
+    expect(store.dialog.value).toMatchObject({ kind: 'releases', productId: 501 })
   })
 
-  it('the roadmap dialog ranks items, with the ones not on offer yet saying why', () => {
+  it('the releases dialog lists each release with what it did', () => {
     const store = richStore()
-    const host = mount(store, <RoadmapDialog productId={501} />)
-    expect(host.textContent).toContain('Nothing planned')
-    act(() => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Add')!.click())
-    expect(store.state.products[0].roadmap?.length).toBe(1)
+    store.state.products[0].releases = [
+      { version: '1.1.0', title: 'Multiplayer', day: 900, by: 'HQ', clarity: 80, reachBefore: 1000, reachAfter: 1200, fitBefore: 70, fitAfter: 74, qualityBefore: 80, qualityAfter: 82, bugsShipped: 3 },
+    ]
+    const host = mount(store, <ReleasesDialog productId={501} />)
+    expect(host.textContent).toContain('1.1.0: Multiplayer')
+    expect(host.textContent).toContain('reach +20%')
+    expect(host.textContent).toContain('fit +4')
+  })
+
+  it('a finished spec offers requirements to choose from, and choosing starts the build', () => {
+    const store = richStore()
+    const office = store.state.offices[0]
+    office.productId = 501
+    office.spec = {
+      phase: 'choose',
+      startDay: 0,
+      days: 5,
+      clarity: 80,
+      askedDay: store.state.day,
+      proposals: [{ kind: 'polish', id: 'polish', why: '12 open bugs' }],
+    }
+    const host = mount(store, <SpecPanel office={office} product={store.state.products[0]} />)
+    expect(host.textContent).toContain('what should the next release be?')
+    expect(host.textContent).toContain('Stability')
+    act(() => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Build this')!.click())
+    expect(store.state.offices[0].spec).toBeUndefined()
+    expect(store.state.offices[0].project?.spec?.title).toBe('Stability')
   })
 
   it('the move out of the garage lists the other products to keep or sell', () => {

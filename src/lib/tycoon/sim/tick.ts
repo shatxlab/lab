@@ -27,6 +27,7 @@ import { rankingDay, rivalArrives, rivalsDay } from './rivals'
 import { checkStage } from './stages'
 import { moraleDay, trainingDay } from './staff'
 import type { GameState, SimEvent } from './types'
+import { specDay } from './cycle'
 import { teamDay } from './teams'
 import { workDay } from './work'
 
@@ -42,6 +43,7 @@ export function advanceDay(state: GameState): void {
   fixesDay(state)
   workDay(state)
   teamDay(state)
+  specDay(state)
   rivalsDay(state)
   nemesisDay(state)
   deepWorkDay(state)

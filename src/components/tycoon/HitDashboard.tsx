@@ -2,10 +2,9 @@ import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { formatCount, formatMoney } from '@/lib/tycoon/format'
 import { DAYS_PER_MONTH } from '@/lib/tycoon/sim/balance'
 import { fitPressure, retention, totalPressure } from '@/lib/tycoon/sim/fit'
-import { WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
 import { inGarage, officeName } from '@/lib/tycoon/sim/offices'
-import { DEFAULT_WORKSTREAM } from '@/lib/tycoon/sim/teams'
-import { WORKSTREAMS, type Workstream } from '@/lib/tycoon/sim/types'
+import { floorCycle } from '@/lib/tycoon/sim/cycle'
+import { formatVersion, versionOf } from '@/lib/tycoon/sim/releases'
 import { productIncome } from '@/lib/tycoon/sim/economy'
 import { agentEffects } from '@/lib/tycoon/sim/agents'
 import { companionEffects, companionsOf, freeSlots } from '@/lib/tycoon/sim/companions'
@@ -35,6 +34,7 @@ export function HitDashboard() {
   const worst = (Object.keys(CAUSES) as (keyof typeof CAUSES)[]).reduce((a, b) => (pressure[b] > pressure[a] ? b : a))
   const kept = Math.round(retention(hit, companionEffects(state).retention + agentEffects(state).churn) * 100)
   const eu = usersIn(hit, 'eu')
+  const latest = hit.releases?.at(-1)
   const loadTone = load >= 1 ? 'bad' : load >= 0.8 ? 'warn' : 'good'
 
   return (
@@ -45,7 +45,7 @@ export function HitDashboard() {
           {getProductType(hit.productTypeId).name} · {formatCount(hit.users)} {getProductType(hit.productTypeId).userNoun}
           {eu > 0 && ` (${formatCount(eu)} in Europe)`}
         </span>
-        <button onClick={() => store.openDialog({ kind: 'roadmap', productId: hit.id })}>Roadmap…</button>
+        <button onClick={() => store.openDialog({ kind: 'releases', productId: hit.id })}>{formatVersion(versionOf(hit))} · Releases…</button>
       </div>
       <div className="hit-dash-grid">
         <div>
@@ -108,19 +108,21 @@ export function HitDashboard() {
         </small>
       )}
       <div className="hit-dash-floors">
+        {latest && (
+          <small>
+            <span className="muted">Last release:</span> <strong>{latest.version}{latest.title && ` ${latest.title}`}</strong>{' '}
+            <span className={latest.reachAfter >= latest.reachBefore ? 'good' : 'bad'}>
+              reach {Math.round((latest.reachAfter / Math.max(1, latest.reachBefore) - 1) * 100) >= 0 ? '+' : ''}
+              {Math.round((latest.reachAfter / Math.max(1, latest.reachBefore) - 1) * 100)}%
+            </span>
+          </small>
+        )}
         {state.offices
           .filter((o) => o.kind === 'office' && o.productId === hit.id)
           .map((office) => (
-            <label key={office.id} title={WORKSTREAM_INFO[office.workstream ?? DEFAULT_WORKSTREAM].blurb}>
-              <span className="muted">{officeName(state, office)} focus</span>{' '}
-              <select value={office.workstream ?? DEFAULT_WORKSTREAM} onChange={(e) => store.setWorkstream(office.id, e.target.value as Workstream)}>
-                {WORKSTREAMS.map((w) => (
-                  <option key={w} value={w}>
-                    {WORKSTREAM_INFO[w].name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <small key={office.id} className="muted">
+              {officeName(state, office)}: {floorCycle(state, office)}
+            </small>
           ))}
       </div>
       <small className="muted">

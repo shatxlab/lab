@@ -1,5 +1,4 @@
 import { getProductType } from '@/lib/tycoon/data/productTypes'
-import { WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
 import { OVERSHOOT_CAP, PROJECT_SIZES } from '@/lib/tycoon/sim/balance'
 import { contractBalance } from '@/lib/tycoon/sim/contracts'
 import { projectQuality } from '@/lib/tycoon/sim/project'
@@ -9,7 +8,9 @@ import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { formatMoney } from '@/lib/tycoon/format'
 import { useGame, useOffice, useStore } from './context'
 import { cssVars } from './style'
-import { DEFAULT_WORKSTREAM, nextReleaseDay, nextReleasePlan, ownedProduct } from '@/lib/tycoon/sim/teams'
+import { SpecPanel } from './SpecPanel'
+import { ownedProduct } from '@/lib/tycoon/sim/teams'
+import { runsCycle } from '@/lib/tycoon/sim/cycle'
 
 function Bar({ project, discipline }: { project: Project; discipline: Discipline }) {
   const progress = project.progress[discipline]
@@ -76,15 +77,14 @@ export function ProjectPanel() {
 
   if (!project) {
     const owned = ownedProduct(state, office)
+    if (owned && office.spec) return <SpecPanel office={office} product={owned} />
     return (
       <section className="project idle">
         <span className="muted">
           {owned && office.kind === 'office'
-            ? `Looks after ${owned.name} (${WORKSTREAM_INFO[office.workstream ?? DEFAULT_WORKSTREAM].name}): ${
-                nextReleaseDay(state, office, owned) === Number.MAX_SAFE_INTEGER
-                  ? `${nextReleasePlan(state, office, owned)}.`
-                  : `next, ${nextReleasePlan(state, office, owned)} in ${Math.max(0, nextReleaseDay(state, office, owned) - state.day)} days, unless you give the team something else.`
-              }`
+            ? runsCycle(state, office)
+              ? `${owned.name}: the analysts are about to read the product and write the next spec.`
+              : `${owned.name} has no analyst on this floor, so the team only keeps it fresh. Hire an analyst, and a product manager to lead, to write specs.`
             : office.kind === 'cafe'
               ? 'Nothing on the go. Small jobs for clients pay for the coffee, and then for a garage.'
               : 'No project in progress. The team is burning salary.'}

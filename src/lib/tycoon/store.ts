@@ -14,6 +14,7 @@ import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, inGarage, moveOut, moveToGarage, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { foundStudio } from '@/lib/tycoon/sim/founding'
+import { chooseRequirement, discardSpec } from '@/lib/tycoon/sim/cycle'
 import { setRoadmap } from '@/lib/tycoon/sim/roadmap'
 import { assignProduct, queueFeatures, setWorkstream } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
@@ -45,7 +46,7 @@ export type Dialog =
   | { kind: 'new-project'; officeId?: number; updateOf?: number; grow?: boolean }
   /** Picks the features a product's team adds in its next release. */
   | { kind: 'queue'; productId: number }
-  | { kind: 'roadmap'; productId: number }
+  | { kind: 'releases'; productId: number }
   | { kind: 'ship'; officeId: number }
   | { kind: 'ready'; officeId: number }
   | { kind: 'event' }
@@ -168,6 +169,10 @@ export interface Store {
   /** What a floor's team does with its product. */
   setWorkstream(officeId: number, workstream: Workstream): Result
   setRoadmap(productId: number, itemIds: readonly string[]): Result
+  /** Picks which requirement of a floor's spec the team builds. */
+  chooseRequirement(officeId: number, index: number): Result
+  /** Sends a floor's spec back to the analysts. */
+  discardSpec(officeId: number): Result
   /** Queues the features of a product's next release. */
   queueFeatures(productId: number, featureIds: readonly string[]): Result
   /** Makes a senior analyst the product manager of their office. */
@@ -550,6 +555,14 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     setWorkstream(officeId, workstream) {
       return cue(changed(logged(() => decisions.setWorkstream(state, officeId, workstream), () => setWorkstream(state, officeId, workstream))), 'click')
+    },
+
+    chooseRequirement(officeId, index) {
+      return cue(changed(logged(() => decisions.chooseRequirement(state, officeId, index), () => chooseRequirement(state, officeId, index))), 'click')
+    },
+
+    discardSpec(officeId) {
+      return cue(changed(logged(() => decisions.discardSpec(state, officeId), () => discardSpec(state, officeId))), 'click')
     },
 
     setRoadmap(productId, itemIds) {

@@ -20,6 +20,7 @@ import {
   REPUTATION_DIVISOR,
   REPUTATION_MAX,
   REPUTATION_NEUTRAL_QUALITY,
+  SPEC_REACH,
   UPDATE_MAX_FEATURES,
   UPDATE_REPUTATION_SHARE,
   UPDATE_TARGET_SHARE,
@@ -32,8 +33,9 @@ import { releaseFit, takeoffBlocker, takeOff, undiscovered } from './fit'
 import { campaignCost, growBlocker, localiseBlocker, newProductBlocker, nextSize, startBoost, updateBlocker } from './lifecycle'
 import { marketDemand } from './market'
 import { freshProductName } from './naming'
-import { inGarage, resolveOffice, teamOf } from './offices'
+import { inGarage, officeName, resolveOffice, teamOf } from './offices'
 import { bugProneness, euShareOf, regionScale, releaseBugs, settledUsers } from './products'
+import { addNote, bumpFor, bumped, formatVersion, versionOf } from './releases'
 import { moraleFromRelease } from './staff'
 import { statMultiplier } from './modifiers'
 import { pick, randRange } from './rng'
@@ -50,6 +52,7 @@ import {
   type ProductType,
   type Project,
   type ProjectSize,
+  type ReleaseNote,
   type Result,
   type Skills,
   type Tier,
@@ -498,7 +501,10 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   // Hidden at first: users find them over the following weeks, and a well-made product has fewer.
   const bugs = releaseBugs(project) * bugProneness(product.quality)
   const fit = updateFit(state, product, project, quality)
+  const before = { reach: product.reach, fit: product.fit ?? fit, quality: product.quality }
   product.reach = reachAfterUpdate(state, product, project, quality)
+  // A clear spec finds more people for the same work, a vague one fewer.
+  if (project.spec) product.reach *= 1 + (SPEC_REACH * (project.spec.clarity - 50)) / 50
   product.fit = fit
   product.peakFit = fit
   if (project.pivotsTo) pivot(state, product, project.pivotsTo)
@@ -526,6 +532,23 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   reputationFromRelease(state, project, quality, UPDATE_REPUTATION_SHARE)
   moraleFromRelease(state, quality, UPDATE_REPUTATION_SHARE)
   maybeTakeOff(state, product)
+  const bump = project.spec?.bump ?? bumpFor(project.featureIds.length, project.itemId !== undefined)
+  product.version = bumped(versionOf(product), bump)
+  const note: ReleaseNote = {
+    version: formatVersion(product.version),
+    title: project.spec?.title ?? '',
+    day: state.day,
+    by: officeName(state, office),
+    ...(project.spec ? { clarity: Math.round(project.spec.clarity) } : {}),
+    reachBefore: before.reach,
+    reachAfter: product.reach,
+    fitBefore: before.fit,
+    fitAfter: product.fit ?? fit,
+    qualityBefore: before.quality,
+    qualityAfter: product.quality,
+    bugsShipped: bugs,
+  }
+  addNote(product, note)
   office.project = null
   state.events.push({ type: 'shipped', productId: product.id, update: true, reach: product.reach, bugs, quality })
   return OK

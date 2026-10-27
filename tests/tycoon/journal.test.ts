@@ -109,6 +109,7 @@ describe('the run log and launches', () => {
     expect(month.data).toMatchObject({ hitName: 'Atlas', hitCapacity: 600_000, hitBuilt: ['load_balancer'], hitRoadmap: ['cdn'], secondSlotsFree: 2 })
     expect(month.data!.hitLoadPercent).toBeGreaterThan(50)
     expect(month.data!.hitPressure).toContain('stale')
-    expect(month.data!.floors).toEqual(['HQ: scale'])
+    // The founder reads the product, so the floor works in cycles and may already be building what its spec chose.
+    expect(month.data!.floors).toEqual([expect.stringMatching(/^HQ: scale/)])
   })
 })

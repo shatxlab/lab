@@ -6,7 +6,9 @@ import { logEntry } from './journal'
 import { getOffice, hasEuropeOffice, officeName, productInWork, teamOf } from './offices'
 import { euShareOf, interest, lastReleaseDay } from './products'
 import { shipProject, startLocalisation, startUpdate } from './project'
+import { cycleDay } from './cycle'
 import { companionsOf } from './companions'
+import { describeRelease } from './releases'
 import { nextStep } from './roadmap'
 import { isReady } from './scoring'
 import { featureLock } from './unlocks'
@@ -193,9 +195,12 @@ export function teamDay(state: GameState): void {
       delete office.idleSince
       if (project.byTeam && project.kind === 'update' && isReady(project)) {
         const name = project.name
+        const owner = ownedProduct(state, office)
         if (shipProject(state, undefined, office.id).ok) {
-          state.events.push({ type: 'notice', text: `${officeName(state, office)} shipped a release of ${name}.` })
-          logEntry(state, 'team.release', `${officeName(state, office)} shipped ${name}`, { office: officeName(state, office) })
+          const note = owner?.releases?.at(-1)
+          const text = owner && note ? describeRelease(owner, note) : `a release of ${name}`
+          state.events.push({ type: 'notice', text: `${officeName(state, office)} shipped ${text}.` })
+          logEntry(state, 'team.release', `${officeName(state, office)} shipped ${text}`, { office: officeName(state, office) })
         }
       }
       continue
@@ -203,6 +208,8 @@ export function teamDay(state: GameState): void {
     office.idleSince ??= state.day
     const product = ownedProduct(state, office)
     if (!product || office.kind !== 'office' || teamOf(state, office).length === 0 || productInWork(state, product.id, true)) continue
+    // A floor with analysts works in cycles (`sim/cycle.ts`): they write a spec and the player chooses what it builds.
+    if (cycleDay(state, office, product)) continue
     if (state.day < nextReleaseDay(state, office, product)) continue
     startRelease(state, office, product)
   }

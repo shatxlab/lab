@@ -10,6 +10,7 @@ import { title } from './careers'
 import { describePendingEvent } from './events'
 import { nextSize, promotionCost, promotionEffect, promotionReturn } from './lifecycle'
 import { buildingName, newOfficeCost, officeName, officesIn, getOffice, openableRegions } from './offices'
+import { describeProposal } from './cycle'
 import { ownedProduct } from './teams'
 import { projectBudget, projectFit, projectQuality, projectTarget, updateFit } from './project'
 import { acquisitionPrice } from './rivals'
@@ -205,6 +206,17 @@ export const decisions = {
   setWorkstream(state: GameState, officeId: number, workstream: Workstream): Decision {
     const product = ownedProduct(state, getOffice(state, officeId)!)
     return ['team.workstream', `${officeLabel(state, officeId)}: ${WORKSTREAM_INFO[workstream].name}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), workstream }]
+  },
+
+  chooseRequirement(state: GameState, officeId: number, index: number): Decision {
+    const office = getOffice(state, officeId)
+    const product = office && ownedProduct(state, office)
+    const proposal = office?.spec?.proposals[index]
+    return ['team.spec.choice', `${officeLabel(state, officeId)}: ${proposal ? describeProposal(proposal).title : 'a requirement'}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), requirement: proposal?.id ?? '', clarity: office?.spec?.clarity ?? 0 }]
+  },
+
+  discardSpec(state: GameState, officeId: number): Decision {
+    return ['team.spec.discard', `${officeLabel(state, officeId)} sent the spec back`, { office: officeLabel(state, officeId) }]
   },
 
   setRoadmap(state: GameState, productId: number, itemIds: readonly string[]): Decision {

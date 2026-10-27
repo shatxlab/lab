@@ -1,5 +1,5 @@
 import { AbsorbDialog } from './AbsorbDialog'
-import { RoadmapDialog } from './RoadmapDialog'
+import { ReleasesDialog } from './ReleasesDialog'
 import { useSignal, useStore } from './context'
 import { BreakoutDialog, EraDialog, GameOverDialog, OfferDialog, ReadyDialog, ResultDialog, StageDialog } from './dialogs'
 import { EmployeeDialog } from './EmployeeDialog'
@@ -17,8 +17,8 @@ export function DialogHost() {
   switch (dialog?.kind) {
     case 'new-project':
       return <NewProjectDialog updateOf={dialog.updateOf} officeId={dialog.officeId} grow={dialog.grow} />
-    case 'roadmap':
-      return <RoadmapDialog productId={dialog.productId} />
+    case 'releases':
+      return <ReleasesDialog productId={dialog.productId} />
     case 'queue':
       return <NewProjectDialog updateOf={dialog.productId} queue />
     case 'ship':

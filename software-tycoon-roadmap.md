@@ -153,6 +153,84 @@ Phases, each playable and tested before the next. Phase 1 is built (uncommitted)
      the friend and the agents cover the stage for now. Ask the player after they have played.
    - Bot over 12 seeds: IPO in 6.0 to 9.0 years (the bot uses neither deep work nor the checkpoint beyond the first choice).
 
+## The release cycle: the hit stage as the café's craft loop (2026-10-27; first slice built, uncommitted)
+
+The player rejected "seasons" (it would make the game something else) and a layout-only fix. The problem is the *gameplay* of
+the hit stage: it is a to-do list you watch. It should feel like the café and the garage: people you know, a thing being made,
+bars filling, a result you can see. The stage's verb is **Improve the product you keep**, through the team's own cycle.
+
+### The loop (per floor)
+Each floor is a small product team with a **product manager** (lead) and **at least one analyst**. It runs a cycle, and the
+cycle ends in a named release ("Russia 1.1", "Payments 1.2") that is the payoff.
+1. **Discovery** (PM + analysts). Analysts turn the product's data (the funnel's leaks, user feedback, rival moves,
+   complaints) into findings; the PM turns findings into a **spec**: a short written document with a few requirements
+   (e.g. "Russian localisation", "fewer drop-offs at sign-up", "faster checkout"). The spec's **clarity** (0 to 100) comes from
+   analyst skill, insight spent and the PM's skill. The player sees the spec being written as text, and may steer it: choose
+   among 2 or 3 proposed requirements, cut scope, or send it back for more research.
+2. **Build** (design, developers, QA: the existing bars). The spec's requirements set the bars' targets. A clear spec means
+   less rework; a vague one means features built wrong (bugs, lost days, mid-cycle "the spec changed" events).
+3. **Release** ("Russia 1.1"). A release card shows what it did: new users, fit change, quality, bugs and income per day,
+   each against what the spec promised. Good discovery plus good build brings new users; a clear spec that was built badly
+   disappoints in a different way than a vague one built well. The card is the thing the player wants to see.
+4. The next cycle starts, with what the last release taught.
+
+### What the player does (few actions, each with a visible effect)
+- Hires and grows the people: the PM and analyst matter here, as the garage's builders did (careers already make a senior
+  analyst a PM: `sim/careers.ts`).
+- At discovery: reads the findings and picks the bet (one decision per cycle, not a queue).
+- Mid-build: the existing checkpoints (alpha, first users) as choices; crunch or not.
+- At release: ships, and reads the card.
+- Everything else (which row, which floor, which focus) goes. No roadmap queue, no workstream selector, no per-row ordering.
+
+### What changes in the code (sketch; to be checked before building)
+- A floor needs a PM and an analyst to run a cycle; without them it can only do maintenance (a worse, slower cycle).
+- New `Spec` on the office (requirements, clarity, written text) produced during a Discovery phase of a few days to weeks.
+- `Project` gets its requirements from the spec instead of from `nextStep`/`roadmap`. Workstream items stay as the *catalogue* of
+  requirements the PM can propose (their effects are unchanged), so the balance work in `data/workstreams.ts` is kept.
+- `HitDashboard` shrinks to: product vitals, each floor's cycle (discovery, build, release with its version name), the
+  rival line. The roadmap dialog becomes the spec/release history. Floor focus selectors, `setWorkstream` and the roadmap order
+  go away (saves v9: the roadmap becomes the PM's backlog).
+- Operations that run themselves (servers, fixes, companions) become requirements the PM proposes when the data calls for
+  them ("servers 92% full: scale"), instead of rows the player queues.
+
+### Decided with the player (2026-10-27)
+- The player *chooses* among proposed requirements; they come from the product, so a game and a dev tool get different journeys.
+- On the first floor the player is the PM (the founder analyst becomes the PM when the hit lands, as before).
+- Semantic versions, and each release also carries its requirement's name ("Atlas 1.2.0: Multiplayer"). Minor releases exist as
+  patches: upkeep and polishing.
+
+### Built (first slice, 2026-10-27; saves unchanged, all fields optional)
+- `sim/cycle.ts`: a floor with an analyst or PM (not a CEO) runs a cycle; one without only keeps the product fresh (the old
+  `releasePlan`, which no longer has a UI). After `TEAM_IDLE_DAYS` idle the floor *writes a spec* for `specDays(clarity)` days
+  (4 to 12), then puts `SPEC_PROPOSALS` (3) requirements to the player (`Office.spec`). If they do not choose in
+  `SPEC_DECIDE_DAYS` (10) the PM builds the first. "Send back" re-reads for a few more days.
+- *Clarity* (0 to 100, `clarityOf`): 25 + 0.4 x best analysis + a PM (10 + 0.2 x their analysis) + 6 per extra reader (up to 2);
+  capped at 70 with no PM. It sets the spec's writing time, how well the proposals match the product's numbers (noise on the
+  weights), the rework (up to +60% on the targets) and the bugs (up to +80%) of the build, and the reach of the release
+  (+/-15%, neutral at 50). The constants are in `balance.ts` under "The release cycle".
+- *Proposals* (`propose`, `candidates`): the best feature always gets a place (features are per product type: Multiplayer
+  for games, CLI for dev tools, weighted by what users expect and what the audience loves), then roadmap items weighted by
+  the numbers (servers 92% full -> scale first; open bugs -> quality; fit 70+ -> growth), the polish release, and Europe's two
+  steps. All the old `WORK_ITEMS` and their effects are kept as the catalogue.
+- *Versions and notes* (`sim/releases.ts`): `Product.version` (starts 1.0.0) and `Product.releases` (last 30): reach, fit and
+  quality before and after, and the bugs shipped. A feature or item is a minor, a big item (work 3+), a companion or Europe
+  is a major, upkeep and polish a patch. A team release's notice reads "Atlas 1.2.0 "Multiplayer": reach +12%, fit +3".
+- UI: `SpecPanel` (writing bar; the three requirement cards), `ReleasesDialog` (replaces the roadmap dialog, kind `releases`),
+  the dashboard shows the last release and each floor's state (`floorCycle`) instead of the focus selectors; the products tab
+  lost Focus and Roadmap. Tests: `tests/tycoon/cycle.test.ts`.
+- Bot, seeds 1 to 3: the IPO at 5.9 to 7.7 years (the bot never chooses, so the PM picks; its roadmap and focus are ignored).
+
+### Still to do
+- Look at it in the browser (the build had no browser driver; only render tests). Check the bottom stack on a phone: the spec
+  cards sit in the project panel's place, so they scroll inside its 34dvh cap.
+- Dead weight: `setRoadmap`, `setWorkstream`, `Product.roadmap`, `Office.workstream` and the bot's use of them (only the no-analyst
+  fallback reads them). Remove with a save bump once the cycle is liked.
+- Make the discovery richer: spend insight to dig deeper (more clarity or a fourth proposal), findings text, mid-build "the spec
+  changed" events when clarity is low, a release card that shows up after the users arrive (reach is the immediate part).
+- The dashboard is still tall (rival, deep work, friend, companions rows): collapse once the loop is settled.
+- The bot should choose by the same rules a player would, and hire analysts per floor.
+- A hiring nudge: a second floor has no analyst until the player hires one; say so where they hire.
+
 ## Guide for the next session (written 2026-10-23, before the player's first playthrough of phases B to E)
 
 Read this first if you are picking the game up after the player has played. It says what to read in a run log, which knob

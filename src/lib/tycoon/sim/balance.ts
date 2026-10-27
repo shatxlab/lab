@@ -748,3 +748,27 @@ export const DEEP_CONTRACTOR_DAYS = 8
 /** Asking your friend to pair needs at least this bond, and strengthens it by this much. */
 export const DEEP_FRIEND_BOND_MIN = 50
 export const DEEP_FRIEND_BOND_GAIN = 4
+
+/* The release cycle (`sim/cycle.ts`): analysts and the product manager write a spec, then the team builds it. */
+/** Days a spec takes to write at no clarity; clearer teams are faster, down to the minimum. */
+export const SPEC_BASE_DAYS = 12
+export const SPEC_MIN_DAYS = 4
+/** Days the player has to choose before the product manager picks for them. */
+export const SPEC_DECIDE_DAYS = 10
+/** How many requirements a spec proposes. */
+export const SPEC_PROPOSALS = 3
+/** A vague spec makes the build this share bigger and its bugs this share likelier, at clarity 0; none at clarity 100. */
+export const SPEC_REWORK = 0.6
+export const SPEC_BUGS = 0.8
+/** A release's reach moves by up to this share from the spec: more for a clear one, less for a vague one (clarity 50 is neutral). */
+export const SPEC_REACH = 0.15
+/** Clarity: a base, plus this share of the sharpest analyst's skill, of the product manager's, and a bonus for a second pair of eyes. */
+export const CLARITY_BASE = 25
+export const CLARITY_ANALYST = 0.4
+export const CLARITY_PM = 0.2
+export const CLARITY_PM_PRESENT = 10
+export const CLARITY_EXTRA_ANALYST = 6
+/** Without a product manager a floor's specs are never clearer than this. */
+export const CLARITY_NO_PM_CAP = 70
+/** How many release notes a product keeps. */
+export const RELEASE_NOTES_KEPT = 30

@@ -1,3 +1,4 @@
+import { floorCycle } from '@/lib/tycoon/sim/cycle'
 import { officeName, teamOf } from '@/lib/tycoon/sim/offices'
 import { overallProgress } from '@/lib/tycoon/sim/scoring'
 import type { GameState, Office } from '@/lib/tycoon/sim/types'
@@ -8,7 +9,7 @@ import { cssVars } from './style'
 /** What an office is up to, in a couple of words. */
 function status(state: GameState, office: Office): string {
   const project = office.project
-  if (!project) return teamOf(state, office).length === 0 ? 'empty' : 'idle'
+  if (!project) return office.spec ? floorCycle(state, office).replace('spec ready: choose what to build', 'choose!') : teamOf(state, office).length === 0 ? 'empty' : 'idle'
   const done = `${Math.round(overallProgress(project) * 100)}%`
   if (project.kind === 'contract') return `client · ${done}`
   return `${project.name} · ${done}`

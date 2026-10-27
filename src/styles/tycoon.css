@@ -1871,3 +1871,27 @@
   gap: 4px 14px;
   margin-top: 6px;
 }
+
+/* ---- spec: the requirements a floor's product manager proposes ---- */
+
+.tycoon-root .spec-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.tycoon-root .spec-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  font-size: 13px;
+}
+
+.tycoon-root .spec-card button {
+  margin-top: auto;
+  align-self: flex-start;
+}

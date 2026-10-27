@@ -207,27 +207,6 @@ export const TOOLS: readonly ToolEntry[] = [
         "Build towers along the king's road and hold the gate: archers, catapults, frost mages and ballistas against a marching horde. Free, offline, made for phones.",
     },
   },
-  {
-    id: "football",
-    path: "/football",
-    category: "games",
-    files: {
-      en: "single-player · made for phones · saves locally",
-      ru: "одиночная · для телефона · сохраняется локально",
-    },
-    title: { en: "Sunday League", ru: "Воскресная лига" },
-    description: {
-      en: "Eight-a-side pixel football: your lads play the match and you make the calls that decide it. Shoot, pass or run with the ball, and read the odds.",
-      ru: "Пиксельный футбол «восемь на восемь»: ребята играют матч, а решающие моменты решаете вы. Бейте, отдавайте пас или рвитесь с мячом и читайте шансы.",
-    },
-    keywords:
-      "football soccer game pixel match casual rpg sports eight a side 8v8 pass shoot goal футбол игра пиксель матч спорт казуальная гол пас удар",
-    seo: {
-      title: "Sunday League — pixel football for phones",
-      description:
-        "Eight-a-side pixel football for phones: your side plays the match, you call the moments that decide it. Free, offline, no sign-up.",
-    },
-  },
 ];
 
 export function toolHref(tool: ToolEntry): string {

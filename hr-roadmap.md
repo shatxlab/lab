@@ -1,7 +1,40 @@
-# HR Department roadmap (working title)
+# HR Department roadmap
 
-The single source of TODOs and design record for the office-coworker games. Nothing is built yet: this file records what
-we decided in the brainstorm so the next session can start without redoing it.
+The single source of TODOs, design record and handoff notes for the office-coworker games. Start with "Status" and "Next
+steps", then read "Guide for the next session" (at the end) before changing anything in `src/lib/roster/` or
+`src/lib/hr/`.
+
+## Status (2026-10-28)
+
+- **Live and public:** <https://shatx.ru/hr/> (dev: `http://127.0.0.1:4321/lab/hr`, the site's base is `/lab`). Listed
+  under Games on the home page (`src/lib/apps/tools.ts`, id `hr`). The user is about to play it on a phone; their
+  feedback is the next input.
+- **Built:** the shared roster (`src/lib/roster/`), the hero run (sim, bot, renderer, page) with 3 fixed starters, run
+  suspend/resume, English and Russian copy.
+- **Not built:** anything that carries over between runs (gold banking, performance reviews, burnout, quitting), the HR
+  loop (hiring), weapon combinations, the panic button, real foe art, the auto-battler.
+- **Commits:** `3ebf673` roster, `2847ae5` sim and bot, `edff191` page and listing (all on `main`, deployed).
+
+## Next steps (start here)
+
+1. **Take the user's phone feedback** on the live run and act on it first. Things already suspected (see "Known
+   rough edges"): foes look small, the floor is dim, starters are uneven, the stick's feel and the run length are
+   untested by a human. Retune with the bot (see the playbook) before adding features.
+2. **Step 4: between runs and the stakes.** Nothing carries over yet: a run's gold, level and kills are shown on the
+   result panel and then dropped. Design, then build:
+   - bank the run's gold in a save (`lab:hr:v1` or in the roster save; decide), and spend it on "performance reviews"
+     that raise a coworker's permanent stats (`Coworker.stats`, `level`, `xp` exist in the roster already);
+   - burnout: a fallen coworker can't be sent out for N days (`Status.burnedOut.until` exists; `RosterSave.day` exists
+     but nothing advances it: decide what a "day" is before the HR loop, e.g. one run = one day);
+   - quitting and the paid "keep them" option stay off (`stakes: false`) until the HR loop exists.
+   **Ask the user first** (see "Open questions for the user"); these are design choices, not defaults.
+3. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
+   reveal quirks, hire / pass / hold, desks, the codex. Then turn `stakes` on and tune the quit chance and the price of
+   keeping someone with the bot (needs the bot to play the meta, not just runs).
+4. **Hero run backlog:** even out the starters (the intern is the weakest, not the easiest), weapon combinations
+   ("evolutions"), the optional panic button, real foe sprites, a falling animation for the hero, an "Overtime"
+   difficulty for desktop.
+5. Later: the auto-battler (Game 3), then the hospital (parked).
 
 ## The idea in one paragraph
 
@@ -24,114 +57,130 @@ and KingsRoad.
 - **Paying to stop a quit is allowed, and expensive.** See "Stakes".
 - **Everything is named `hr`:** route `/hr` (`src/pages/hr.astro`), code in `src/lib/hr/`, the bot in
   `scripts/hr/`, saves under `lab:hr:`. Not "office": `src/lib/focus/office.ts` already means the Focus app's office.
-  "HR Department" stays a working title.
-- **The solutions below to sprites, ids, the sim and bot, run length and starters** were proposed and accepted.
+  "HR Department" is the shown title (EN) / "Отдел кадров" (RU).
+- **The solutions to sprites, ids, the sim and bot, run length and starters** (below) were proposed and accepted.
+- **Made public** on 2026-10-28 at the user's request, to test on prod.
 
-## Shared core: the roster (`src/lib/roster/`, pure, seeded)
+## Shared core: the roster (`src/lib/roster/`, pure, seeded; built)
 
 One module every game here can use. Tycoon's `appearanceFor(id: number)` already gives a person a stable face from an
 id; the roster builds on the same idea.
 
-- A coworker: `id`, name, look (from the id), department, 1 or 2 quirks, rarity, stats, level, state (`active`,
-  `burned out until day N`, `quit`).
+- A coworker (`types.ts`): `id`, name, department, rarity, 1 or 2 quirks, stats, level, xp, status (`active`,
+  `burnedOut` until a day, `quit` on a day).
 - **Ids are numbers**, taken from a `nextId` counter in the save, like Tycoon's `Employee.id`, so `appearanceFor(id)`
-  works unchanged. Candidates are generated from the save's seeded rng, so ids and faces replay.
-- **Departments (built):** Engineering (rubber duck), Finance (spreadsheet), Legal (contract), Sales (business card),
-  IT (server rack), HR (policy binder), Interns (sticky notes). Seven, one per Tycoon shirt ramp, so the shirt
-  tells the department; Facilities waits for an eighth ramp. Each favours one stat. Used for signature weapons now and
-  for synergies in the auto-battler later.
-- **Stats (built):** grit (health), output (damage), hustle (move speed), focus (attack rate), luck (gold, better
-  picks). Small integers around 10; the hero sim turns them into its own numbers.
-- Quirks have an upside and often a downside, in percent ("Caffeinated": hustle +20, damage taken +15; "Steals
-  lunches": gold +20, colleagues' quit chance +5; 13 in `data.ts`). Names and lines go in `src/lib/hr/i18n.ts`, not
-  the data. A codex records every quirk and coworker the player has ever seen.
-- Rarity: common, uncommon, rare, legend (weights 60 / 27 / 10 / 3; more bonus stat points and 2 quirks for rare and
-  up). Legends are the reason to keep interviewing.
-- Save: `lab:roster:v1`, with a tolerant `normalizeSave` like the other games. It carries a `stakes` flag: off until
-  the HR loop exists (see "Starters").
+  works unchanged. `generateCoworker(source)` takes any `{ rng, nextId }` (a `RosterSave` is one) and advances both.
+- **Departments:** Engineering (rubber duck), Finance (spreadsheet), Legal (contract), Sales (business card), IT
+  (server rack), HR (policy binder), Interns (sticky notes). Seven, one per Tycoon shirt ramp, so the shirt tells the
+  department; Facilities waits for an eighth ramp. Each favours one stat (`DEPARTMENTS` in `data.ts`).
+- **Stats:** grit (health), output (damage), hustle (move speed), focus (attack rate), luck (gold). Base 10, +3 on
+  the department's favourite, ±1 jitter, plus rarity bonus points; capped at 99.
+- **Quirks:** 13 in `data.ts` (`QUIRKS`), each a set of percent effects on a stat or on gold, xp, damage taken, own
+  quit chance, colleagues' quit chance, salary. Every quirk has an upside (a test enforces it). Names and the
+  "+20% speed" lines are copy, in `src/lib/hr/i18n.ts` (`quirkLine`).
+- **Rarity:** common / uncommon / rare / legend, weights 60 / 27 / 10 / 3, bonus points 2 / 5 / 9 / 14, quirks 1 / 1 /
+  2 / 2 (`RARITY`).
+- **Starters** (`STARTERS`, `starters()`): ids 1 to 3, each from its own fixed seed, so they never change: Kenji Dubois
+  (Interns, steals lunches), Noor Kowalski (Finance, clock-watcher), Casey Okafor (IT, networker).
+- **Look:** `rosterAppearance(id, department)` (`appearance.ts`): sprite and hair from `appearanceFor(id)`, shirt from
+  the department.
+- **Save** `lab:roster:v1` (`save.ts`): `rng`, `nextId`, `day`, `stakes`, `coworkers` (quit ones stay, as a gap on the
+  desk), `codex` (`coworkers` seen and `quirks` seen). `defaultSave(seed)` holds the starters; `normalizeSave` repairs
+  field by field, drops coworkers without an id or with a duplicate id, and pushes `nextId` past every id in use;
+  `recordSeen` adds to the codex once. The page writes the save straight back on first visit, so a new player keeps
+  the roster (and rng seed) they were dealt.
 
-## Game 1: the hero run (`/hr`)
+## Game 1: the hero run (`/hr`; built)
 
-- **Controls:** drag or virtual stick to move. The hero attacks on its own. A single optional active button (a
-  "panic button" on cooldown) at most; not built yet.
-- **A run:** about **6 minutes** on normal, so it fits a phone. As tuned: the Middle Manager (mini-boss) at 2:30,
-  the Auditor at 5:00, and **the audit closes at 7:30**: if the Auditor still stands, the run is lost. A typical win
-  lands around 6:00. Level-ups offer 3 picks (new weapon, upgrade, passive), as in Slay the Spire / Vampire Survivors;
-  up to 4 weapons and 4 passives. A longer "Overtime" difficulty (about 10 minutes) can come later for desktop.
-- **Signature weapons** by department: the accountant throws spreadsheets (arc, piercing), the intern spams sticky
-  notes (fast, weak, homing), the sysadmin drops server racks (area), HR itself waves a policy binder (close
-  knockback). Weapons level within a run (to 6). **Combining weapons is not built yet.**
-- **Enemies:** Reply-All Storm (swarm), Monday Blob (slow tank), Meeting Invite (summons more), Printer Jam (turret
-  that blocks lanes), the Auditor (boss). Each needs a `FOES` entry, a roster rule per wave, a drawing, and a way the
-  bot can see it.
-- **Between runs:** gold and "performance review" XP raise the coworker's permanent stats and unlock a skill tree.
-- **Suspend and resume:** the run state is plain JSON. Save it to `lab:hr:run:v1` on `visibilitychange` / `pagehide`
-  and at every level-up, and resume it on load. Closing the tab just before dying therefore does not dodge the quit
-  chance: reopening resumes the same moment. **Abandon** counts as falling.
+- **Controls:** a floating stick (it appears where the thumb lands), or arrow keys / WASD. The hero attacks on its
+  own. Escape pauses. An optional "panic button" is still only an idea.
+- **A run:** about **6 minutes** on normal. The Middle Manager (mini-boss) at 2:30, the Auditor at 5:00, and **the
+  audit closes at 7:30**: if the Auditor still stands, the run is lost. Beating the Auditor wins. A typical bot win
+  lands around 6:00. Level-ups offer 3 picks (new weapon, weapon level, passive, or a heal / gold when the build is
+  full); up to 4 weapons (level 6 max) and 4 passives (level 5 max).
+- **Weapons** (one per department; the starter carries its department's): sticky notes (homing), spreadsheet
+  (thrown at the nearest foe, pierces), server rack (lands on a nearby foe after a delay, area), policy binder (swing
+  around the hero with knockback), rubber duck (orbiting), fine print / contract (slowing, damaging aura), business
+  cards (a fan thrown the way the hero faces). **Combining weapons is not built.**
+- **Passives:** coffee (cooldowns), gym membership (health), sneakers (speed), lanyard (gem magnet), mentor (xp),
+  ergonomic chair (damage taken), power tie (damage).
+- **Foes:** Reply-All Storm (swarm), Monday Blob (slow tank, from 1:15), Meeting Invite (summons reply-alls, from
+  1:30), Printer Jam (stationary turret that blocks the hero and spits toner, from 2:00, at most 3), the Middle Manager
+  (charges) and the Auditor (rings of red tape, cc's a chain of reply-alls every third ring).
+- **Suspend and resume (built):** the run is plain JSON, saved to `lab:hr:run:v1` when the page is hidden or closed,
+  and whenever a level-up offer appears; the menu then offers "Continue the run". Closing the tab just before dying
+  therefore does not dodge the fall. **Walk out** (pause → Walk out) counts as falling. The save is cleared when a run
+  ends.
+- **Between runs (not built):** gold and "performance review" XP should raise the coworker's permanent stats and
+  unlock a skill tree. Today the result panel shows time, level, kills and gold, and nothing is kept.
 
 ### Starters
 
-The hero run ships before the HR loop, with **3 fixed starters** made by the real roster generator from fixed seeds:
-the Intern (sticky notes, easy), the Accountant (spreadsheets, piercing), the Sysadmin (server rack, area).
-Performance reviews and the skill tree work from day one; **burnout is on, quitting is off** (`stakes: false`) until
-the HR loop lands. The starters are ordinary coworkers in the save, so the HR loop needs no save migration.
+The hero run shipped before the HR loop, with the **3 fixed starters**. The plan for them: performance reviews from day
+one, **burnout on, quitting off** (`stakes: false`) until the HR loop lands. The starters are ordinary coworkers in the
+save, so the HR loop needs no save migration. As of now none of that meta exists (see Next steps, step 4).
 
 ### Sim and bot
 
-As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, `src/lib/hr/render/` on a plain canvas.
+As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, rendered on a plain canvas by `src/lib/hr/render/`.
 
-- **Built:** `types.ts`, `balance.ts` (every number), `grid.ts`, `hero.ts` (stats and quirks to numbers),
-  `picks.ts`, `run.ts`; `src/lib/hr/snapshot.ts` saves and resumes a run. Tests in `tests/hr/`.
-- **API**, on a fixed timestep like KingsRoad's `STEP`: `step(run, input: { dx, dy })` with the stick normalised,
-  `choose(run, pick)` while `run.picks` is set (`step` is a no-op until then), and `abandon(run)`.
-- **Arena:** a walled office floor about 3×3 screens with a camera that follows the hero; not endless, so the camera
-  and the bot stay simple. No desks to path around in v1; the Printer Jam is the only blocker.
+- **Files:** `types.ts`, `balance.ts` (every number), `grid.ts`, `hero.ts` (stats and quirks to numbers), `picks.ts`,
+  `run.ts`; `src/lib/hr/snapshot.ts` saves and resumes a run.
+- **API**, on a fixed timestep `STEP = 1/60`: `createRun(coworker, seed)`, `step(run, { dx, dy })` with the stick at
+  most length 1, `choose(run, index)` while `run.picks` is set (`step` does nothing until then), `abandon(run)`.
+- **Arena:** a walled 1400 × 1400 floor; the camera follows the hero and stops at the walls. No obstacles but printers.
 - **Spatial grid:** 64-unit cells rebuilt every step, for projectile-vs-foe, foe-vs-hero and foe separation.
-- **Caps:** 300 foes alive, 200 projectiles; above 150 XP gems, gems merge into bigger ones.
-- **Bot** (`scripts/hr/playthrough.ts`, usage in its header like KingsRoad's): every 6 ticks it tries 16
-  directions, looks half a second ahead at where each would take it and where the foes would be, and goes the way
-  with the least danger and the most gems, clear of the walls and close to its last heading. (A potential field was
-  tried first and played worse than walking in a circle.) Picks follow a fixed priority list, like KingsRoad's
-  `PLAN`. Prints per seed: how the run ended and when, level, kills, gold, damage by weapon; per starter, the win
-  rate and the share of damage taken from each foe.
-- **Target:** the bot wins about 50–60% on normal. It is sensible but unhurried; a human should do better.
-- **As tuned (30 seeds per starter):** 53% overall, a typical win at 6:04 (5:37 to 7:05). Deaths are spread across
-  every foe. By starter: Finance 70%, IT 50%, Interns 40%, although the roadmap meant the intern to be the easy one;
-  the gap is the next thing to tune, once the run can be seen. About 1 second of CPU per run.
+- **Caps:** 300 foes alive (bosses and printers may pass it by a few), 200 hero shots; above 150 XP gems the oldest is
+  folded into the next.
+- **Bot** (`scripts/hr/playthrough.ts`, usage in its header): every 6 ticks it tries 16 directions, looks half a
+  second ahead at where each would take it and where the foes would be, and goes the way with the least danger and the
+  most gems, clear of the walls and close to its last heading. Picks follow a fixed priority list. Prints per seed how
+  the run ended and when, level, kills, gold and damage by weapon; per starter, the win rate and the share of damage
+  taken from each foe; overall, the win rate.
+- **Target:** the bot wins about 50–60% on normal, wins land around 6:00. It is sensible but unhurried; a human
+  should do better.
+- **As tuned (30 seeds per starter):** 53% overall, wins at 5:37 to 7:05 (median 6:04). Deaths spread across every
+  foe. By starter: Finance 70%, IT 50%, Interns 40%. About 1 second of CPU per run.
 
-### Sprites
+### Rendering and page
 
-`src/lib/tycoon/render-support/` is pure pixel code (no Pixi): `characters.ts` recolours, and `poses.ts` already has a
-walk cycle (`walkA`–`walkD`, `stepA`–`stepD`) for all five characters. `src/lib/hr/render/heroes.ts` bakes each
-coworker once at load:
+- `src/lib/hr/render/heroes.ts`: `loadSheet()` reads `PixelOfficeAssets.png` (served from `assets/pixeloffice/`,
+  the site's public dir); `heroPixels(sheet, id, department)` (pure, tested) cuts the character out, recolours it,
+  and poses a standing frame, the 4 `STEP_CYCLE` strides (from Tycoon's `poses.ts`) and a white silhouette for the
+  hit flash; `bakeHero` turns them into canvases. If the sheet fails to load, the hero is drawn as a plain disc.
+- `src/lib/hr/render/draw.ts`: `fitView` (about 420 world units across the short side; a wide screen zooms in so
+  nobody sees foes spawn), `cameraFor`, `drawRun` (floor, aura, gems, drop shadows, foes sorted by y, hero, ducks,
+  shots, foe shots, falling racks, effects, then arrows to off-screen bosses and the stick), `stickInput` (dead zone
+  0.15). The hero is drawn at 2 world units per sprite pixel and mirrored when facing left. **Foes are placeholder
+  shapes** drawn in code (envelope, blob, calendar, printer, two suits).
+- `src/components/hr/HrApp.tsx`: menu (title, how-to, "Continue the run", coworker cards with a pixel portrait,
+  quirks, stats, "Send in"), the result panel. `RunView.tsx`: the canvas loop (fixed-step sim, catch-up capped at
+  0.1 s), the stick, keys on the window, HUD (clock and next boss, gold, health, XP and level, boss bar), level-up cards,
+  pause / walk out, saving the run.
+- `src/lib/hr/i18n.ts`: every string, English and Russian together (`HR_TEXT`), plus `quirkLine` and `clock`.
+- `src/styles/hr.css` recolours Tower's `tower-*` panels, buttons and run layout (`src/styles/tower.css`) for an office
+  at night and adds the cards and bars. The page loads both stylesheets.
 
-- Load `PixelOfficeAssets.png` as an image, read its pixels, crop the character's `CHARACTER_FRAMES` rect, `recolor`
-  it, then `poseFrame` a standing frame and the 4 walk frames, each into an offscreen canvas.
-- **Facing left:** draw mirrored (`ctx.scale(-1, 1)`). **Hit:** a baked white silhouette shown for about 80 ms.
-  **Falling:** tip over 90° and fade.
-- **Scale ×2** (about 30×46 px): readable on a phone with room for the horde.
-- **Department at a glance:** `rosterAppearance(id, department)` (built, in `src/lib/roster/appearance.ts`) calls
-  `appearanceFor(id)` and replaces the shirt with the department's colour; the sprite and hair stay from the id.
-- Foes start as procedural shapes (envelopes, blobs, a printer) until the run is proven fun.
-
-## Game 2: the HR loop (wraps game 1)
+## Game 2: the HR loop (wraps game 1; not built)
 
 - **Daily pool** of candidates. Each shows a CV with some stats visible and quirks hidden.
 - **Interview:** spend an action to reveal one hidden quirk. Limited actions per day force choices.
 - **Hire, pass, or hold:** hiring costs a signing fee and a daily salary; passing is final for that candidate.
 - **Desks:** a cap on the roster. A new hire means someone leaves or the office expands (the budget sink).
 - **The risk that makes it fun:** a great CV can hide a bad quirk, a weak CV can hide a legend.
-- **Codex and collection:** every coworker and quirk found is recorded; the user chases rarities.
+- **Codex and collection:** every coworker and quirk found is recorded (`recordSeen` exists); the user chases rarities.
 
-## Stakes ("make hiring matter")
+## Stakes ("make hiring matter"; not built)
 
 - A coworker who falls in a run is **burned out** for a number of days (cannot be sent out), and has a chance to
-  **quit for good**, rising with the run's difficulty and falling with their loyalty / level.
+  **quit for good**, rising with the run's difficulty and falling with their loyalty / level. (There is only one
+  difficulty today.)
 - Quitting is permanent and visible: a goodbye line and a gap on the desk. Legends are worth the risk.
 - **Paying to keep someone (decided):** the player can spend gold to cut the quit chance (a raise, a day off), and it
   is expensive: costly enough to compete with hiring and upgrades, so it is a choice made for a legend or a favourite,
   not a routine fee. It gives gold a second sink and makes losing a legend partly the player's call, not only luck.
   Tune the price with the bot so a normal player loses a coworker every few runs and not every run.
+- Quirk effects `quitChance`, `teamQuitChance` and `salary` are already in the data for this; the run ignores them.
 
 ## Later: Game 3, the auto-battler
 
@@ -148,28 +197,144 @@ sprites exist.
 - **Colony / dungeon sim.** Needs pathfinding, needs, jobs and emergent events. The office in the HR loop could grow
   into a small colony later.
 
-## Next steps
+## Guide for the next session (written 2026-10-28, before the user's first phone playtest)
 
-1. ~~Build `src/lib/roster/` (types, numeric ids, generator, quirks, rarity, the 3 starters, save) with tests in
-   `tests/roster/`.~~ Done: `types.ts`, `data.ts`, `generate.ts`, `appearance.ts` (`rosterAppearance`), `save.ts`.
-   The starters are Kenji Dubois (Interns, steals lunches), Noor Kowalski (Finance, clock-watcher) and Casey Okafor
-   (IT, networker).
-2. ~~Build the hero run's sim (`src/lib/hr/sim/`): movement, spatial grid, auto-attack, enemy waves, level-up picks, one
-   boss, run snapshot. Write `scripts/hr/playthrough.ts` and tune the bot to the 6-minute run and 50–60% win rate
-   before any art.~~ Done; see "Sim and bot". Left for later: weapon combinations, the panic button, evening out the
-   starters (the intern is the weakest, not the easiest).
-3. ~~`src/lib/hr/render/heroes.ts` and a placeholder renderer at `/hr`, then check the run is readable and fun on a
-   phone.~~ Done: `src/pages/hr.astro`, `src/components/hr/` (`HrApp`, `RunView`), `src/lib/hr/render/`
-   (`heroes.ts`, `draw.ts`), `src/lib/hr/i18n.ts` (English and Russian), `src/styles/hr.css` on top of Tower's
-   styles. Menu with the coworker cards and "Continue the run"; the run with a floating stick (or arrows / WASD),
-   clock and next boss, health, XP, boss bar, level-up cards, pause and walk out; result panel. Checked in headless
-   Chromium at 390 and 360 px wide, in both languages: 60 fps with 300 foes (on a desktop CPU; a real phone is still
-   to try). Still to do for the page:
-   - **Not on the home page yet:** `/hr` has no `TOOLS` entry in `src/lib/apps/tools.ts`, so it isn't listed or
-     searchable. Add one when the run is ready to show.
-   - **Nothing carries over between runs yet:** gold, burnout and performance reviews come with step 4.
-   - **Play it on a phone:** foes are small on screen (an envelope is about 15 px), the carpet is low contrast, and
-     the feel of the stick and the 6-minute length need a human.
-4. Add the HR loop, turn `stakes` on, and tune the quit chance and the price of keeping someone with the bot.
-5. English and Russian copy together in `src/lib/hr/i18n.ts`, as in Focus.
-6. Revisit the auto-battler, then the hospital.
+Read this if you are picking the game up. It says where things are, how to run and check them, how the sim works, which
+knob answers which complaint, what was tried, and what bites.
+
+### 1. What to do when the user comes back
+
+1. Ask what they felt on the phone: readable? too easy / hard? which starter? where they died? did the stick feel
+   right? was 6 minutes right? any stutter? Ask for screenshots if something looked wrong.
+2. Place each complaint in the playbook (section 5), change one knob at a time, and check it with the bot over 20 to
+   30 seeds per starter so a fix for one end doesn't break the other. Keep the win rate at 50–60% and wins near 6:00
+   unless the user asks otherwise.
+3. Before building step 4, ask the open questions (section 8): they are design calls.
+4. Verify before reporting: `npm test`, `npm run typecheck`, and for UI changes look at the page (section 2). Commit
+   only when asked, to `main`, `type(scope): summary` (`feat(hr): ...`, `feat(roster): ...`), staging only the task's
+   files (see `AGENTS.md`). Pushing to `main` deploys to prod through `.github/workflows/deploy.yml` (typecheck, test,
+   build, GitHub Pages); the user tests on prod.
+
+### 2. Running and checking
+
+- **Tests:** `tests/roster/` (generator, save, appearance) and `tests/hr/` (`run.test.ts` sim, `parts.test.ts` grid /
+  hero numbers / weapons / picks, `snapshot.test.ts`, `render.test.ts` view, camera, stick, sprite baking and copy,
+  `hr-app.test.tsx` the menu, a run, walking out, continuing). Run just these with `npx vitest run tests/hr tests/roster`.
+- **The bot:**
+  ```
+  npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/hr.mjs
+  node /tmp/hr.mjs 30            # 30 seeds per starter
+  node /tmp/hr.mjs 5 interns verbose   # one department, a line per minute
+  ```
+  Rebuild with esbuild after every balance change; the bundle doesn't watch.
+- **The page:** `npm run dev` serves at `http://127.0.0.1:4321/lab/hr` (the base is `/lab`; `/hr` alone is a 404).
+  The user may already have a dev server running on 4321 (`astro dev` refuses to start a second one and says so);
+  reuse it rather than killing it. The first request to a new route can take a few seconds to compile.
+- **Looking at it headless:** there is no `chromium-cli` here and the Playwright headless shell isn't downloaded.
+  What works: require Playwright from
+  `/home/shatxme/.local/share/shell-scripts/node/lib/node_modules/@playwright/cli/node_modules/playwright` and launch
+  `chromium.launch({ args: ['--no-sandbox'], executablePath: '/home/shatxme/.cache/ms-playwright/chromium-1247/chrome-linux64/chrome' })`
+  with a phone context (`{ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }`;
+  also try 360 wide, and Russian via `localStorage.setItem('lab:lang', 'ru')`). Drive the stick with `page.mouse`
+  down / move / up on `canvas.tower-canvas`; pick with `.tower-choice`; pause with `Escape`. Keep driver scripts in
+  `/tmp`, not in the repo.
+- **A late run on demand:** play a run in node (bundle a small script with esbuild like the bot: `createRun`, then
+  `step` with a circling input and `choose(run, 0)` until `run.time` ≈ 290), print `JSON.stringify(run)`, put it in
+  the page's `localStorage['lab:hr:run:v1']`, reload, click "Continue the run". That is how the 300-foe view was checked
+  (60 fps in headless Chromium on a desktop CPU). The run's `coworkerId` must be in the roster (1 to 3).
+
+### 3. How the sim works (reference)
+
+- **Tick order** (`run.ts` `step`): fade effects → (stop if over or a pick is waiting) → clock → move hero (and push
+  out of printers) → spawn (bosses on time, the horde by `spawnRate`, printers every 25 s) → index the grid → move foes
+  (timers: summon / shoot / charge; walk at the hero, stop at its edge; knockback fades; slow resets) and separate them
+  → index again → fire weapons → move shots → land racks → move foe shots → contact damage → reap the dead (gems, gold,
+  pops; the Auditor's death wins) → collect gems (levels queue picks) → lose at 0 hp or when the audit closes, else
+  offer the next queued pick.
+- **Units:** world units; the hero's radius is 12; speeds in units per second; damage per hit, contact damage per
+  second (`touch`). Foe hp scales with time by `hpScale`, contact by `touchScale`; bosses don't scale; toner and red
+  tape don't scale.
+- **Hero numbers** (`hero.ts`): `HERO_BASE` (100 hp, 120 speed, ×1 damage, ×1 cooldown, 80 magnet, ×1 xp, ×1 gold,
+  ×1 taken), each stat point away from 10 moves its number by 5% (`STAT_STEP`; focus divides the cooldown), then each
+  quirk moves its numbers by its percent (`QUIRK_NUMBER`). `run.base` is that; `run.numbers` is `base` with passives
+  (`withPassives`), recomputed only when a passive is picked. Gaining max hp heals the difference.
+- **Weapons** (`balance.ts` `WEAPONS`): a `pattern` plus `base` numbers and `perLevel` additions; `weaponNumbers(id,
+  level)` floors `count` and `pierce`. `fire` handles orbit and the aura's slow every tick and everything else on its
+  cooldown (`numbers.cooldown × run.numbers.cooldown`, floor `MIN_COOLDOWN`). A weapon with nothing to aim at stays
+  ready instead of wasting the shot. Damage dealt is credited per weapon in `run.dealt`, damage taken per foe kind in
+  `run.takenFrom` (the bot's report reads both).
+- **Picks** (`picks.ts`): `possiblePicks` = next level of owned weapons / passives below their max, plus new ones while
+  slots are free; `rollPicks` draws 3 different ones with the run's rng and tops up with heal and gold.
+- **Randomness:** only through `run.rng` (`random(run)` from `src/lib/tower/sim/random.ts`). Never `Math.random` in the
+  sim; the replay and resume tests depend on it.
+- **State outside the run:** `run.ts` keeps one module-level `Grid` and a `byId` map, rebuilt at the start of every
+  phase that uses them. They must never be stored on the run (it must stay plain JSON).
+- **Snapshot:** `normalizeRun` accepts only `version === RUN_VERSION` and `status === "playing"`, and checks shape
+  shallowly. **Bump `RUN_VERSION` in `run.ts` whenever the `Run` shape changes**; an old saved run is then dropped
+  instead of misread.
+
+### 4. Why it is shaped this way (decisions, and what was rejected)
+
+- **A bounded arena, not an endless field:** simpler camera and bot; the walls are part of the dodge.
+- **The bot samples directions; a potential field was rejected:** the field version lost to a bot that just walked in a
+  circle, because it got pinned and chased gems into the horde.
+- **Bosses at 2:30 / 5:00 instead of 3:00 / 6:00:** with the later clock, wins took 7 to 9 minutes; the boss fight
+  itself lasts a minute or two.
+- **The audit closes at 7:30:** without a deadline one bot run kited the Auditor past 11 minutes.
+- **Toner and red tape don't scale with time:** scaled toner made printers a third of all damage taken.
+- **Interns is a department** (for the sticky-notes starter); Facilities waits for an eighth shirt colour.
+- **Russian "grit" is "Закалка":** "Стойкость" didn't fit the five-across stats row on a 360 px phone.
+- **The site's `TOOLS` list was left out until the user said "make it public".**
+
+### 5. Retune playbook (symptom, then knob, in `src/lib/hr/sim/balance.ts`)
+
+- **Too hard / too easy overall:** the Auditor's `hp` (moves the win rate most once builds converge), `hpScale` slope,
+  `RED_TAPE.damage`. Earlier tries: Auditor 7000 to 9000 hp with the Auditor at 6:00 → 78–80% wins; 12000 with the
+  Auditor at 5:00 → 12%; 7000 at 5:00 → 37%, then 53% after the charge and sticky-note changes.
+- **Dies in the first two minutes:** `FOES.replyAll.hp`, `spawnRate` intercept, the starter weapon's base damage.
+- **Monday Blobs pile up mid-run:** `mondayBlob.hp` and its `MIX` weight and start time (at 60 hp from 1:00 they killed
+  most runs).
+- **Printers dominate damage taken:** `printerJam.every`, `TONER.speed` / `damage`, `MAX_PRINTERS`; the bot's printer
+  weight in its `danger()`.
+- **The Middle Manager kills too often:** `CHARGE.speed` (a charge faster than the hero's 120 can't be outrun) and its hp.
+- **Runs too long / short:** `MINI_BOSS_AT`, `BOSS_AT`, `AUDIT_CLOSES`, then the Auditor's hp.
+- **One weapon carries every build:** its `perLevel` (the server rack's radius and count growth was the culprit).
+- **A starter lags:** its signature weapon's `base` and `perLevel` (sticky notes for Interns). Note the starters'
+  quirks differ too (Noor's clock-watcher costs 15% XP and Finance still wins most).
+- **Levels come too fast / slow:** `xpToNext`, foe `xp`, `HERO_BASE.magnet`.
+- **Hard to read on a phone** (render only, `draw.ts`): `fitView`'s 420 (smaller = zoomed in, but keep the view under
+  `SPAWN_DISTANCE.min`, a test checks it), foe drawing sizes (you can draw bigger than the hit radius), `FLOOR` /
+  `FLOOR_ALT` colours.
+
+### 6. Pitfalls
+
+- **The base path is `/lab`.** Links and assets go through `withBase` (`@/lib/apps/paths`).
+- **The editor's TypeScript diagnostics go stale** after edits made with shell tools (it reported `AUDIT_CLOSES` and
+  `FoeShot.from` missing when they existed). Trust `npx tsc --noEmit -p .` / `npm run typecheck`.
+- **Copy:** every new string goes in `src/lib/hr/i18n.ts` in both languages; a test checks both have the same keys.
+  Check Russian at 360 px wide: it is longer and broke the card layout once.
+- **`hr.css` overrides `tower-*` classes** under `.hr-root`; mind specificity (`.hr-root .tower-button` once restyled the
+  quiet button; it now uses `:not(.tower-button-quiet)`).
+- **Keys are read on `window`** (`RunView`), not the canvas, because the canvas has no focus right after "Send in".
+- **Tests stub `fetch`** so the sprite sheet fails to load and the hero is drawn as a disc; `getContext` returns null
+  and `requestAnimationFrame` never fires, so the screen stays put.
+- **Don't commit build output or driver scripts:** `dist/` is the build; keep Playwright scripts and screenshots in
+  `/tmp`.
+- **The bot keeps `heading` in a module variable;** fine for the CLI, don't import `steer` into the app.
+
+### 7. Known rough edges (from the headless check, not yet confirmed by the user)
+
+- Foes are small on a phone (an envelope is about 15 px); the carpet is dim and low contrast.
+- The intern starter is the weakest of the three by the bot, though meant to be the easy one.
+- The hero has no falling animation; the hit flash lasts `HURT_FLASH` (0.15 s).
+- Frame rate was measured only on a desktop CPU (60 fps at 300 foes).
+
+### 8. Open questions for the user (ask before building step 4)
+
+- What does a run's gold buy: stat points per coworker, a shared upgrade shop, or both? Is gold per coworker or for
+  the whole office?
+- How do performance reviews work: XP from runs raising `level`, a point to spend per level, a skill tree per
+  department? How big should a reviewed coworker's edge be over a fresh one?
+- What is a "day" before the HR loop exists (one run = one day?), and how many days does burnout last?
+- With only 3 starters, should burnout be on at all before hiring exists (all 3 burned out = nothing to play)?
+- Should the run's difficulty scale with the coworker's level, so progress doesn't make runs trivial?

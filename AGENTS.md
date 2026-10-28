@@ -25,6 +25,15 @@
   "Next steps" and "Guide for the next session" before changing anything in `src/lib/tycoon/`.
 - `scripts/tycoon/playthrough.ts` plays the whole game with a bot (usage in its header): run it over several seeds after balance changes.
 
+## HR Department
+
+- The game at `/hr` (an office survivors-style hero run) and the shared coworker roster: its single source of TODOs,
+  design record, retune playbook and handoff notes is `hr-roadmap.md`. Start with its "Status", "Next steps" and
+  "Guide for the next session" before changing anything in `src/lib/hr/`, `src/lib/roster/` or `src/components/hr/`.
+- `scripts/hr/playthrough.ts` plays hero runs with a bot for each starter (usage in its header): run it over 20 to 30
+  seeds per starter after balance changes.
+- Its copy lives in `src/lib/hr/i18n.ts`, English and Russian together.
+
 ## Copy
 
 - The Focus app's user-facing strings live in `src/lib/focus/i18n.ts`, with English and Russian in the same object. Update both languages together.

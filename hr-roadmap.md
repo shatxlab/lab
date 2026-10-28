@@ -22,28 +22,35 @@ and KingsRoad.
   engine; the classic feel is fine when its turn comes. See "Parked".
 - **Colony / dungeon sim is a maybe**, not planned.
 - **Paying to stop a quit is allowed, and expensive.** See "Stakes".
-- **Route is `/office`** (`src/pages/office.astro`). "HR Department" stays a working title.
+- **Everything is named `hr`:** route `/hr` (`src/pages/hr.astro`), code in `src/lib/hr/`, the bot in
+  `scripts/hr/`, saves under `lab:hr:`. Not "office": `src/lib/focus/office.ts` already means the Focus app's office.
+  "HR Department" stays a working title.
+- **The solutions below to sprites, ids, the sim and bot, run length and starters** were proposed and accepted.
 
 ## Shared core: the roster (`src/lib/roster/`, pure, seeded)
 
-One module every game here can use. Tycoon's `appearanceFor(id)` already gives a person a stable face from an id; the
-roster builds on the same idea.
+One module every game here can use. Tycoon's `appearanceFor(id: number)` already gives a person a stable face from an
+id; the roster builds on the same idea.
 
 - A coworker: `id`, name, look (from the id), department, 1 or 2 quirks, rarity, stats, level, state (`active`,
   `burned out until day N`, `quit`).
+- **Ids are numbers**, taken from a `nextId` counter in the save, like Tycoon's `Employee.id`, so `appearanceFor(id)`
+  works unchanged. Candidates are generated from the save's seeded rng, so ids and faces replay.
 - Departments (Engineering, Finance, Legal, Sales, IT, Facilities, ...). Used for signature weapons now and for
   synergies in the auto-battler later.
 - Quirks have an upside and often a downside ("Caffeinated": faster, takes more damage; "Steals lunches": gold
   bonus, morale penalty to neighbours). A codex records every quirk and coworker the player has ever seen.
 - Rarity: common, uncommon, rare, legend. Legends are the reason to keep interviewing.
-- Save: `lab:roster:v1`, with a tolerant `normalizeSave` like the other games.
+- Save: `lab:roster:v1`, with a tolerant `normalizeSave` like the other games. It carries a `stakes` flag: off until
+  the HR loop exists (see "Starters").
 
-## Game 1: the hero run (`/office`)
+## Game 1: the hero run (`/hr`)
 
 - **Controls:** drag or virtual stick to move. The hero attacks on its own. A single optional active button (a
   "panic button" on cooldown) at most.
-- **A run:** 8 to 12 minutes in escalating waves of office hordes, a mini-boss midway, a boss at the end. Level-ups
-  offer 3 picks (new weapon, upgrade, passive), as in Slay the Spire / Vampire Survivors.
+- **A run:** about **6 minutes** on normal, so it fits a phone: waves to 2:30, a mini-boss at 3:00, waves to 5:30,
+  the boss at about 6:00. Level-ups offer 3 picks (new weapon, upgrade, passive), as in Slay the Spire / Vampire
+  Survivors. A longer "Overtime" difficulty (about 10 minutes) can come later for desktop.
 - **Signature weapons** by department: the accountant throws spreadsheets (arc, piercing), the intern spams sticky
   notes (fast, weak, homing), the sysadmin drops server racks (area), HR itself waves a policy binder (close
   knockback). Weapons level and combine within a run.
@@ -51,9 +58,47 @@ roster builds on the same idea.
   that blocks lanes), the Auditor (boss). Each needs a `FOES` entry, a roster rule per wave, a drawing, and a way the
   bot can see it.
 - **Between runs:** gold and "performance review" XP raise the coworker's permanent stats and unlock a skill tree.
-- **Sim shape** (as in Tower and KingsRoad): `sim/` pure and seeded, `render/` on a plain canvas, a bot in
-  `scripts/office/playthrough.ts` that plays whole runs over many seeds so balance is tuned before it is dressed up.
-  Hundreds of entities on canvas is the main perf risk: use a spatial grid for collisions from the start.
+- **Suspend and resume:** the run state is plain JSON. Save it to `lab:hr:run:v1` on `visibilitychange` / `pagehide`
+  and at every level-up, and resume it on load. Closing the tab just before dying therefore does not dodge the quit
+  chance: reopening resumes the same moment. **Abandon** counts as falling.
+
+### Starters
+
+The hero run ships before the HR loop, with **3 fixed starters** made by the real roster generator from fixed seeds:
+the Intern (sticky notes, easy), the Accountant (spreadsheets, piercing), the Sysadmin (server rack, area).
+Performance reviews and the skill tree work from day one; **burnout is on, quitting is off** (`stakes: false`) until
+the HR loop lands. The starters are ordinary coworkers in the save, so the HR loop needs no save migration.
+
+### Sim and bot
+
+As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, `src/lib/hr/render/` on a plain canvas.
+
+- **API**, on a fixed timestep like KingsRoad's `STEP`: `step(run, input: { dx, dy })` with the stick normalised,
+  and `choose(run, pick)` while `run.pendingPicks` is set (`step` is a no-op until then).
+- **Arena:** a walled office floor about 3×3 screens with a camera that follows the hero; not endless, so the camera
+  and the bot stay simple. No desks to path around in v1; the Printer Jam is the only blocker.
+- **Spatial grid:** 64-unit cells rebuilt every step, for projectile-vs-foe, foe-vs-hero and foe separation.
+- **Caps:** 300 foes alive, 200 projectiles; above 150 XP gems, gems merge into bigger ones.
+- **Bot** (`scripts/hr/playthrough.ts`, usage in its header like KingsRoad's): steers by a potential field: each foe
+  in range pushes away, weighted 1/d²; the nearest gem pulls only when the way to it is clear; a weak pull to the
+  centre keeps it out of corners. Picks follow a fixed priority list per starter weapon, like KingsRoad's `PLAN`.
+  Prints per seed: survival time, level, cause of death, damage by weapon, and the win rate.
+- **Target:** the bot wins about 50–60% on normal. It is sensible but unhurried; a human should do better.
+
+### Sprites
+
+`src/lib/tycoon/render-support/` is pure pixel code (no Pixi): `characters.ts` recolours, and `poses.ts` already has a
+walk cycle (`walkA`–`walkD`, `stepA`–`stepD`) for all five characters. `src/lib/hr/render/heroes.ts` bakes each
+coworker once at load:
+
+- Load `PixelOfficeAssets.png` as an image, read its pixels, crop the character's `CHARACTER_FRAMES` rect, `recolor`
+  it, then `poseFrame` a standing frame and the 4 walk frames, each into an offscreen canvas.
+- **Facing left:** draw mirrored (`ctx.scale(-1, 1)`). **Hit:** a baked white silhouette shown for about 80 ms.
+  **Falling:** tip over 90° and fade.
+- **Scale ×2** (about 30×46 px): readable on a phone with room for the horde.
+- **Department at a glance:** `rosterAppearance(id, department)` calls `appearanceFor(id)` and replaces the shirt
+  with the department's colour (Tycoon has 7 shirt ramps); the sprite and hair stay from the id.
+- Foes start as procedural shapes (envelopes, blobs, a printer) until the run is proven fun.
 
 ## Game 2: the HR loop (wraps game 1)
 
@@ -91,10 +136,13 @@ sprites exist.
 
 ## Next steps
 
-1. Build `src/lib/roster/` (types, generator, quirks, rarity, save) with tests in `tests/roster/`.
-2. Build the hero run's sim (`src/lib/office/sim/`): movement, auto-attack, enemy waves, level-up picks, one boss.
-   Write `scripts/office/playthrough.ts` and tune the bot's win rate before any art.
-3. Placeholder renderer with the existing coworker sprites, then check the run is readable and fun on a phone.
-4. Add the HR loop and the quit stakes; tune the quit chance with the bot.
-5. English and Russian copy together in an `i18n.ts`, as in Focus.
+1. Build `src/lib/roster/` (types, numeric ids, generator, quirks, rarity, the 3 starters, save) with tests in
+   `tests/roster/`.
+2. Build the hero run's sim (`src/lib/hr/sim/`): movement, spatial grid, auto-attack, enemy waves, level-up picks, one
+   boss, run snapshot. Write `scripts/hr/playthrough.ts` and tune the bot to the 6-minute run and 50–60% win rate
+   before any art.
+3. `src/lib/hr/render/heroes.ts` and a placeholder renderer at `/hr`, then check the run is readable and fun on a
+   phone.
+4. Add the HR loop, turn `stakes` on, and tune the quit chance and the price of keeping someone with the bot.
+5. English and Russian copy together in `src/lib/hr/i18n.ts`, as in Focus.
 6. Revisit the auto-battler, then the hospital.

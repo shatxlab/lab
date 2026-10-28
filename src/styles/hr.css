@@ -1,0 +1,170 @@
+/*
+ * HR Department styling: Lone Tower's panels, buttons and run layout (tower.css), recoloured for an office at night,
+ * plus the coworker cards and the extra bars of the hero run.
+ */
+
+.hr-root {
+  --tower-bg: #232a38;
+  --tower-accent: #3b5dc9;
+  --tower-accent-ink: #ffffff;
+}
+
+.hr-root .tower-screen {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(65, 166, 246, 0.25), transparent 28rem),
+    var(--tower-bg);
+}
+
+.hr-root .tower-button:not(.tower-button-quiet) {
+  box-shadow: 0 3px 0 #29418f;
+}
+
+.hr-root .tower-overlay {
+  background: rgba(15, 18, 28, 0.6);
+}
+
+.hr-menu {
+  width: min(100%, 30rem);
+}
+
+.hr-menu h1 {
+  font-size: 1.9rem;
+  letter-spacing: -0.01em;
+}
+
+.hr-menu-heading {
+  margin-top: 1.4rem !important;
+  font-size: 1.15rem;
+}
+
+.hr-continue-hint {
+  margin: 0;
+  color: var(--tower-muted);
+  font-size: 0.9rem;
+}
+
+.hr-coworkers {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hr-card {
+  display: grid;
+  /* minmax(0, …) so long words wrap instead of widening the card past the panel. */
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.4rem 0.8rem;
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 2px var(--tower-line);
+  text-align: left;
+}
+
+.hr-portrait {
+  width: 4.5rem;
+  height: auto;
+  align-self: start;
+  image-rendering: pixelated;
+}
+
+.hr-card-body p {
+  margin: 0;
+}
+
+.hr-card-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.hr-card-department {
+  color: var(--tower-muted);
+  font-size: 0.88rem;
+}
+
+.hr-card-quirk {
+  margin-top: 0.3rem !important;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.hr-card-stats {
+  display: grid;
+  /* Under the portrait and the text, the width of the card, so five fit across even in Russian on a 360px phone. */
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.2rem;
+  margin: 0;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.hr-card-stats dt {
+  color: var(--tower-muted);
+  font-size: 0.68rem;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.hr-card-stats dd {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.hr-card-send {
+  grid-column: 1 / -1;
+}
+
+/* ------------------------------------------------------------- run */
+
+.hr-hud-clock {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.hr-hud-time {
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-hud-next {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.hr-xp,
+.hr-boss {
+  position: relative;
+  height: 1rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.hr-xp-fill,
+.hr-boss-fill {
+  height: 100%;
+  background: #41a6f6;
+  transition: width 120ms linear;
+}
+
+.hr-boss-fill {
+  background: #b13e53;
+}
+
+.hr-xp-text,
+.hr-boss-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}

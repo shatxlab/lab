@@ -158,8 +158,18 @@ sprites exist.
    boss, run snapshot. Write `scripts/hr/playthrough.ts` and tune the bot to the 6-minute run and 50–60% win rate
    before any art.~~ Done; see "Sim and bot". Left for later: weapon combinations, the panic button, evening out the
    starters (the intern is the weakest, not the easiest).
-3. `src/lib/hr/render/heroes.ts` and a placeholder renderer at `/hr`, then check the run is readable and fun on a
-   phone.
+3. ~~`src/lib/hr/render/heroes.ts` and a placeholder renderer at `/hr`, then check the run is readable and fun on a
+   phone.~~ Done: `src/pages/hr.astro`, `src/components/hr/` (`HrApp`, `RunView`), `src/lib/hr/render/`
+   (`heroes.ts`, `draw.ts`), `src/lib/hr/i18n.ts` (English and Russian), `src/styles/hr.css` on top of Tower's
+   styles. Menu with the coworker cards and "Continue the run"; the run with a floating stick (or arrows / WASD),
+   clock and next boss, health, XP, boss bar, level-up cards, pause and walk out; result panel. Checked in headless
+   Chromium at 390 and 360 px wide, in both languages: 60 fps with 300 foes (on a desktop CPU; a real phone is still
+   to try). Still to do for the page:
+   - **Not on the home page yet:** `/hr` has no `TOOLS` entry in `src/lib/apps/tools.ts`, so it isn't listed or
+     searchable. Add one when the run is ready to show.
+   - **Nothing carries over between runs yet:** gold, burnout and performance reviews come with step 4.
+   - **Play it on a phone:** foes are small on screen (an envelope is about 15 px), the carpet is low contrast, and
+     the feel of the stick and the 6-minute length need a human.
 4. Add the HR loop, turn `stakes` on, and tune the quit chance and the price of keeping someone with the bot.
 5. English and Russian copy together in `src/lib/hr/i18n.ts`, as in Focus.
 6. Revisit the auto-battler, then the hospital.

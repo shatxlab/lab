@@ -207,6 +207,27 @@ export const TOOLS: readonly ToolEntry[] = [
         "Build towers along the king's road and hold the gate: archers, catapults, frost mages and ballistas against a marching horde. Free, offline, made for phones.",
     },
   },
+  {
+    id: "hr",
+    path: "/hr",
+    category: "games",
+    files: {
+      en: "single-player · made for phones · saves locally",
+      ru: "одиночная · для телефона · сохраняется локально",
+    },
+    title: { en: "HR Department", ru: "Отдел кадров" },
+    description: {
+      en: "Send a coworker into the office horde: steer while they fight on their own with sticky notes, spreadsheets and server racks, level up, and beat the Auditor before the audit closes.",
+      ru: "Отправьте сотрудника против офисной орды: ведите его, пока он сам отбивается стикерами, таблицами и серверными стойками, растите в уровне и одолейте аудитора, пока аудит не закрылся.",
+    },
+    keywords:
+      "hr office survivors roguelike auto battler horde coworker hero level up upgrades arcade casual кадры офис сотрудник орда выживание рогалик уровни улучшения аркада",
+    seo: {
+      title: "HR Department — an office survivors game for phones",
+      description:
+        "Steer a coworker through waves of reply-alls, Monday blobs and printer jams while they fight on their own; level up and beat the Auditor. Free, offline, made for phones.",
+    },
+  },
 ];
 
 export function toolHref(tool: ToolEntry): string {

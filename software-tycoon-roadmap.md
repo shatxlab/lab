@@ -4,28 +4,37 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-23, evening).** The one-product pivot is built end to end: phases 0 and A (the café and the hunt for a
+**Handover (2026-10-28).** The hit stage is now a release cycle (spec, choose, build, versioned release); see "Next steps" and "The release cycle".
+
+**Earlier handover (2026-10-23, evening).** The one-product pivot is built end to end: phases 0 and A (the café and the hunt for a
 hit, pushed earlier), then B (the hit is the company), C (internal tools and companion products) and D (endings, Absorb, the
 journey) in this session, and a bot playthrough with a first retune (E). Saves are version 7. The work of this session is
 not committed yet (see "Built: Phases B to E" below). **Start with "Next steps".**
 
 ## Next steps (start here)
 
-**1. The player plays it (waiting on them).** Everything after the garage has only been played by a bot
-(`scripts/tycoon/playthrough.ts`) and looked at in screenshots, never by a person. Ask for a run log (Menu → Export run
-log; `lab-tycoon-run-*.json`, untracked and gitignored: read it, never commit it; the monthly entries now carry the hit's
-fields: see "Guide for the next session"). Look at:
-- *The hunt* (café and garage): a bot that reads the true fit finds its first hit after 250 to 570 days (and often two or three more in the garage); a person reading it through
-  an analyst's eye will be slower. If the garage is too poor, `CONTRACT_PAY_PER_POINT` and `UNDISCOVERED_REACH` come first.
-- *Act 2 pace*: the bot goes from the move out to the IPO in about 3.5 to 5.5 years (6 to 8.5 years from the start). The numbers
-  that set it are in `sim/balance.ts`: `HIT_GROWTH_RATE` (0.003 a day, the biggest lever), `BASE_CAPACITY`, the capacity
-  and `pay` of the items in `data/workstreams.ts`, `HOSTING_PER_USER_DAY`, the stage goals in `data/stages.ts` and the
-  IPO gates `IPO_*`. Money stops mattering about a year after the move out (income runs 100 times the burn): if that
-  feels flat, make the late costs bite (hosting, the upkeep of tools, rent per floor) rather than slow the growth.
-- *The roadmap runs dry*: every item is built about 3 years after the move out, so the late game has nothing to queue
-  and money piles up. More items (per era) or repeatable ones are the natural next content.
-- *Is it clear?* Whether the player finds the workstream selectors (on the hit's dashboard and in Studio → Products), the
-  roadmap, the second-product slots ("Both slots are taken: retire a side product") and the Europe stream.
+**0. The release cycle replaced the roadmap queue (2026-10-27, pushed as b030d4e).** Read "The release cycle" section first; it has
+the design, what was built, the numbers and what is left. The roadmap dialog, the focus dropdowns and the Roadmap button are
+gone from the UI; the "Guide for the next session" below still describes them and is out of date on that point (the item
+catalogue, effects and `buildItem` it describes are unchanged).
+
+**1. The player runs the changed game (waiting on them).** Nobody has seen the cycle in a browser: only render tests and the bot,
+and the bot never chooses. Ask for a run log (Menu -> Export run log; `lab-tycoon-run-*.json`, untracked and gitignored: read it,
+never commit it). The log has a `team.spec.choice` entry for each choice, `team.spec.discard` for each send-back and `team.spec`
+when the PM chose unasked. Look at:
+- *Did they use the choice?* How many specs were chosen by the player and how many by the PM after 10 days; if most were the PM's,
+  the cards are not worth reading or the notices are missed (`SPEC_DECIDE_DAYS`, the notice text).
+- *Is the choice real?* Did they pick the same kind of card every time (always the feature, never an item)? Do the "why"
+  lines match what they saw on the dashboard? Do a game and a dev tool feel like different journeys?
+- *Does clarity matter?* Did they hire analysts and a PM for a second floor, and did they notice the effect (reach +/-15%, rework, bugs)?
+  If not, the numbers (`SPEC_*`, `CLARITY_*` in `balance.ts`) are too quiet, or the release card does not show it.
+- *Is the payoff visible?* Do they read the "reach +12%, fit +3" toast and the Releases dialog? Reach is the immediate part
+  only; users arrive over the following weeks, so a release can look like nothing.
+- *Pace and fit to the stage*: how long from the move out to the IPO, and is the late game still a watched queue? The old
+  questions (the hunt, Act 2 pace) are below in the first-run section.
+- *Layout*: the spec cards sit in the project panel's place; check a phone, and the height of the dashboard stack.
+- *Rough edges to expect*: a second floor has no analyst until hired (its panel says so); the bot's pace (5.9 to 7.7 years, seeds
+  1 to 3) says nothing about how a person plays.
 
 **2. Known gaps and rough edges**
 - `scripts/tycoon/simulate.ts` (the old bots) and `scripts/tycoon/e2e.mjs` are stale. `playthrough.ts` replaces the

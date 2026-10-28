@@ -6,7 +6,7 @@
  * plain JSON file holding the raw string values, so restoring one is exactly
  * what the apps would have written themselves — no per-app migration code.
  *
- * The site shares an origin (shatxlab.github.io) with other projects, so only
+ * The site shares an origin (shatx.ru) with other projects, so only
  * keys matching KEY_PATTERN are ever read, written or removed.
  */
 

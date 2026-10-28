@@ -56,7 +56,7 @@ The build is **static**: no server, no database, no session state. `npm run
 build` writes `dist/`, which can be served by any static host or CDN.
 
 This repo is set up for **GitHub Pages**. `astro.config.mjs` sets `site` and
-`base` for the project page at **https://shatxlab.github.io/lab/**, and
+`base` for the custom domain **https://shatx.ru/** (served from the root), and
 `.github/workflows/deploy.yml` builds and publishes `dist/` on every push to
 `main`. Enable it once under **Settings → Pages → Build and deployment →
 Source: GitHub Actions**.
@@ -78,7 +78,7 @@ The service worker is generated at build time (`scripts/pwa/`) and served from
 `Cache-Control: max-age=600`, which means a new deploy can take up to ten
 minutes to be noticed by returning visitors — that is why updates are announced
 with a prompt rather than applied silently. `localStorage` is shared by every
-project under `shatxlab.github.io`; all lab keys are prefixed (`lab:`) to avoid
+project under `shatx.ru`; all lab keys are prefixed (`lab:`) to avoid
 clashes.
 
 ## Structure

@@ -1,6 +1,6 @@
 // Browser smoke test for the tycoon island: `npm run build && node scripts/tycoon/e2e.mjs` (serves dist/ with `astro preview`, drives real Chrome).
 // The standalone app's PWA scenario is not ported: the lab's service worker / install flow is covered by the lab's own PWA tests.
-//   node scripts/tycoon/e2e.mjs --url https://shatxlab.github.io/lab/tycoon/   test a deployed site (no play-through)
+//   node scripts/tycoon/e2e.mjs --url https://shatx.ru/tycoon/   test a deployed site (no play-through)
 //   node scripts/tycoon/e2e.mjs --quick                                          skip the ~30 s play-through
 //   node scripts/tycoon/e2e.mjs --only play                                      run just one scenario (load, event, research, lifecycle, launch, staff, stats, sound, looks, play)
 // Needs Chrome: set CHROME_PATH, or it tries the usual install locations.

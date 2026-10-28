@@ -11,14 +11,12 @@ import pwa from "./scripts/pwa/integration.mjs";
  */
 export default defineConfig({
   /*
-   * GitHub Pages project site: https://shatxlab.github.io/lab/
-   * `base` is required for a project page (served under a subpath). Internal
-   * links use `import.meta.env.BASE_URL` so they keep working if this is later
-   * moved to a root/custom domain (set `base: "/"` then). Astro rewrites the
-   * bundled `/_astro/*` asset URLs with `base` automatically.
+   * GitHub Pages with the custom domain https://shatx.ru, served from the
+   * root, so no `base`. Internal links use `import.meta.env.BASE_URL`, and
+   * Astro prefixes the bundled `/_astro/*` asset URLs with `base` itself.
    */
-  site: "https://shatxlab.github.io",
-  base: "/lab",
+  site: "https://shatx.ru",
+  base: "/",
   output: "static",
   compressHTML: true,
   integrations: [react(), pwa()],

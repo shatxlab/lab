@@ -36,11 +36,17 @@ id; the roster builds on the same idea.
   `burned out until day N`, `quit`).
 - **Ids are numbers**, taken from a `nextId` counter in the save, like Tycoon's `Employee.id`, so `appearanceFor(id)`
   works unchanged. Candidates are generated from the save's seeded rng, so ids and faces replay.
-- Departments (Engineering, Finance, Legal, Sales, IT, Facilities, ...). Used for signature weapons now and for
-  synergies in the auto-battler later.
-- Quirks have an upside and often a downside ("Caffeinated": faster, takes more damage; "Steals lunches": gold
-  bonus, morale penalty to neighbours). A codex records every quirk and coworker the player has ever seen.
-- Rarity: common, uncommon, rare, legend. Legends are the reason to keep interviewing.
+- **Departments (built):** Engineering (rubber duck), Finance (spreadsheet), Legal (contract), Sales (business card),
+  IT (server rack), HR (policy binder), Interns (sticky notes). Seven, one per Tycoon shirt ramp, so the shirt
+  tells the department; Facilities waits for an eighth ramp. Each favours one stat. Used for signature weapons now and
+  for synergies in the auto-battler later.
+- **Stats (built):** grit (health), output (damage), hustle (move speed), focus (attack rate), luck (gold, better
+  picks). Small integers around 10; the hero sim turns them into its own numbers.
+- Quirks have an upside and often a downside, in percent ("Caffeinated": hustle +20, damage taken +15; "Steals
+  lunches": gold +20, colleagues' quit chance +5; 13 in `data.ts`). Names and lines go in `src/lib/hr/i18n.ts`, not
+  the data. A codex records every quirk and coworker the player has ever seen.
+- Rarity: common, uncommon, rare, legend (weights 60 / 27 / 10 / 3; more bonus stat points and 2 quirks for rare and
+  up). Legends are the reason to keep interviewing.
 - Save: `lab:roster:v1`, with a tolerant `normalizeSave` like the other games. It carries a `stakes` flag: off until
   the HR loop exists (see "Starters").
 
@@ -96,8 +102,8 @@ coworker once at load:
 - **Facing left:** draw mirrored (`ctx.scale(-1, 1)`). **Hit:** a baked white silhouette shown for about 80 ms.
   **Falling:** tip over 90° and fade.
 - **Scale ×2** (about 30×46 px): readable on a phone with room for the horde.
-- **Department at a glance:** `rosterAppearance(id, department)` calls `appearanceFor(id)` and replaces the shirt
-  with the department's colour (Tycoon has 7 shirt ramps); the sprite and hair stay from the id.
+- **Department at a glance:** `rosterAppearance(id, department)` (built, in `src/lib/roster/appearance.ts`) calls
+  `appearanceFor(id)` and replaces the shirt with the department's colour; the sprite and hair stay from the id.
 - Foes start as procedural shapes (envelopes, blobs, a printer) until the run is proven fun.
 
 ## Game 2: the HR loop (wraps game 1)
@@ -136,8 +142,10 @@ sprites exist.
 
 ## Next steps
 
-1. Build `src/lib/roster/` (types, numeric ids, generator, quirks, rarity, the 3 starters, save) with tests in
-   `tests/roster/`.
+1. ~~Build `src/lib/roster/` (types, numeric ids, generator, quirks, rarity, the 3 starters, save) with tests in
+   `tests/roster/`.~~ Done: `types.ts`, `data.ts`, `generate.ts`, `appearance.ts` (`rosterAppearance`), `save.ts`.
+   The starters are Kenji Dubois (Interns, steals lunches), Noor Kowalski (Finance, clock-watcher) and Casey Okafor
+   (IT, networker).
 2. Build the hero run's sim (`src/lib/hr/sim/`): movement, spatial grid, auto-attack, enemy waves, level-up picks, one
    boss, run snapshot. Write `scripts/hr/playthrough.ts` and tune the bot to the 6-minute run and 50–60% win rate
    before any art.

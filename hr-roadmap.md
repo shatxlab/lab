@@ -53,13 +53,14 @@ id; the roster builds on the same idea.
 ## Game 1: the hero run (`/hr`)
 
 - **Controls:** drag or virtual stick to move. The hero attacks on its own. A single optional active button (a
-  "panic button" on cooldown) at most.
-- **A run:** about **6 minutes** on normal, so it fits a phone: waves to 2:30, a mini-boss at 3:00, waves to 5:30,
-  the boss at about 6:00. Level-ups offer 3 picks (new weapon, upgrade, passive), as in Slay the Spire / Vampire
-  Survivors. A longer "Overtime" difficulty (about 10 minutes) can come later for desktop.
+  "panic button" on cooldown) at most; not built yet.
+- **A run:** about **6 minutes** on normal, so it fits a phone. As tuned: the Middle Manager (mini-boss) at 2:30,
+  the Auditor at 5:00, and **the audit closes at 7:30**: if the Auditor still stands, the run is lost. A typical win
+  lands around 6:00. Level-ups offer 3 picks (new weapon, upgrade, passive), as in Slay the Spire / Vampire Survivors;
+  up to 4 weapons and 4 passives. A longer "Overtime" difficulty (about 10 minutes) can come later for desktop.
 - **Signature weapons** by department: the accountant throws spreadsheets (arc, piercing), the intern spams sticky
   notes (fast, weak, homing), the sysadmin drops server racks (area), HR itself waves a policy binder (close
-  knockback). Weapons level and combine within a run.
+  knockback). Weapons level within a run (to 6). **Combining weapons is not built yet.**
 - **Enemies:** Reply-All Storm (swarm), Monday Blob (slow tank), Meeting Invite (summons more), Printer Jam (turret
   that blocks lanes), the Auditor (boss). Each needs a `FOES` entry, a roster rule per wave, a drawing, and a way the
   bot can see it.
@@ -79,17 +80,24 @@ the HR loop lands. The starters are ordinary coworkers in the save, so the HR lo
 
 As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, `src/lib/hr/render/` on a plain canvas.
 
+- **Built:** `types.ts`, `balance.ts` (every number), `grid.ts`, `hero.ts` (stats and quirks to numbers),
+  `picks.ts`, `run.ts`; `src/lib/hr/snapshot.ts` saves and resumes a run. Tests in `tests/hr/`.
 - **API**, on a fixed timestep like KingsRoad's `STEP`: `step(run, input: { dx, dy })` with the stick normalised,
-  and `choose(run, pick)` while `run.pendingPicks` is set (`step` is a no-op until then).
+  `choose(run, pick)` while `run.picks` is set (`step` is a no-op until then), and `abandon(run)`.
 - **Arena:** a walled office floor about 3×3 screens with a camera that follows the hero; not endless, so the camera
   and the bot stay simple. No desks to path around in v1; the Printer Jam is the only blocker.
 - **Spatial grid:** 64-unit cells rebuilt every step, for projectile-vs-foe, foe-vs-hero and foe separation.
 - **Caps:** 300 foes alive, 200 projectiles; above 150 XP gems, gems merge into bigger ones.
-- **Bot** (`scripts/hr/playthrough.ts`, usage in its header like KingsRoad's): steers by a potential field: each foe
-  in range pushes away, weighted 1/d²; the nearest gem pulls only when the way to it is clear; a weak pull to the
-  centre keeps it out of corners. Picks follow a fixed priority list per starter weapon, like KingsRoad's `PLAN`.
-  Prints per seed: survival time, level, cause of death, damage by weapon, and the win rate.
+- **Bot** (`scripts/hr/playthrough.ts`, usage in its header like KingsRoad's): every 6 ticks it tries 16
+  directions, looks half a second ahead at where each would take it and where the foes would be, and goes the way
+  with the least danger and the most gems, clear of the walls and close to its last heading. (A potential field was
+  tried first and played worse than walking in a circle.) Picks follow a fixed priority list, like KingsRoad's
+  `PLAN`. Prints per seed: how the run ended and when, level, kills, gold, damage by weapon; per starter, the win
+  rate and the share of damage taken from each foe.
 - **Target:** the bot wins about 50–60% on normal. It is sensible but unhurried; a human should do better.
+- **As tuned (30 seeds per starter):** 53% overall, a typical win at 6:04 (5:37 to 7:05). Deaths are spread across
+  every foe. By starter: Finance 70%, IT 50%, Interns 40%, although the roadmap meant the intern to be the easy one;
+  the gap is the next thing to tune, once the run can be seen. About 1 second of CPU per run.
 
 ### Sprites
 
@@ -146,9 +154,10 @@ sprites exist.
    `tests/roster/`.~~ Done: `types.ts`, `data.ts`, `generate.ts`, `appearance.ts` (`rosterAppearance`), `save.ts`.
    The starters are Kenji Dubois (Interns, steals lunches), Noor Kowalski (Finance, clock-watcher) and Casey Okafor
    (IT, networker).
-2. Build the hero run's sim (`src/lib/hr/sim/`): movement, spatial grid, auto-attack, enemy waves, level-up picks, one
+2. ~~Build the hero run's sim (`src/lib/hr/sim/`): movement, spatial grid, auto-attack, enemy waves, level-up picks, one
    boss, run snapshot. Write `scripts/hr/playthrough.ts` and tune the bot to the 6-minute run and 50–60% win rate
-   before any art.
+   before any art.~~ Done; see "Sim and bot". Left for later: weapon combinations, the panic button, evening out the
+   starters (the intern is the weakest, not the easiest).
 3. `src/lib/hr/render/heroes.ts` and a placeholder renderer at `/hr`, then check the run is readable and fun on a
    phone.
 4. Add the HR loop, turn `stakes` on, and tune the quit chance and the price of keeping someone with the bot.

@@ -147,6 +147,20 @@ describe("service worker", () => {
     expect(worker.self.skipWaiting).toHaveBeenCalledTimes(1);
   });
 
+  it("parks a shared file and text in the share cache and redirects to the workbench", async () => {
+    const worker = boot();
+    const form = new FormData();
+    form.append("files", new File(["hello"], "note.txt", { type: "text/plain" }));
+    form.append("text", "a line");
+    const request = new Request("https://site.test/lab/share-target/", { method: "POST", body: form });
+    const response = await worker.dispatch("fetch", { request });
+    expect(response!.status).toBe(303);
+    expect(response!.headers.get("Location")).toBe("https://site.test/lab/tools/?shared=1");
+    const stored = worker.caches.stores.get("lab-share")!;
+    expect([...stored.keys()].sort()).toEqual(["https://site.test/shared-text", "https://site.test/shared/0"]);
+    expect(await stored.get("https://site.test/shared/0")!.text()).toBe("hello");
+  });
+
   it("serves pages from the precache — with or without a trailing slash, ignoring the query", async () => {
     const worker = boot();
     await worker.dispatch("install");

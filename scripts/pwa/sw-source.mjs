@@ -11,9 +11,6 @@
  *     when the visitor accepts the "new version" prompt (message SKIP_WAITING),
  *     so a page is never half old / half new.
  *   - Large optional data (PDF.js fonts, CMaps, WASM) is cached on first use.
- *   - Web Share Target (Android "Share" / "Open with" sheet): the manifest posts
- *     shared files to BASE + "share-target/"; the worker parks them in a cache and
- *     redirects to the workbench, which picks them up (src/lib/apps/share-target.ts).
  */
 
 export function renderServiceWorker({ version, base, assets }) {
@@ -26,8 +23,6 @@ const ASSETS = ${JSON.stringify(assets)};
 // Servers differ in the Vary header they send (e.g. "Origin" for module scripts);
 // the files are versioned, so a Vary mismatch must never cause a cache miss.
 const MATCH = { ignoreSearch: true, ignoreVary: true };
-const SHARE_CACHE = "lab-share";
-const SHARE_PATH = BASE + "share-target/";
 const RUNTIME_PREFIXES = [BASE + "pdfjs/", BASE + "_astro/"];
 
 self.addEventListener("install", (event) => {
@@ -55,35 +50,11 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-  const url = new URL(request.url);
-  if (request.method === "POST" && url.origin === self.location.origin && url.pathname === SHARE_PATH) {
-    event.respondWith(receiveShare(request));
-    return;
-  }
   if (request.method !== "GET") return;
+  const url = new URL(request.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE)) return;
   event.respondWith(request.mode === "navigate" ? navigate(request, url) : asset(request));
 });
-
-async function receiveShare(request) {
-  const target = BASE + "tools/?shared=1";
-  try {
-    const form = await request.formData();
-    await caches.delete(SHARE_CACHE);
-    const cache = await caches.open(SHARE_CACHE);
-    let index = 0;
-    for (const value of form.getAll("files")) {
-      if (typeof value === "string") continue;
-      const headers = { "Content-Type": value.type || "application/octet-stream", "X-Name": encodeURIComponent(value.name || "shared") };
-      await cache.put("/shared/" + index++, new Response(value, { headers }));
-    }
-    const text = [form.get("title"), form.get("text"), form.get("url")].filter((part) => typeof part === "string" && part).join("\\n");
-    if (text) await cache.put("/shared-text", new Response(text, { headers: { "Content-Type": "text/plain;charset=utf-8" } }));
-  } catch (error) {
-    // Fall through to the workbench with nothing to import.
-  }
-  return Response.redirect(self.location.origin + target, 303);
-}
 
 function navigationCandidates(url) {
   const path = url.pathname;

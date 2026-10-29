@@ -30,14 +30,6 @@ export const GET: APIRoute = () => {
     theme_color: BRAND.manifest.theme,
     categories: ["utilities", "productivity"],
     icons: [icon("icon-192.png", "192x192"), icon("icon-512.png", "512x512"), icon("icon-maskable-512.png", "512x512", "maskable")],
-    // Android (installed PWA): the app appears in the system Share / "Open with"
-    // sheet for any file or text. The service worker receives the POST.
-    share_target: {
-      action: `${scope}share-target/`,
-      method: "POST",
-      enctype: "multipart/form-data",
-      params: { title: "title", text: "text", url: "url", files: [{ name: "files", accept: ["*/*"] }] },
-    },
     shortcuts: SHORTCUTS.flatMap((id) => {
       const tool = TOOLS.find((entry) => entry.id === id);
       return tool

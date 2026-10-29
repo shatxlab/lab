@@ -28,7 +28,6 @@ import { ReceiveDialog } from "@/components/tools/ReceiveDialog";
 import { SendToPhone } from "@/components/tools/SendToPhone";
 import { ActionButton, FilePicker, Tabs, ToolPage, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
-import { takeSharedItems } from "@/lib/apps/share-target";
 import { withBase } from "@/lib/apps/paths";
 import { useIncomingSend } from "@/lib/send/use-incoming";
 import type { AppLang } from "@/lib/apps/lang";
@@ -473,16 +472,6 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     },
     [addAssets],
   );
-
-  // Files shared to the installed app from the Android share sheet.
-  React.useEffect(() => {
-    if (!new URLSearchParams(window.location.search).has("shared")) return;
-    window.history.replaceState(null, "", window.location.pathname);
-    void takeSharedItems().then(({ files, text }) => {
-      if (files.length > 0) addFiles(files);
-      if (text) addText(text);
-    });
-  }, [addFiles, addText]);
 
   const selected = assets.find((asset) => asset.id === selectedId) ?? assets[0] ?? null;
   const offered = React.useMemo(() => capabilitiesFor(assets, selected), [assets, selected]);

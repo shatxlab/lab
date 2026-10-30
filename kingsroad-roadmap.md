@@ -12,8 +12,12 @@ saltire, gorge, trident, citadel (8 to 28 waves, `toughness` 1 to 2). Difficulty
 calls waves early and only uses the volley, so it is a floor, not an average player. The warlord waves (10, 20, last) are
 where it loses most, and Crossroads was eased from 1.6 to 1.4 after a player found it near-impossible.
 
-**Next: the player plays maps 4 to 10.** Only the bot has played them. Watch Twin Rivers, The Gorge and Last Stand.
-The lever is `toughness` per map; wave counts are the other (Last Stand is 28 waves, about 23 minutes).
+**Played through (2026-10-30).** The player has now finished map 10 (Last Stand), so all ten maps have been beaten by a
+human, not only the bot. The lever for any further retune is `toughness` per map; wave counts are the other (Last Stand
+is 28 waves, about 23 minutes). Per-map feedback on Twin Rivers, The Gorge and Last Stand was not recorded: ask before
+retuning them.
+
+**Next: maps 11 to 20**, below.
 
 ## Next: maps 11 to 20 (the second canvas)
 
@@ -21,11 +25,14 @@ Decided with the user, not started. **A new canvas every 10 maps, and something 
 Ten maps is the unit: the first ten teach and exhaust the meadow canvas, the next ten arrive with a new look, new
 rules and new enemies, so the second batch is not just harder roads.
 
-**Canvas.** A different setting from the meadow, with its own palette, scenery, road surface and gate/wall art. Today
-the look is baked in `render/draw.ts` (`COLORS`, `ROAD`, `HOUSES`, `TREELINE`, `sceneryFor`, keyed by map id), so
-the first step is to make a canvas/theme a property of the map (a `theme` field on `MapDef`, or a canvas id) and draw
-from it. The simulation (`sim/`) stays theme-free. Keep the field size and `GATE`/`WALL_Y` unless the new canvas truly
-needs otherwise: the plot generator and map tests assume them.
+**Canvas (groundwork done 2026-10-30).** Each `MapDef` has a `canvas: CanvasId` (today only `"meadow"`, in
+`sim/types.ts`) and `render/themes.ts` holds a `Theme` per canvas: woods, ground and courtyard colours, road, plot pads,
+town houses, treeline, gate colours. `draw.ts` reads them through `THEMES[map.canvas]`; the meadow's values are the old
+ones, so nothing looks different. The simulation only carries the id. To add the second canvas: extend `CanvasId`, add a
+`THEMES` entry, set `canvas` on maps 11 to 20. Still baked in and not themeable: the tufts, trees, wall, courtyard
+cobbles and horde, which come from Lone Tower's `sprites.ts` (`COLORS`); a very different setting (snow, desert) needs
+those parameterised there, or its own drawing in `draw.ts`. Keep the field size and `GATE`/`WALL_Y` unless the new
+canvas truly needs otherwise: the plot generator and map tests assume them.
 
 **New tower upgrades (archers first).** Beyond the three levels, archers branch into special arrows, picked on
 upgrade. Ideas so far:

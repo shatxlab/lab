@@ -15,6 +15,9 @@ export type TowerKind = "archer" | "catapult" | "frost" | "ballista";
 
 export type MapId = "meadow" | "ford" | "crossroads" | "switchback" | "rivers" | "serpent" | "saltire" | "gorge" | "trident" | "citadel";
 
+/** A setting for ten maps: the look is drawn from `render/themes.ts`. */
+export type CanvasId = "meadow";
+
 /** `ready` is the calm before the first wave, while the first towers go up. */
 export type Status = "ready" | "playing" | "won" | "lost";
 

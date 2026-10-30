@@ -1,8 +1,10 @@
 import { makePath, type Path, type Point } from "./path";
-import type { MapId } from "./types";
+import type { CanvasId, MapId } from "./types";
 
 export interface MapDef {
   id: MapId;
+  /** Which look the map is drawn in; the simulation never reads it. */
+  canvas: CanvasId;
   /** Every road starts in the woods above the field and ends at the gate. */
   roads: readonly Path[];
   plots: readonly Point[];
@@ -20,6 +22,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // A long road snaking back and forth across the meadow: plenty of time to learn.
     id: "meadow",
+    canvas: "meadow",
     roads: [road([70, -24], [70, 150], [290, 150], [290, 300], [70, 300], [70, 440], [180, 440], [180, 572])],
     plots: plots(
       [30, 100],
@@ -43,6 +46,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // Two long diagonals: shorter, and the ballista's to sweep.
     id: "ford",
+    canvas: "meadow",
     roads: [road([300, -24], [300, 120], [60, 250], [60, 370], [180, 460], [180, 572])],
     plots: plots(
       [254, 64],
@@ -67,6 +71,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // Two roads out of the woods that meet in the middle and run on together to the gate.
     id: "crossroads",
+    canvas: "meadow",
     roads: [
       road([50, -24], [50, 180], [180, 270], [180, 390], [100, 470], [180, 572]),
       road([310, -24], [310, 180], [180, 270], [180, 390], [100, 470], [180, 572]),
@@ -94,6 +99,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // Back and forth across the whole field: five long lanes, and the plots between them see two at once.
     id: "switchback",
+    canvas: "meadow",
     roads: [road([60, -24], [60, 110], [300, 110], [300, 225], [60, 225], [60, 340], [300, 340], [300, 440], [180, 440], [180, 572])],
     plots: plots([128, 48], [122, 162], [218, 168], [74, 174], [170, 174], [230, 270], [140, 282], [188, 294], [272, 294], [122, 390], [170, 390], [218, 396], [146, 432], [230, 486]),
     waves: 16,
@@ -103,6 +109,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // Two roads that never meet until the gate: a tower sees only one of them.
     id: "rivers",
+    canvas: "meadow",
     roads: [road([50, -24], [50, 380], [180, 480], [180, 572]), road([310, -24], [310, 380], [180, 480], [180, 572])],
     plots: plots([86, 72], [86, 168], [86, 300], [272, 336], [86, 348], [140, 396], [218, 402], [176, 432], [92, 456], [272, 462], [230, 486], [128, 492], [266, 522], [92, 528], [218, 534], [140, 540]),
     waves: 18,
@@ -112,6 +119,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // One road, nine bends and a lot of diagonals.
     id: "serpent",
+    canvas: "meadow",
     roads: [road([300, -24], [300, 90], [90, 160], [270, 250], [90, 340], [270, 430], [180, 500], [180, 572])],
     plots: plots([236, 60], [152, 102], [104, 114], [206, 174], [254, 180], [110, 234], [158, 234], [134, 276], [200, 324], [248, 324], [224, 366], [110, 390], [158, 414], [170, 462], [248, 498]),
     waves: 20,
@@ -121,6 +129,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // Two roads cross in the middle of the field and swap sides.
     id: "saltire",
+    canvas: "meadow",
     roads: [
       road([60, -24], [60, 170], [300, 330], [300, 430], [180, 500], [180, 572]),
       road([300, -24], [300, 170], [60, 330], [60, 430], [180, 500], [180, 572]),
@@ -133,6 +142,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // A narrow gorge with the road wandering from wall to wall.
     id: "gorge",
+    canvas: "meadow",
     roads: [road([180, -24], [180, 60], [110, 130], [250, 200], [110, 270], [250, 340], [110, 410], [180, 480], [180, 572])],
     plots: plots([128, 60], [206, 84], [200, 132], [242, 156], [110, 174], [152, 198], [110, 222], [236, 264], [188, 270], [110, 318], [152, 342], [110, 366], [200, 408], [206, 456], [134, 486]),
     waves: 24,
@@ -142,6 +152,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // Three roads out of the woods run together into one for the last stretch to the gate.
     id: "trident",
+    canvas: "meadow",
     roads: [
       road([40, -24], [40, 170], [180, 300], [180, 572]),
       road([180, -24], [180, 300], [180, 572]),
@@ -155,6 +166,7 @@ export const MAPS: readonly MapDef[] = [
   {
     // The last stand: three roads, one of them a long way round.
     id: "citadel",
+    canvas: "meadow",
     roads: [
       road([40, -24], [40, 200], [180, 300], [180, 572]),
       road([320, -24], [320, 200], [180, 300], [180, 572]),

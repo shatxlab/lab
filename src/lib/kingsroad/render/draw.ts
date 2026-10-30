@@ -25,8 +25,6 @@ import {
   drawWall,
   ellipse,
   shade,
-  treeline,
-  type House,
   type Tree,
   type Tuft,
 } from "@/lib/tower/render/sprites";
@@ -35,6 +33,7 @@ import { levelOf } from "../sim/game";
 import { mapById, type MapDef } from "../sim/maps";
 import { distanceToPath, poseAt } from "../sim/path";
 import type { Game, MapId, Shot, Tower, TowerKind } from "../sim/types";
+import { THEMES, type Theme } from "./themes";
 
 export interface View {
   /** CSS pixels of the canvas. */
@@ -53,9 +52,6 @@ export interface Selection {
   preview: TowerKind | null;
 }
 
-const ROAD = { edge: "#b39565", fill: "#d8c08c", pebble: "#c4a874" } as const;
-const PLOT = { pad: "#c8b184", rim: "#a08a62" } as const;
-
 /** Fit the portrait arena inside the canvas, centred, never cropped. */
 export function fitView(width: number, height: number): View {
   const scale = Math.max(0.01, Math.min(width / ARENA.width, height / ARENA.height));
@@ -72,16 +68,6 @@ export function fitView(width: number, height: number): View {
 export function toWorld(view: View, x: number, y: number): { x: number; y: number } {
   return { x: (x - view.offsetX) / view.scale, y: (y - view.offsetY) / view.scale };
 }
-
-// The town behind the wall: Lone Tower's houses, either side of the gate.
-const HOUSES: House[] = [
-  { x: 14, y: 602, width: 62, height: 34, roof: "#b5523b" },
-  { x: 86, y: 612, width: 46, height: 28, roof: "#3f6fa0" },
-  { x: 228, y: 612, width: 46, height: 28, roof: "#b5523b" },
-  { x: 284, y: 602, width: 62, height: 34, roof: "#3f6fa0" },
-];
-
-const TREELINE = treeline(7, ARENA.width);
 
 interface Scenery {
   tufts: Tuft[];
@@ -135,11 +121,12 @@ function sceneryFor(map: MapDef): Scenery {
 export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, selection: Selection, time: number): void {
   const map = mapById(game.map);
   const scenery = sceneryFor(map);
+  const theme = THEMES[map.canvas];
   // Past the arena's edges the woods carry on above the wall and the courtyard below it.
   const wallOnScreen = view.offsetY + WALL_Y * view.scale;
-  ctx.fillStyle = COLORS.forest;
+  ctx.fillStyle = theme.woods;
   ctx.fillRect(0, 0, view.width, wallOnScreen);
-  ctx.fillStyle = COLORS.courtyard;
+  ctx.fillStyle = theme.courtyard;
   ctx.fillRect(0, wallOnScreen, view.width, view.height - wallOnScreen);
   ctx.save();
   ctx.translate(view.offsetX, view.offsetY);
@@ -147,18 +134,18 @@ export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, 
   const left = -view.offsetX / view.scale;
   const right = (view.width - view.offsetX) / view.scale;
 
-  ctx.fillStyle = COLORS.grass;
+  ctx.fillStyle = theme.ground;
   ctx.fillRect(0, 0, ARENA.width, WALL_Y);
   drawTufts(ctx, scenery.tufts);
-  drawRoads(ctx, map, scenery);
+  drawRoads(ctx, map, scenery, theme);
   drawCourtyard(ctx, left, right, WALL_Y, ARENA.height);
-  drawStreet(ctx);
-  drawHouses(ctx, HOUSES);
+  drawStreet(ctx, theme);
+  drawHouses(ctx, theme.houses);
   drawWall(ctx, left, right, WALL_Y);
-  drawGatehouse(ctx);
+  drawGatehouse(ctx, theme);
 
   for (const [index, plot] of map.plots.entries()) {
-    if (!game.towers.some((tower) => tower.plot === index)) drawPlot(ctx, plot.x, plot.y, index === selection.plot, time);
+    if (!game.towers.some((tower) => tower.plot === index)) drawPlot(ctx, theme, plot.x, plot.y, index === selection.plot, time);
   }
   drawRange(ctx, game, map, selection);
   for (const effect of game.effects) if (effect.kind === "mark") drawEffect(ctx, effect);
@@ -167,7 +154,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, 
   for (const tower of game.towers) drawTower(ctx, map, tower, tower.plot === selection.plot, time);
   for (const shot of game.shots) drawShot(ctx, shot, time);
   for (const foe of game.foes) if (foe.flying) drawFoe(ctx, foe, foe.facing, time);
-  drawTrees(ctx, TREELINE);
+  drawTrees(ctx, theme.treeline);
   for (const volley of game.volleys) drawVolleyArrow(ctx, volley);
   for (const effect of game.effects) if (effect.kind !== "mark") drawEffect(ctx, effect);
 
@@ -175,12 +162,12 @@ export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, 
 }
 
 /** Every road's verge first, then every road's surface, so where two roads join they read as one. */
-function drawRoads(ctx: CanvasRenderingContext2D, map: MapDef, scenery: Scenery): void {
+function drawRoads(ctx: CanvasRenderingContext2D, map: MapDef, scenery: Scenery, theme: Theme): void {
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   for (const [color, width] of [
-    [ROAD.edge, ROAD_HALF * 2 + 4],
-    [ROAD.fill, ROAD_HALF * 2],
+    [theme.road.edge, ROAD_HALF * 2 + 4],
+    [theme.road.fill, ROAD_HALF * 2],
   ] as const) {
     ctx.strokeStyle = color;
     ctx.lineWidth = width;
@@ -192,38 +179,34 @@ function drawRoads(ctx: CanvasRenderingContext2D, map: MapDef, scenery: Scenery)
   }
   ctx.lineJoin = "miter";
   ctx.lineCap = "butt";
-  for (const pebble of scenery.pebbles) circle(ctx, pebble.x, pebble.y, pebble.size, ROAD.pebble);
+  for (const pebble of scenery.pebbles) circle(ctx, pebble.x, pebble.y, pebble.size, theme.road.pebble);
 }
 
 /** The road carries on through the gate as a paved street down between the houses. */
-function drawStreet(ctx: CanvasRenderingContext2D): void {
-  ctx.fillStyle = shade(COLORS.courtyard, 0.12);
+function drawStreet(ctx: CanvasRenderingContext2D, theme: Theme): void {
+  ctx.fillStyle = shade(theme.courtyard, 0.12);
   ctx.fillRect(GATE.x - ROAD_HALF, WALL_Y, ROAD_HALF * 2, ARENA.height - WALL_Y + 400);
 }
 
 /** The gate in the wall: a dark arch with its doors swung open, a small round tower either side. */
-function drawGatehouse(ctx: CanvasRenderingContext2D): void {
+function drawGatehouse(ctx: CanvasRenderingContext2D, theme: Theme): void {
   const { x } = GATE;
-  ctx.fillStyle = "#4a3a2e";
+  ctx.fillStyle = theme.gate.arch;
   ctx.fillRect(x - ROAD_HALF - 1, WALL_Y - 3, ROAD_HALF * 2 + 2, 19);
-  ctx.fillStyle = "#8a6a45";
+  ctx.fillStyle = theme.gate.door;
   ctx.fillRect(x - ROAD_HALF - 1, WALL_Y + 14, 6, 9);
   ctx.fillRect(x + ROAD_HALF - 5, WALL_Y + 14, 6, 9);
   for (const side of [-1, 1]) drawRoundTower(ctx, x + side * (ROAD_HALF + 12), WALL_Y + 6, 12);
   // Pennants on the gate towers, in the town's two roof colours.
-  for (const [side, color] of [
-    [-1, "#b5523b"],
-    [1, "#3f6fa0"],
-  ] as const) {
-    circle(ctx, x + side * (ROAD_HALF + 12), WALL_Y + 6, 3, color);
-  }
+  circle(ctx, x - (ROAD_HALF + 12), WALL_Y + 6, 3, theme.gate.pennants[0]);
+  circle(ctx, x + (ROAD_HALF + 12), WALL_Y + 6, 3, theme.gate.pennants[1]);
 }
 
 /** An empty build plot: a levelled pad of packed earth with a ring of stones. */
-function drawPlot(ctx: CanvasRenderingContext2D, x: number, y: number, selected: boolean, time: number): void {
+function drawPlot(ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number, selected: boolean, time: number): void {
   ellipse(ctx, x + 1, y + 2, PLOT_RADIUS, PLOT_RADIUS * 0.9, COLORS.shadow);
-  circle(ctx, x, y, PLOT_RADIUS, PLOT.pad);
-  ctx.strokeStyle = PLOT.rim;
+  circle(ctx, x, y, PLOT_RADIUS, theme.plot.pad);
+  ctx.strokeStyle = theme.plot.rim;
   ctx.lineWidth = 2;
   ctx.setLineDash([3, 3]);
   ctx.beginPath();

@@ -20,10 +20,10 @@ export type TowerKind = "archer" | "catapult" | "frost" | "ballista";
 /** What an archer's third level becomes on maps that allow it: arrows that burn, or arrows that mark. */
 export type ArcherBranch = "fire" | "lune";
 
-export type MapId = "meadow" | "ford" | "crossroads" | "switchback" | "rivers" | "serpent" | "saltire" | "gorge" | "trident" | "citadel";
+export type MapId = "meadow" | "ford" | "crossroads" | "switchback" | "rivers" | "serpent" | "saltire" | "gorge" | "trident" | "citadel" | "harvest" | "orchards" | "hairpin" | "crows" | "detour" | "parting" | "winding" | "gauntlet" | "kings" | "watch";
 
 /** A setting for ten maps: the look is drawn from `render/themes.ts`. */
-export type CanvasId = "meadow";
+export type CanvasId = "meadow" | "autumn";
 
 /** `ready` is the calm before the first wave, while the first towers go up. */
 export type Status = "ready" | "playing" | "won" | "lost";

@@ -3,7 +3,7 @@
 The single source of TODOs and design notes for the game. Nothing here is blocking: the ten maps below build, pass
 their tests and ship.
 
-## Where it stands (2026-10-27)
+## Where it stands (2026-10-30)
 
 Ten maps on one canvas (the phone-shaped field, woods along the top, castle wall and gate along the bottom), each opened by
 winning the one before it. In `src/lib/kingsroad/sim/maps.ts`: meadow, ford, crossroads, switchback, rivers, serpent,
@@ -17,19 +17,30 @@ human, not only the bot. The lever for any further retune is `toughness` per map
 is 28 waves, about 23 minutes). Per-map feedback on Twin Rivers, The Gorge and Last Stand was not recorded: ask before
 retuning them.
 
-**Next: maps 11 to 20**, below.
+**Maps 11 to 20 are in (2026-10-30), unplayed by a human.** A second canvas, `autumn` ("The Amber Woods": straw ground,
+rust woods, mud roads), with ten maps after Last Stand: harvest, orchards, hairpin, crows, detour, parting, winding,
+gauntlet, kings, watch (16 to 28 waves). All have `archerBranches: true`. New foes are introduced one a map: harvest
+knights; orchards + scamps; hairpin + imps; crows + healers; detour + gargoyles, then all five. Roads were picked by
+hand and plots by `scripts/kingsroad/plots.ts` (usage in its header); the menu groups maps by canvas. Bot results, 8
+seeds, after three tuning rounds (avg lives left, all won unless noted): harvest 11 (1.75), orchards 13 (1.4), hairpin
+14 (2.45, 7/8), crows 13 (1.3), detour 14 (1.3), parting 15 (1.4), winding 14 (1.4), gauntlet 14 (1.7), kings 11 (1.3),
+watch 9 (1.4, 28 waves). **The toughness ramp is not monotone**: it follows the bot, not the number, because roads
+with two or three lanes dilute fire (a map with three roads at 1.3 is harder than one road at 1.75), and a map can swing from
+18 lives to near-loss across 0.4 of toughness (Hairpin: 2.3 gives 18, 2.7 gives 1). Not seen yet: the new canvas drawn in
+a browser, and any human play. The rest of this section is the design record.
 
-## Next: maps 11 to 20 (the second canvas)
+## Maps 11 to 20 (the second canvas): design record
 
 Decided with the user, not started. **A new canvas every 10 maps, and something new in the gameplay with each one.**
 Ten maps is the unit: the first ten teach and exhaust the meadow canvas, the next ten arrive with a new look, new
 rules and new enemies, so the second batch is not just harder roads.
 
-**Canvas (groundwork done 2026-10-30).** Each `MapDef` has a `canvas: CanvasId` (today only `"meadow"`, in
+**Canvas (groundwork done 2026-10-30).** Each `MapDef` has a `canvas: CanvasId` (`"meadow"` and `"autumn"`, in
 `sim/types.ts`) and `render/themes.ts` holds a `Theme` per canvas: woods, ground and courtyard colours, road, plot pads,
 town houses, treeline, gate colours. `draw.ts` reads them through `THEMES[map.canvas]`; the meadow's values are the old
-ones, so nothing looks different. The simulation only carries the id. To add the second canvas: extend `CanvasId`, add a
-`THEMES` entry, set `canvas` on maps 11 to 20. Still baked in and not themeable: the tufts, trees, wall, courtyard
+ones, so nothing looks different. The simulation only carries the id. To add a third canvas: extend `CanvasId`, add a
+`THEMES` entry and a `canvases` title in `i18n.ts`, set `canvas` on its maps. Trees, tufts and the courtyard cobbles now take a
+palette from the theme (`sprites.ts` defaults keep Lone Tower unchanged). Still baked in and not themeable: the tufts, trees, wall, courtyard
 cobbles and horde, which come from Lone Tower's `sprites.ts` (`COLORS`); a very different setting (snow, desert) needs
 those parameterised there, or its own drawing in `draw.ts`. Keep the field size and `GATE`/`WALL_Y` unless the new
 canvas truly needs otherwise: the plot generator and map tests assume them.

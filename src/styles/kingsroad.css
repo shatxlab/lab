@@ -263,3 +263,11 @@
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
+
+.kr-canvas-heading {
+  margin: 1.1rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tower-muted);
+}

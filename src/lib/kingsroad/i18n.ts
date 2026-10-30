@@ -1,7 +1,7 @@
 import type { AppLang } from "@/lib/apps/lang";
 import type { Blurb, Stat } from "@/lib/tower/i18n";
 import { BURN, MARK, type TowerLevel } from "./sim/balance";
-import type { ArcherBranch, MapId, TowerKind } from "./sim/types";
+import type { ArcherBranch, CanvasId, MapId, TowerKind } from "./sim/types";
 
 /** What one level of a tower does, as a card shows it. */
 export type LevelStats = (level: TowerLevel & { burn?: number; mark?: number }) => Stat[];
@@ -23,6 +23,8 @@ export interface KingsroadText {
   howTo: string[];
   home: string;
   chooseRoad: string;
+  /** The setting each run of ten maps is played in, as a menu heading. */
+  canvases: Record<CanvasId, string>;
   maps: Record<MapId, Blurb>;
   waves: (count: number) => string;
   locked: string;
@@ -79,6 +81,7 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     ],
     home: "Home",
     chooseRoad: "Choose a road",
+    canvases: { meadow: "The Meadow", autumn: "The Amber Woods" },
     maps: {
       meadow: { name: "The Meadow", description: "A long road winding across the fields. A gentle start." },
       ford: { name: "Long Ford", description: "Two long diagonals and less time to stop them." },
@@ -90,6 +93,16 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
       gorge: { name: "The Gorge", description: "A narrow road wandering from wall to wall." },
       trident: { name: "The Trident", description: "Three roads out of the woods, then one road home." },
       citadel: { name: "Last Stand", description: "Three roads, one a long way round. The warlord is waiting." },
+      harvest: { name: "Harvest Lane", description: "A spiral road down the amber woods. Knights wear plate: small arrows barely scratch them." },
+      orchards: { name: "Twin Orchards", description: "Two roads either side of the orchard, and scamps swarming down both." },
+      hairpin: { name: "Hairpin Hill", description: "Tight bends from edge to edge. Imps don't burn: save the fire arrows." },
+      crows: { name: "Crow's Crossing", description: "Two roads cross and a third runs straight down the middle. Healers walk with the column." },
+      detour: { name: "The Detour", description: "A road straight to the gate and another the long way round. Gargoyles fly over both." },
+      parting: { name: "Parting of Ways", description: "One road splits in two and meets again at the gate." },
+      winding: { name: "The Winding Walk", description: "One road winds the whole field; another hugs the edge and cuts in late." },
+      gauntlet: { name: "The Gauntlet", description: "Long straights from wall to wall." },
+      kings: { name: "Three Kings", description: "Three roads: the outer two run straight, the middle one twists." },
+      watch: { name: "The Long Watch", description: "Three roads, one straight and fast. The winter warlord waits." },
     },
     waves: (count) => `${count} waves`,
     locked: "Win the road before to open this one",
@@ -161,6 +174,7 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     ],
     home: "На главную",
     chooseRoad: "Выберите дорогу",
+    canvases: { meadow: "Луг", autumn: "Янтарный лес" },
     maps: {
       meadow: { name: "Луг", description: "Длинная дорога петляет по полям. Спокойное начало." },
       ford: { name: "Долгий брод", description: "Две длинные диагонали и меньше времени, чтобы остановить врагов." },
@@ -172,6 +186,16 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
       gorge: { name: "Ущелье", description: "Узкая дорога петляет от стены к стене." },
       trident: { name: "Трезубец", description: "Три дороги из леса, а к воротам — одна." },
       citadel: { name: "Последний рубеж", description: "Три дороги, одна из них — в обход. Полководец ждёт." },
+      harvest: { name: "Урожайная тропа", description: "Дорога-спираль по янтарному лесу. Рыцари в латах: мелкие стрелы их едва царапают." },
+      orchards: { name: "Два сада", description: "Две дороги по обе стороны сада, и по обеим бежит рой бесят." },
+      hairpin: { name: "Шпильки", description: "Крутые повороты от края до края. Бесы не горят: берегите огненные стрелы." },
+      crows: { name: "Воронье перекрёстье", description: "Две дороги пересекаются, третья идёт прямо посередине. Лекари идут в колонне." },
+      detour: { name: "Окружной путь", description: "Одна дорога прямо к воротам, другая — в обход. Горгульи летят над обеими." },
+      parting: { name: "Развилка", description: "Одна дорога делится надвое и сходится у ворот." },
+      winding: { name: "Извилистая тропа", description: "Одна дорога вьётся по всему полю, другая жмётся к краю и выходит поздно." },
+      gauntlet: { name: "Строй", description: "Длинные прямые от стены до стены." },
+      kings: { name: "Три короля", description: "Три дороги: две крайние прямые, средняя извивается." },
+      watch: { name: "Долгий дозор", description: "Три дороги, одна прямая и быстрая. Зимний полководец ждёт." },
     },
     waves: (count) => `${count} ${plural(count, "волна", "волны", "волн")}`,
     locked: "Откроется после победы на предыдущей дороге",

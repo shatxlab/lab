@@ -34,7 +34,8 @@ describe("kingsroad save", () => {
     expect(isUnlocked(save, "crossroads")).toBe(false);
     expect(nextMap("meadow")).toBe("ford");
     expect(nextMap("crossroads")).toBe("switchback");
-    expect(nextMap("citadel")).toBeNull();
+    expect(nextMap("citadel")).toBe("harvest");
+    expect(nextMap("watch")).toBeNull();
   });
 
   it("keeps the best stars", () => {

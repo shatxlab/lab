@@ -91,21 +91,40 @@ export function treeline(seed: number, width: number): Tree[] {
   return trees;
 }
 
-export function drawTrees(ctx: CanvasRenderingContext2D, trees: readonly Tree[]): void {
-  for (const tree of trees) circle(ctx, tree.x + 2, tree.y + 5, tree.radius, COLORS.forest);
+export interface TreePalette {
+  shadow: string;
+  canopy: string;
+  light: string;
+}
+
+export function drawTrees(
+  ctx: CanvasRenderingContext2D,
+  trees: readonly Tree[],
+  palette: TreePalette = { shadow: COLORS.forest, canopy: COLORS.canopy, light: COLORS.canopyLight },
+): void {
+  for (const tree of trees) circle(ctx, tree.x + 2, tree.y + 5, tree.radius, palette.shadow);
   for (const tree of trees) {
-    circle(ctx, tree.x, tree.y, tree.radius, COLORS.canopy);
-    circle(ctx, tree.x - tree.radius * 0.3, tree.y - tree.radius * 0.3, tree.radius * 0.45, COLORS.canopyLight);
+    circle(ctx, tree.x, tree.y, tree.radius, palette.canopy);
+    circle(ctx, tree.x - tree.radius * 0.3, tree.y - tree.radius * 0.3, tree.radius * 0.45, palette.light);
   }
 }
 
-export function drawTufts(ctx: CanvasRenderingContext2D, tufts: readonly Tuft[]): void {
+export interface TuftPalette {
+  blade: string;
+  flower: string;
+}
+
+export function drawTufts(
+  ctx: CanvasRenderingContext2D,
+  tufts: readonly Tuft[],
+  palette: TuftPalette = { blade: COLORS.tuft, flower: COLORS.flower },
+): void {
   for (const tuft of tufts) {
     if (tuft.flower) {
-      circle(ctx, tuft.x, tuft.y, tuft.size * 0.45, COLORS.flower);
+      circle(ctx, tuft.x, tuft.y, tuft.size * 0.45, palette.flower);
       continue;
     }
-    ctx.strokeStyle = COLORS.tuft;
+    ctx.strokeStyle = palette.blade;
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -118,11 +137,18 @@ export function drawTufts(ctx: CanvasRenderingContext2D, tufts: readonly Tuft[])
 }
 
 /** The cobbled courtyard behind the wall, from its top edge down past the bottom of the screen. */
-export function drawCourtyard(ctx: CanvasRenderingContext2D, left: number, right: number, top: number, bottom: number): void {
-  ctx.fillStyle = COLORS.courtyard;
+export function drawCourtyard(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  right: number,
+  top: number,
+  bottom: number,
+  palette: { base: string; stone: string } = { base: COLORS.courtyard, stone: COLORS.cobble },
+): void {
+  ctx.fillStyle = palette.base;
   ctx.fillRect(left, top, right - left, bottom - top + 400);
   // Cobbles: a loose grid of small flat stones.
-  ctx.fillStyle = COLORS.cobble;
+  ctx.fillStyle = palette.stone;
   for (let y = top + 22; y < bottom + 40; y += 9) {
     for (let x = left + ((y / 9) % 2) * 6; x < right; x += 12) ctx.fillRect(x, y, 7, 4);
   }

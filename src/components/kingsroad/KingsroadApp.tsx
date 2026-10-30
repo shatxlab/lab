@@ -8,6 +8,9 @@ import { defaultSave, isUnlocked, nextMap, readSave, recordWin, writeSave, type 
 import { starsFor } from "@/lib/kingsroad/sim/balance";
 import { createGame } from "@/lib/kingsroad/sim/game";
 import { MAPS, mapById } from "@/lib/kingsroad/sim/maps";
+
+/** The settings in the order their maps unlock, one menu section each. */
+const CANVASES = [...new Set(MAPS.map((map) => map.canvas))];
 import type { Game, MapId } from "@/lib/kingsroad/sim/types";
 
 import { GameView } from "./GameView";
@@ -111,23 +114,28 @@ function MenuScreen({ text, save, onPlay }: { text: KingsroadText; save: Kingsro
           ))}
         </ul>
         <h2 className="kr-menu-heading">{text.chooseRoad}</h2>
-        <ul className="kr-maps">
-          {MAPS.map((map) => {
-            const open = isUnlocked(save, map.id);
-            return (
-              <li key={map.id}>
-                <button type="button" className="kr-map" disabled={!open} onClick={() => onPlay(map.id)}>
-                  <span className="kr-map-name">
-                    {!open && <Lock size={14} aria-hidden="true" />} {text.maps[map.id].name}
-                  </span>
-                  <Stars count={save.stars[map.id]} label={text.starsLabel(save.stars[map.id])} />
-                  <span className="kr-map-description">{open ? text.maps[map.id].description : text.locked}</span>
-                  <span className="kr-map-waves">{text.waves(map.waves)}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        {CANVASES.map((canvas) => (
+          <section key={canvas}>
+            <h3 className="kr-canvas-heading">{text.canvases[canvas]}</h3>
+            <ul className="kr-maps">
+              {MAPS.filter((map) => map.canvas === canvas).map((map) => {
+                const open = isUnlocked(save, map.id);
+                return (
+                  <li key={map.id}>
+                    <button type="button" className="kr-map" disabled={!open} onClick={() => onPlay(map.id)}>
+                      <span className="kr-map-name">
+                        {!open && <Lock size={14} aria-hidden="true" />} {text.maps[map.id].name}
+                      </span>
+                      <Stars count={save.stars[map.id]} label={text.starsLabel(save.stars[map.id])} />
+                      <span className="kr-map-description">{open ? text.maps[map.id].description : text.locked}</span>
+                      <span className="kr-map-waves">{text.waves(map.waves)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
         <a className="tower-home" href={withBase("/")}>
           {text.home}
         </a>

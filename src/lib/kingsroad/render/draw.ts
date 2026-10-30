@@ -137,9 +137,9 @@ export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, 
 
   ctx.fillStyle = theme.ground;
   ctx.fillRect(0, 0, ARENA.width, WALL_Y);
-  drawTufts(ctx, scenery.tufts);
+  drawTufts(ctx, scenery.tufts, theme.tufts);
   drawRoads(ctx, map, scenery, theme);
-  drawCourtyard(ctx, left, right, WALL_Y, ARENA.height);
+  drawCourtyard(ctx, left, right, WALL_Y, ARENA.height, theme.cobbles);
   drawStreet(ctx, theme);
   drawHouses(ctx, theme.houses);
   drawWall(ctx, left, right, WALL_Y);
@@ -152,11 +152,11 @@ export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, 
   for (const effect of game.effects) if (effect.kind === "mark") drawEffect(ctx, effect);
   for (const foe of game.foes) if (!foe.flying) drawKingsroadFoe(ctx, foe, time);
   for (const foe of game.foes) if (foe.markLeft > 0) drawMarkRing(ctx, foe, time);
-  drawTrees(ctx, scenery.trees);
+  drawTrees(ctx, scenery.trees, theme.trees);
   for (const tower of game.towers) drawTower(ctx, map, tower, tower.plot === selection.plot, time);
   for (const shot of game.shots) drawShot(ctx, shot, time);
   for (const foe of game.foes) if (foe.flying) drawKingsroadFoe(ctx, foe, time);
-  drawTrees(ctx, theme.treeline);
+  drawTrees(ctx, theme.treeline, theme.trees);
   for (const volley of game.volleys) drawVolleyArrow(ctx, volley);
   for (const effect of game.effects) if (effect.kind !== "mark") drawEffect(ctx, effect);
 

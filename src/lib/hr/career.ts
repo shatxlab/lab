@@ -1,5 +1,5 @@
-import { DEPARTMENTS, MAX_STAT } from "@/lib/roster/data";
-import { STATS, type Coworker, type Stat } from "@/lib/roster/types";
+import { MAX_STAT } from "@/lib/roster/data";
+import type { Coworker, Stat } from "@/lib/roster/types";
 import { REVIEW } from "./sim/balance";
 
 /**
@@ -85,6 +85,10 @@ export function difficultyFor(level: number): number {
   return 1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1);
 }
 
+const GROWTH_ORDER: readonly Stat[] = ["output", "grit", "focus", "hustle", "luck"];
+/** The stats a promotion lifts, by `REVIEW.promotionBonus` each. */
+const PROMOTION_STATS: readonly Stat[] = ["grit", "output", "focus"];
+
 export interface Review {
   coworker: Coworker;
   /** The XP that was added. */
@@ -93,11 +97,12 @@ export interface Review {
   promoted: boolean;
 }
 
-/** The stat a coworker grows on reaching `level`: their favourite first, then the others in order. */
-function grownStat(coworker: Coworker, level: number): Stat {
-  const favourite = DEPARTMENTS[coworker.department].favours;
-  const order = [favourite, ...STATS.filter((stat) => stat !== favourite)];
-  return order[(level - 2) % order.length];
+/**
+ * The stat every coworker grows on reaching `level`, the same cycle for all departments: growth that followed the
+ * favourite stat made a hustle coworker (the intern) fall behind a damage one over the weeks.
+ */
+function grownStat(level: number): Stat {
+  return GROWTH_ORDER[(level - 2) % GROWTH_ORDER.length];
 }
 
 /** The coworker after a review: the XP added, every level it earns granted a stat point, a promotion a bonus. */
@@ -112,10 +117,10 @@ export function review(coworker: Coworker, xp: number): Review {
   while (pool >= reviewXpToNext(level)) {
     pool -= reviewXpToNext(level);
     level += 1;
-    bump(grownStat(coworker, level), 1);
+    bump(grownStat(level), 1);
     if (rankOf(level) > rankOf(level - 1)) {
       promoted = true;
-      bump(DEPARTMENTS[coworker.department].favours, REVIEW.promotionBonus);
+      for (const stat of PROMOTION_STATS) bump(stat, REVIEW.promotionBonus);
     }
   }
   return { coworker: { ...coworker, level, xp: pool, stats }, xp: Math.max(0, Math.floor(xp)), levelsGained: level - coworker.level, promoted };

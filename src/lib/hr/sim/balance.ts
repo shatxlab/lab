@@ -159,7 +159,7 @@ const weapon = (pattern: Pattern, base: Partial<WeaponNumbers>, perLevel: Partia
 });
 
 export const WEAPONS: Readonly<Record<WeaponId, WeaponDef>> = {
-  stickyNotes: weapon("homing", { cooldown: 0.55, damage: 8, radius: 5, speed: 320, life: 1.5 }, { damage: 3, count: 0.6, cooldown: -0.03 }),
+  stickyNotes: weapon("homing", { cooldown: 0.55, damage: 8, radius: 5, speed: 320, life: 1.5 }, { damage: 3, count: 0.6, cooldown: -0.03, pierce: 0.3 }),
   spreadsheet: weapon("pierce", { cooldown: 1.1, damage: 16, pierce: 4, radius: 8, speed: 260, life: 1.6 }, { damage: 5, pierce: 1, count: 0.34 }),
   serverRack: weapon("drop", { cooldown: 2.2, damage: 22, radius: 45, life: 0.6 }, { damage: 7, radius: 4, cooldown: -0.15, count: 0.3 }),
   policyBinder: weapon("swing", { cooldown: 1, damage: 12, radius: 55, knockback: 260 }, { damage: 4, radius: 6, cooldown: -0.05 }),
@@ -227,9 +227,9 @@ export const GEM_RADIUS = 5;
 
 /**
  * One run is one day. A run ends in a performance review: review XP from the time survived (and a bonus for beating
- * the auditor) raises the coworker's career level, and each level adds a stat point. Every `levelsPerRank` levels is a
- * promotion. Foes get tougher with the level so growth doesn't make runs trivial. Aim: about a week of runs to the first
- * promotion, about a month to Senior.
+ * the auditor) raises the coworker's career level, and each level adds a stat point (the same cycle for everyone).
+ * Every `levelsPerRank` levels is a promotion. Foes get tougher with the level so growth doesn't make runs trivial.
+ * Aim: about a week of runs to the first promotion, about a month to Senior.
  */
 export const REVIEW = {
   /** One review XP per this many seconds survived. */
@@ -240,8 +240,8 @@ export const REVIEW = {
   toNextBase: 60,
   toNextPerLevel: 20,
   levelsPerRank: 5,
-  /** Extra points in the department's favourite stat at a promotion. */
-  promotionBonus: 2,
+  /** Extra points in each of grit, output and focus at a promotion. */
+  promotionBonus: 1,
   /** Foes' hp (bosses too) grows by this fraction per career level past the first; spawns by half of it. */
-  difficultyPerLevel: 0.04,
+  difficultyPerLevel: 0.06,
 } as const;

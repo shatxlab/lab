@@ -64,14 +64,18 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
   Existing saves started fresh by design (no carry-over from the old version).
 - **A run is a day:** the end of a run (win, fall or walk-out) moves `RosterSave.day` on and runs a review.
 - **Review XP** = 1 per 5 s survived + 50 for beating the auditor (walking out at once pays 0). XP from level L to the
-  next = 60 + 20 L. Each level +1 to a stat (the department's favourite first, then the others in order); every 5
-  levels a promotion (Trainee, Junior, Specialist, Senior, Lead, Director) with +2 to the favourite. Pace: about 8 runs to
-  the first promotion, about 35 to 40 runs to Senior (level 16).
-- **Difficulty:** `difficultyFor(level)` = 1 + 0.04 per level past 1, passed to `createRun`; it multiplies foe hp
+  next = 60 + 20 L. Each level +1 to a stat, in the same cycle for every department (output, grit, focus, hustle,
+  luck); every 5 levels a promotion (Trainee, Junior, Specialist, Senior, Lead, Director) with +1 each to grit, output
+  and focus. Pace: about 8 runs to the first promotion, about 35 to 40 runs to Senior (level 16).
+- **Why the growth ignores the department:** growth that followed the favourite stat left the hustle-favouring intern
+  behind damage-favouring departments as the levels rose (bot: 2/20 wins at level 16). Sticky notes also gained +0.3
+  pierce per level (homing shots hit a second and third foe), which brought the intern level with the others.
+- **Difficulty:** `difficultyFor(level)` = 1 + 0.06 per level past 1, passed to `createRun`; it multiplies foe hp
   (bosses too) and spawn rate by half of it. `Run.difficulty` is in the snapshot (`RUN_VERSION` 2).
-- **Bot check** (`node /tmp/hr.mjs 20 all - <level>`): the bot wins 55% / 63% / 67% / 58% overall at levels 1 / 6 / 11 /
-  16. **The intern (Kenji) falls off at high levels** (2/20 at level 16, vs 7/20 at 11): his favourite stat is hustle
-  and sticky notes scale poorly with the +1 stat points; look at it before the curve is trusted past level 15.
+- **Bot check** (30 seeds per starter, `node /tmp/hr.mjs 30 all - <level>`): at levels 1 / 6 / 11 / 16 the three starters
+  win about 59% / 73% / 73% / 78%, each within noise (about ±9 points) of the others. The bot drifts a little easier
+  as the levels rise; if a human finds high levels too easy, raise `difficultyPerLevel`. Difficulty alone moves a
+  starter's win rate a lot (1.2 took the intern from 90% to 60%), so retune with it first.
 - **Gold is banked but nothing spends it yet.** The menu shows the savings.
 
 ## The idea in one paragraph

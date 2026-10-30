@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { defaultCareer, difficultyFor, normalizeCareer, rankOf, review, reviewXp, reviewXpToNext } from "@/lib/hr/career";
 import { REVIEW } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
-import { DEPARTMENTS } from "@/lib/roster/data";
 import { starters } from "@/lib/roster/generate";
 import { STATS } from "@/lib/roster/types";
 
@@ -27,12 +26,13 @@ describe("review", () => {
     expect(result.promoted).toBe(false);
   });
 
-  it("grants a stat point per level, the favourite first, and carries the leftover XP over", () => {
+  it("grants a stat point per level, in the same order for every department, and carries the leftover XP over", () => {
     const result = review(coworker, reviewXpToNext(1) + 5);
-    const favourite = DEPARTMENTS[coworker.department].favours;
     expect(result.coworker).toMatchObject({ level: 2, xp: 5 });
     expect(result.levelsGained).toBe(1);
-    expect(result.coworker.stats[favourite]).toBe(coworker.stats[favourite] + 1);
+    expect(result.coworker.stats.output).toBe(coworker.stats.output + 1);
+    const other = starters()[1];
+    expect(review(other, reviewXpToNext(1)).coworker.stats.output).toBe(other.stats.output + 1);
     expect(total(result.coworker.stats)).toBe(total(coworker.stats) + 1);
   });
 
@@ -42,7 +42,7 @@ describe("review", () => {
     const result = review(coworker, need);
     expect(result.coworker.level).toBe(REVIEW.levelsPerRank + 1);
     expect(result.promoted).toBe(true);
-    expect(total(result.coworker.stats)).toBe(total(coworker.stats) + REVIEW.levelsPerRank + REVIEW.promotionBonus);
+    expect(total(result.coworker.stats)).toBe(total(coworker.stats) + REVIEW.levelsPerRank + 3 * REVIEW.promotionBonus);
     expect(rankOf(result.coworker.level)).toBe(1);
   });
 

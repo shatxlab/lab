@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultCareer, difficultyFor, normalizeCareer, rankOf, review, reviewXp, reviewXpToNext } from "@/lib/hr/career";
-import { REVIEW } from "@/lib/hr/sim/balance";
+import { defaultCareer, difficultyFor, normalizeCareer, openPack, rankOf, review, reviewXp, reviewXpToNext } from "@/lib/hr/career";
+import { PACKS, REVIEW } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import { starters } from "@/lib/roster/generate";
+import { defaultSave } from "@/lib/roster/save";
 import { STATS } from "@/lib/roster/types";
 
 const total = (stats: Record<string, number>) => Object.values(stats).reduce((sum, value) => sum + value, 0);
@@ -68,6 +69,10 @@ describe("difficulty", () => {
   it("starts at 1 and toughens foes in a run", () => {
     expect(difficultyFor(1)).toBe(1);
     expect(difficultyFor(11)).toBeGreaterThan(difficultyFor(6));
+    expect(difficultyFor(1, "legend")).toBeGreaterThan(difficultyFor(1, "rare"));
+    expect(difficultyFor(1, "rare")).toBeGreaterThan(difficultyFor(1, "uncommon"));
+    expect(difficultyFor(1, "uncommon")).toBeGreaterThan(difficultyFor(1, "common"));
+    expect(difficultyFor(1, "common")).toBe(1);
     expect(createRun(starters()[0], 1, 1.5).difficulty).toBe(1.5);
     expect(createRun(starters()[0], 1).difficulty).toBe(1);
   });
@@ -76,7 +81,37 @@ describe("difficulty", () => {
 describe("normalizeCareer", () => {
   it("repairs what it can and defaults the rest", () => {
     expect(normalizeCareer(null)).toEqual(defaultCareer());
-    expect(normalizeCareer({ focusId: 2.7, gold: -5 })).toEqual({ focusId: 2, gold: 0 });
-    expect(normalizeCareer({ focusId: "x", gold: 12 })).toEqual({ focusId: null, gold: 12 });
+    expect(normalizeCareer({ focusId: 2.7, gold: -5 })).toEqual({ focusId: 2, owned: [2], gold: 0 });
+    expect(normalizeCareer({ focusId: "x", gold: 12 })).toEqual({ focusId: null, owned: [], gold: 12 });
+  });
+
+  it("always owns the focus, once, and drops bad ids", () => {
+    expect(normalizeCareer({ focusId: 3, owned: [5, 3, "x", 5, -1], gold: 0 }).owned).toEqual([3, 5]);
+  });
+});
+
+describe("openPack", () => {
+  it("refuses without the gold", () => {
+    expect(openPack(defaultSave(1), { focusId: 1, owned: [1], gold: PACKS.price - 1 })).toBeNull();
+  });
+
+  it("spends the price and adds a new level 1 card to the roster, the codex and the owned list", () => {
+    const roster = defaultSave(1);
+    const bought = openPack(roster, { focusId: 1, owned: [1], gold: PACKS.price + 5 })!;
+    expect(bought.career).toEqual({ focusId: 1, owned: [1, bought.coworker.id], gold: 5 });
+    expect(bought.coworker).toMatchObject({ level: 1, xp: 0 });
+    expect(bought.coworker.id).toBe(roster.nextId);
+    expect(bought.roster.nextId).toBe(roster.nextId + 1);
+    expect(bought.roster.coworkers).toHaveLength(roster.coworkers.length + 1);
+    expect(bought.roster.codex.coworkers.some((entry) => entry.id === bought.coworker.id)).toBe(true);
+    expect(roster.coworkers).toHaveLength(3);
+  });
+
+  it("gives a different card each time, and the same ones from the same save", () => {
+    const career = { focusId: 1, owned: [1], gold: PACKS.price * 3 };
+    const first = openPack(defaultSave(7), career)!;
+    const second = openPack(first.roster, first.career)!;
+    expect(second.coworker.id).not.toBe(first.coworker.id);
+    expect(openPack(defaultSave(7), career)!.coworker).toEqual(first.coworker);
   });
 });

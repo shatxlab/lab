@@ -2,10 +2,12 @@
 // change can be judged on whole runs.
 //
 //   npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/hr.mjs
-//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level]
+//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level] [rarity]
 //
 // With a level, each starter is first grown to that career level (a stat point per level, see `review`) and meets the
-// matching difficulty, to check the career curve. Level 1 is a first-day coworker.
+// matching difficulty, to check the career curve. Level 1 is a first-day coworker. With a rarity (uncommon, rare or
+// legend) the starters' departments are played by pack cards of that rarity instead, to check that a lucky pull is
+// stronger but not a walkover.
 //
 // The bot is a sensible but unhurried player. A few times a second it tries 16 directions, looks where each would take
 // it half a second from now and where the foes and foe shots would be by then, and goes the way with the least danger
@@ -14,7 +16,8 @@
 // player who herds the horde and plans a build should do better.
 
 import process from 'node:process'
-import { starters } from '../../src/lib/roster/generate.ts'
+import { generateCoworker, starters } from '../../src/lib/roster/generate.ts'
+import type { Rarity } from '../../src/lib/roster/types.ts'
 import type { Coworker } from '../../src/lib/roster/types.ts'
 import { ARENA, AUDIT_CLOSES, BOSS_AT, MINI_BOSS_AT } from '../../src/lib/hr/sim/balance.ts'
 import { difficultyFor, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
@@ -113,7 +116,7 @@ function steer(run: Run): Input {
 }
 
 function play(coworker: Coworker, seed: number, verbose: boolean) {
-  const run = createRun(coworker, seed, difficultyFor(coworker.level))
+  const run = createRun(coworker, seed, difficultyFor(coworker.level, coworker.rarity))
   let tick = 0
   let input: Input = { dx: 0, dy: 0 }
   let nextReport = 60
@@ -143,13 +146,16 @@ const seeds = Number(process.argv[2] ?? 5)
 const only = process.argv[3] === 'all' ? undefined : process.argv[3]
 const verbose = process.argv[4] === 'verbose'
 const careerLevel = Number(process.argv[5] ?? 1)
+const rarity = process.argv[6] as Rarity | undefined
 let wins = 0
 let runs = 0
-for (const starter of starters()) {
+for (const [index, base] of starters().entries()) {
+  // A pack card of the starter's department, the same one every run of the script.
+  const starter = rarity ? generateCoworker({ rng: 1000 + index, nextId: 10 + index }, { department: base.department, rarity }) : base
   let coworker = starter
   while (coworker.level < careerLevel) coworker = review(coworker, reviewXpToNext(coworker.level) - coworker.xp).coworker
   if (only && only !== coworker.department) continue
-  console.log(`${coworker.name} (${coworker.department}, level ${coworker.level}, ${coworker.quirks.join(', ')})`)
+  console.log(`${coworker.name} (${coworker.rarity} ${coworker.department}, level ${coworker.level}, ${coworker.quirks.join(', ')})`)
   let teamWins = 0
   const taken: Record<string, number> = {}
   for (let seed = 1; seed <= seeds; seed += 1) {

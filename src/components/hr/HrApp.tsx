@@ -2,15 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
-import { clearCareer, difficultyFor, rankOf, readCareer, review, reviewXp, reviewXpToNext, writeCareer, type Career } from "@/lib/hr/career";
+import { clearCareer, defaultCareer, difficultyFor, openPack, rankOf, readCareer, review, reviewXp, reviewXpToNext, writeCareer, type Career } from "@/lib/hr/career";
 import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
-import { AUDIT_CLOSES } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, PACKS } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import type { Run } from "@/lib/hr/sim/types";
 import { clearRun, readRun, writeRun } from "@/lib/hr/snapshot";
 import { DEPARTMENTS } from "@/lib/roster/data";
 import { defaultSave, readSave, writeSave } from "@/lib/roster/save";
+import { STARTERS } from "@/lib/roster/generate";
 import { STATS, type Coworker, type RosterSave } from "@/lib/roster/types";
 
 import { RunView } from "./RunView";
@@ -38,6 +39,8 @@ export default function HrApp() {
   const [saved, setSaved] = useState<Run | null>(null);
   const [run, setRun] = useState<Run | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  /** The card a pack just revealed. */
+  const [revealed, setRevealed] = useState<Coworker | null>(null);
 
   // Storage and the sprite sheet only exist in the browser; read them after mount.
   useEffect(() => {
@@ -66,7 +69,7 @@ export default function HrApp() {
 
   const start = (coworker: Coworker) => {
     setResult(null);
-    const next = createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level));
+    const next = createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity));
     writeRun(next);
     setSaved(null);
     setRun(next);
@@ -89,7 +92,8 @@ export default function HrApp() {
       const after: RosterSave = { ...before, day: before.day + 1, coworkers: before.coworkers.map((coworker) => (coworker.id === worker.id ? outcome.coworker : coworker)) };
       writeSave(after);
       setRoster(after);
-      const savings: Career = { focusId: careerRef.current?.focusId ?? null, gold: (careerRef.current?.gold ?? 0) + Math.floor(ended.gold) };
+      const current = careerRef.current ?? defaultCareer();
+      const savings: Career = { ...current, gold: current.gold + Math.floor(ended.gold) };
       writeCareer(savings);
       setCareer(savings);
       reviewed = { xp: outcome.xp, level: outcome.coworker.level, levelsGained: outcome.levelsGained, promotedTo: outcome.promoted ? rankOf(outcome.coworker.level) : null };
@@ -107,7 +111,25 @@ export default function HrApp() {
   }, []);
 
   const startCareer = (coworker: Coworker) => {
-    const next: Career = { focusId: coworker.id, gold: 0 };
+    const next: Career = { focusId: coworker.id, owned: [coworker.id], gold: 0 };
+    writeCareer(next);
+    setCareer(next);
+  };
+
+  const buyPack = () => {
+    if (!roster || !career) return;
+    const bought = openPack(roster, career);
+    if (!bought) return;
+    writeSave(bought.roster);
+    writeCareer(bought.career);
+    setRoster(bought.roster);
+    setCareer(bought.career);
+    setRevealed(bought.coworker);
+  };
+
+  const makeFocus = (coworker: Coworker) => {
+    if (!career) return;
+    const next: Career = { ...career, focusId: coworker.id };
     writeCareer(next);
     setCareer(next);
   };
@@ -119,7 +141,7 @@ export default function HrApp() {
     clearCareer();
     writeSave(fresh);
     setRoster(fresh);
-    setCareer({ focusId: null, gold: 0 });
+    setCareer(defaultCareer());
     setSaved(null);
   };
 
@@ -163,6 +185,7 @@ export default function HrApp() {
 
   const savedCoworker = coworkerOf(saved);
   const focus = roster?.coworkers.find((coworker) => coworker.id === career?.focusId) ?? null;
+  const others = (roster?.coworkers ?? []).filter((coworker) => career?.owned.includes(coworker.id) && coworker.id !== focus?.id);
   return (
     <div className="tower-root hr-root" ref={readyRef} data-lang-sensitive>
       <div className="tower-screen">
@@ -188,7 +211,7 @@ export default function HrApp() {
               <p className="hr-continue-hint">{text.careerBlurb}</p>
               <ul className="hr-coworkers">
                 {roster.coworkers
-                  .filter((coworker) => coworker.status.kind !== "quit")
+                  .filter((coworker) => coworker.id <= STARTERS.length && coworker.status.kind !== "quit")
                   .map((coworker) => (
                     <li key={coworker.id}>
                       <CoworkerCard coworker={coworker} sheet={sheet} text={text} action={text.startCareer} onAct={() => startCareer(coworker)} />
@@ -206,6 +229,24 @@ export default function HrApp() {
                   <CoworkerCard coworker={focus} sheet={sheet} text={text} action={text.goToWork} onAct={() => start(focus)} showCareer />
                 </li>
               </ul>
+              <div className="hr-pack">
+                <button type="button" className="tower-button" onClick={buyPack} disabled={career.gold < PACKS.price}>
+                  {text.openPack(text.goldAmount(PACKS.price))}
+                </button>
+                <p className="hr-continue-hint">{text.packHint}</p>
+              </div>
+              {others.length > 0 && (
+                <>
+                  <h2 className="hr-menu-heading">{text.yourCards}</h2>
+                  <ul className="hr-coworkers">
+                    {others.map((coworker) => (
+                      <li key={coworker.id}>
+                        <CoworkerCard coworker={coworker} sheet={sheet} text={text} action={text.makeFocus} onAct={() => makeFocus(coworker)} showCareer />
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
               <button type="button" className="tower-button tower-button-quiet tower-button-small hr-start-over" onClick={startOver}>
                 {text.startOver}
               </button>
@@ -216,6 +257,19 @@ export default function HrApp() {
           </a>
         </div>
       </div>
+      {revealed && (
+        <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="hr-pack-title">
+          <div className="tower-panel hr-reveal">
+            <h2 id="hr-pack-title">{text.packOpened(text.rarities[revealed.rarity])}</h2>
+            <CoworkerCard coworker={revealed} sheet={sheet} text={text} />
+            <div className="tower-actions">
+              <button type="button" className="tower-button" onClick={() => setRevealed(null)} autoFocus>
+                {text.nice}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -234,15 +288,16 @@ interface CardProps {
   coworker: Coworker;
   sheet: Sheet | null;
   text: HrText;
-  action: string;
-  onAct: () => void;
+  /** The button's label and what it does; none for a card that is only shown. */
+  action?: string;
+  onAct?: () => void;
   /** Show the career: rank, level and progress to the next level. */
   showCareer?: boolean;
 }
 
 function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer }: CardProps) {
   return (
-    <article className="hr-card">
+    <article className={`hr-card hr-card-${coworker.rarity}`}>
       <Portrait coworker={coworker} sheet={sheet} />
       <div className="hr-card-body">
         <p className="hr-card-name">{coworker.name}</p>
@@ -256,7 +311,7 @@ function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer }: Card
           </>
         )}
         <p className="hr-card-department">
-          {text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
+          {text.rarities[coworker.rarity]} · {text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
         </p>
         {coworker.quirks.map((quirk) => (
           <p key={quirk} className="hr-card-quirk">
@@ -272,9 +327,11 @@ function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer }: Card
           </div>
         ))}
       </dl>
-      <button type="button" className="tower-button tower-button-small hr-card-send" onClick={onAct}>
-        {action}
-      </button>
+      {action && (
+        <button type="button" className="tower-button tower-button-small hr-card-send" onClick={onAct}>
+          {action}
+        </button>
+      )}
     </article>
   );
 }

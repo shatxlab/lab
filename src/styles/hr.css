@@ -133,6 +133,27 @@
   margin-top: 0.9rem;
 }
 
+.hr-card-uncommon {
+  box-shadow: inset 0 0 0 2px #38b764;
+}
+
+.hr-card-rare {
+  box-shadow: inset 0 0 0 3px #3b5dc9;
+}
+
+.hr-card-legend {
+  background: #fff8e1;
+  box-shadow: inset 0 0 0 3px #e0a21a;
+}
+
+.hr-pack {
+  margin-top: 0.9rem;
+}
+
+.hr-reveal .hr-card {
+  margin-top: 0.8rem;
+}
+
 .hr-card-send {
   grid-column: 1 / -1;
 }

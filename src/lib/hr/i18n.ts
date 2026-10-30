@@ -1,6 +1,6 @@
 import type { AppLang } from "@/lib/apps/lang";
 import { QUIRKS } from "@/lib/roster/data";
-import type { DepartmentId, Effect, QuirkId, Stat } from "@/lib/roster/types";
+import type { DepartmentId, Effect, QuirkId, Rarity, Stat } from "@/lib/roster/types";
 import type { Blurb } from "@/lib/tower/i18n";
 import type { FoeKind, PassiveId, WeaponId } from "./sim/types";
 
@@ -25,6 +25,13 @@ export interface HrText {
   reviewEarned: (xp: number) => string;
   leveledUp: (level: number) => string;
   promoted: (rank: string) => string;
+  openPack: (price: string) => string;
+  packHint: string;
+  packOpened: (rarity: string) => string;
+  nice: string;
+  yourCards: string;
+  makeFocus: string;
+  rarities: Record<Rarity, string>;
   startOver: string;
   startOverConfirm: string;
   departments: Record<DepartmentId, string>;
@@ -89,6 +96,13 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     reviewEarned: (xp) => `+${xp} review XP`,
     leveledUp: (level) => `Level up: ${level}!`,
     promoted: (rank) => `Promoted to ${rank}!`,
+    openPack: (price) => `Open a pack (${price})`,
+    packHint: "A pack holds one new coworker. Rarer ones are stronger, but the office pushes back harder.",
+    packOpened: (rarity) => `New coworker: ${rarity}!`,
+    nice: "Nice",
+    yourCards: "Your cards",
+    makeFocus: "Make focus",
+    rarities: { common: "Common", uncommon: "Uncommon", rare: "Rare", legend: "Legend" },
     startOver: "Start a new career",
     startOverConfirm: "Start over? Your coworker's level and savings will be lost.",
     departments: {
@@ -206,6 +220,13 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     reviewEarned: (xp) => `+${xp} опыта аттестации`,
     leveledUp: (level) => `Новый уровень: ${level}!`,
     promoted: (rank) => `Повышение: ${rank}!`,
+    openPack: (price) => `Открыть пакет (${price})`,
+    packHint: "В пакете один новый сотрудник. Редкие сильнее, но офис давит на них сильнее.",
+    packOpened: (rarity) => `Новый сотрудник: ${rarity}!`,
+    nice: "Отлично",
+    yourCards: "Ваши карточки",
+    makeFocus: "Сделать главным",
+    rarities: { common: "Обычный", uncommon: "Необычный", rare: "Редкий", legend: "Легенда" },
     startOver: "Начать новую карьеру",
     startOverConfirm: "Начать заново? Уровень сотрудника и накопления пропадут.",
     departments: {

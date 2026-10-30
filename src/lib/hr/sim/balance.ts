@@ -245,3 +245,10 @@ export const REVIEW = {
   /** Foes' hp (bosses too) grows by this fraction per career level past the first; spawns by half of it. */
   difficultyPerLevel: 0.06,
 } as const;
+
+/**
+ * Packs: gold buys one new coworker card, rolled with the roster's rarity odds. Aim: a pack about every three runs.
+ * A card's rarity gives it bonus stat points (see `RARITY`), so it also faces a tougher office: each bonus point past a
+ * common's counts as `rarityLevels` career levels of difficulty. A lucky pull is stronger, not a walkover.
+ */
+export const PACKS = { price: 1200, rarityLevels: 1 } as const;

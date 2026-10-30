@@ -1,6 +1,8 @@
-import { MAX_STAT } from "@/lib/roster/data";
-import type { Coworker, Stat } from "@/lib/roster/types";
-import { REVIEW } from "./sim/balance";
+import { MAX_STAT, RARITY } from "@/lib/roster/data";
+import { generateCoworker } from "@/lib/roster/generate";
+import { recordSeen } from "@/lib/roster/save";
+import type { Coworker, Rarity, RosterSave, Stat } from "@/lib/roster/types";
+import { PACKS, REVIEW } from "./sim/balance";
 
 /**
  * The journey between runs: the one coworker the player is growing and the gold saved up. Level, XP and the day live
@@ -11,7 +13,9 @@ export const CAREER_STORAGE_KEY = "lab:hr:v1";
 export interface Career {
   /** The coworker being grown; null until the player picks a starter. */
   focusId: number | null;
-  /** Gold banked from runs. Nothing spends it yet (packs are next). */
+  /** Ids of the cards the player owns: the starter they picked and every pack since. */
+  owned: number[];
+  /** Gold banked from runs, spent on packs. */
   gold: number;
 }
 
@@ -30,14 +34,17 @@ function storageOrUndefined(): CareerStorage | undefined {
 }
 
 export function defaultCareer(): Career {
-  return { focusId: null, gold: 0 };
+  return { focusId: null, owned: [], gold: 0 };
 }
 
 export function normalizeCareer(raw: unknown): Career {
   if (!raw || typeof raw !== "object") return defaultCareer();
-  const { focusId, gold } = raw as Partial<Record<keyof Career, unknown>>;
+  const { focusId, owned, gold } = raw as Partial<Record<keyof Career, unknown>>;
   const whole = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
-  return { focusId: whole(focusId) || null, gold: whole(gold) };
+  const focus = whole(focusId) || null;
+  const ids = Array.isArray(owned) ? owned.map(whole).filter((id) => id > 0) : [];
+  // The focus is always owned, so a save from before packs keeps its coworker.
+  return { focusId: focus, owned: [...new Set(focus ? [focus, ...ids] : ids)], gold: whole(gold) };
 }
 
 export function readCareer(storage: CareerStorage | undefined = storageOrUndefined()): Career {
@@ -80,9 +87,10 @@ export function rankOf(level: number): number {
   return Math.floor((Math.max(1, level) - 1) / REVIEW.levelsPerRank);
 }
 
-/** How much tougher the office is for a coworker of this level. */
-export function difficultyFor(level: number): number {
-  return 1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1);
+/** How much tougher the office is for a coworker of this level and rarity (see `PACKS`). */
+export function difficultyFor(level: number, rarity: Rarity = "common"): number {
+  const extra = Math.max(0, RARITY[rarity].bonus - RARITY.common.bonus) * PACKS.rarityLevels;
+  return 1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1 + extra);
 }
 
 const GROWTH_ORDER: readonly Stat[] = ["output", "grit", "focus", "hustle", "luck"];
@@ -124,4 +132,13 @@ export function review(coworker: Coworker, xp: number): Review {
     }
   }
   return { coworker: { ...coworker, level, xp: pool, stats }, xp: Math.max(0, Math.floor(xp)), levelsGained: level - coworker.level, promoted };
+}
+
+/** The roster and career after buying a pack, with the card it held; null when the gold falls short. */
+export function openPack(roster: RosterSave, career: Career): { roster: RosterSave; career: Career; coworker: Coworker } | null {
+  if (career.gold < PACKS.price) return null;
+  const source = { rng: roster.rng, nextId: roster.nextId };
+  const coworker = generateCoworker(source);
+  const next = recordSeen({ ...roster, rng: source.rng, nextId: source.nextId, coworkers: [...roster.coworkers, coworker] }, coworker);
+  return { roster: next, career: { ...career, owned: [...career.owned, coworker.id], gold: career.gold - PACKS.price }, coworker };
 }

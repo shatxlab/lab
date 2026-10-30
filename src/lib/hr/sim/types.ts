@@ -163,6 +163,8 @@ export interface Run {
   seed: number;
   rng: number;
   coworkerId: number;
+  /** Multiplies foes' hp and (by half) their spawns; 1 on a coworker's first day. */
+  difficulty: number;
   status: Status;
   /** Seconds played; the clock stops while a pick is waiting. */
   time: number;

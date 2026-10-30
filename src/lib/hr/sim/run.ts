@@ -48,7 +48,7 @@ import type { Effect, Foe, FoeKind, Input, OwnedWeapon, Run, Shot, WeaponId } fr
 
 /** The fixed tick the page steps the sim with, so every device plays the same run. */
 export const STEP = 1 / 60;
-export const RUN_VERSION = 1;
+export const RUN_VERSION = 2;
 
 /** The biggest foe's radius, which every grid search is widened by. */
 const FOE_PAD = Math.max(...Object.values(FOES).map((foe) => foe.radius));
@@ -59,13 +59,15 @@ const grid = new Grid<Foe>(ARENA.width, ARENA.height, GRID_CELL);
 /** Foes by id for homing shots; rebuilt every tick alongside the grid. */
 const byId = new Map<number, Foe>();
 
-export function createRun(coworker: Coworker, seed: number): Run {
+/** `difficulty` is 1 for a first-day coworker and grows with their career level (see `difficultyFor`). */
+export function createRun(coworker: Coworker, seed: number, difficulty = 1): Run {
   const base = baseNumbers(coworker);
   return {
     version: RUN_VERSION,
     seed,
     rng: seed,
     coworkerId: coworker.id,
+    difficulty,
     status: "playing",
     time: 0,
     base,
@@ -208,7 +210,7 @@ function index(run: Run): void {
 
 function addFoe(run: Run, kind: FoeKind, x: number, y: number): Foe {
   const def = FOES[kind];
-  const hp = def.boss ? def.hp : def.hp * hpScale(run.time);
+  const hp = (def.boss ? def.hp : def.hp * hpScale(run.time)) * run.difficulty;
   const foe: Foe = {
     id: run.nextId++,
     kind,
@@ -271,7 +273,7 @@ function spawn(run: Run, dt: number): void {
     addFoe(run, "auditor", at.x, at.y);
   }
   const auditorOut = run.foes.some((foe) => foe.kind === "auditor");
-  run.spawnDebt += spawnRate(run.time) * (auditorOut ? 0.5 : 1) * dt;
+  run.spawnDebt += spawnRate(run.time) * (1 + (run.difficulty - 1) / 2) * (auditorOut ? 0.5 : 1) * dt;
   while (run.spawnDebt >= 1) {
     run.spawnDebt -= 1;
     if (run.foes.length >= MAX_FOES) continue;

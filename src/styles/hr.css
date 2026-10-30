@@ -114,6 +114,25 @@
   font-size: 0.95rem;
 }
 
+.hr-card-rank {
+  color: var(--tower-muted);
+  font-size: 0.85rem;
+}
+
+.hr-card-progress {
+  width: 100%;
+  height: 0.5rem;
+  margin: 0.2rem 0;
+}
+
+.hr-promoted {
+  font-weight: 700;
+}
+
+.hr-start-over {
+  margin-top: 0.9rem;
+}
+
 .hr-card-send {
   grid-column: 1 / -1;
 }

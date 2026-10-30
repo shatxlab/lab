@@ -12,7 +12,21 @@ export interface HrText {
   whoGoesIn: string;
   continueRun: string;
   continueHint: (name: string, time: string) => string;
-  send: string;
+  chooseCareer: string;
+  careerBlurb: string;
+  startCareer: string;
+  goToWork: string;
+  day: (day: number) => string;
+  /** Rank titles, lowest first; the last one repeats. */
+  ranks: string[];
+  careerLevel: (level: number) => string;
+  reviewProgress: (xp: number, next: number) => string;
+  savings: (gold: string) => string;
+  reviewEarned: (xp: number) => string;
+  leveledUp: (level: number) => string;
+  promoted: (rank: string) => string;
+  startOver: string;
+  startOverConfirm: string;
   departments: Record<DepartmentId, string>;
   stats: Record<Stat, string>;
   quirks: Record<QuirkId, string>;
@@ -63,7 +77,20 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     whoGoesIn: "Who goes in today?",
     continueRun: "Continue the run",
     continueHint: (name, time) => `${name}, at ${time}`,
-    send: "Send in",
+    chooseCareer: "Who will you grow?",
+    careerBlurb: "Pick one coworker and grow them over the coming weeks. One run is one day. The rest of the office can be hired later.",
+    startCareer: "Start career",
+    goToWork: "Go to work",
+    day: (day) => `Day ${day}`,
+    ranks: ["Trainee", "Junior", "Specialist", "Senior", "Lead", "Director"],
+    careerLevel: (level) => `Level ${level}`,
+    reviewProgress: (xp, next) => `Review: ${xp} / ${next} XP`,
+    savings: (gold) => `Savings: ${gold}`,
+    reviewEarned: (xp) => `+${xp} review XP`,
+    leveledUp: (level) => `Level up: ${level}!`,
+    promoted: (rank) => `Promoted to ${rank}!`,
+    startOver: "Start a new career",
+    startOverConfirm: "Start over? Your coworker's level and savings will be lost.",
     departments: {
       engineering: "Engineering",
       finance: "Finance",
@@ -167,7 +194,20 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     whoGoesIn: "Кто идёт сегодня?",
     continueRun: "Продолжить забег",
     continueHint: (name, time) => `${name}, ${time}`,
-    send: "Отправить",
+    chooseCareer: "Кого будете растить?",
+    careerBlurb: "Выберите одного сотрудника и растите его ближайшие недели. Один забег — один день. Остальных можно будет нанять позже.",
+    startCareer: "Начать карьеру",
+    goToWork: "На работу",
+    day: (day) => `День ${day}`,
+    ranks: ["Стажёр", "Младший", "Специалист", "Старший", "Ведущий", "Директор"],
+    careerLevel: (level) => `Уровень ${level}`,
+    reviewProgress: (xp, next) => `Аттестация: ${xp} / ${next} опыта`,
+    savings: (gold) => `Накопления: ${gold}`,
+    reviewEarned: (xp) => `+${xp} опыта аттестации`,
+    leveledUp: (level) => `Новый уровень: ${level}!`,
+    promoted: (rank) => `Повышение: ${rank}!`,
+    startOver: "Начать новую карьеру",
+    startOverConfirm: "Начать заново? Уровень сотрудника и накопления пропадут.",
     departments: {
       engineering: "Разработка",
       finance: "Финансы",

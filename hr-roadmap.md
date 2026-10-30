@@ -11,8 +11,11 @@ steps", then read "Guide for the next session" (at the end) before changing anyt
   feedback is the next input.
 - **Built:** the shared roster (`src/lib/roster/`), the hero run (sim, bot, renderer, page) with 3 fixed starters, run
   suspend/resume, English and Russian copy.
-- **Not built:** anything that carries over between runs (gold banking, performance reviews, burnout, quitting), the HR
-  loop (hiring), weapon combinations, the panic button, real foe art, the auto-battler.
+- **Career slice (2026-10-30, built, not yet committed or deployed):** pick one starter to grow, one run = one day,
+  review XP after each run raises career level (+1 stat per level, promotion every 5 levels), foes scale with the level,
+  gold is banked in `lab:hr:v1`. See "The career" below.
+- **Not built:** burnout, quitting, packs (the gold sink), the interview bosses, the HR loop, stages, weapon
+  combinations, the panic button, real foe art, the auto-battler.
 - **Commits:** `3ebf673` roster, `2847ae5` sim and bot, `edff191` page and listing (all on `main`, deployed).
 
 ## Next steps (start here)
@@ -20,14 +23,10 @@ steps", then read "Guide for the next session" (at the end) before changing anyt
 1. **Take the user's phone feedback** on the live run and act on it first. Things already suspected (see "Known
    rough edges"): foes look small, the floor is dim, starters are uneven, the stick's feel and the run length are
    untested by a human. Retune with the bot (see the playbook) before adding features.
-2. **Step 4: between runs and the stakes.** Nothing carries over yet: a run's gold, level and kills are shown on the
-   result panel and then dropped. Design, then build:
-   - bank the run's gold in a save (`lab:hr:v1` or in the roster save; decide), and spend it on "performance reviews"
-     that raise a coworker's permanent stats (`Coworker.stats`, `level`, `xp` exist in the roster already);
-   - burnout: a fallen coworker can't be sent out for N days (`Status.burnedOut.until` exists; `RosterSave.day` exists
-     but nothing advances it: decide what a "day" is before the HR loop, e.g. one run = one day);
-   - quitting and the paid "keep them" option stay off (`stakes: false`) until the HR loop exists.
-   **Ask the user first** (see "Open questions for the user"); these are design choices, not defaults.
+2. **Step 4 is half built** (see "The career"). Next in it: **packs**, the gold sink: spend banked gold on a pack of
+   candidate cards (daily pool of the HR loop); then **stages** (office areas with a hazard each) and **promotion
+   unlocks** (today a promotion is only a title and +2 to the favourite stat). Burnout and quitting stay off until
+   there is a bench to swap to.
 3. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
    reveal quirks, hire / pass / hold, desks, the codex. Then turn `stakes` on and tune the quit chance and the price of
    keeping someone with the bot (needs the bot to play the meta, not just runs).
@@ -57,6 +56,23 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
 - **Open:** the game's name (the "HR Department" title may change if the focus becomes one character; decide later),
   whether runs per real day are limited, how many foes/upgrades the weeks of play need, the card rarity and pack odds.
 - The hospital game is a separate game, parked on its own; it is in this file only because it came up as an idea.
+
+## The career (built 2026-10-30; `src/lib/hr/career.ts`, numbers in `REVIEW` in `sim/balance.ts`)
+
+- **Focus coworker:** the menu first asks who to grow (the three starters); after that only the focus is shown, with
+  rank, level, review progress, the day and the savings. "Start a new career" (confirm) resets the roster and career.
+  Existing saves started fresh by design (no carry-over from the old version).
+- **A run is a day:** the end of a run (win, fall or walk-out) moves `RosterSave.day` on and runs a review.
+- **Review XP** = 1 per 5 s survived + 50 for beating the auditor (walking out at once pays 0). XP from level L to the
+  next = 60 + 20 L. Each level +1 to a stat (the department's favourite first, then the others in order); every 5
+  levels a promotion (Trainee, Junior, Specialist, Senior, Lead, Director) with +2 to the favourite. Pace: about 8 runs to
+  the first promotion, about 35 to 40 runs to Senior (level 16).
+- **Difficulty:** `difficultyFor(level)` = 1 + 0.04 per level past 1, passed to `createRun`; it multiplies foe hp
+  (bosses too) and spawn rate by half of it. `Run.difficulty` is in the snapshot (`RUN_VERSION` 2).
+- **Bot check** (`node /tmp/hr.mjs 20 all - <level>`): the bot wins 55% / 63% / 67% / 58% overall at levels 1 / 6 / 11 /
+  16. **The intern (Kenji) falls off at high levels** (2/20 at level 16, vs 7/20 at 11): his favourite stat is hustle
+  and sticky notes scale poorly with the +1 stat points; look at it before the curve is trusted past level 15.
+- **Gold is banked but nothing spends it yet.** The menu shows the savings.
 
 ## The idea in one paragraph
 

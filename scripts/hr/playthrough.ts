@@ -2,7 +2,10 @@
 // change can be judged on whole runs.
 //
 //   npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/hr.mjs
-//   node /tmp/hr.mjs [seeds] [department] [verbose]
+//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level]
+//
+// With a level, each starter is first grown to that career level (a stat point per level, see `review`) and meets the
+// matching difficulty, to check the career curve. Level 1 is a first-day coworker.
 //
 // The bot is a sensible but unhurried player. A few times a second it tries 16 directions, looks where each would take
 // it half a second from now and where the foes and foe shots would be by then, and goes the way with the least danger
@@ -14,6 +17,7 @@ import process from 'node:process'
 import { starters } from '../../src/lib/roster/generate.ts'
 import type { Coworker } from '../../src/lib/roster/types.ts'
 import { ARENA, AUDIT_CLOSES, BOSS_AT, MINI_BOSS_AT } from '../../src/lib/hr/sim/balance.ts'
+import { difficultyFor, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
 import { choose, createRun, step } from '../../src/lib/hr/sim/run.ts'
 import type { Input, Pick, Run } from '../../src/lib/hr/sim/types.ts'
 
@@ -109,7 +113,7 @@ function steer(run: Run): Input {
 }
 
 function play(coworker: Coworker, seed: number, verbose: boolean) {
-  const run = createRun(coworker, seed)
+  const run = createRun(coworker, seed, difficultyFor(coworker.level))
   let tick = 0
   let input: Input = { dx: 0, dy: 0 }
   let nextReport = 60
@@ -136,13 +140,16 @@ function minutes(seconds: number): string {
 }
 
 const seeds = Number(process.argv[2] ?? 5)
-const only = process.argv[3]
+const only = process.argv[3] === 'all' ? undefined : process.argv[3]
 const verbose = process.argv[4] === 'verbose'
+const careerLevel = Number(process.argv[5] ?? 1)
 let wins = 0
 let runs = 0
-for (const coworker of starters()) {
+for (const starter of starters()) {
+  let coworker = starter
+  while (coworker.level < careerLevel) coworker = review(coworker, reviewXpToNext(coworker.level) - coworker.xp).coworker
   if (only && only !== coworker.department) continue
-  console.log(`${coworker.name} (${coworker.department}, ${coworker.quirks.join(', ')})`)
+  console.log(`${coworker.name} (${coworker.department}, level ${coworker.level}, ${coworker.quirks.join(', ')})`)
   let teamWins = 0
   const taken: Record<string, number> = {}
   for (let seed = 1; seed <= seeds; seed += 1) {

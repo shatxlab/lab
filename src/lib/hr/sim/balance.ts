@@ -222,3 +222,26 @@ export const GOLD_PICK = 10;
 /** Speed of a gem flying to the hero. */
 export const GEM_PULL = 320;
 export const GEM_RADIUS = 5;
+
+// ---- The career (between runs) -----------------------------------------------------------------------------------
+
+/**
+ * One run is one day. A run ends in a performance review: review XP from the time survived (and a bonus for beating
+ * the auditor) raises the coworker's career level, and each level adds a stat point. Every `levelsPerRank` levels is a
+ * promotion. Foes get tougher with the level so growth doesn't make runs trivial. Aim: about a week of runs to the first
+ * promotion, about a month to Senior.
+ */
+export const REVIEW = {
+  /** One review XP per this many seconds survived. */
+  secondsPerXp: 5,
+  /** Extra XP for beating the auditor. */
+  winBonus: 50,
+  /** XP from level L to the next: `toNextBase + toNextPerLevel * L`. */
+  toNextBase: 60,
+  toNextPerLevel: 20,
+  levelsPerRank: 5,
+  /** Extra points in the department's favourite stat at a promotion. */
+  promotionBonus: 2,
+  /** Foes' hp (bosses too) grows by this fraction per career level past the first; spawns by half of it. */
+  difficultyPerLevel: 0.04,
+} as const;

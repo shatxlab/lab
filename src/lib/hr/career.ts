@@ -1,0 +1,122 @@
+import { DEPARTMENTS, MAX_STAT } from "@/lib/roster/data";
+import { STATS, type Coworker, type Stat } from "@/lib/roster/types";
+import { REVIEW } from "./sim/balance";
+
+/**
+ * The journey between runs: the one coworker the player is growing and the gold saved up. Level, XP and the day live
+ * with the coworker and the day counter in the shared roster save; this is the part only the hero game cares about.
+ */
+export const CAREER_STORAGE_KEY = "lab:hr:v1";
+
+export interface Career {
+  /** The coworker being grown; null until the player picks a starter. */
+  focusId: number | null;
+  /** Gold banked from runs. Nothing spends it yet (packs are next). */
+  gold: number;
+}
+
+export interface CareerStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+function storageOrUndefined(): CareerStorage | undefined {
+  try {
+    return typeof localStorage === "undefined" ? undefined : localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+export function defaultCareer(): Career {
+  return { focusId: null, gold: 0 };
+}
+
+export function normalizeCareer(raw: unknown): Career {
+  if (!raw || typeof raw !== "object") return defaultCareer();
+  const { focusId, gold } = raw as Partial<Record<keyof Career, unknown>>;
+  const whole = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
+  return { focusId: whole(focusId) || null, gold: whole(gold) };
+}
+
+export function readCareer(storage: CareerStorage | undefined = storageOrUndefined()): Career {
+  try {
+    const raw = storage?.getItem(CAREER_STORAGE_KEY);
+    return raw ? normalizeCareer(JSON.parse(raw)) : defaultCareer();
+  } catch {
+    return defaultCareer();
+  }
+}
+
+export function writeCareer(career: Career, storage: CareerStorage | undefined = storageOrUndefined()): void {
+  try {
+    storage?.setItem(CAREER_STORAGE_KEY, JSON.stringify(career));
+  } catch {
+    // Private mode or a full quota: progress just isn't kept.
+  }
+}
+
+export function clearCareer(storage: CareerStorage | undefined = storageOrUndefined()): void {
+  try {
+    storage?.removeItem(CAREER_STORAGE_KEY);
+  } catch {
+    // Nothing to do.
+  }
+}
+
+/** Review XP for a run: a little for every few seconds survived, and a bonus for beating the auditor. */
+export function reviewXp(time: number, won: boolean): number {
+  return Math.floor(Math.max(0, time) / REVIEW.secondsPerXp) + (won ? REVIEW.winBonus : 0);
+}
+
+/** Review XP from `level` to the next. */
+export function reviewXpToNext(level: number): number {
+  return REVIEW.toNextBase + REVIEW.toNextPerLevel * level;
+}
+
+/** 0 is the first rank; the next starts every `levelsPerRank` levels. */
+export function rankOf(level: number): number {
+  return Math.floor((Math.max(1, level) - 1) / REVIEW.levelsPerRank);
+}
+
+/** How much tougher the office is for a coworker of this level. */
+export function difficultyFor(level: number): number {
+  return 1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1);
+}
+
+export interface Review {
+  coworker: Coworker;
+  /** The XP that was added. */
+  xp: number;
+  levelsGained: number;
+  promoted: boolean;
+}
+
+/** The stat a coworker grows on reaching `level`: their favourite first, then the others in order. */
+function grownStat(coworker: Coworker, level: number): Stat {
+  const favourite = DEPARTMENTS[coworker.department].favours;
+  const order = [favourite, ...STATS.filter((stat) => stat !== favourite)];
+  return order[(level - 2) % order.length];
+}
+
+/** The coworker after a review: the XP added, every level it earns granted a stat point, a promotion a bonus. */
+export function review(coworker: Coworker, xp: number): Review {
+  const stats = { ...coworker.stats };
+  const bump = (stat: Stat, points: number) => {
+    stats[stat] = Math.min(MAX_STAT, stats[stat] + points);
+  };
+  let { level } = coworker;
+  let pool = coworker.xp + Math.max(0, Math.floor(xp));
+  let promoted = false;
+  while (pool >= reviewXpToNext(level)) {
+    pool -= reviewXpToNext(level);
+    level += 1;
+    bump(grownStat(coworker, level), 1);
+    if (rankOf(level) > rankOf(level - 1)) {
+      promoted = true;
+      bump(DEPARTMENTS[coworker.department].favours, REVIEW.promotionBonus);
+    }
+  }
+  return { coworker: { ...coworker, level, xp: pool, stats }, xp: Math.max(0, Math.floor(xp)), levelsGained: level - coworker.level, promoted };
+}

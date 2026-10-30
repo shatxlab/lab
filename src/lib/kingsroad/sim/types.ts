@@ -11,6 +11,10 @@ import type { Effect, EnemyKind, VolleyArrow } from "@/lib/tower/sim/types";
 
 export type { Effect, EnemyKind, VolleyArrow };
 
+/** The foes the second canvas adds, which maps list in `MapDef.foes`. */
+export type NewFoeKind = "knight" | "imp" | "healer" | "scamp" | "gargoyle";
+export type FoeKind = EnemyKind | NewFoeKind;
+
 export type TowerKind = "archer" | "catapult" | "frost" | "ballista";
 
 /** What an archer's third level becomes on maps that allow it: arrows that burn, or arrows that mark. */
@@ -27,7 +31,8 @@ export type Status = "ready" | "playing" | "won" | "lost";
 /** Which way an enemy comes: along one of the map's roads, or straight over everything by air. */
 export type Route = { road: number } | { air: { fromX: number } };
 
-export interface Foe extends FoeSprite {
+export interface Foe extends Omit<FoeSprite, "kind"> {
+  kind: FoeKind;
   id: number;
   route: Route;
   /** How far along its route it has come. */
@@ -93,7 +98,7 @@ export interface Shot {
 }
 
 export interface PendingSpawn {
-  kind: EnemyKind;
+  kind: FoeKind;
   /** Seconds into the wave. */
   at: number;
   /** Which road it walks; ignored for bats, which fly. */

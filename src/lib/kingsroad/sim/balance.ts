@@ -1,5 +1,5 @@
 import { ENEMIES as LONE_TOWER_ENEMIES } from "@/lib/tower/sim/balance";
-import type { ArcherBranch, EnemyKind, TowerKind } from "./types";
+import type { ArcherBranch, FoeKind, TowerKind } from "./types";
 
 /**
  * The same phone-shaped field as Lone Tower: the woods along the top, the
@@ -104,6 +104,13 @@ export const FROST_SECONDS = 2;
 /** How long a stone takes to land: a base plus a little per unit of distance. */
 export const STONE_FLIGHT = { base: 0.7, perUnit: 1 / 600 } as const;
 
+/** The least a hit does to an armoured foe, as a share of its damage, so small arrows still count for something. */
+export const ARMOR_FLOOR = 0.25;
+/** The share of a fire arrow's own damage that gets through to a fireproof foe. */
+export const FIREPROOF_HIT = 0.5;
+/** How far a healer's mending reaches. */
+export const HEAL_RANGE = 48;
+
 export interface FoeDef {
   hp: number;
   speed: number;
@@ -112,13 +119,43 @@ export interface FoeDef {
   gold: number;
 }
 
-/** Tougher than Lone Tower's horde, since a whole row of towers is shooting at it, but the same army. */
-export const FOES: Record<EnemyKind, FoeDef & { radius: number; flying: boolean }> = {
-  grunt: { hp: 28, speed: 30, leak: 1, gold: 5, radius: LONE_TOWER_ENEMIES.grunt.radius, flying: false },
-  runner: { hp: 18, speed: 56, leak: 1, gold: 5, radius: LONE_TOWER_ENEMIES.runner.radius, flying: false },
-  brute: { hp: 130, speed: 18, leak: 2, gold: 14, radius: LONE_TOWER_ENEMIES.brute.radius, flying: false },
-  bat: { hp: 22, speed: 38, leak: 1, gold: 7, radius: LONE_TOWER_ENEMIES.bat.radius, flying: true },
-  boss: { hp: 700, speed: 12, leak: 10, gold: 120, radius: LONE_TOWER_ENEMIES.boss.radius, flying: false },
+interface FoeStats extends FoeDef {
+  radius: number;
+  flying: boolean;
+  /** Taken off every hit's damage (fire's burning ignores it), down to `ARMOR_FLOOR` of the hit. */
+  armor: number;
+  /** Ignores burning, and takes only `FIREPROOF_HIT` of a fire arrow's own damage. */
+  fireproof: boolean;
+  /** Share of a friend's full health a healer restores each second within `HEAL_RANGE`; 0 for foes that don't. */
+  heal: number;
+  color: string;
+}
+
+const foe = (stats: Pick<FoeStats, "hp" | "speed" | "leak" | "gold" | "radius" | "color"> & Partial<FoeStats>): FoeStats => ({
+  flying: false,
+  armor: 0,
+  fireproof: false,
+  heal: 0,
+  ...stats,
+});
+
+/** Tougher than Lone Tower's horde, since a whole row of towers is shooting at it, but the same army; the last five are the second canvas's. */
+export const FOES: Record<FoeKind, FoeStats> = {
+  grunt: foe({ hp: 28, speed: 30, leak: 1, gold: 5, radius: LONE_TOWER_ENEMIES.grunt.radius, color: LONE_TOWER_ENEMIES.grunt.color }),
+  runner: foe({ hp: 18, speed: 56, leak: 1, gold: 5, radius: LONE_TOWER_ENEMIES.runner.radius, color: LONE_TOWER_ENEMIES.runner.color }),
+  brute: foe({ hp: 130, speed: 18, leak: 2, gold: 14, radius: LONE_TOWER_ENEMIES.brute.radius, color: LONE_TOWER_ENEMIES.brute.color }),
+  bat: foe({ hp: 22, speed: 38, leak: 1, gold: 7, radius: LONE_TOWER_ENEMIES.bat.radius, flying: true, color: LONE_TOWER_ENEMIES.bat.color }),
+  boss: foe({ hp: 700, speed: 12, leak: 10, gold: 120, radius: LONE_TOWER_ENEMIES.boss.radius, color: LONE_TOWER_ENEMIES.boss.color }),
+  // Plate shrugs off small arrows; ballista bolts, stones and burning go through it.
+  knight: foe({ hp: 130, speed: 22, leak: 2, gold: 14, radius: 12, armor: 5, color: "#7f8a99" }),
+  // Born in fire: no use setting it alight.
+  imp: foe({ hp: 55, speed: 34, leak: 1, gold: 8, radius: 8, fireproof: true, color: "#e2552b" }),
+  // Walks in the column and mends it; kill it first.
+  healer: foe({ hp: 40, speed: 30, leak: 1, gold: 12, radius: 9, heal: 0.06, color: "#f3f0e6" }),
+  // A swarm of them: stones and frost sweep them up, single-target shots waste themselves.
+  scamp: foe({ hp: 8, speed: 54, leak: 1, gold: 2, radius: 5, color: "#a8754a" }),
+  // A flyer that archers, ballistas and frost can reach, and few shots hurt much.
+  gargoyle: foe({ hp: 140, speed: 28, leak: 3, gold: 16, radius: 11, flying: true, armor: 2, color: "#7d8591" }),
 };
 
 /** Seconds between a warlord's calls for help, and how many footmen answer. */

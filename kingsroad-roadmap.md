@@ -48,11 +48,25 @@ does as well as the plain longbow on all ten maps (Last Stand 20 lives on more s
 tuned value: retune once there are enemies that resist fire or armoured ones. No save change was needed (towers are not
 saved). Open: do the other towers get a branch in this batch? Still to decide with the enemies.
 
-**New enemies.** Ones that make the new upgrades matter and that the meadow's five (grunt, runner, brute, bat, boss)
-do not cover. Ideas to pick from: an armoured foe that shrugs off small arrows (rewards ballistas and catapults), a
-foe that resists or is immune to fire (so fire arrows are not always right), a healer or shield-bearer that supports
-the column, a swarm of tiny fast ones, a flying foe tougher than bats. Each needs a `FOES` entry in `sim/balance.ts`, a
-roster rule in `sim/waves.ts` (`waveRoster`, `SPACING`), a drawing in `render/draw.ts`, and a bot-visible counter.
+**New enemies (built 2026-10-30, off until map 11).** All five ideas are in. A map lists the ones it sends in
+`MapDef.foes` (empty for maps 1 to 10, so they play as before); `FoeKind` in `sim/types.ts` is Lone Tower's five plus
+`NewFoeKind`. Stats are `FOES` in `sim/balance.ts` (now with `color`, `armor`, `fireproof`, `heal`), rosters are in
+`waveRoster`/`SPACING` in `sim/waves.ts`, drawing is `drawKingsroadFoe` in `render/draw.ts` (each borrows a Lone Tower
+figure via `FoeSprite.color`, plus a mark):
+- *Knight* (130 hp, armour 5): every hit loses 5 damage, down to 25% of the hit. Burning ignores armour. From wave 5.
+- *Imp* (55 hp, fireproof): ignores burning, and a fire arrow's own hit does half. Lune or longbow is right. Odd waves from 7.
+- *Healer* (40 hp): mends allies within 48 units for 6% of their max hp per second (not warlords). Slipped into the
+  grunt column, not a column of its own, so it walks with them. From wave 7.
+- *Scamp* (8 hp, fast, tiny): a swarm of 6 + wave on even waves. Catapults and frost sweep them.
+- *Gargoyle* (140 hp, armour 2, flies, leaks 3): only archers, ballistas and frost reach it. Every fourth wave from 8.
+**Balance is a first pass, not a tuned value.** Bot, 10 seeds a map, branches on, all five foes forced onto maps 1 to 10
+(which is harsher than shipping, since map 11 will list one or two): early and middle maps lose 1 to 7 lives against the
+same maps with branches and no new foes (Meadow 19.5 to 18.0, Ford 15.9 to 11.8, Serpent 17.6 to 11.8) and stay
+winnable; Last Stand and The Gorge turn near-unwinnable for the bot (3/10 and 1/10 wins). Two earlier rounds
+bracketed it: a softer one gave the bot more gold than threat, a harder one lost Ford 4/10. Note the branches alone
+already lift the bot a lot (Last Stand 11.0 to 15.6 lives), so judge new maps with both on. Not done: the bot does not
+counter (it never aims at healers or picks lune against imps), so real players should beat these numbers; a gentler
+intro (one or two foes on map 11, adding the rest across maps 12 to 20) is the planned way to use them.
 
 **Pacing.** Unlock the new upgrades and enemies at the start of the second canvas, not mid-batch, and consider
 introducing them gently on map 11 the way meadow introduces the first five. Maps 11 to 20 need their own `toughness`

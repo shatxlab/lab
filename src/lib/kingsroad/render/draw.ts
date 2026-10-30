@@ -25,14 +25,15 @@ import {
   drawWall,
   ellipse,
   shade,
+  type FoeSprite,
   type Tree,
   type Tuft,
 } from "@/lib/tower/render/sprites";
-import { ARENA, GATE, PLOT_RADIUS, ROAD_HALF, TOWERS, WALL_Y } from "../sim/balance";
+import { ARENA, FOES, GATE, HEAL_RANGE, PLOT_RADIUS, ROAD_HALF, TOWERS, WALL_Y } from "../sim/balance";
 import { levelOf } from "../sim/game";
 import { mapById, type MapDef } from "../sim/maps";
 import { distanceToPath, poseAt } from "../sim/path";
-import type { Game, MapId, Shot, Tower, TowerKind } from "../sim/types";
+import type { Foe, Game, MapId, Shot, Tower, TowerKind } from "../sim/types";
 import { THEMES, type Theme } from "./themes";
 
 export interface View {
@@ -149,12 +150,12 @@ export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, 
   }
   drawRange(ctx, game, map, selection);
   for (const effect of game.effects) if (effect.kind === "mark") drawEffect(ctx, effect);
-  for (const foe of game.foes) if (!foe.flying) drawFoe(ctx, foe, foe.facing, time);
+  for (const foe of game.foes) if (!foe.flying) drawKingsroadFoe(ctx, foe, time);
   for (const foe of game.foes) if (foe.markLeft > 0) drawMarkRing(ctx, foe, time);
   drawTrees(ctx, scenery.trees);
   for (const tower of game.towers) drawTower(ctx, map, tower, tower.plot === selection.plot, time);
   for (const shot of game.shots) drawShot(ctx, shot, time);
-  for (const foe of game.foes) if (foe.flying) drawFoe(ctx, foe, foe.facing, time);
+  for (const foe of game.foes) if (foe.flying) drawKingsroadFoe(ctx, foe, time);
   drawTrees(ctx, theme.treeline);
   for (const volley of game.volleys) drawVolleyArrow(ctx, volley);
   for (const effect of game.effects) if (effect.kind !== "mark") drawEffect(ctx, effect);
@@ -189,8 +190,43 @@ function drawStreet(ctx: CanvasRenderingContext2D, theme: Theme): void {
   ctx.fillRect(GATE.x - ROAD_HALF, WALL_Y, ROAD_HALF * 2, ARENA.height - WALL_Y + 400);
 }
 
+/** Which of Lone Tower's figures each new foe is dressed from. */
+const DRESSED_AS = { knight: "grunt", imp: "runner", healer: "grunt", scamp: "grunt", gargoyle: "bat" } as const;
+
+/** Lone Tower's five are drawn as they are; the new foes borrow a figure, take their own colour and add a mark. */
+function drawKingsroadFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
+  if (!(foe.kind in DRESSED_AS)) {
+    drawFoe(ctx, foe as FoeSprite, foe.facing, time);
+    return;
+  }
+  const kind = foe.kind as keyof typeof DRESSED_AS;
+  if (kind === "healer") {
+    ctx.fillStyle = `rgba(120, 220, 140, ${0.1 + 0.05 * Math.sin(time * 3)})`;
+    ctx.beginPath();
+    ctx.arc(foe.x, foe.y, HEAL_RANGE, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  drawFoe(ctx, { ...foe, kind: DRESSED_AS[kind], color: FOES[kind].color }, foe.facing, time);
+  const { x, y, radius } = foe;
+  if (kind === "knight") {
+    ctx.strokeStyle = "#e6ebf2";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 0.75, -Math.PI * 0.8, -Math.PI * 0.2);
+    ctx.stroke();
+  } else if (kind === "imp") {
+    for (const side of [-1, 1]) circle(ctx, x + Math.cos(foe.facing) * radius * 0.5 - Math.sin(foe.facing) * side * radius * 0.7, y + Math.sin(foe.facing) * radius * 0.5 + Math.cos(foe.facing) * side * radius * 0.7, 1.6, "#ffd27a");
+  } else if (kind === "healer") {
+    ctx.fillStyle = "#3fae5a";
+    ctx.fillRect(x - 1.5, y - 5, 3, 10);
+    ctx.fillRect(x - 5, y - 1.5, 10, 3);
+  } else if (kind === "gargoyle") {
+    circle(ctx, x, y, radius * 0.3, "#c9ced6");
+  }
+}
+
 /** A pale ring round a foe the lune has marked. */
-function drawMarkRing(ctx: CanvasRenderingContext2D, foe: Game["foes"][number], time: number): void {
+function drawMarkRing(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
   ctx.strokeStyle = `rgba(190, 215, 255, ${0.6 + 0.3 * Math.sin(time * 8)})`;
   ctx.lineWidth = 1.6;
   ctx.beginPath();

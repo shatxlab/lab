@@ -1,14 +1,16 @@
-import { ENEMIES as LONE_TOWER_ENEMIES } from "@/lib/tower/sim/balance";
 import { random } from "@/lib/tower/sim/random";
 import {
   ARCHER_BRANCHES,
   ARENA,
+  ARMOR_FLOOR,
   BOSS_SUMMON,
   BURN,
   EARLY_GOLD_PER_SECOND,
+  FIREPROOF_HIT,
   FOES,
   FROST_SECONDS,
   GATE,
+  HEAL_RANGE,
   MARK,
   MAX_LEVEL,
   SELL_REFUND,
@@ -24,7 +26,7 @@ import {
 import { mapById, type MapDef } from "./maps";
 import { poseAt, type PathPose } from "./path";
 import { buildSpawns } from "./waves";
-import type { ArcherBranch, Effect, EnemyKind, Foe, Game, MapId, Shot, Tower, TowerKind } from "./types";
+import type { ArcherBranch, Effect, Foe, FoeKind, Game, MapId, Shot, Tower, TowerKind } from "./types";
 
 /** The fixed tick the page steps the sim with, so every device plays the same game. */
 export const STEP = 1 / 60;
@@ -80,6 +82,7 @@ export function step(game: Game, dt: number): void {
   game.volleyLeft = Math.max(0, game.volleyLeft - dt);
 
   moveFoes(game, map, dt);
+  healFoes(game);
   for (const tower of game.towers) actTower(game, map, tower, dt);
   moveShots(game, dt);
   landVolleys(game, dt);
@@ -243,7 +246,7 @@ function startNextWave(game: Game, map: MapDef): void {
   game.nextWaveIn = null;
 }
 
-function spawnFoe(game: Game, map: MapDef, kind: EnemyKind, road: number, distance: number, lane?: number): Foe {
+function spawnFoe(game: Game, map: MapDef, kind: FoeKind, road: number, distance: number, lane?: number): Foe {
   const def = FOES[kind];
   const hp = def.hp * hpScale(game.wave) * map.toughness;
   const foe: Foe = {
@@ -327,6 +330,19 @@ function moveFoes(game: Game, map: MapDef, dt: number): void {
     if (foe.kind === "boss") summon(game, map, foe, dt);
   }
   if (through.size > 0) game.foes = game.foes.filter((foe) => !through.has(foe));
+}
+
+/** Healers mend whoever walks near them, themselves and warlords excepted. */
+function healFoes(game: Game): void {
+  for (const healer of game.foes) {
+    const rate = FOES[healer.kind].heal;
+    if (rate <= 0 || healer.hp <= 0) continue;
+    for (const ally of game.foes) {
+      if (ally === healer || ally.hp <= 0 || ally.hp >= ally.maxHp || ally.kind === "boss") continue;
+      if (Math.hypot(ally.x - healer.x, ally.y - healer.y) > HEAL_RANGE) continue;
+      ally.hp = Math.min(ally.maxHp, ally.hp + ally.maxHp * rate * STEP);
+    }
+  }
 }
 
 function summon(game: Game, map: MapDef, boss: Foe, dt: number): void {
@@ -452,8 +468,8 @@ function flyHoming(game: Game, shot: Shot, dt: number): boolean {
   }
   // Arrived. A shot whose target fell on the way just drops.
   if (!target) return false;
-  hitFoe(target, shot.damage, shot.slow);
-  if (shot.burn > 0) target.burnLeft = shot.burn;
+  hitFoe(target, shot.damage, shot.slow, shot.burn > 0);
+  if (shot.burn > 0 && !FOES[target.kind].fireproof) target.burnLeft = shot.burn;
   if (shot.mark > 0) target.markLeft = shot.mark;
   if (shot.splash > 0) {
     for (const foe of game.foes) {
@@ -513,8 +529,12 @@ function landVolleys(game: Game, dt: number): void {
   game.volleys = airborne;
 }
 
-function hitFoe(foe: Foe, damage: number, slow: number): void {
-  foe.hp -= damage * (foe.markLeft > 0 ? 1 + MARK.bonus : 1);
+/** `fire` is a fire arrow's own hit, which a fireproof foe mostly shrugs off. */
+function hitFoe(foe: Foe, damage: number, slow: number, fire = false): void {
+  const def = FOES[foe.kind];
+  const raw = fire && def.fireproof ? damage * FIREPROOF_HIT : damage;
+  const dealt = Math.max(raw * ARMOR_FLOOR, raw - def.armor);
+  foe.hp -= dealt * (foe.markLeft > 0 ? 1 + MARK.bonus : 1);
   foe.flash = 0.08;
   if (slow > 0) {
     foe.slowLeft = FROST_SECONDS;
@@ -531,7 +551,7 @@ function reapFoes(game: Game): void {
     }
     game.kills += 1;
     game.gold += FOES[foe.kind].gold;
-    addEffect(game, "pop", foe.x, foe.y, foe.radius, 0.35, LONE_TOWER_ENEMIES[foe.kind].color);
+    addEffect(game, "pop", foe.x, foe.y, foe.radius, 0.35, FOES[foe.kind].color);
   }
   game.foes = alive;
 }

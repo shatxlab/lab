@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ARCHER_BRANCHES, FOES, FROST_SECONDS, GATE, MARK, START_LIVES, TOWERS, VOLLEY, WAVE_GAP, hpScale, starsFor } from "@/lib/kingsroad/sim/balance";
+import { ARCHER_BRANCHES, ARMOR_FLOOR, FIREPROOF_HIT, FOES, FROST_SECONDS, GATE, MARK, START_LIVES, TOWERS, VOLLEY, WAVE_GAP, hpScale, starsFor } from "@/lib/kingsroad/sim/balance";
 import {
   atFork,
   build,
@@ -22,7 +22,7 @@ import {
 import { mapById, MAPS } from "@/lib/kingsroad/sim/maps";
 import { poseAt } from "@/lib/kingsroad/sim/path";
 import { buildSpawns, isBossWave, waveRoster } from "@/lib/kingsroad/sim/waves";
-import type { EnemyKind, Foe, Game, Route } from "@/lib/kingsroad/sim/types";
+import type { FoeKind as EnemyKind, Foe, Game, Route } from "@/lib/kingsroad/sim/types";
 
 const MEADOW = mapById("meadow");
 
@@ -422,6 +422,80 @@ describe("the volley", () => {
         return foe.maxHp - foe.hp;
       };
       expect(firstHit(2)).toBeCloseTo(firstHit(0) * (1 + MARK.bonus), 5);
+    });
+  });
+
+  describe("new foes", () => {
+    const ALL = ["knight", "imp", "healer", "scamp", "gargoyle"] as const;
+
+    afterEach(() => {
+      MEADOW.foes = [];
+    });
+
+    it("sends none of them unless the map lists them", () => {
+      for (let wave = 1; wave <= MEADOW.waves; wave += 1) {
+        const roster = waveRoster(wave, MEADOW);
+        for (const kind of ALL) expect(roster[kind]).toBe(0);
+      }
+      MEADOW.foes = [...ALL];
+      const seen = new Set<string>();
+      for (let wave = 1; wave <= 28; wave += 1) {
+        const roster = waveRoster(wave, MEADOW);
+        for (const kind of ALL) if (roster[kind] > 0) seen.add(kind);
+      }
+      expect([...seen].sort()).toEqual([...ALL].sort());
+    });
+
+    it("slips each healer into the grunts' column", () => {
+      MEADOW.foes = ["healer"];
+      const spawns = buildSpawns(9, MEADOW, { rng: 3 });
+      const healers = spawns.filter((spawn) => spawn.kind === "healer");
+      expect(healers).toHaveLength(waveRoster(9, MEADOW).healer);
+      const grunts = spawns.filter((spawn) => spawn.kind === "grunt");
+      for (const healer of healers) expect(grunts.some((grunt) => grunt.road === healer.road && Math.abs(grunt.at - healer.at) < 1)).toBe(true);
+      expect(spawns.map((spawn) => spawn.at)).toEqual([...spawns.map((spawn) => spawn.at)].sort((a, b) => a - b));
+    });
+
+    function firstHit(kind: EnemyKind, branch?: "fire"): { dealt: number; burning: boolean } {
+      MEADOW.archerBranches = branch !== undefined;
+      const game = quietGame();
+      build(game, 0, "archer");
+      if (branch) {
+        upgrade(game, 0);
+        upgrade(game, 0, branch);
+      }
+      const foe = foeAt(game, 60, kind);
+      foe.x = MEADOW.plots[0].x + 20;
+      foe.y = MEADOW.plots[0].y;
+      for (let tick = 0; tick < 120 && foe.hp === foe.maxHp; tick += 1) step(game, STEP);
+      MEADOW.archerBranches = false;
+      return { dealt: foe.maxHp - foe.hp, burning: foe.burnLeft > 0 };
+    }
+
+    it("turns small hits aside on a knight, but never below the floor", () => {
+      const grunt = firstHit("grunt").dealt;
+      expect(grunt).toBe(TOWERS.archer.levels[0].damage);
+      expect(firstHit("knight").dealt).toBeCloseTo(Math.max(grunt * ARMOR_FLOOR, grunt - FOES.knight.armor));
+    });
+
+    it("lets fire arrows burn a grunt but not an imp, and weakens their own hit", () => {
+      const grunt = firstHit("grunt", "fire");
+      const imp = firstHit("imp", "fire");
+      expect(grunt.burning).toBe(true);
+      expect(imp.burning).toBe(false);
+      expect(imp.dealt).toBeCloseTo(ARCHER_BRANCHES.fire.damage * FIREPROOF_HIT);
+    });
+
+    it("has a healer mend its neighbours", () => {
+      const game = quietGame();
+      const healer = foeAt(game, 100, "healer");
+      const near = foeAt(game, 104, "grunt");
+      const far = foeAt(game, 260, "grunt");
+      near.hp = far.hp = 5;
+      for (let tick = 0; tick < 60; tick += 1) step(game, STEP);
+      expect(near.hp).toBeGreaterThan(5);
+      expect(far.hp).toBe(5);
+      expect(healer.hp).toBe(healer.maxHp);
     });
   });
 });

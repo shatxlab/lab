@@ -44,6 +44,8 @@ export const COLORS = {
 /** What the renderer needs to know about one enemy, whichever game it marches in. */
 export interface FoeSprite {
   kind: EnemyKind;
+  /** Paints the body in this colour instead of the kind's own, for a foe dressed as another kind. */
+  color?: string;
   x: number;
   y: number;
   radius: number;
@@ -247,8 +249,8 @@ export function drawFoe(ctx: CanvasRenderingContext2D, foe: FoeSprite, facing: n
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(facing);
-  if (foe.flying) drawBat(ctx, radius, def.color);
-  else drawSoldier(ctx, foe, def.color, time);
+  if (foe.flying) drawBat(ctx, radius, foe.color ?? def.color);
+  else drawSoldier(ctx, foe, foe.color ?? def.color, time);
   ctx.restore();
 
   if (foe.slowLeft > 0) {

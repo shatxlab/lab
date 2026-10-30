@@ -1,12 +1,15 @@
 import { ENEMIES as LONE_TOWER_ENEMIES } from "@/lib/tower/sim/balance";
 import { random } from "@/lib/tower/sim/random";
 import {
+  ARCHER_BRANCHES,
   ARENA,
   BOSS_SUMMON,
+  BURN,
   EARLY_GOLD_PER_SECOND,
   FOES,
   FROST_SECONDS,
   GATE,
+  MARK,
   MAX_LEVEL,
   SELL_REFUND,
   START_LIVES,
@@ -21,7 +24,7 @@ import {
 import { mapById, type MapDef } from "./maps";
 import { poseAt, type PathPose } from "./path";
 import { buildSpawns } from "./waves";
-import type { Effect, EnemyKind, Foe, Game, MapId, Shot, Tower, TowerKind } from "./types";
+import type { ArcherBranch, Effect, EnemyKind, Foe, Game, MapId, Shot, Tower, TowerKind } from "./types";
 
 /** The fixed tick the page steps the sim with, so every device plays the same game. */
 export const STEP = 1 / 60;
@@ -122,8 +125,14 @@ export function towerOn(game: Game, plot: number): Tower | undefined {
   return game.towers.find((tower) => tower.plot === plot);
 }
 
-export function levelOf(tower: Pick<Tower, "kind" | "level">): TowerLevel {
-  return TOWERS[tower.kind].levels[tower.level - 1];
+export function levelOf(tower: Pick<Tower, "kind" | "level" | "branch">): TowerLevel & { burn: number; mark: number } {
+  if (tower.kind === "archer" && tower.level === MAX_LEVEL && tower.branch) return ARCHER_BRANCHES[tower.branch];
+  return { ...TOWERS[tower.kind].levels[tower.level - 1], burn: 0, mark: 0 };
+}
+
+/** Whether the tower's next level is the archer's fork: fire or lune arrows. */
+export function atFork(game: Game, tower: Tower): boolean {
+  return tower.kind === "archer" && tower.level === MAX_LEVEL - 1 && mapById(game.map).archerBranches;
 }
 
 export function buildCost(kind: TowerKind): number {
@@ -155,12 +164,15 @@ export function build(game: Game, plot: number, kind: TowerKind): boolean {
   return true;
 }
 
-export function upgrade(game: Game, plot: number): boolean {
+/** Raise a tower a level. At the archer's fork on a map with branches, `branch` says which arrows it takes. */
+export function upgrade(game: Game, plot: number, branch?: ArcherBranch): boolean {
   const tower = towerOn(game, plot);
   const cost = tower ? upgradeCost(tower) : null;
   if (!canBuild(game) || !tower || cost === null || game.gold < cost) return false;
+  if (atFork(game, tower) !== (branch !== undefined)) return false;
   game.gold -= cost;
   tower.level += 1;
+  if (branch) tower.branch = branch;
   tower.spent += cost;
   const { x, y } = mapById(game.map).plots[plot];
   addEffect(game, "pop", x, y, 18, 0.4, "#ffd27a");
@@ -254,6 +266,7 @@ function spawnFoe(game: Game, map: MapDef, kind: EnemyKind, road: number, distan
     flash: 0,
     phase: random(game) * Math.PI * 2,
     summonTimer: BOSS_SUMMON.every,
+    markLeft: 0,
   };
   place(map, foe);
   game.foes.push(foe);
@@ -292,6 +305,11 @@ function moveFoes(game: Game, map: MapDef, dt: number): void {
   // A snapshot: footmen a warlord calls in join the list but start walking next tick.
   for (const foe of [...game.foes]) {
     foe.flash = Math.max(0, foe.flash - dt);
+    foe.markLeft = Math.max(0, foe.markLeft - dt);
+    if (foe.burnLeft > 0) {
+      foe.hp -= BURN.dps * (1 + (foe.markLeft > 0 ? MARK.bonus : 0)) * Math.min(dt, foe.burnLeft);
+      foe.burnLeft -= dt;
+    }
     if (foe.slowLeft > 0) {
       foe.slowLeft -= dt;
       if (foe.slowLeft <= 0) foe.slow = 0;
@@ -365,7 +383,7 @@ function ahead(map: MapDef, foe: Foe, seconds: number): { x: number; y: number }
   return poseAtDistance(map, foe, distance);
 }
 
-function fire(game: Game, map: MapDef, tower: Tower, level: TowerLevel, x: number, y: number, target: Foe): void {
+function fire(game: Game, map: MapDef, tower: Tower, level: ReturnType<typeof levelOf>, x: number, y: number, target: Foe): void {
   const def = TOWERS[tower.kind];
   const shot: Shot = {
     id: game.nextId++,
@@ -383,6 +401,8 @@ function fire(game: Game, map: MapDef, tower: Tower, level: TowerLevel, x: numbe
     damage: level.damage,
     splash: level.splash,
     slow: level.slow,
+    burn: level.burn,
+    mark: level.mark,
     air: def.air,
     hitIds: [],
   };
@@ -433,6 +453,8 @@ function flyHoming(game: Game, shot: Shot, dt: number): boolean {
   // Arrived. A shot whose target fell on the way just drops.
   if (!target) return false;
   hitFoe(target, shot.damage, shot.slow);
+  if (shot.burn > 0) target.burnLeft = shot.burn;
+  if (shot.mark > 0) target.markLeft = shot.mark;
   if (shot.splash > 0) {
     for (const foe of game.foes) {
       if (foe === target || foe.hp <= 0 || Math.hypot(foe.x - target.x, foe.y - target.y) > shot.splash + foe.radius * 0.5) continue;
@@ -492,7 +514,7 @@ function landVolleys(game: Game, dt: number): void {
 }
 
 function hitFoe(foe: Foe, damage: number, slow: number): void {
-  foe.hp -= damage;
+  foe.hp -= damage * (foe.markLeft > 0 ? 1 + MARK.bonus : 1);
   foe.flash = 0.08;
   if (slow > 0) {
     foe.slowLeft = FROST_SECONDS;

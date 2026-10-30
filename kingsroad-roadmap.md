@@ -34,14 +34,19 @@ cobbles and horde, which come from Lone Tower's `sprites.ts` (`COLORS`); a very 
 those parameterised there, or its own drawing in `draw.ts`. Keep the field size and `GATE`/`WALL_Y` unless the new
 canvas truly needs otherwise: the plot generator and map tests assume them.
 
-**New tower upgrades (archers first).** Beyond the three levels, archers branch into special arrows, picked on
-upgrade. Ideas so far:
-- *Lune (moon) arrows*, and *fire arrows*. Fire: a burn that keeps damaging after the hit. Lune: to be designed (a
-  crit, a mark that makes the target take more damage, or hits that pass through).
-- Whether the other towers (catapult, frost, ballista) get a branch too, or only archers in this batch.
-- Open design points: is the branch a level-4 choice, a replacement for level 3, or a one-time side-grade with its own
-  cost? Is it per tower or unlocked globally by winning a map? How does it show on the tower card (the cards already
-  show what each level gives) and in `i18n.ts` (English and Russian together)?
+**Archer branches (built 2026-10-30, off until map 11).** Decided with the user: the branch *replaces level 3*, picked on
+the 2 to 3 upgrade, per tower. `MapDef.archerBranches` turns it on (false for maps 1 to 10, so they play as before; set
+it true on maps 11 to 20). `upgrade(game, plot, branch)` must be given a branch exactly at the fork (`atFork`) and none
+otherwise; `tower.branch` is `"fire" | "lune"`. Stats are `ARCHER_BRANCHES` in `sim/balance.ts`, same 100 gold as the
+longbow:
+- *Fire* (13 dmg, 0.5 s, range 108): the hit sets the foe burning, `BURN` 6 damage/s for 3 s, refreshed not stacked.
+- *Lune* (12 dmg, 0.5 s, range 112): the hit marks the foe, `MARK` +35% damage from every source (burn included)
+  for 3 s. Strong in a mixed team, weak on its own.
+The tower card shows both picks with their stats at the fork (`i18n.ts`, English and Russian), fire arrows draw orange,
+lune arrows pale blue with a ring on marked foes. The bot alternates fire and lune by plot. With branches forced on, it
+does as well as the plain longbow on all ten maps (Last Stand 20 lives on more seeds), so the numbers are a floor, not a
+tuned value: retune once there are enemies that resist fire or armoured ones. No save change was needed (towers are not
+saved). Open: do the other towers get a branch in this batch? Still to decide with the enemies.
 
 **New enemies.** Ones that make the new upgrades matter and that the meadow's five (grunt, runner, brute, bat, boss)
 do not cover. Ideas to pick from: an armoured foe that shrugs off small arrows (rewards ballistas and catapults), a
@@ -54,12 +59,11 @@ introducing them gently on map 11 the way meadow introduces the first five. Maps
 ramp; they should start near where map 10 ends and not reset to 1.
 
 **Practical.**
-- The bot (`playthrough.ts`) needs to know the new upgrades to be a fair judge: teach it to take the branch, or its
-  results on maps 11+ will read too hard.
+- The bot already takes the archer branch (`raise` in `playthrough.ts`); teach it any new upgrade the same way.
 - `meta.ts` unlocks by list order and the save is keyed by `MapId`, so more maps just extend the list, but the menu
   (`KingsroadApp.tsx`, ten cards in a grid) will want grouping by canvas once there are twenty.
-- Save key is `lab:kingsroad:v1`; if per-tower branches or global unlocks are stored, bump it and keep `normalizeSave`
-  tolerant.
+- Save key is `lab:kingsroad:v1`; bump it and keep `normalizeSave` tolerant if anything new is stored (branches are
+  not).
 - Reuse the plot generation approach from the maps 4 to 10 session: pick road shapes, then greedily place plots clear of
   the road (more than `ROAD_HALF + towerRadius(3)`), apart from each other (more than `PLOT_REACH * 2 - 6`) and in reach
   of the archers. `tests/kingsroad/maps.test.ts` checks all of it for every map.

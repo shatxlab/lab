@@ -150,6 +150,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, game: Game, view: View, 
   drawRange(ctx, game, map, selection);
   for (const effect of game.effects) if (effect.kind === "mark") drawEffect(ctx, effect);
   for (const foe of game.foes) if (!foe.flying) drawFoe(ctx, foe, foe.facing, time);
+  for (const foe of game.foes) if (foe.markLeft > 0) drawMarkRing(ctx, foe, time);
   drawTrees(ctx, scenery.trees);
   for (const tower of game.towers) drawTower(ctx, map, tower, tower.plot === selection.plot, time);
   for (const shot of game.shots) drawShot(ctx, shot, time);
@@ -186,6 +187,15 @@ function drawRoads(ctx: CanvasRenderingContext2D, map: MapDef, scenery: Scenery,
 function drawStreet(ctx: CanvasRenderingContext2D, theme: Theme): void {
   ctx.fillStyle = shade(theme.courtyard, 0.12);
   ctx.fillRect(GATE.x - ROAD_HALF, WALL_Y, ROAD_HALF * 2, ARENA.height - WALL_Y + 400);
+}
+
+/** A pale ring round a foe the lune has marked. */
+function drawMarkRing(ctx: CanvasRenderingContext2D, foe: Game["foes"][number], time: number): void {
+  ctx.strokeStyle = `rgba(190, 215, 255, ${0.6 + 0.3 * Math.sin(time * 8)})`;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.arc(foe.x, foe.y, foe.radius + 4, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 /** The gate in the wall: a dark arch with its doors swung open, a small round tower either side. */
@@ -359,7 +369,7 @@ function drawBallista(ctx: CanvasRenderingContext2D, x: number, y: number, tower
 
 function drawShot(ctx: CanvasRenderingContext2D, shot: Shot, time: number): void {
   if (shot.kind === "archer") {
-    drawArrow(ctx, shot.x, shot.y, Math.atan2(shot.toY - shot.y, shot.toX - shot.x), COLORS.shaft, 10);
+    drawArrow(ctx, shot.x, shot.y, Math.atan2(shot.toY - shot.y, shot.toX - shot.x), shot.burn > 0 ? "#e8662a" : shot.mark > 0 ? "#8fb8e8" : COLORS.shaft, 10);
   } else if (shot.kind === "ballista") {
     drawArrow(ctx, shot.x, shot.y, Math.atan2(shot.toY - shot.fromY, shot.toX - shot.fromX), "#3a2c22", 18);
   } else if (shot.kind === "frost") {

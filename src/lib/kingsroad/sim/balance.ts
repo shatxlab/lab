@@ -1,5 +1,5 @@
 import { ENEMIES as LONE_TOWER_ENEMIES } from "@/lib/tower/sim/balance";
-import type { EnemyKind, TowerKind } from "./types";
+import type { ArcherBranch, EnemyKind, TowerKind } from "./types";
 
 /**
  * The same phone-shaped field as Lone Tower: the woods along the top, the
@@ -84,6 +84,21 @@ export const TOWERS: Record<TowerKind, TowerDef> = {
 
 export const TOWER_KINDS = Object.keys(TOWERS) as TowerKind[];
 export const MAX_LEVEL = 3;
+/** Fire arrows: damage per second while a foe burns, and how long a hit keeps it alight. */
+export const BURN = { dps: 6, seconds: 3 } as const;
+/** Lune arrows: the share of extra damage a marked foe takes, and how long a hit keeps the mark. */
+export const MARK = { bonus: 0.35, seconds: 3 } as const;
+
+/**
+ * What an archer's third level can be instead of the plain longbow, on maps that
+ * allow branches. Each is about as strong as the longbow against a lone target
+ * and pays off in its own way: fire keeps hurting after the hit, lune makes
+ * every tower's shots count for more.
+ */
+export const ARCHER_BRANCHES: Record<ArcherBranch, TowerLevel & { burn: number; mark: number }> = {
+  fire: { cost: 100, damage: 13, reload: 0.5, range: 108, splash: 0, slow: 0, burn: BURN.seconds, mark: 0 },
+  lune: { cost: 100, damage: 12, reload: 0.5, range: 112, splash: 0, slow: 0, burn: 0, mark: MARK.seconds },
+};
 /** Seconds a frost hit keeps an enemy slowed. */
 export const FROST_SECONDS = 2;
 /** How long a stone takes to land: a base plus a little per unit of distance. */

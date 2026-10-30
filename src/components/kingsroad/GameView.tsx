@@ -4,7 +4,7 @@ import { Coins, FastForward, Heart, Pause, X } from "lucide-react";
 import { statChange } from "@/lib/tower/i18n";
 import type { KingsroadText } from "@/lib/kingsroad/i18n";
 import { drawGame, fitView, toWorld, type Selection, type View } from "@/lib/kingsroad/render/draw";
-import { ARENA, MAX_LEVEL, PLOT_REACH, TOWER_KINDS, TOWERS, VOLLEY } from "@/lib/kingsroad/sim/balance";
+import { ARCHER_BRANCHES, ARENA, MAX_LEVEL, PLOT_REACH, TOWER_KINDS, TOWERS, VOLLEY } from "@/lib/kingsroad/sim/balance";
 import {
   build,
   buildCost,
@@ -13,6 +13,7 @@ import {
   earlyBonus,
   giveUp,
   leadFoe,
+  atFork,
   levelOf,
   refundFor,
   sell,
@@ -24,7 +25,7 @@ import {
 } from "@/lib/kingsroad/sim/game";
 import { mapById } from "@/lib/kingsroad/sim/maps";
 import { isBossWave } from "@/lib/kingsroad/sim/waves";
-import type { Game, TowerKind } from "@/lib/kingsroad/sim/types";
+import type { ArcherBranch, Game, TowerKind } from "@/lib/kingsroad/sim/types";
 
 interface Hud {
   status: Game["status"];
@@ -296,10 +297,12 @@ export function GameView({
                 text={text}
                 kind={tower.kind}
                 level={tower.level}
+                branch={tower.branch}
+                fork={atFork(game, tower)}
                 upgradeCost={upgradeCost(tower)}
                 refund={refundFor(game, tower)}
                 gold={hud.gold}
-                onUpgrade={() => act(upgrade(game, tower.plot))}
+                onUpgrade={(branch) => act(upgrade(game, tower.plot, branch))}
                 onSell={() => {
                   if (sell(game, tower.plot)) {
                     select(null);
@@ -435,6 +438,8 @@ function TowerSheet({
   text,
   kind,
   level,
+  branch,
+  fork,
   upgradeCost,
   refund,
   gold,
@@ -444,30 +449,57 @@ function TowerSheet({
   text: KingsroadText;
   kind: TowerKind;
   level: number;
+  branch: ArcherBranch | undefined;
+  /** The archer's next level is a choice of arrows. */
+  fork: boolean;
   upgradeCost: number | null;
   refund: number;
   gold: number;
-  onUpgrade: () => void;
+  onUpgrade: (branch?: ArcherBranch) => void;
   onSell: () => void;
 }) {
-  const now = text.levelStats[kind](levelOf({ kind, level }));
-  const next = level < MAX_LEVEL ? text.levelStats[kind](levelOf({ kind, level: level + 1 })) : now;
+  const now = text.levelStats[kind](levelOf({ kind, level, branch }));
+  const next = level < MAX_LEVEL && !fork ? text.levelStats[kind](levelOf({ kind, level: level + 1 })) : now;
   return (
     <>
       <p className="kr-sheet-title">
         <TowerIcon kind={kind} /> {text.towers[kind].name} <span className="tower-perk-level">{text.level(level)}</span>
       </p>
-      <p className="kr-sheet-description">{text.towers[kind].description}</p>
+      <p className="kr-sheet-description">{branch ? text.branches[branch].description : text.towers[kind].description}</p>
       <p className="kr-sheet-stats">{statChange(now, next)}</p>
+      {fork && (
+        <>
+          <p className="kr-sheet-description">{text.chooseArrows}</p>
+          {(Object.keys(ARCHER_BRANCHES) as ArcherBranch[]).map((pick) => (
+            <p key={pick} className="kr-sheet-stats">
+              {text.branches[pick].name}: {statChange(now, text.levelStats.archer(ARCHER_BRANCHES[pick]))}
+            </p>
+          ))}
+        </>
+      )}
       <div className="kr-sheet-actions">
-        <button
-          type="button"
-          className="tower-button tower-button-small"
-          disabled={upgradeCost === null || gold < upgradeCost}
-          onClick={onUpgrade}
-        >
-          {upgradeCost === null ? text.topLevel : text.upgrade(upgradeCost)}
-        </button>
+        {fork ? (
+          (Object.keys(ARCHER_BRANCHES) as ArcherBranch[]).map((pick) => (
+            <button
+              key={pick}
+              type="button"
+              className="tower-button tower-button-small"
+              disabled={upgradeCost === null || gold < upgradeCost}
+              onClick={() => onUpgrade(pick)}
+            >
+              {text.branches[pick].name} · {ARCHER_BRANCHES[pick].cost}
+            </button>
+          ))
+        ) : (
+          <button
+            type="button"
+            className="tower-button tower-button-small"
+            disabled={upgradeCost === null || gold < upgradeCost}
+            onClick={() => onUpgrade()}
+          >
+            {upgradeCost === null ? text.topLevel : text.upgrade(upgradeCost)}
+          </button>
+        )}
         <button type="button" className="tower-button tower-button-small tower-button-quiet" onClick={onSell}>
           {text.sell(refund)}
         </button>

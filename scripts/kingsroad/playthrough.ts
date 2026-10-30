@@ -9,7 +9,7 @@
 
 import process from 'node:process'
 import { MAX_LEVEL, TOWERS, starsFor } from '../../src/lib/kingsroad/sim/balance.ts'
-import { build, callWave, castVolley, createGame, leadFoe, step, STEP, towerOn, upgrade, upgradeCost, buildCost } from '../../src/lib/kingsroad/sim/game.ts'
+import { atFork, build, callWave, castVolley, createGame, leadFoe, step, STEP, towerOn, upgrade, upgradeCost, buildCost } from '../../src/lib/kingsroad/sim/game.ts'
 import { MAPS } from '../../src/lib/kingsroad/sim/maps.ts'
 import { roadWithin } from '../../src/lib/kingsroad/sim/path.ts'
 import type { Game, MapId, TowerKind } from '../../src/lib/kingsroad/sim/types.ts'
@@ -27,6 +27,13 @@ function coverage(mapIndex: number, plot: number, kind: TowerKind): number {
   return map.roads.reduce((sum, road) => sum + roadWithin(road, x, y, TOWERS[kind].levels[0].range), 0)
 }
 
+/** Upgrade a tower; at the archer's fork the bot alternates fire and lune by plot. */
+function raise(game: Game, plot: number): boolean {
+  const tower = towerOn(game, plot)
+  if (tower && atFork(game, tower)) return upgrade(game, plot, plot % 2 === 0 ? 'fire' : 'lune')
+  return upgrade(game, plot)
+}
+
 function decide(game: Game, mapIndex: number): void {
   const map = MAPS[mapIndex]
   const lead = leadFoe(game)
@@ -36,7 +43,7 @@ function decide(game: Game, mapIndex: number): void {
       .filter((tower) => tower.level < targetLevel(game.wave))
       .sort((a, b) => (upgradeCost(a) ?? 0) - (upgradeCost(b) ?? 0))[0]
     if (behind) {
-      if (!upgrade(game, behind.plot)) return
+      if (!raise(game, behind.plot)) return
       continue
     }
     const kind = PLAN[game.towers.length]
@@ -49,7 +56,7 @@ function decide(game: Game, mapIndex: number): void {
     }
     // Every plot taken: top up whatever is cheapest to raise.
     const next = game.towers.filter((tower) => upgradeCost(tower) !== null).sort((a, b) => upgradeCost(a)! - upgradeCost(b)!)[0]
-    if (!next || !upgrade(game, next.plot)) return
+    if (!next || !raise(game, next.plot)) return
   }
 }
 

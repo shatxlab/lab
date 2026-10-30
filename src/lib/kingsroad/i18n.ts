@@ -1,10 +1,10 @@
 import type { AppLang } from "@/lib/apps/lang";
 import type { Blurb, Stat } from "@/lib/tower/i18n";
-import type { TowerLevel } from "./sim/balance";
-import type { MapId, TowerKind } from "./sim/types";
+import { BURN, MARK, type TowerLevel } from "./sim/balance";
+import type { ArcherBranch, MapId, TowerKind } from "./sim/types";
 
 /** What one level of a tower does, as a card shows it. */
-export type LevelStats = (level: TowerLevel) => Stat[];
+export type LevelStats = (level: TowerLevel & { burn?: number; mark?: number }) => Stat[];
 
 function numbers(lang: AppLang) {
   const one = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
@@ -47,6 +47,9 @@ export interface KingsroadText {
   build: (cost: number) => string;
   upgrade: (cost: number) => string;
   topLevel: string;
+  /** The archer's fork: what to call each pick and what it does. */
+  branches: Record<ArcherBranch, Blurb>;
+  chooseArrows: string;
   sell: (refund: number) => string;
   close: string;
   level: (level: number) => string;
@@ -111,6 +114,11 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     build: (cost) => `Build · ${cost}`,
     upgrade: (cost) => `Upgrade · ${cost}`,
     topLevel: "Top level",
+    branches: {
+      fire: { name: "Fire arrows", description: "Sets the enemy alight; it keeps burning after the hit." },
+      lune: { name: "Lune arrows", description: "Marks the enemy: every tower's hits on it do more damage." },
+    },
+    chooseArrows: "Choose its arrows",
     sell: (refund) => `Sell · +${refund}`,
     close: "Close",
     level: (level) => `Lv ${level}`,
@@ -121,7 +129,11 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
       ballista: { name: "Ballista", description: "The longest reach; each bolt goes through everything in its line." },
     },
     levelStats: {
-      archer: (level) => statsEn(level),
+      archer: (level) => [
+        ...statsEn(level),
+        ...(level.burn ? [["Burn", `${EN.num(BURN.dps)}/s · ${EN.num(level.burn)} s`] as Stat] : []),
+        ...(level.mark ? [["Mark", `+${EN.pct(MARK.bonus)} · ${EN.num(level.mark)} s`] as Stat] : []),
+      ],
       catapult: (level) => [...statsEn(level), ["Area", EN.num(level.splash)]],
       frost: (level) => [...statsEn(level), ["Slow", EN.pct(level.slow)]],
       ballista: (level) => statsEn(level),
@@ -184,6 +196,11 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     build: (cost) => `Построить · ${cost}`,
     upgrade: (cost) => `Улучшить · ${cost}`,
     topLevel: "Высший уровень",
+    branches: {
+      fire: { name: "Огненные стрелы", description: "Поджигает врага: он горит и после попадания." },
+      lune: { name: "Лунные стрелы", description: "Метит врага: попадания любых башен по нему сильнее." },
+    },
+    chooseArrows: "Выберите стрелы",
     sell: (refund) => `Продать · +${refund}`,
     close: "Закрыть",
     level: (level) => `Ур. ${level}`,
@@ -194,7 +211,11 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
       ballista: { name: "Баллиста", description: "Самая дальняя; каждый болт пробивает всех на своём пути." },
     },
     levelStats: {
-      archer: (level) => statsRu(level),
+      archer: (level) => [
+        ...statsRu(level),
+        ...(level.burn ? [["Горение", `${RU.num(BURN.dps)}/с · ${RU.num(level.burn)} с`] as Stat] : []),
+        ...(level.mark ? [["Метка", `+${RU.pct(MARK.bonus)} · ${RU.num(level.mark)} с`] as Stat] : []),
+      ],
       catapult: (level) => [...statsRu(level), ["Область", RU.num(level.splash)]],
       frost: (level) => [...statsRu(level), ["Замедление", RU.pct(level.slow)]],
       ballista: (level) => statsRu(level),

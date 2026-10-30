@@ -13,6 +13,9 @@ export type { Effect, EnemyKind, VolleyArrow };
 
 export type TowerKind = "archer" | "catapult" | "frost" | "ballista";
 
+/** What an archer's third level becomes on maps that allow it: arrows that burn, or arrows that mark. */
+export type ArcherBranch = "fire" | "lune";
+
 export type MapId = "meadow" | "ford" | "crossroads" | "switchback" | "rivers" | "serpent" | "saltire" | "gorge" | "trident" | "citadel";
 
 /** A setting for ten maps: the look is drawn from `render/themes.ts`. */
@@ -36,6 +39,8 @@ export interface Foe extends FoeSprite {
   slow: number;
   /** Bosses call in footmen on this timer. */
   summonTimer: number;
+  /** Seconds left of a lune mark: the foe takes extra damage from everything. */
+  markLeft: number;
 }
 
 export interface Tower {
@@ -45,6 +50,8 @@ export interface Tower {
   kind: TowerKind;
   /** 1 to 3. */
   level: number;
+  /** The archer's pick at level 3; unset for plain level 3 and for other towers. */
+  branch?: ArcherBranch;
   aim: number;
   reloadLeft: number;
   /** Seconds since it last shot, for the renderer's recoil. */
@@ -77,6 +84,10 @@ export interface Shot {
   damage: number;
   splash: number;
   slow: number;
+  /** Seconds of burning the hit sets alight; 0 for none. */
+  burn: number;
+  /** Seconds of lune mark the hit leaves; 0 for none. */
+  mark: number;
   air: boolean;
   hitIds: number[];
 }

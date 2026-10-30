@@ -1,13 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { FOES, FROST_SECONDS, GATE, START_LIVES, TOWERS, VOLLEY, WAVE_GAP, hpScale, starsFor } from "@/lib/kingsroad/sim/balance";
+import { ARCHER_BRANCHES, FOES, FROST_SECONDS, GATE, MARK, START_LIVES, TOWERS, VOLLEY, WAVE_GAP, hpScale, starsFor } from "@/lib/kingsroad/sim/balance";
 import {
+  atFork,
   build,
   callWave,
   castVolley,
   createGame,
   earlyBonus,
   giveUp,
+  levelOf,
   refundFor,
   routeLength,
   sell,
@@ -57,6 +59,7 @@ function foeAt(game: Game, distance: number, kind: EnemyKind = "grunt", override
     slowLeft: 0,
     slow: 0,
     burnLeft: 0,
+    markLeft: 0,
     flash: 0,
     phase: 0,
     summonTimer: 99,
@@ -355,5 +358,70 @@ describe("the volley", () => {
 
   it("can't be cast before the first wave", () => {
     expect(castVolley(createGame("meadow", 1), 100, 100)).toBe(false);
+  });
+
+  describe("archer branches", () => {
+    function branching(): Game {
+      MEADOW.archerBranches = true;
+      const game = quietGame();
+      build(game, 0, "archer");
+      upgrade(game, 0);
+      return game;
+    }
+
+    afterEach(() => {
+      MEADOW.archerBranches = false;
+    });
+
+    it("asks for a branch at the fork on a map that has them, and only there", () => {
+      const game = branching();
+      const tower = towerOn(game, 0)!;
+      expect(atFork(game, tower)).toBe(true);
+      expect(upgrade(game, 0)).toBe(false);
+      expect(upgrade(game, 0, "fire")).toBe(true);
+      expect(tower.branch).toBe("fire");
+      expect(levelOf(tower)).toBe(ARCHER_BRANCHES.fire);
+      build(game, 1, "catapult");
+      expect(upgrade(game, 1, "fire")).toBe(false);
+    });
+
+    it("keeps the plain longbow on maps without branches", () => {
+      MEADOW.archerBranches = false;
+      const game = quietGame();
+      build(game, 0, "archer");
+      upgrade(game, 0);
+      expect(upgrade(game, 0, "lune")).toBe(false);
+      expect(upgrade(game, 0)).toBe(true);
+      expect(levelOf(towerOn(game, 0)!)).toMatchObject(TOWERS.archer.levels[2]);
+    });
+
+    it("sets a foe burning, and the fire keeps hurting after the hit", () => {
+      const game = branching();
+      upgrade(game, 0, "fire");
+      const plot = MEADOW.plots[0];
+      const foe = foeAt(game, 60, "brute");
+      foe.x = plot.x + 20;
+      foe.y = plot.y;
+      for (let tick = 0; tick < 90 && foe.burnLeft <= 0; tick += 1) step(game, STEP);
+      expect(foe.burnLeft).toBeGreaterThan(0);
+      const before = foe.hp;
+      game.towers = [];
+      game.shots = [];
+      for (let tick = 0; tick < 30; tick += 1) step(game, STEP);
+      expect(foe.hp).toBeLessThan(before);
+    });
+
+    it("makes a marked foe take more damage", () => {
+      const firstHit = (markLeft: number) => {
+        const game = quietGame();
+        build(game, 0, "archer");
+        const foe = foeAt(game, 60, "brute", { markLeft });
+        foe.x = MEADOW.plots[0].x + 20;
+        foe.y = MEADOW.plots[0].y;
+        for (let tick = 0; tick < 120 && foe.hp === foe.maxHp; tick += 1) step(game, STEP);
+        return foe.maxHp - foe.hp;
+      };
+      expect(firstHit(2)).toBeCloseTo(firstHit(0) * (1 + MARK.bonus), 5);
+    });
   });
 });

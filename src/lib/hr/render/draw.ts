@@ -1,6 +1,6 @@
 /*
  * Draws a hero run on a plain 2D canvas. Placeholder art: the hero is the real coworker sprite, everything else is
- * drawn from shapes until the run is proven fun. The camera follows the hero and stops at the walls.
+ * drawn from shapes until the run is proven fun. The camera follows the hero and stops at the walls (except below, on a tall view).
  */
 import { DEPARTMENTS } from "@/lib/roster/data";
 import { POSE_PAD } from "@/lib/tycoon/render-support/poses";
@@ -25,12 +25,23 @@ export function fitView(width: number, height: number): View {
   return { width, height, scale };
 }
 
-/** The world point at the view's top-left corner: centred on the hero, held inside the arena. */
+/**
+ * Where the hero sits down the screen on a tall (phone) view, as a share of the height: above the middle, so the thumb
+ * on the stick doesn't cover them or the ground ahead of them.
+ */
+const PORTRAIT_FOCUS = 0.4;
+
+/**
+ * The world point at the view's top-left corner: on the hero, held inside the arena at the top and the sides. On a tall
+ * view the hero sits above the middle and the camera runs past the bottom wall, so the hero never ends up under the
+ * thumb at the bottom of the map.
+ */
 export function cameraFor(run: Run, view: View): { x: number; y: number } {
   const across = view.width / view.scale;
   const down = view.height / view.scale;
   const fit = (centre: number, span: number, size: number) => (span >= size ? (size - span) / 2 : Math.min(size - span, Math.max(0, centre - span / 2)));
-  return { x: fit(run.hero.x, across, ARENA.width), y: fit(run.hero.y, down, ARENA.height) };
+  if (view.height <= view.width) return { x: fit(run.hero.x, across, ARENA.width), y: fit(run.hero.y, down, ARENA.height) };
+  return { x: fit(run.hero.x, across, ARENA.width), y: Math.max(0, run.hero.y - down * PORTRAIT_FOCUS) };
 }
 
 /** Where the thumb is: the stick appears where it went down and the knob follows it, in CSS pixels. */
@@ -449,16 +460,16 @@ function drawStick(ctx: CanvasRenderingContext2D, stick: Stick): void {
   const reach = Math.min(length, STICK_RADIUS);
   const knobX = stick.originX + (length > 0 ? (dx / length) * reach : 0);
   const knobY = stick.originY + (length > 0 ? (dy / length) * reach : 0);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
-  ctx.lineWidth = 2;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(stick.originX, stick.originY, STICK_RADIUS, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
   ctx.beginPath();
-  ctx.arc(knobX, knobY, 18, 0, Math.PI * 2);
+  ctx.arc(knobX, knobY, 16, 0, Math.PI * 2);
   ctx.fill();
 }
 

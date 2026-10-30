@@ -36,6 +36,28 @@ steps", then read "Guide for the next session" (at the end) before changing anyt
    difficulty for desktop.
 5. Later: the auto-battler (Game 3), then the hospital (parked).
 
+## Direction (2026-10-30, after the user won with all three starters)
+
+Playtest feedback (phone only): foes are a fine size, the floor's contrast is ok but it is a bit boring, the intern felt
+the strongest (the three starters read as three difficulty levels, intern = easy), the run length is right, and the
+stick's thumb covered the view near the bottom of the map. The last is fixed (`cameraFor`: on a tall view the hero sits
+at 40% from the top and the camera runs past the bottom wall; the stick ring is fainter). Not committed yet.
+
+The shape the user and I agreed on, to build step 4 and 5 toward (the roster, quirks and sim stay as they are):
+
+- **A journey, not a menu.** Play one focus coworker and grow them between runs over weeks, tamagotchi style. One run =
+  one day, no real-time gating at first (an energy meter can come later). Growth must be slow: intern to senior takes
+  weeks, promotions are milestones that unlock abilities or stages.
+- **Coworkers are cards with powers.** The roster is a collection. Gold buys "loot boxes" (packs of candidates), so the
+  hire is a reveal ("I just got Steve Dubois!"). Gold only, no real money. The pack is the daily pool of the HR loop.
+- **Getting hired is a fight.** A new coworker starts by beating a monster HR or lead (an interview boss), then joins.
+- **Difficulty scales and brings new challenges.** Office areas as stages (open space, kitchen with coffee spills,
+  server room, meeting room with a projector beam, boardroom boss), each adding one hazard and a few foes. This is also
+  the fix for the dull floor and for content running out after a couple of days.
+- **Open:** the game's name (the "HR Department" title may change if the focus becomes one character; decide later),
+  whether runs per real day are limited, how many foes/upgrades the weeks of play need, the card rarity and pack odds.
+- The hospital game is a separate game, parked on its own; it is in this file only because it came up as an idea.
+
 ## The idea in one paragraph
 
 You are the HR manager of a chaotic office. Each day you hire quirky pixel coworkers from a pool of candidates; each

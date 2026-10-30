@@ -21,16 +21,30 @@ describe("fitView", () => {
 });
 
 describe("cameraFor", () => {
-  it("centres on the hero and stops at the walls", () => {
+  it("centres on the hero on a wide view and stops at the walls", () => {
     const run = createRun(starters()[0], 1);
-    const view = fitView(390, 700);
-    const across = view.width / view.scale;
+    const view = fitView(1280, 720);
     run.hero.x = ARENA.width / 2;
     run.hero.y = ARENA.height / 2;
-    expect(cameraFor(run, view).x).toBeCloseTo(ARENA.width / 2 - across / 2);
+    expect(cameraFor(run, view).x).toBeCloseTo(ARENA.width / 2 - view.width / view.scale / 2);
+    expect(cameraFor(run, view).y).toBeCloseTo(ARENA.height / 2 - view.height / view.scale / 2);
     run.hero.x = 5;
     run.hero.y = ARENA.height - 5;
     expect(cameraFor(run, view)).toEqual({ x: 0, y: ARENA.height - view.height / view.scale });
+  });
+
+  it("keeps the hero above the thumb on a tall view, even at the bottom wall", () => {
+    const run = createRun(starters()[0], 1);
+    const view = fitView(390, 700);
+    const down = view.height / view.scale;
+    run.hero.x = ARENA.width / 2;
+    run.hero.y = ARENA.height / 2;
+    expect((run.hero.y - cameraFor(run, view).y) / down).toBeCloseTo(0.4);
+    run.hero.y = ARENA.height - 5;
+    expect((run.hero.y - cameraFor(run, view).y) / down).toBeCloseTo(0.4);
+    run.hero.x = 5;
+    run.hero.y = 5;
+    expect(cameraFor(run, view)).toEqual({ x: 0, y: 0 });
   });
 });
 

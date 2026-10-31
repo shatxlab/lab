@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
-import { clearCareer, defaultCareer, difficultyFor, openPack, rankOf, readCareer, review, reviewXp, reviewXpToNext, writeCareer, type Career } from "@/lib/hr/career";
+import { clearCareer, defaultCareer, difficultyFor, hire, interviewDifficultyFor, openPack, rankOf, readCareer, review, reviewXp, reviewXpToNext, writeCareer, type Career } from "@/lib/hr/career";
 import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
-import { AUDIT_CLOSES, PACKS } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, INTERVIEW, interviewBossFor, PACKS } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import type { Run } from "@/lib/hr/sim/types";
 import { clearRun, readRun, writeRun } from "@/lib/hr/snapshot";
@@ -27,6 +27,8 @@ interface Result {
   gold: number;
   /** The performance review that followed: null when the coworker is gone from the roster. */
   review: { xp: number; level: number; levelsGained: number; promotedTo: number | null } | null;
+  /** Set when the run was an interview: who it was for, and whether they were hired. */
+  interview: { candidate: Coworker; hired: boolean } | null;
 }
 
 export default function HrApp() {
@@ -67,13 +69,23 @@ export default function HrApp() {
 
   const coworkerOf = (target: Run | null) => roster?.coworkers.find((coworker) => coworker.id === target?.coworkerId) ?? null;
 
-  const start = (coworker: Coworker) => {
+  const begin = (next: Run) => {
     setResult(null);
-    const next = createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity));
     writeRun(next);
     setSaved(null);
     setRun(next);
   };
+
+  const start = (coworker: Coworker) => begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity)));
+
+  /** The focus fights the boss of a sealed card; winning hires the card. */
+  const startInterview = (focusCoworker: Coworker, candidate: Coworker) =>
+    begin(
+      createRun(focusCoworker, Math.floor(Math.random() * 2 ** 31), interviewDifficultyFor(focusCoworker.level, focusCoworker.rarity), {
+        boss: interviewBossFor(candidate.id),
+        candidateId: candidate.id,
+      }),
+    );
 
   const resume = () => {
     setResult(null);
@@ -81,13 +93,29 @@ export default function HrApp() {
     setSaved(null);
   };
 
-  /** One run is one day: the review raises the coworker, the day moves on, and the gold goes into savings. */
+  /**
+   * One run is one day: the review raises the coworker, the day moves on, and the gold goes into savings. An interview
+   * is not a day: nothing is earned, and beating the boss only hires the card.
+   */
   const finish = useCallback((ended: Run) => {
     clearRun();
     const before = rosterRef.current;
     const worker = before?.coworkers.find((coworker) => coworker.id === ended.coworkerId);
     let reviewed: Result["review"] = null;
-    if (before && worker) {
+    let interviewed: Result["interview"] = null;
+    if (ended.interview) {
+      const candidate = before?.coworkers.find((coworker) => coworker.id === ended.interview?.candidateId);
+      const current = careerRef.current;
+      if (candidate && current) {
+        const hired = ended.status === "won" && current.sealed.includes(candidate.id);
+        if (hired) {
+          const next = hire(current, candidate.id);
+          writeCareer(next);
+          setCareer(next);
+        }
+        interviewed = { candidate, hired };
+      }
+    } else if (before && worker) {
       const outcome = review(worker, reviewXp(ended.time, ended.status === "won"));
       const after: RosterSave = { ...before, day: before.day + 1, coworkers: before.coworkers.map((coworker) => (coworker.id === worker.id ? outcome.coworker : coworker)) };
       writeSave(after);
@@ -101,17 +129,18 @@ export default function HrApp() {
     setResult({
       status: ended.status,
       abandoned: ended.abandoned,
-      closed: ended.status === "lost" && ended.hero.hp > 0 && ended.time >= AUDIT_CLOSES,
+      closed: ended.status === "lost" && ended.hero.hp > 0 && ended.time >= (ended.interview ? INTERVIEW.closesAt : AUDIT_CLOSES),
       time: ended.time,
       level: ended.level,
       kills: ended.kills,
       gold: Math.floor(ended.gold),
       review: reviewed,
+      interview: interviewed,
     });
   }, []);
 
   const startCareer = (coworker: Coworker) => {
-    const next: Career = { focusId: coworker.id, owned: [coworker.id], gold: 0 };
+    const next: Career = { focusId: coworker.id, owned: [coworker.id], sealed: [], gold: 0 };
     writeCareer(next);
     setCareer(next);
   };
@@ -158,7 +187,8 @@ export default function HrApp() {
                 <ul className="tower-stats">
                   <li>{text.reached(result.level)}</li>
                   <li>{text.kills(result.kills)}</li>
-                  <li>{text.goldEarned(result.gold)}</li>
+                  {!result.interview && <li>{text.goldEarned(result.gold)}</li>}
+                  {result.interview?.hired && <li className="hr-promoted">{text.hiredLine(result.interview.candidate.name)}</li>}
                 </ul>
                 {result.review && (
                   <ul className="tower-stats hr-review">
@@ -168,9 +198,17 @@ export default function HrApp() {
                   </ul>
                 )}
                 <div className="tower-actions">
-                  <button type="button" className="tower-button" onClick={() => start(current)} autoFocus>
-                    {text.playAgain}
-                  </button>
+                  {result.interview ? (
+                    !result.interview.hired && (
+                      <button type="button" className="tower-button" onClick={() => startInterview(current, result.interview!.candidate)} autoFocus>
+                        {text.tryAgain}
+                      </button>
+                    )
+                  ) : (
+                    <button type="button" className="tower-button" onClick={() => start(current)} autoFocus>
+                      {text.playAgain}
+                    </button>
+                  )}
                   <button type="button" className="tower-button tower-button-quiet" onClick={() => setRun(null)}>
                     {text.menu}
                   </button>
@@ -185,6 +223,7 @@ export default function HrApp() {
 
   const savedCoworker = coworkerOf(saved);
   const focus = roster?.coworkers.find((coworker) => coworker.id === career?.focusId) ?? null;
+  const sealedCards = (roster?.coworkers ?? []).filter((coworker) => career?.sealed.includes(coworker.id));
   const others = (roster?.coworkers ?? []).filter((coworker) => career?.owned.includes(coworker.id) && coworker.id !== focus?.id);
   return (
     <div className="tower-root hr-root" ref={readyRef} data-lang-sensitive>
@@ -235,6 +274,18 @@ export default function HrApp() {
                 </button>
                 <p className="hr-continue-hint">{text.packHint}</p>
               </div>
+              {sealedCards.length > 0 && (
+                <>
+                  <h2 className="hr-menu-heading">{text.sealedTitle}</h2>
+                  <ul className="hr-coworkers">
+                    {sealedCards.map((coworker) => (
+                      <li key={coworker.id}>
+                        <CoworkerCard coworker={coworker} sheet={sheet} text={text} action={text.interview(text.foes[interviewBossFor(coworker.id)])} onAct={() => startInterview(focus, coworker)} />
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
               {others.length > 0 && (
                 <>
                   <h2 className="hr-menu-heading">{text.yourCards}</h2>
@@ -262,6 +313,7 @@ export default function HrApp() {
           <div className="tower-panel hr-reveal">
             <h2 id="hr-pack-title">{text.packOpened(text.rarities[revealed.rarity])}</h2>
             <CoworkerCard coworker={revealed} sheet={sheet} text={text} />
+            <p className="hr-continue-hint">{text.sealedHint(text.foes[interviewBossFor(revealed.id)])}</p>
             <div className="tower-actions">
               <button type="button" className="tower-button" onClick={() => setRevealed(null)} autoFocus>
                 {text.nice}
@@ -275,8 +327,9 @@ export default function HrApp() {
 }
 
 function resultTitle(text: HrText, result: Result): string {
-  if (result.status === "won") return text.won;
+  if (result.status === "won") return result.interview ? text.hired : text.won;
   if (result.abandoned) return text.walkedOut;
+  if (result.interview) return result.closed ? text.auditClosed : text.interviewFailed;
   return result.closed ? text.auditClosed : text.fell;
 }
 

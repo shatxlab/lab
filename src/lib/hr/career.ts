@@ -13,8 +13,10 @@ export const CAREER_STORAGE_KEY = "lab:hr:v1";
 export interface Career {
   /** The coworker being grown; null until the player picks a starter. */
   focusId: number | null;
-  /** Ids of the cards the player owns: the starter they picked and every pack since. */
+  /** Ids of the cards the player owns: the starter they picked and every card hired since. */
   owned: number[];
+  /** Ids of cards bought in a pack that are waiting for their interview; they join `owned` once it is beaten. */
+  sealed: number[];
   /** Gold banked from runs, spent on packs. */
   gold: number;
 }
@@ -34,17 +36,18 @@ function storageOrUndefined(): CareerStorage | undefined {
 }
 
 export function defaultCareer(): Career {
-  return { focusId: null, owned: [], gold: 0 };
+  return { focusId: null, owned: [], sealed: [], gold: 0 };
 }
 
 export function normalizeCareer(raw: unknown): Career {
   if (!raw || typeof raw !== "object") return defaultCareer();
-  const { focusId, owned, gold } = raw as Partial<Record<keyof Career, unknown>>;
+  const { focusId, owned, sealed, gold } = raw as Partial<Record<keyof Career, unknown>>;
   const whole = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
   const focus = whole(focusId) || null;
-  const ids = Array.isArray(owned) ? owned.map(whole).filter((id) => id > 0) : [];
+  const ids = (list: unknown) => (Array.isArray(list) ? list.map(whole).filter((id) => id > 0) : []);
   // The focus is always owned, so a save from before packs keeps its coworker.
-  return { focusId: focus, owned: [...new Set(focus ? [focus, ...ids] : ids)], gold: whole(gold) };
+  const own = [...new Set(focus ? [focus, ...ids(owned)] : ids(owned))];
+  return { focusId: focus, owned: own, sealed: [...new Set(ids(sealed))].filter((id) => !own.includes(id)), gold: whole(gold) };
 }
 
 export function readCareer(storage: CareerStorage | undefined = storageOrUndefined()): Career {
@@ -93,6 +96,14 @@ export function difficultyFor(level: number, rarity: Rarity = "common"): number 
   return 1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1 + extra);
 }
 
+/**
+ * Interviews are short, so a coworker has less time to grow into the fight than in a day: they scale at half the
+ * day's pace.
+ */
+export function interviewDifficultyFor(level: number, rarity: Rarity = "common"): number {
+  return 1 + (difficultyFor(level, rarity) - 1) / 2;
+}
+
 const GROWTH_ORDER: readonly Stat[] = ["output", "grit", "focus", "hustle", "luck"];
 /** The stats a promotion lifts, by `REVIEW.promotionBonus` each. */
 const PROMOTION_STATS: readonly Stat[] = ["grit", "output", "focus"];
@@ -134,11 +145,17 @@ export function review(coworker: Coworker, xp: number): Review {
   return { coworker: { ...coworker, level, xp: pool, stats }, xp: Math.max(0, Math.floor(xp)), levelsGained: level - coworker.level, promoted };
 }
 
-/** The roster and career after buying a pack, with the card it held; null when the gold falls short. */
+/** The roster and career after buying a pack, with the card it held (sealed until it is interviewed); null when the gold falls short. */
 export function openPack(roster: RosterSave, career: Career): { roster: RosterSave; career: Career; coworker: Coworker } | null {
   if (career.gold < PACKS.price) return null;
   const source = { rng: roster.rng, nextId: roster.nextId };
   const coworker = generateCoworker(source);
   const next = recordSeen({ ...roster, rng: source.rng, nextId: source.nextId, coworkers: [...roster.coworkers, coworker] }, coworker);
-  return { roster: next, career: { ...career, owned: [...career.owned, coworker.id], gold: career.gold - PACKS.price }, coworker };
+  return { roster: next, career: { ...career, sealed: [...career.sealed, coworker.id], gold: career.gold - PACKS.price }, coworker };
+}
+
+/** The career once the sealed card's interview is won: the card is owned. Anything else is returned as it was. */
+export function hire(career: Career, candidateId: number): Career {
+  if (!career.sealed.includes(candidateId)) return career;
+  return { ...career, owned: [...career.owned, candidateId], sealed: career.sealed.filter((id) => id !== candidateId) };
 }

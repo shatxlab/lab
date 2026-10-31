@@ -23,8 +23,7 @@ steps", then read "Guide for the next session" (at the end) before changing anyt
 1. **Take the user's phone feedback** on the live run and act on it first. Things already suspected (see "Known
    rough edges"): foes look small, the floor is dim, starters are uneven, the stick's feel and the run length are
    untested by a human. Retune with the bot (see the playbook) before adding features.
-2. **Step 4 is mostly built** (see "The career", packs included). Next in it: the **interview boss** (a new card must
-   beat a monster HR or lead before it joins), **pity** for packs, then **stages** (office areas with a hazard each) and **promotion
+2. **Step 4 is mostly built** (see "The career", packs included). Next in it: **stages** (office areas with a hazard each) and **promotion
    unlocks** (today a promotion is only a title and +1 each to grit, output and focus). Burnout and quitting stay off until
    there is a bench to swap to.
 3. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
@@ -85,8 +84,17 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
   `PACKS.rarityLevels` (1) career levels of difficulty per bonus point past a common's. Bot check (30 seeds per
   department, `node /tmp/hr.mjs 30 all - <level> <rarity>`): uncommon / rare / legend win 70% / 68% / 58% at level 1 and
   71% / 62% / 71% at level 11, in the commons' band, so a lucky pull is a different build, not a walkover.
-- **Not built in packs:** pity (a guaranteed rare after N packs), duplicates (none possible), a desk cap, selling a card,
-  the interview boss (a pack gives the card straight away for now).
+- **Interview bosses (built):** a pack's card is **sealed** (`Career.sealed`), shown under "Waiting for an interview"
+  with its stats. The focus coworker fights the card's boss in an interview run (`createRun(..., interview)`, `Run.interview`,
+  `RUN_VERSION` 3): the boss walks in at 0:04 with a thin horde (30% spawns while it is out), the interview closes at
+  2:30, beating the boss wins. Winning hires the card (`hire`: sealed to owned); losing leaves it sealed and it can be
+  retried for free. An interview earns nothing (no gold, XP or day). The boss is fixed by the card's id
+  (`interviewBossFor`): **Team Lead** (charges often), **HR Manager** (fans and rings of paperwork), **Recruiter**
+  (calls in clones). They scale at half the day's pace (`interviewDifficultyFor`). Bot check (30 seeds per department,
+  `node /tmp/hr.mjs 30 all - <level> - <boss>`): wins 63% / 60% / 73% at level 1 and 63% / 59% / 78% at level 16
+  (team lead / HR manager / recruiter). The bot does badly against a slow ranged boss it kites, so the HR manager
+  has the least hp (600).
+- **Not built in packs:** pity (a guaranteed rare after N packs), duplicates (none possible), a desk cap, selling a card.
 
 ## The idea in one paragraph
 

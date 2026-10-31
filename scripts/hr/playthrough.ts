@@ -2,7 +2,7 @@
 // change can be judged on whole runs.
 //
 //   npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/hr.mjs
-//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level] [rarity]
+//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level] [rarity|-] [teamLead|hrManager|recruiter]
 //
 // With a level, each starter is first grown to that career level (a stat point per level, see `review`) and meets the
 // matching difficulty, to check the career curve. Level 1 is a first-day coworker. With a rarity (uncommon, rare or
@@ -19,10 +19,10 @@ import process from 'node:process'
 import { generateCoworker, starters } from '../../src/lib/roster/generate.ts'
 import type { Rarity } from '../../src/lib/roster/types.ts'
 import type { Coworker } from '../../src/lib/roster/types.ts'
-import { ARENA, AUDIT_CLOSES, BOSS_AT, MINI_BOSS_AT } from '../../src/lib/hr/sim/balance.ts'
-import { difficultyFor, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
+import { ARENA, AUDIT_CLOSES, BOSS_AT, INTERVIEW, MINI_BOSS_AT } from '../../src/lib/hr/sim/balance.ts'
+import { difficultyFor, interviewDifficultyFor, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
 import { choose, createRun, step } from '../../src/lib/hr/sim/run.ts'
-import type { Input, Pick, Run } from '../../src/lib/hr/sim/types.ts'
+import type { Input, InterviewBoss, Pick, Run } from '../../src/lib/hr/sim/types.ts'
 
 /** How far ahead the bot looks, in seconds. */
 const LOOK_AHEAD = 0.5
@@ -116,7 +116,7 @@ function steer(run: Run): Input {
 }
 
 function play(coworker: Coworker, seed: number, verbose: boolean) {
-  const run = createRun(coworker, seed, difficultyFor(coworker.level, coworker.rarity))
+  const run = createRun(coworker, seed, (boss ? interviewDifficultyFor : difficultyFor)(coworker.level, coworker.rarity), boss ? { boss, candidateId: 99 } : null)
   let tick = 0
   let input: Input = { dx: 0, dy: 0 }
   let nextReport = 60
@@ -146,7 +146,8 @@ const seeds = Number(process.argv[2] ?? 5)
 const only = process.argv[3] === 'all' ? undefined : process.argv[3]
 const verbose = process.argv[4] === 'verbose'
 const careerLevel = Number(process.argv[5] ?? 1)
-const rarity = process.argv[6] as Rarity | undefined
+const rarity = process.argv[6] && process.argv[6] !== '-' ? (process.argv[6] as Rarity) : undefined
+const boss = process.argv[7] as InterviewBoss | undefined
 let wins = 0
 let runs = 0
 for (const [index, base] of starters().entries()) {
@@ -166,7 +167,7 @@ for (const [index, base] of starters().entries()) {
       wins += 1
       teamWins += 1
     }
-    const end = run.status === 'won' ? 'beat the auditor' : run.time >= AUDIT_CLOSES ? 'the audit closed' : `fell to ${run.lastHitBy}`
+    const end = run.status === 'won' ? (boss ? `beat the ${boss}` : 'beat the auditor') : run.time >= (boss ? INTERVIEW.closesAt : AUDIT_CLOSES) ? 'the audit closed' : `fell to ${run.lastHitBy}`
     const stage = run.time >= BOSS_AT ? 'boss' : run.time >= MINI_BOSS_AT ? 'past mini-boss' : 'early'
     const dealt = Object.entries(run.dealt)
       .sort((a, b) => b[1] - a[1])

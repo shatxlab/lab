@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AUDIT_CLOSES, FOES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, FOES, INTERVIEW, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
 import { abandon, choose, createRun, step } from "@/lib/hr/sim/run";
 import type { Input, Run } from "@/lib/hr/sim/types";
 import { starters } from "@/lib/roster/generate";
@@ -153,3 +153,41 @@ function foe(fields: Partial<Run["foes"][number]>): Run["foes"][number] {
     ...fields,
   };
 }
+
+describe("an interview", () => {
+  const interview = { boss: "hrManager", candidateId: 9 } as const;
+
+  it("brings the boss in at once, and none of the day's bosses or printers", () => {
+    const run = createRun(plain, 1, 1, interview);
+    play(run, INTERVIEW.bossAt + 20);
+    expect(run.foes.some((foe) => foe.kind === "hrManager")).toBe(true);
+    expect(run.foes.some((foe) => ["middleManager", "auditor", "printerJam"].includes(foe.kind))).toBe(false);
+  });
+
+  it("is won by beating the boss, not the auditor", () => {
+    const run = createRun(plain, 1, 1, interview);
+    play(run, INTERVIEW.bossAt + 1);
+    for (const foe of run.foes) if (foe.kind === "hrManager") foe.hp = 0;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("won");
+  });
+
+  it("is lost when its time runs out with the boss still standing", () => {
+    // A boss nobody can beat, and a hero who cannot fall.
+    const run = createRun(plain, 1, 1e6, interview);
+    run.hero.hp = run.numbers.maxHp = 1e12;
+    play(run, INTERVIEW.closesAt + 1);
+    expect(run.status).toBe("lost");
+    expect(run.time).toBeGreaterThanOrEqual(INTERVIEW.closesAt);
+    expect(run.time).toBeLessThan(AUDIT_CLOSES);
+  });
+
+  it("makes foes tougher with the difficulty, the boss included", () => {
+    const hard = createRun(plain, 1, 2, interview);
+    const easy = createRun(plain, 1, 1, interview);
+    play(hard, INTERVIEW.bossAt + 1);
+    play(easy, INTERVIEW.bossAt + 1);
+    const hp = (run: Run) => run.foes.find((foe) => foe.kind === "hrManager")!.maxHp;
+    expect(hp(hard)).toBeCloseTo(hp(easy) * 2);
+  });
+});

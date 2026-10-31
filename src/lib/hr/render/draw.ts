@@ -61,6 +61,8 @@ const FLOOR = "#4a5a6e";
 const FLOOR_ALT = "#46566a";
 const WALL = "#2a3140";
 const SHADOW = "rgba(10, 12, 20, 0.28)";
+/** The suit each boss wears; the shirt colours tell the interview bosses from the office ones. */
+const SUIT_HEX: Partial<Record<string, string>> = { middleManager: "#566c86", auditor: "#333c57", teamLead: "#3b5dc9", hrManager: "#d6498a", recruiter: "#38b764" };
 
 const SHIRT_HEX: Record<string, string> = {
   red: "#b13e53",
@@ -293,7 +295,8 @@ function drawFoeShot(ctx: CanvasRenderingContext2D, from: string, x: number, y: 
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(Math.atan2(vy, vx));
-  ctx.fillStyle = "#e0483f";
+  // Paperwork is a white sheet; red tape is red.
+  ctx.fillStyle = from === "hrManager" ? "#f4f4f4" : "#e0483f";
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1;
   ctx.fillRect(-radius * 1.5, -radius * 0.5, radius * 3, radius);
@@ -391,9 +394,12 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
       ctx.fillRect(r * 0.6, -r * 0.4, r * 0.3, r * 0.3);
       break;
     case "middleManager":
+    case "teamLead":
+    case "hrManager":
+    case "recruiter":
     case "auditor": {
       const auditor = foe.kind === "auditor";
-      ctx.fillStyle = auditor ? "#333c57" : "#566c86";
+      ctx.fillStyle = SUIT_HEX[foe.kind] ?? "#566c86";
       ctx.beginPath();
       ctx.arc(0, r * 0.2, r, 0, Math.PI * 2);
       ctx.fill();

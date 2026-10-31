@@ -9,7 +9,16 @@ import type { WeaponId } from "@/lib/roster/types";
 
 export type { WeaponId };
 
-export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "auditor";
+export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "auditor" | InterviewBoss;
+
+/** The monsters a new hire has to beat before they join: a charging lead, an HR manager, a recruiter. */
+export type InterviewBoss = "teamLead" | "hrManager" | "recruiter";
+
+/** A run that is an interview, not a day: beat `boss` to hire the card `candidateId`. */
+export interface Interview {
+  boss: InterviewBoss;
+  candidateId: number;
+}
 
 export type PassiveId = "coffee" | "gym" | "sneakers" | "lanyard" | "mentor" | "ergoChair" | "powerTie";
 
@@ -165,6 +174,8 @@ export interface Run {
   coworkerId: number;
   /** Multiplies foes' hp and (by half) their spawns; 1 on a coworker's first day. */
   difficulty: number;
+  /** Set when the run is an interview: no review, no day, and the boss is the only goal. */
+  interview: Interview | null;
   status: Status;
   /** Seconds played; the clock stops while a pick is waiting. */
   time: number;

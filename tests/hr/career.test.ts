@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultCareer, difficultyFor, normalizeCareer, openPack, rankOf, review, reviewXp, reviewXpToNext } from "@/lib/hr/career";
-import { PACKS, REVIEW } from "@/lib/hr/sim/balance";
+import { defaultCareer, difficultyFor, hire, interviewDifficultyFor, normalizeCareer, openPack, rankOf, review, reviewXp, reviewXpToNext } from "@/lib/hr/career";
+import { interviewBossFor, INTERVIEW_BOSSES, PACKS, REVIEW } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import { starters } from "@/lib/roster/generate";
 import { defaultSave } from "@/lib/roster/save";
@@ -81,8 +81,12 @@ describe("difficulty", () => {
 describe("normalizeCareer", () => {
   it("repairs what it can and defaults the rest", () => {
     expect(normalizeCareer(null)).toEqual(defaultCareer());
-    expect(normalizeCareer({ focusId: 2.7, gold: -5 })).toEqual({ focusId: 2, owned: [2], gold: 0 });
-    expect(normalizeCareer({ focusId: "x", gold: 12 })).toEqual({ focusId: null, owned: [], gold: 12 });
+    expect(normalizeCareer({ focusId: 2.7, gold: -5 })).toEqual({ focusId: 2, owned: [2], sealed: [], gold: 0 });
+    expect(normalizeCareer({ focusId: "x", gold: 12 })).toEqual({ focusId: null, owned: [], sealed: [], gold: 12 });
+  });
+
+  it("keeps sealed cards apart from owned ones", () => {
+    expect(normalizeCareer({ focusId: 1, owned: [1, 4], sealed: [4, 5, 5, "x"], gold: 0 })).toEqual({ focusId: 1, owned: [1, 4], sealed: [5], gold: 0 });
   });
 
   it("always owns the focus, once, and drops bad ids", () => {
@@ -92,13 +96,13 @@ describe("normalizeCareer", () => {
 
 describe("openPack", () => {
   it("refuses without the gold", () => {
-    expect(openPack(defaultSave(1), { focusId: 1, owned: [1], gold: PACKS.price - 1 })).toBeNull();
+    expect(openPack(defaultSave(1), { focusId: 1, owned: [1], sealed: [], gold: PACKS.price - 1 })).toBeNull();
   });
 
-  it("spends the price and adds a new level 1 card to the roster, the codex and the owned list", () => {
+  it("spends the price and adds a new level 1 card to the roster and the codex, sealed until its interview", () => {
     const roster = defaultSave(1);
-    const bought = openPack(roster, { focusId: 1, owned: [1], gold: PACKS.price + 5 })!;
-    expect(bought.career).toEqual({ focusId: 1, owned: [1, bought.coworker.id], gold: 5 });
+    const bought = openPack(roster, { focusId: 1, owned: [1], sealed: [], gold: PACKS.price + 5 })!;
+    expect(bought.career).toEqual({ focusId: 1, owned: [1], sealed: [bought.coworker.id], gold: 5 });
     expect(bought.coworker).toMatchObject({ level: 1, xp: 0 });
     expect(bought.coworker.id).toBe(roster.nextId);
     expect(bought.roster.nextId).toBe(roster.nextId + 1);
@@ -108,10 +112,30 @@ describe("openPack", () => {
   });
 
   it("gives a different card each time, and the same ones from the same save", () => {
-    const career = { focusId: 1, owned: [1], gold: PACKS.price * 3 };
+    const career = { focusId: 1, owned: [1], sealed: [], gold: PACKS.price * 3 };
     const first = openPack(defaultSave(7), career)!;
     const second = openPack(first.roster, first.career)!;
     expect(second.coworker.id).not.toBe(first.coworker.id);
     expect(openPack(defaultSave(7), career)!.coworker).toEqual(first.coworker);
+  });
+});
+
+describe("hire", () => {
+  it("moves a sealed card to owned, and ignores a card that is not sealed", () => {
+    const career = { focusId: 1, owned: [1], sealed: [4, 5], gold: 0 };
+    expect(hire(career, 4)).toEqual({ focusId: 1, owned: [1, 4], sealed: [5], gold: 0 });
+    expect(hire(career, 9)).toBe(career);
+  });
+});
+
+describe("interviews", () => {
+  it("give each card the same boss every time, spread over all three", () => {
+    expect(interviewBossFor(7)).toBe(interviewBossFor(7));
+    expect(new Set([4, 5, 6].map(interviewBossFor)).size).toBe(INTERVIEW_BOSSES.length);
+  });
+
+  it("scale at half the day's pace", () => {
+    expect(interviewDifficultyFor(1)).toBe(1);
+    expect(interviewDifficultyFor(11) - 1).toBeCloseTo((difficultyFor(11) - 1) / 2);
   });
 });

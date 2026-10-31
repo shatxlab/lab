@@ -32,6 +32,14 @@ export interface HrText {
   yourCards: string;
   makeFocus: string;
   rarities: Record<Rarity, string>;
+  sealedTitle: string;
+  sealedHint: (boss: string) => string;
+  interview: (boss: string) => string;
+  interviewClock: (boss: string, time: string) => string;
+  hired: string;
+  hiredLine: (name: string) => string;
+  interviewFailed: string;
+  tryAgain: string;
   startOver: string;
   startOverConfirm: string;
   departments: Record<DepartmentId, string>;
@@ -103,6 +111,14 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     yourCards: "Your cards",
     makeFocus: "Make focus",
     rarities: { common: "Common", uncommon: "Uncommon", rare: "Rare", legend: "Legend" },
+    sealedTitle: "Waiting for an interview",
+    sealedHint: (boss) => `Your focus has to beat the ${boss} before they join.`,
+    interview: (boss) => `Interview: ${boss}`,
+    interviewClock: (boss, time) => `${boss}, ${time} left`,
+    hired: "Hired!",
+    hiredLine: (name) => `${name} joins your cards`,
+    interviewFailed: "Interview failed",
+    tryAgain: "Try again",
     startOver: "Start a new career",
     startOverConfirm: "Start over? Your coworker's level and savings will be lost.",
     departments: {
@@ -176,6 +192,9 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       printerJam: "Printer Jam",
       middleManager: "Middle Manager",
       auditor: "Auditor",
+      teamLead: "Team Lead",
+      hrManager: "HR Manager",
+      recruiter: "Recruiter",
     },
     next: (who, time) => `${who} in ${time}`,
     auditCloses: (time) => `The audit closes in ${time}`,
@@ -227,6 +246,14 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     yourCards: "Ваши карточки",
     makeFocus: "Сделать главным",
     rarities: { common: "Обычный", uncommon: "Необычный", rare: "Редкий", legend: "Легенда" },
+    sealedTitle: "Ждут собеседования",
+    sealedHint: (boss) => `Ваш главный сотрудник должен победить: ${boss}.`,
+    interview: (boss) => `Собеседование: ${boss}`,
+    interviewClock: (boss, time) => `${boss}, осталось ${time}`,
+    hired: "Принят!",
+    hiredLine: (name) => `${name} теперь в вашей коллекции`,
+    interviewFailed: "Собеседование провалено",
+    tryAgain: "Ещё раз",
     startOver: "Начать новую карьеру",
     startOverConfirm: "Начать заново? Уровень сотрудника и накопления пропадут.",
     departments: {
@@ -300,6 +327,9 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       printerJam: "Зажевало бумагу",
       middleManager: "Менеджер среднего звена",
       auditor: "Аудитор",
+      teamLead: "Тимлид",
+      hrManager: "HR-менеджер",
+      recruiter: "Рекрутёр",
     },
     next: (who, time) => `${who} через ${time}`,
     auditCloses: (time) => `Аудит закроется через ${time}`,

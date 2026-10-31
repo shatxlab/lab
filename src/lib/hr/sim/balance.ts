@@ -3,7 +3,7 @@
  * `scripts/hr/playthrough.ts` (usage in its header).
  */
 import type { Effect as QuirkEffect, Stat } from "@/lib/roster/types";
-import type { FoeKind, HeroNumbers, PassiveId, WeaponId } from "./types";
+import type { FoeKind, HeroNumbers, InterviewBoss, PassiveId, WeaponId } from "./types";
 
 /** A walled office floor, about 3 by 3 phone screens. */
 export const ARENA = { width: 1400, height: 1400 } as const;
@@ -103,7 +103,38 @@ export const FOES: Readonly<Record<FoeKind, FoeDef>> = {
   middleManager: { hp: 1000, radius: 22, speed: 55, touch: 30, xp: 60, gold: 25, every: 4, boss: true },
   /** The boss: rings of red tape and a reply-all chain now and then. */
   auditor: { hp: 7000, radius: 28, speed: 45, touch: 40, xp: 0, gold: 100, every: 3, boss: true },
+  /** Interview bosses (hp before the coworker's difficulty). A lead who charges often and hard. */
+  teamLead: { hp: 1500, radius: 22, speed: 60, touch: 28, xp: 0, gold: 0, every: 2.6, boss: true },
+  /** Throws paperwork in fans, and now and then a ring of it. */
+  hrManager: { hp: 600, radius: 24, speed: 55, touch: 25, xp: 0, gold: 0, every: 2.2, boss: true },
+  /** Keeps calling in clones. */
+  recruiter: { hp: 1700, radius: 20, speed: 50, touch: 20, xp: 0, gold: 0, every: 3.5, boss: true },
 };
+
+/** The interview: a short fight against one boss, with a thin horde around it. */
+export const INTERVIEW = {
+  /** The boss walks in at this time. */
+  bossAt: 4,
+  /** If the boss still stands at this time, the interview is over. */
+  closesAt: 150,
+  /** Foes per second, flat; only `bossOutShare` of it while the boss is out, so the fight is about the boss. */
+  spawnRate: 1.6,
+  bossOutShare: 0.3,
+} as const;
+
+export const INTERVIEW_BOSSES: readonly InterviewBoss[] = ["teamLead", "hrManager", "recruiter"];
+
+/** The boss a card's interview is, fixed by its id so a retry is the same fight. */
+export function interviewBossFor(candidateId: number): InterviewBoss {
+  return INTERVIEW_BOSSES[candidateId % INTERVIEW_BOSSES.length];
+}
+
+/** The HR manager throws a fan of this many sheets at the hero, and every `ringEvery` fans a ring of `ring`. */
+export const PAPERWORK = { speed: 120, radius: 6, damage: 9, life: 5, fan: 5, spread: 0.22, ringEvery: 3, ring: 10 } as const;
+/** Clones a recruiter calls in at a time. */
+export const RECRUITER_CLONES = 5;
+/** The team lead's charge: the middle manager's, but quicker. */
+export const LEAD_CHARGE = { seconds: 0.8, speed: 3 } as const;
 
 /** Reply-alls a meeting invite calls in at a time. */
 export const INVITE_SUMMONS = 3;

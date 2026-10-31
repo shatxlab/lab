@@ -19,7 +19,10 @@ import {
   GRID_CELL,
   HERO_RADIUS,
   HURT_FLASH,
+  INTERVIEW,
   INVITE_SUMMONS,
+  LEAD_CHARGE,
+  PAPERWORK,
   MAX_FOES,
   MAX_GEMS,
   MAX_PRINTERS,
@@ -31,6 +34,7 @@ import {
   PRINTER_FROM,
   PRINTER_RANGE,
   PUSH_FADE,
+  RECRUITER_CLONES,
   RED_TAPE,
   SPAWN_DISTANCE,
   TONER,
@@ -44,11 +48,11 @@ import {
 import { Grid } from "./grid";
 import { baseNumbers } from "./hero";
 import { applyPick, rollPicks } from "./picks";
-import type { Effect, Foe, FoeKind, Input, OwnedWeapon, Run, Shot, WeaponId } from "./types";
+import type { Effect, Foe, FoeKind, Input, Interview, OwnedWeapon, Run, Shot, WeaponId } from "./types";
 
 /** The fixed tick the page steps the sim with, so every device plays the same run. */
 export const STEP = 1 / 60;
-export const RUN_VERSION = 2;
+export const RUN_VERSION = 3;
 
 /** The biggest foe's radius, which every grid search is widened by. */
 const FOE_PAD = Math.max(...Object.values(FOES).map((foe) => foe.radius));
@@ -59,8 +63,11 @@ const grid = new Grid<Foe>(ARENA.width, ARENA.height, GRID_CELL);
 /** Foes by id for homing shots; rebuilt every tick alongside the grid. */
 const byId = new Map<number, Foe>();
 
-/** `difficulty` is 1 for a first-day coworker and grows with their career level (see `difficultyFor`). */
-export function createRun(coworker: Coworker, seed: number, difficulty = 1): Run {
+/**
+ * `difficulty` is 1 for a first-day coworker and grows with their career level (see `difficultyFor`). With an
+ * `interview` the run is a fight against that boss alone, not a day at the office.
+ */
+export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null): Run {
   const base = baseNumbers(coworker);
   return {
     version: RUN_VERSION,
@@ -68,6 +75,7 @@ export function createRun(coworker: Coworker, seed: number, difficulty = 1): Run
     rng: seed,
     coworkerId: coworker.id,
     difficulty,
+    interview,
     status: "playing",
     time: 0,
     base,
@@ -119,7 +127,7 @@ export function step(run: Run, input: Input): void {
   if (run.hero.hp <= 0) {
     run.hero.hp = 0;
     run.status = "lost";
-  } else if (run.status === "playing" && run.time >= AUDIT_CLOSES) {
+  } else if (run.status === "playing" && run.time >= (run.interview ? INTERVIEW.closesAt : AUDIT_CLOSES)) {
     run.status = "lost";
   } else if (run.status === "playing" && run.queuedPicks > 0 && !run.picks) {
     run.queuedPicks -= 1;
@@ -261,7 +269,27 @@ function drawKind(run: Run): FoeKind {
   return "replyAll";
 }
 
+function spawnInterview(run: Run, interview: Interview, dt: number): void {
+  if (!run.bossDone && run.time >= INTERVIEW.bossAt) {
+    run.bossDone = true;
+    const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
+    addFoe(run, interview.boss, at.x, at.y);
+  }
+  const bossOut = run.foes.some((foe) => foe.kind === interview.boss);
+  run.spawnDebt += INTERVIEW.spawnRate * (1 + (run.difficulty - 1) / 2) * (bossOut ? INTERVIEW.bossOutShare : 1) * dt;
+  while (run.spawnDebt >= 1) {
+    run.spawnDebt -= 1;
+    if (run.foes.length >= MAX_FOES) continue;
+    const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
+    addFoe(run, "replyAll", at.x, at.y);
+  }
+}
+
 function spawn(run: Run, dt: number): void {
+  if (run.interview) {
+    spawnInterview(run, run.interview, dt);
+    return;
+  }
   if (!run.miniBossDone && run.time >= MINI_BOSS_AT) {
     run.miniBossDone = true;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
@@ -325,6 +353,21 @@ function act(run: Run, foe: Foe, toHero: number, distance: number): void {
       foe.chargeX = Math.cos(toHero);
       foe.chargeY = Math.sin(toHero);
       break;
+    case "teamLead":
+      foe.charge = LEAD_CHARGE.seconds;
+      foe.chargeX = Math.cos(toHero);
+      foe.chargeY = Math.sin(toHero);
+      break;
+    case "hrManager":
+      if (foe.cycles % PAPERWORK.ringEvery === 0) {
+        for (let index = 0; index < PAPERWORK.ring; index += 1) shootAt(run, foe, toHero + (index / PAPERWORK.ring) * Math.PI * 2, PAPERWORK);
+      } else {
+        for (let index = 0; index < PAPERWORK.fan; index += 1) shootAt(run, foe, toHero + (index - (PAPERWORK.fan - 1) / 2) * PAPERWORK.spread, PAPERWORK);
+      }
+      break;
+    case "recruiter":
+      summon(run, foe, RECRUITER_CLONES);
+      break;
     case "auditor":
       for (let index = 0; index < RED_TAPE.count; index += 1) shootAt(run, foe, toHero + (index / RED_TAPE.count) * Math.PI * 2, RED_TAPE);
       if (foe.cycles % AUDITOR_SUMMON_EVERY === 0) summon(run, foe, AUDITOR_SUMMONS);
@@ -361,7 +404,7 @@ function moveFoes(run: Run, dt: number): void {
     let [mx, my] = distance > 0 ? [dx / distance, dy / distance] : [0, 0];
     if (foe.charge > 0) {
       foe.charge -= dt;
-      speed *= CHARGE.speed;
+      speed *= foe.kind === "teamLead" ? LEAD_CHARGE.speed : CHARGE.speed;
       mx = foe.chargeX;
       my = foe.chargeY;
     }
@@ -427,7 +470,7 @@ function reap(run: Run): void {
     run.gold += foe.gold * run.numbers.gold;
     if (foe.xp > 0) run.gems.push({ id: run.nextId++, x: foe.x, y: foe.y, value: foe.xp, pulled: false });
     addEffect(run, "pop", foe.x, foe.y, foe.radius, 0.3);
-    if (foe.kind === "auditor") run.status = "won";
+    if (foe.kind === (run.interview?.boss ?? "auditor")) run.status = "won";
   }
   run.foes = alive;
   while (run.gems.length > MAX_GEMS) {

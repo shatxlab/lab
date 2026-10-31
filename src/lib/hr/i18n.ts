@@ -139,6 +139,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     stages: {
       openSpace: { name: "Open space", blurb: "The usual office floor." },
       kitchen: { name: "Kitchen", blurb: "Coffee spills slow you down and microwaves fire rings of popcorn. Harder, with more gold and XP." },
+      serverRoom: { name: "Server room", blurb: "Floor vents flash, then blast heat, and the Sysadmin sends pings. Harder still, with even more gold and XP." },
     },
     whereTo: "Where to today?",
     stageLocked: (name, level) => `${name} opens at level ${level}.`,
@@ -215,6 +216,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       printerJam: "Printer Jam",
       middleManager: "Middle Manager",
       lunchMonitor: "Lunch Monitor",
+      sysadmin: "Sysadmin",
       auditor: "Auditor",
       teamLead: "Team Lead",
       hrManager: "HR Manager",
@@ -292,6 +294,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     stages: {
       openSpace: { name: "Опенспейс", blurb: "Обычный офисный этаж." },
       kitchen: { name: "Кухня", blurb: "Лужи кофе замедляют, а микроволновки стреляют кольцами попкорна. Сложнее, но больше золота и опыта." },
+      serverRoom: { name: "Серверная", blurb: "Вентиляционные решётки мигают, а затем выдают жар, и сисадмин шлёт пинги. Ещё сложнее, но ещё больше золота и опыта." },
     },
     whereTo: "Куда сегодня?",
     stageLocked: (name, level) => `${name}: с уровня ${level}.`,
@@ -368,6 +371,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       printerJam: "Зажевало бумагу",
       middleManager: "Менеджер среднего звена",
       lunchMonitor: "Контролёр обедов",
+      sysadmin: "Сисадмин",
       auditor: "Аудитор",
       teamLead: "Тимлид",
       hrManager: "HR-менеджер",

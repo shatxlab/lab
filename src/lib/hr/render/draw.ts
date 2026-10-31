@@ -4,7 +4,7 @@
  */
 import { DEPARTMENTS } from "@/lib/roster/data";
 import { POSE_PAD } from "@/lib/tycoon/render-support/poses";
-import { ARENA, DUCK_RADIUS, FOES, HERO_RADIUS, weaponNumbers } from "../sim/balance";
+import { ARENA, DUCK_RADIUS, FOES, HERO_RADIUS, SERVER_ROOM, weaponNumbers } from "../sim/balance";
 import type { Foe, Run } from "../sim/types";
 import type { HeroFrames } from "./heroes";
 
@@ -62,9 +62,11 @@ const FLOOR_ALT = "#46566a";
 const WALL = "#2a3140";
 const KITCHEN_FLOOR = "#9db4b0";
 const KITCHEN_ALT = "#8fa8a4";
+const SERVER_FLOOR = "#3a4458";
+const SERVER_ALT = "#343d51";
 const SHADOW = "rgba(10, 12, 20, 0.28)";
 /** The suit each boss wears; the shirt colours tell the interview bosses from the office ones. */
-const SUIT_HEX: Partial<Record<string, string>> = { middleManager: "#566c86", auditor: "#333c57", teamLead: "#3b5dc9", hrManager: "#d6498a", recruiter: "#38b764", lunchMonitor: "#ef7d57" };
+const SUIT_HEX: Partial<Record<string, string>> = { middleManager: "#566c86", auditor: "#333c57", teamLead: "#3b5dc9", hrManager: "#d6498a", recruiter: "#38b764", lunchMonitor: "#ef7d57", sysadmin: "#41a6f6" };
 
 const SHIRT_HEX: Record<string, string> = {
   red: "#b13e53",
@@ -120,11 +122,12 @@ function tileHash(x: number, y: number): number {
 
 function drawFloor(ctx: CanvasRenderingContext2D, run: Run, camera: { x: number; y: number }, view: View): void {
   const kitchen = run.stage === "kitchen";
-  ctx.fillStyle = kitchen ? KITCHEN_FLOOR : FLOOR;
+  const server = run.stage === "serverRoom";
+  ctx.fillStyle = kitchen ? KITCHEN_FLOOR : server ? SERVER_FLOOR : FLOOR;
   ctx.fillRect(0, 0, ARENA.width, ARENA.height);
   // Tiles, only the ones in view: big carpet tiles in the open space, small glazed ones in the kitchen.
-  const tile = kitchen ? 50 : 100;
-  ctx.fillStyle = kitchen ? KITCHEN_ALT : FLOOR_ALT;
+  const tile = kitchen ? 50 : server ? 60 : 100;
+  ctx.fillStyle = kitchen ? KITCHEN_ALT : server ? SERVER_ALT : FLOOR_ALT;
   const fromX = Math.max(0, Math.floor(camera.x / tile));
   const fromY = Math.max(0, Math.floor(camera.y / tile));
   const toX = Math.min(ARENA.width / tile, Math.ceil((camera.x + view.width / view.scale) / tile));
@@ -136,6 +139,20 @@ function drawFloor(ctx: CanvasRenderingContext2D, run: Run, camera: { x: number;
     ctx.strokeStyle = "rgba(30, 50, 50, 0.22)";
     ctx.lineWidth = 1;
     for (let ty = fromY; ty < toY; ty += 1) for (let tx = fromX; tx < toX; tx += 1) ctx.strokeRect(tx * tile, ty * tile, tile, tile);
+  } else if (server) {
+    // Raised floor panels with a status light blinking on some of them.
+    ctx.strokeStyle = "rgba(10, 14, 24, 0.5)";
+    ctx.lineWidth = 1;
+    for (let ty = fromY; ty < toY; ty += 1) {
+      for (let tx = fromX; tx < toX; tx += 1) {
+        ctx.strokeRect(tx * tile, ty * tile, tile, tile);
+        const h = tileHash(tx, ty);
+        if (h % 9 === 0) {
+          ctx.fillStyle = (h >>> 5) % 3 === 0 ? "rgba(91, 220, 150, 0.8)" : "rgba(65, 166, 246, 0.8)";
+          ctx.fillRect(tx * tile + 6, ty * tile + 6, 3, 3);
+        }
+      }
+    }
   } else {
     // Wear on the carpet: speckles, stains and a stray sheet of paper, so the floor isn't a bare checkerboard.
     for (let ty = fromY; ty < toY; ty += 1) {
@@ -181,6 +198,26 @@ function drawHazards(ctx: CanvasRenderingContext2D, run: Run): void {
       ctx.beginPath();
       ctx.ellipse(hazard.x - hazard.radius * 0.2, hazard.y - hazard.radius * 0.15, hazard.radius * 0.45, hazard.radius * 0.25, 0, 0, Math.PI * 2);
       ctx.fill();
+      continue;
+    }
+    if (hazard.kind === "vent") {
+      const warning = hazard.active === 0 && hazard.timer < SERVER_ROOM.warn;
+      ctx.fillStyle = hazard.active > 0 ? "rgba(255, 120, 60, 0.55)" : warning ? (Math.floor(hazard.timer * 10) % 2 === 0 ? "rgba(255, 190, 90, 0.4)" : "rgba(255, 190, 90, 0.15)") : "rgba(20, 24, 36, 0.55)";
+      ctx.beginPath();
+      ctx.arc(hazard.x, hazard.y, hazard.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = hazard.active > 0 ? "#ff8a4a" : "#5a6478";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // The grate.
+      ctx.strokeStyle = "rgba(10, 14, 24, 0.7)";
+      ctx.lineWidth = 3;
+      for (let bar = -2; bar <= 2; bar += 1) {
+        ctx.beginPath();
+        ctx.moveTo(hazard.x - hazard.radius * 0.7, hazard.y + bar * hazard.radius * 0.3);
+        ctx.lineTo(hazard.x + hazard.radius * 0.7, hazard.y + bar * hazard.radius * 0.3);
+        ctx.stroke();
+      }
       continue;
     }
     const r = hazard.radius;
@@ -381,8 +418,8 @@ function drawFoeShot(ctx: CanvasRenderingContext2D, from: string, x: number, y: 
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(Math.atan2(vy, vx));
-  // Paperwork is a white sheet; red tape is red.
-  ctx.fillStyle = from === "hrManager" ? "#f4f4f4" : "#e0483f";
+  // Paperwork is a white sheet, a ping is blue; red tape is red.
+  ctx.fillStyle = from === "hrManager" ? "#f4f4f4" : from === "sysadmin" ? "#41a6f6" : "#e0483f";
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1;
   ctx.fillRect(-radius * 1.5, -radius * 0.5, radius * 3, radius);
@@ -481,6 +518,7 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
       break;
     case "middleManager":
     case "lunchMonitor":
+    case "sysadmin":
     case "teamLead":
     case "hrManager":
     case "recruiter":

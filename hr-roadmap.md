@@ -23,7 +23,7 @@ steps", then read "Guide for the next session" (at the end) before changing anyt
 1. **Take the user's phone feedback** on the live run and act on it first. Things already suspected (see "Known
    rough edges"): foes look small, the floor is dim, starters are uneven, the stick's feel and the run length are
    untested by a human. Retune with the bot (see the playbook) before adding features.
-2. **Step 4 is mostly built** (see "The career", packs included). Next in it: more **stages** (server room, meeting room, boardroom) and, once a few more perks are wanted, a **bigger perk pool** (a perk per department's weapon, say). Burnout and quitting stay off until
+2. **Step 4 is mostly built** (see "The career", packs included). Next in it: more **stages** (meeting room, boardroom) and, once a few more perks are wanted, a **bigger perk pool** (a perk per department's weapon, say). Burnout and quitting stay off until
    there is a bench to swap to.
 3. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
    reveal quirks, hire / pass / hold, desks, the codex. Then turn `stakes` on and tune the quit chance and the price of
@@ -93,7 +93,7 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
   `node /tmp/hr.mjs 30 all - <level> - <boss>`): wins 63% / 60% / 73% at level 1 and 63% / 59% / 78% at level 16
   (team lead / HR manager / recruiter). The bot does badly against a slow ranged boss it kites, so the HR manager
   has the least hp (600).
-- **Stages (built, one so far):** `STAGES` in `balance.ts`, `Run.stage` and `Run.hazards` (`RUN_VERSION` 4), the choice
+- **Stages (built: kitchen, server room):** `STAGES` in `balance.ts`, `Run.stage` and `Run.hazards` (`RUN_VERSION` 5), the choice
   kept in `Career.stage` and shown on the menu ("Where to today?"; a stage below the focus's level is greyed and the
   run falls back to the open space, `stageFor`). The **Kitchen** opens at level 6 (the first promotion): coffee spills
   slow the hero by 35% (not the foes), two microwaves in corners fire a ring of 8 popcorn shots every 5 s (turned a
@@ -101,8 +101,14 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
   tile floor. In return: foe difficulty x1.05, gold x1.25, review XP x1.2. Interviews are always in the open space.
   The open space got carpet wear (speckles, stains, stray paper) so the floor is less bare. Bot check (30 seeds per
   department, `node /tmp/hr.mjs 30 all - <level> - - kitchen`): the kitchen wins about 56% at levels 6, 11 and 16 against
-  72% / 74% / 83% in the open space; the microwaves cause 13 to 25% of the damage the bot takes. More stages (server
-  room, meeting room, boardroom) follow the same recipe: a hazard in `Run.hazards`, a mini-boss, multipliers, an
+  72% / 74% / 83% in the open space; the microwaves cause 13 to 25% of the damage the bot takes.
+  The **Server room** opens at level 11 (the second promotion): seven floor vents flash for 1.2 s, blast heat for 1.6 s
+  (15 damage a second to a hero standing in one) every 6 s, staggered; the mini-boss is the **Sysadmin** (slow, fans of
+  three pings every 3.2 s) instead of the Middle Manager; raised-floor panels with blinking lights. Foe difficulty
+  x1.05, gold x1.5, XP x1.4. Bot (30 seeds per department, with perks): 51% at level 11 and 67% at level 16, against
+  about 73% / 80% in the open space and 64% / 67% in the kitchen; the vents cause 16 to 32% of the damage the bot
+  takes. The first attempt (26 damage a second, pings every 2.4 s, x1.1) gave 24% / 32% and was too hard.
+  More stages (meeting room, boardroom) follow the same recipe: a hazard in `Run.hazards`, a mini-boss, multipliers, an
   unlock level; add the stage to `Stage`, `STAGES`, the floor in `drawFloor`, copy in `i18n.ts`, and run the bot.
 - **Promotion perks (built):** every promotion (a new rank, `rankOf`) lets the player pick one of three permanent perks
   for that coworker (`Coworker.perks`, `PERK_IDS` in `roster/types.ts`; `perksPending`, `perkOffer`, `choosePerk` in

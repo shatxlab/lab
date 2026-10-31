@@ -9,22 +9,27 @@ import type { WeaponId } from "@/lib/roster/types";
 
 export type { WeaponId };
 
-export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "lunchMonitor" | "auditor" | InterviewBoss;
+export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "lunchMonitor" | "sysadmin" | "auditor" | InterviewBoss;
 
 /** What hurt the hero: a foe, or a hazard of the stage. */
-export type Source = FoeKind | "microwave";
+export type Source = FoeKind | "microwave" | "vent";
 
 /** Where a day is spent: the open space everyone starts in, then areas with a hazard of their own. */
-export type Stage = "openSpace" | "kitchen";
+export type Stage = "openSpace" | "kitchen" | "serverRoom";
 
-/** Something fixed to the floor of a stage: a coffee spill that slows the hero, a microwave that fires rings. */
+/**
+ * Something fixed to the floor of a stage: a coffee spill that slows the hero, a microwave that fires rings, a vent that
+ * blasts heat in bursts.
+ */
 export interface Hazard {
-  kind: "spill" | "microwave";
+  kind: "spill" | "microwave" | "vent";
   x: number;
   y: number;
   radius: number;
-  /** Seconds until a microwave fires. */
+  /** Seconds until a microwave fires or a vent next blasts. */
   timer: number;
+  /** Seconds left of a vent's blast; 0 while it is quiet. */
+  active: number;
 }
 
 /** The monsters a new hire has to beat before they join: a charging lead, an HR manager, a recruiter. */

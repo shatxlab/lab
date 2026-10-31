@@ -103,6 +103,8 @@ export const FOES: Readonly<Record<FoeKind, FoeDef>> = {
   middleManager: { hp: 1000, radius: 22, speed: 55, touch: 30, xp: 60, gold: 25, every: 4, boss: true },
   /** The kitchen's mini-boss: charges like the middle manager, a little quicker and tougher. */
   lunchMonitor: { hp: 1300, radius: 21, speed: 60, touch: 30, xp: 70, gold: 30, every: 3.5, boss: true },
+  /** The server room's mini-boss: slow, and sends fans of pings instead of charging. */
+  sysadmin: { hp: 1300, radius: 21, speed: 42, touch: 24, xp: 80, gold: 35, every: 3.2, boss: true },
   /** The boss: rings of red tape and a reply-all chain now and then. */
   auditor: { hp: 7000, radius: 28, speed: 45, touch: 40, xp: 0, gold: 100, every: 3, boss: true },
   /** Interview bosses (hp before the coworker's difficulty). A lead who charges often and hard. */
@@ -315,6 +317,7 @@ export interface StageDef {
 export const STAGES: Readonly<Record<Stage, StageDef>> = {
   openSpace: { unlockLevel: 1, difficulty: 1, gold: 1, xp: 1, miniBoss: "middleManager" },
   kitchen: { unlockLevel: 6, difficulty: 1.05, gold: 1.25, xp: 1.2, miniBoss: "lunchMonitor" },
+  serverRoom: { unlockLevel: 11, difficulty: 1.05, gold: 1.5, xp: 1.4, miniBoss: "sysadmin" },
 };
 
 export const STAGE_IDS = Object.keys(STAGES) as Stage[];
@@ -348,3 +351,23 @@ export const PERK_DIFFICULTY: Readonly<Record<PerkId, number>> = {
   cornerOffice: 0.38,
   secondWind: 0.24,
 };
+
+/**
+ * The server room: floor vents that flash for `warn` seconds, then blast heat for `burst` seconds, then go quiet.
+ * Standing in a blast hurts; the flash gives time to leave.
+ */
+export const SERVER_ROOM = {
+  vents: 7,
+  ventRadius: 62,
+  /** Seconds between the starts of one vent's blasts. */
+  every: 6,
+  warn: 1.2,
+  burst: 1.6,
+  /** Damage per second standing in a blast. */
+  dps: 15,
+  /** No vent sits this close to where the hero starts. */
+  clearRadius: 170,
+} as const;
+
+/** The sysadmin's ping: a fan of this many shots at the hero. */
+export const PING = { speed: 150, radius: 5, damage: 7, life: 4, fan: 3, spread: 0.3 } as const;

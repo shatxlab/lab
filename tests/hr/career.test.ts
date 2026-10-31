@@ -141,6 +141,13 @@ describe("interviews", () => {
 });
 
 describe("stages", () => {
+  it("unlock in order: the server room after the kitchen", () => {
+    expect(STAGES.serverRoom.unlockLevel).toBeGreaterThan(STAGES.kitchen.unlockLevel);
+    expect(stageFor(STAGES.serverRoom.unlockLevel - 1, "serverRoom")).toBe("openSpace");
+    expect(stageFor(STAGES.serverRoom.unlockLevel, "serverRoom")).toBe("serverRoom");
+    expect(normalizeCareer({ focusId: 1, stage: "serverRoom" }).stage).toBe("serverRoom");
+  });
+
   it("open for a coworker only from their level, else the open space", () => {
     expect(stageFor(STAGES.kitchen.unlockLevel - 1, "kitchen")).toBe("openSpace");
     expect(stageFor(STAGES.kitchen.unlockLevel, "kitchen")).toBe("kitchen");

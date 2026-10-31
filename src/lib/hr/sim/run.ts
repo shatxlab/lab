@@ -21,6 +21,7 @@ import {
   HURT_FLASH,
   INTERVIEW,
   KITCHEN,
+  PING,
   INVITE_SUMMONS,
   LEAD_CHARGE,
   PAPERWORK,
@@ -39,6 +40,7 @@ import {
   RECRUITER_CLONES,
   RED_TAPE,
   SECOND_WIND,
+  SERVER_ROOM,
   SPAWN_DISTANCE,
   STAGES,
   TONER,
@@ -56,7 +58,7 @@ import type { Effect, Foe, FoeKind, Hazard, Input, Interview, OwnedWeapon, Run, 
 
 /** The fixed tick the page steps the sim with, so every device plays the same run. */
 export const STEP = 1 / 60;
-export const RUN_VERSION = 4;
+export const RUN_VERSION = 5;
 
 /** The biggest foe's radius, which every grid search is widened by. */
 const FOE_PAD = Math.max(...Object.values(FOES).map((foe) => foe.radius));
@@ -122,7 +124,7 @@ export function createRun(coworker: Coworker, seed: number, difficulty = 1, inte
     lastHitBy: null,
     abandoned: false,
   };
-  run.hazards = run.stage === "kitchen" ? kitchenHazards(run) : [];
+  run.hazards = run.stage === "kitchen" ? kitchenHazards(run) : run.stage === "serverRoom" ? serverRoomHazards(run) : [];
   return run;
 }
 
@@ -134,7 +136,7 @@ function kitchenHazards(run: Run): Hazard[] {
     const x = randomBetween(run, edge, ARENA.width - edge);
     const y = randomBetween(run, edge, ARENA.height - edge);
     if (Math.hypot(x - ARENA.width / 2, y - ARENA.height / 2) < KITCHEN.clearRadius) continue;
-    hazards.push({ kind: "spill", x, y, radius: KITCHEN.spillRadius, timer: 0 });
+    hazards.push({ kind: "spill", x, y, radius: KITCHEN.spillRadius, timer: 0, active: 0 });
   }
   const corners = [
     [150, 150],
@@ -144,13 +146,40 @@ function kitchenHazards(run: Run): Hazard[] {
   ];
   for (let index = 0; index < KITCHEN.microwaves; index += 1) {
     const [x, y] = corners.splice(Math.floor(random(run) * corners.length), 1)[0];
-    hazards.push({ kind: "microwave", x, y, radius: KITCHEN.microwaveRadius, timer: (KITCHEN.microwaveEvery * (index + 1)) / KITCHEN.microwaves });
+    hazards.push({ kind: "microwave", x, y, radius: KITCHEN.microwaveRadius, timer: (KITCHEN.microwaveEvery * (index + 1)) / KITCHEN.microwaves, active: 0 });
+  }
+  return hazards;
+}
+
+/** The server room's floor: vents scattered clear of the start, their blasts staggered so they don't all go at once. */
+function serverRoomHazards(run: Run): Hazard[] {
+  const hazards: Hazard[] = [];
+  const edge = 90;
+  while (hazards.length < SERVER_ROOM.vents) {
+    const x = randomBetween(run, edge, ARENA.width - edge);
+    const y = randomBetween(run, edge, ARENA.height - edge);
+    if (Math.hypot(x - ARENA.width / 2, y - ARENA.height / 2) < SERVER_ROOM.clearRadius) continue;
+    const index = hazards.length;
+    hazards.push({ kind: "vent", x, y, radius: SERVER_ROOM.ventRadius, timer: SERVER_ROOM.warn + (SERVER_ROOM.every * index) / SERVER_ROOM.vents, active: 0 });
   }
   return hazards;
 }
 
 function tickHazards(run: Run, dt: number): void {
   for (const hazard of run.hazards) {
+    if (hazard.kind === "vent") {
+      if (hazard.active > 0) {
+        hazard.active = Math.max(0, hazard.active - dt);
+        if (Math.hypot(run.hero.x - hazard.x, run.hero.y - hazard.y) < hazard.radius + HERO_RADIUS) hurtHero(run, SERVER_ROOM.dps * dt, "vent");
+      } else {
+        hazard.timer -= dt;
+        if (hazard.timer <= 0) {
+          hazard.timer += SERVER_ROOM.every;
+          hazard.active = SERVER_ROOM.burst;
+        }
+      }
+      continue;
+    }
     if (hazard.kind !== "microwave") continue;
     hazard.timer -= dt;
     if (hazard.timer > 0) continue;
@@ -431,6 +460,9 @@ function act(run: Run, foe: Foe, toHero: number, distance: number): void {
       foe.charge = CHARGE.seconds;
       foe.chargeX = Math.cos(toHero);
       foe.chargeY = Math.sin(toHero);
+      break;
+    case "sysadmin":
+      for (let index = 0; index < PING.fan; index += 1) shootAt(run, foe, toHero + (index - (PING.fan - 1) / 2) * PING.spread, PING);
       break;
     case "teamLead":
       foe.charge = LEAD_CHARGE.seconds;

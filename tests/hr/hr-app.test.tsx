@@ -139,6 +139,8 @@ describe("HrApp", () => {
     expect(open().disabled).toBe(false);
     await act(async () => open().click());
     expect(readCareer().stage).toBe("kitchen");
+    // The server room waits for level 11.
+    expect(buttons(again.container, "Server room")[0].disabled).toBe(true);
     await act(async () => buttons(again.container, "Go to work")[0].click());
     expect(readRun()?.stage).toBe("kitchen");
     expect(readRun()?.hazards.length).toBeGreaterThan(0);

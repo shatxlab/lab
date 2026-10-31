@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AUDIT_CLOSES, FOES, INTERVIEW, KITCHEN, MINI_BOSS_AT, PICKS_OFFERED, SECOND_WIND, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, FOES, INTERVIEW, KITCHEN, MINI_BOSS_AT, PICKS_OFFERED, PING, SECOND_WIND, SERVER_ROOM, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
 import { abandon, choose, createRun, step } from "@/lib/hr/sim/run";
 import type { Input, Run } from "@/lib/hr/sim/types";
 import { starters } from "@/lib/roster/generate";
@@ -283,5 +283,67 @@ describe("perks in a run", () => {
     for (let tick = 0; tick < 60; tick += 1) step(run, { dx: 0, dy: 0 });
     expect(run.status).toBe("playing");
     expect(run.hero.hp).toBeGreaterThan(run.numbers.maxHp * (SECOND_WIND.hp - 0.05));
+  });
+});
+
+describe("the server room", () => {
+  const room = () => createRun(plain, 4, 1, null, "serverRoom");
+  const stand = (run: Run, vent: Run["hazards"][number]) => {
+    run.hazards = [vent];
+    run.hero.x = vent.x;
+    run.hero.y = vent.y;
+  };
+
+  it("is laid out from the seed: vents clear of the start, quiet to begin with and staggered", () => {
+    const run = room();
+    expect(run.hazards).toHaveLength(SERVER_ROOM.vents);
+    for (const vent of run.hazards) {
+      expect(vent.kind).toBe("vent");
+      expect(vent.active).toBe(0);
+      expect(Math.hypot(vent.x - run.hero.x, vent.y - run.hero.y)).toBeGreaterThanOrEqual(SERVER_ROOM.clearRadius);
+    }
+    expect(new Set(run.hazards.map((vent) => vent.timer)).size).toBe(SERVER_ROOM.vents);
+    expect(room().hazards).toEqual(run.hazards);
+  });
+
+  it("blasts after its timer, for its burst, then goes quiet", () => {
+    const run = room();
+    const vent = run.hazards[0];
+    run.hazards = [vent];
+    vent.timer = 0.02;
+    run.hero.x = 20;
+    run.hero.y = 20;
+    for (let tick = 0; tick < 3; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(vent.active).toBeGreaterThan(0);
+    expect(vent.timer).toBeGreaterThan(SERVER_ROOM.every - 1);
+    for (let tick = 0; tick < Math.ceil(SERVER_ROOM.burst * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(vent.active).toBe(0);
+  });
+
+  it("hurts the hero standing in a blast, and only then", () => {
+    const run = room();
+    const vent = { ...run.hazards[0], timer: 50, active: 0.5 };
+    stand(run, vent);
+    run.foes = [];
+    const before = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(before - run.hero.hp).toBeGreaterThan(0);
+    expect(run.lastHitBy).toBe("vent");
+    vent.active = 0;
+    const quiet = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.hero.hp).toBe(quiet);
+  });
+
+  it("brings the sysadmin, who sends fans of pings", () => {
+    const run = room();
+    run.time = MINI_BOSS_AT - 1;
+    play(run, MINI_BOSS_AT + 1);
+    const admin = run.foes.find((foe) => foe.kind === "sysadmin");
+    expect(admin).toBeDefined();
+    expect(run.foes.some((foe) => foe.kind === "middleManager" || foe.kind === "lunchMonitor")).toBe(false);
+    const shots = run.foeShots.filter((shot) => shot.from === "sysadmin").length;
+    expect(shots % PING.fan).toBe(0);
+    expect(STAGES.serverRoom.gold).toBeGreaterThan(STAGES.kitchen.gold);
   });
 });

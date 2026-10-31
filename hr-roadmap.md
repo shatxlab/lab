@@ -23,8 +23,7 @@ steps", then read "Guide for the next session" (at the end) before changing anyt
 1. **Take the user's phone feedback** on the live run and act on it first. Things already suspected (see "Known
    rough edges"): foes look small, the floor is dim, starters are uneven, the stick's feel and the run length are
    untested by a human. Retune with the bot (see the playbook) before adding features.
-2. **Step 4 is mostly built** (see "The career", packs included). Next in it: more **stages** (server room, meeting room, boardroom) and **promotion
-   unlocks** (today a promotion is only a title and +1 each to grit, output and focus). Burnout and quitting stay off until
+2. **Step 4 is mostly built** (see "The career", packs included). Next in it: more **stages** (server room, meeting room, boardroom) and, once a few more perks are wanted, a **bigger perk pool** (a perk per department's weapon, say). Burnout and quitting stay off until
    there is a bench to swap to.
 3. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
    reveal quirks, hire / pass / hold, desks, the codex. Then turn `stakes` on and tune the quit chance and the price of
@@ -105,6 +104,21 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
   72% / 74% / 83% in the open space; the microwaves cause 13 to 25% of the damage the bot takes. More stages (server
   room, meeting room, boardroom) follow the same recipe: a hazard in `Run.hazards`, a mini-boss, multipliers, an
   unlock level; add the stage to `Stage`, `STAGES`, the floor in `drawFloor`, copy in `i18n.ts`, and run the bot.
+- **Promotion perks (built):** every promotion (a new rank, `rankOf`) lets the player pick one of three permanent perks
+  for that coworker (`Coworker.perks`, `PERK_IDS` in `roster/types.ts`; `perksPending`, `perkOffer`, `choosePerk` in
+  `career.ts`). The offer is fixed by the coworker's id and how many perks they have, so leaving the screen shows
+  the same three. The picker appears on the result panel and on the menu while a promotion is waiting, for any
+  owned coworker. The seven perks: **Coffee Run**, **Gym Pass**, **Fresh Sneakers**, **Mentorship** (a starting
+  passive at level 1 each), **Overtime** (the signature weapon starts at level 2), **Corner Office** (a fourth pick
+  at every level-up, `Run.extraPicks`), **Second Wind** (get up once per run at 40% hp with 2 s of grace,
+  `Run.revive`, `Run.grace`).
+- **Perks and difficulty:** a perk is power, so each adds to the difficulty the coworker faces (`PERK_DIFFICULTY` in
+  `balance.ts`: sneakers 0.12, gym 0.17, mentorship 0.18, coffee 0.22, second wind 0.24, corner office 0.38, overtime 0.45).
+  Alone at level 6 (`PERK=` hack, see git history) the strong ones, overtime and corner office, won ~10 points more
+  than the rest at an equal cost, and stacked perks beat the sum of their costs, so the costs were raised until the
+  bot (first perk on each promotion, 40 seeds per starter) won 74% / 74% / 83% at levels 6 / 11 / 16, as before
+  perks. Re-run it after changing a perk, and check it for the synergies (overtime with the intern's sticky notes is
+  the strongest pairing). Interviews use the same costs, halved like the rest.
 - **Not built in packs:** pity (a guaranteed rare after N packs), duplicates (none possible), a desk cap, selling a card.
 
 ## The idea in one paragraph

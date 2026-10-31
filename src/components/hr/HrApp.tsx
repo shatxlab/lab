@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
-import { clearCareer, defaultCareer, difficultyFor, hire, interviewDifficultyFor, openPack, rankOf, readCareer, review, reviewXp, reviewXpToNext, stageFor, writeCareer, type Career } from "@/lib/hr/career";
+import { choosePerk, clearCareer, defaultCareer, difficultyFor, hire, interviewDifficultyFor, openPack, perkOffer, perksPending, rankOf, readCareer, review, reviewXp, reviewXpToNext, stageFor, writeCareer, type Career } from "@/lib/hr/career";
 import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
 import { AUDIT_CLOSES, INTERVIEW, interviewBossFor, PACKS, STAGE_IDS, STAGES } from "@/lib/hr/sim/balance";
@@ -12,7 +12,7 @@ import { clearRun, readRun, writeRun } from "@/lib/hr/snapshot";
 import { DEPARTMENTS } from "@/lib/roster/data";
 import { defaultSave, readSave, writeSave } from "@/lib/roster/save";
 import { STARTERS } from "@/lib/roster/generate";
-import { STATS, type Coworker, type RosterSave } from "@/lib/roster/types";
+import { STATS, type Coworker, type PerkId, type RosterSave } from "@/lib/roster/types";
 
 import { RunView } from "./RunView";
 
@@ -78,13 +78,13 @@ export default function HrApp() {
 
   const start = (coworker: Coworker) => {
     const stage = stageFor(coworker.level, careerRef.current?.stage ?? "openSpace");
-    begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity, stage), null, stage));
+    begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity, stage, coworker.perks), null, stage));
   };
 
   /** The focus fights the boss of a sealed card; winning hires the card. */
   const startInterview = (focusCoworker: Coworker, candidate: Coworker) =>
     begin(
-      createRun(focusCoworker, Math.floor(Math.random() * 2 ** 31), interviewDifficultyFor(focusCoworker.level, focusCoworker.rarity), {
+      createRun(focusCoworker, Math.floor(Math.random() * 2 ** 31), interviewDifficultyFor(focusCoworker.level, focusCoworker.rarity, focusCoworker.perks), {
         boss: interviewBossFor(candidate.id),
         candidateId: candidate.id,
       }),
@@ -159,6 +159,16 @@ export default function HrApp() {
     setRevealed(bought.coworker);
   };
 
+  /** Take a perk for a promotion that is waiting for one. */
+  const takePerk = (coworker: Coworker, perk: PerkId) => {
+    const before = rosterRef.current;
+    const upgraded = choosePerk(coworker, perk);
+    if (!before || !upgraded) return;
+    const after: RosterSave = { ...before, coworkers: before.coworkers.map((member) => (member.id === upgraded.id ? upgraded : member)) };
+    writeSave(after);
+    setRoster(after);
+  };
+
   const makeFocus = (coworker: Coworker) => {
     if (!career) return;
     const next: Career = { ...career, focusId: coworker.id };
@@ -207,6 +217,7 @@ export default function HrApp() {
                     {result.review.promotedTo !== null && <li className="hr-promoted">{text.promoted(rankName(text, result.review.promotedTo))}</li>}
                   </ul>
                 )}
+                <PerkPicker coworker={current} text={text} onPick={(perk) => takePerk(current, perk)} />
                 <div className="tower-actions">
                   {result.interview ? (
                     !result.interview.hired && (
@@ -271,6 +282,11 @@ export default function HrApp() {
           )}
           {roster && career && focus && (
             <>
+              {[focus, ...others]
+                .filter((coworker) => perksPending(coworker) > 0)
+                .map((coworker) => (
+                  <PerkPicker key={coworker.id} coworker={coworker} text={text} onPick={(perk) => takePerk(coworker, perk)} />
+                ))}
               <h2 className="hr-menu-heading">{text.day(roster.day + 1)}</h2>
               <p className="hr-continue-hint">{text.savings(text.goldAmount(career.gold))}</p>
               <ul className="hr-coworkers">
@@ -366,6 +382,26 @@ function resultTitle(text: HrText, result: Result): string {
   return result.closed ? text.auditClosed : text.fell;
 }
 
+/** A promotion waiting for its perk: three to choose from, each a permanent power for this coworker. */
+function PerkPicker({ coworker, text, onPick }: { coworker: Coworker; text: HrText; onPick: (perk: PerkId) => void }) {
+  if (perksPending(coworker) === 0) return null;
+  return (
+    <section className="hr-perks" aria-label={text.perkTitle(coworker.name)}>
+      <h3>{text.perkTitle(coworker.name)}</h3>
+      <ul>
+        {perkOffer(coworker).map((perk) => (
+          <li key={perk}>
+            <button type="button" className="tower-button tower-button-small" onClick={() => onPick(perk)}>
+              <strong>{text.perks[perk].name}</strong>
+              <span>{text.perks[perk].description}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function rankName(text: HrText, rank: number): string {
   return text.ranks[Math.min(rank, text.ranks.length - 1)];
 }
@@ -394,6 +430,7 @@ function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer }: Card
             </p>
             <progress className="hr-card-progress" max={reviewXpToNext(coworker.level)} value={coworker.xp} aria-label={text.reviewProgress(coworker.xp, reviewXpToNext(coworker.level))} />
             <p className="hr-card-rank">{text.reviewProgress(coworker.xp, reviewXpToNext(coworker.level))}</p>
+            {coworker.perks.length > 0 && <p className="hr-card-rank">{text.perksLine(coworker.perks.map((perk) => text.perks[perk].name).join(", "))}</p>}
           </>
         )}
         <p className="hr-card-department">

@@ -145,6 +145,22 @@ describe("HrApp", () => {
     again.unmount();
   });
 
+  it("offers a perk after a promotion, keeps the same offer, and records the choice", async () => {
+    const save = readSave();
+    save.coworkers[0] = { ...save.coworkers[0], level: 6 };
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(save));
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], sealed: [], stage: "openSpace", gold: 0 }));
+    const view = await mount(<HrApp />);
+    expect(view.container.querySelector(".hr-perks")?.textContent).toContain("Promotion!");
+    const offered = [...view.container.querySelectorAll(".hr-perks button strong")].map((element) => element.textContent);
+    expect(offered).toHaveLength(3);
+    await act(async () => (view.container.querySelector(".hr-perks button") as HTMLButtonElement).click());
+    expect(readSave().coworkers[0].perks).toHaveLength(1);
+    expect(view.container.querySelector(".hr-perks")).toBeNull();
+    expect(view.container.textContent).toContain(`Perks: ${offered[0]}`);
+    view.unmount();
+  });
+
   it("starts a new career after confirming", async () => {
     localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], sealed: [], gold: 40 }));
     vi.spyOn(window, "confirm").mockReturnValue(true);

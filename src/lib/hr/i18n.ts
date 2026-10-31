@@ -1,6 +1,6 @@
 import type { AppLang } from "@/lib/apps/lang";
 import { QUIRKS } from "@/lib/roster/data";
-import type { DepartmentId, Effect, QuirkId, Rarity, Stat } from "@/lib/roster/types";
+import type { DepartmentId, Effect, PerkId, QuirkId, Rarity, Stat } from "@/lib/roster/types";
 import type { Blurb } from "@/lib/tower/i18n";
 import type { FoeKind, PassiveId, Stage, WeaponId } from "./sim/types";
 
@@ -40,6 +40,9 @@ export interface HrText {
   hiredLine: (name: string) => string;
   interviewFailed: string;
   tryAgain: string;
+  perks: Record<PerkId, Blurb>;
+  perkTitle: (name: string) => string;
+  perksLine: (names: string) => string;
   stages: Record<Stage, { name: string; blurb: string }>;
   whereTo: string;
   stageLocked: (name: string, level: number) => string;
@@ -122,6 +125,17 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     hiredLine: (name) => `${name} joins your cards`,
     interviewFailed: "Interview failed",
     tryAgain: "Try again",
+    perks: {
+      coffeeRun: { name: "Coffee Run", description: "Starts every run with coffee: faster attacks." },
+      gymPass: { name: "Gym Pass", description: "Starts every run with more health." },
+      freshSneakers: { name: "Fresh Sneakers", description: "Starts every run moving faster." },
+      mentorship: { name: "Mentorship", description: "Starts every run with bonus XP." },
+      overtime: { name: "Overtime", description: "The signature weapon starts a level higher." },
+      cornerOffice: { name: "Corner Office", description: "One extra choice at every level-up." },
+      secondWind: { name: "Second Wind", description: "Gets back up once per run after falling." },
+    },
+    perkTitle: (name) => `Promotion! ${name} earns a perk`,
+    perksLine: (names) => `Perks: ${names}`,
     stages: {
       openSpace: { name: "Open space", blurb: "The usual office floor." },
       kitchen: { name: "Kitchen", blurb: "Coffee spills slow you down and microwaves fire rings of popcorn. Harder, with more gold and XP." },
@@ -264,6 +278,17 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     hiredLine: (name) => `${name} теперь в вашей коллекции`,
     interviewFailed: "Собеседование провалено",
     tryAgain: "Ещё раз",
+    perks: {
+      coffeeRun: { name: "Кофе-брейк", description: "Каждый забег начинается с кофе: атаки быстрее." },
+      gymPass: { name: "Абонемент в зал", description: "Каждый забег начинается с большим запасом здоровья." },
+      freshSneakers: { name: "Новые кроссовки", description: "Каждый забег начинается с более быстрым шагом." },
+      mentorship: { name: "Наставник", description: "Каждый забег начинается с бонусом к опыту." },
+      overtime: { name: "Сверхурочные", description: "Фирменное оружие сразу на уровень выше." },
+      cornerOffice: { name: "Угловой кабинет", description: "Лишний вариант при каждом повышении уровня." },
+      secondWind: { name: "Второе дыхание", description: "Один раз за забег встаёт после падения." },
+    },
+    perkTitle: (name) => `Повышение! ${name} получает перк`,
+    perksLine: (names) => `Перки: ${names}`,
     stages: {
       openSpace: { name: "Опенспейс", blurb: "Обычный офисный этаж." },
       kitchen: { name: "Кухня", blurb: "Лужи кофе замедляют, а микроволновки стреляют кольцами попкорна. Сложнее, но больше золота и опыта." },

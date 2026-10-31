@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultCareer, difficultyFor, hire, interviewDifficultyFor, normalizeCareer, openPack, rankOf, review, reviewXp, reviewXpToNext, stageFor } from "@/lib/hr/career";
-import { interviewBossFor, INTERVIEW_BOSSES, PACKS, REVIEW, STAGES } from "@/lib/hr/sim/balance";
+import { choosePerk, defaultCareer, difficultyFor, hire, interviewDifficultyFor, normalizeCareer, openPack, perkOffer, perksPending, rankOf, review, reviewXp, reviewXpToNext, stageFor } from "@/lib/hr/career";
+import { interviewBossFor, INTERVIEW_BOSSES, PACKS, PERK_DIFFICULTY, REVIEW, STAGES } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import { starters } from "@/lib/roster/generate";
 import { defaultSave } from "@/lib/roster/save";
@@ -156,5 +156,41 @@ describe("stages", () => {
   it("are kept in the career, and fall back to the open space when unknown", () => {
     expect(normalizeCareer({ focusId: 1, stage: "kitchen" }).stage).toBe("kitchen");
     expect(normalizeCareer({ focusId: 1, stage: "roof" }).stage).toBe("openSpace");
+  });
+});
+
+describe("perks", () => {
+  const [coworker] = starters();
+  const promoted = { ...coworker, level: REVIEW.levelsPerRank + 1 };
+
+  it("wait for a promotion: none at the first rank, one per rank after", () => {
+    expect(perksPending(coworker)).toBe(0);
+    expect(perksPending(promoted)).toBe(1);
+    expect(perksPending({ ...promoted, level: 2 * REVIEW.levelsPerRank + 1 })).toBe(2);
+    expect(perksPending({ ...promoted, perks: ["secondWind"] })).toBe(0);
+  });
+
+  it("are offered three at a time, the same three until one is taken, and never one already owned", () => {
+    const offer = perkOffer(promoted);
+    expect(offer).toHaveLength(REVIEW.perksOffered);
+    expect(new Set(offer).size).toBe(offer.length);
+    expect(perkOffer(promoted)).toEqual(offer);
+    const next = perkOffer({ ...promoted, perks: [offer[0]], level: 2 * REVIEW.levelsPerRank + 1 });
+    expect(next).not.toContain(offer[0]);
+  });
+
+  it("are taken from the offer only, and only when a promotion is waiting", () => {
+    const [first] = perkOffer(promoted);
+    expect(choosePerk(promoted, first)?.perks).toEqual([first]);
+    expect(choosePerk(coworker, first)).toBeNull();
+    const other = (["coffeeRun", "gymPass", "freshSneakers", "mentorship", "overtime", "cornerOffice", "secondWind"] as const).find((perk) => !perkOffer(promoted).includes(perk))!;
+    expect(choosePerk(promoted, other)).toBeNull();
+    expect(choosePerk({ ...promoted, perks: [first] }, perkOffer(promoted)[1])).toBeNull();
+  });
+
+  it("make the office tougher, each by its own cost", () => {
+    expect(difficultyFor(6, "common", "openSpace", ["overtime"])).toBeCloseTo(difficultyFor(6) + PERK_DIFFICULTY.overtime);
+    expect(difficultyFor(6, "common", "openSpace", ["overtime", "gymPass"])).toBeCloseTo(difficultyFor(6) + PERK_DIFFICULTY.overtime + PERK_DIFFICULTY.gymPass);
+    expect(interviewDifficultyFor(6, "common", ["overtime"])).toBeGreaterThan(interviewDifficultyFor(6));
   });
 });

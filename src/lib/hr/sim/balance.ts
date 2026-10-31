@@ -2,7 +2,7 @@
  * Every number the hero run is tuned by. Change them here and check with the bot:
  * `scripts/hr/playthrough.ts` (usage in its header).
  */
-import type { Effect as QuirkEffect, Stat } from "@/lib/roster/types";
+import type { Effect as QuirkEffect, PerkId, Stat } from "@/lib/roster/types";
 import type { FoeKind, HeroNumbers, InterviewBoss, PassiveId, Stage, WeaponId } from "./types";
 
 /** A walled office floor, about 3 by 3 phone screens. */
@@ -243,6 +243,16 @@ export const MAX_PASSIVES = 4;
 
 export const PICKS_OFFERED = 3;
 
+/** Perks: each starts a run with a passive at level 1 (these), or changes the run in a way noted at its use. */
+export const PERK_PASSIVE: Readonly<Partial<Record<PerkId, PassiveId>>> = {
+  coffeeRun: "coffee",
+  gymPass: "gym",
+  freshSneakers: "sneakers",
+  mentorship: "mentor",
+};
+/** The second wind: the hero gets up with this share of max hp, and cannot be hurt for `grace` seconds. */
+export const SECOND_WIND = { hp: 0.4, grace: 2 } as const;
+
 /** XP from `level` to the next. */
 export function xpToNext(level: number): number {
   return 5 + level * 5;
@@ -275,6 +285,8 @@ export const REVIEW = {
   levelsPerRank: 5,
   /** Extra points in each of grit, output and focus at a promotion. */
   promotionBonus: 1,
+  /** A promotion lets the player pick one of this many perks (see `PERK_IDS`). */
+  perksOffered: 3,
   /** Foes' hp (bosses too) grows by this fraction per career level past the first; spawns by half of it. */
   difficultyPerLevel: 0.06,
 } as const;
@@ -322,3 +334,17 @@ export const KITCHEN = {
   ring: 8,
   shot: { speed: 130, radius: 6, damage: 10, life: 4 },
 } as const;
+
+/**
+ * What each perk adds to the difficulty its coworker faces (like extra rarity), so a perk is power, not a free win. Set
+ * from the bot: alone at level 6, the strong ones (overtime, corner office) won about 10 points more than the rest.
+ */
+export const PERK_DIFFICULTY: Readonly<Record<PerkId, number>> = {
+  coffeeRun: 0.22,
+  gymPass: 0.17,
+  freshSneakers: 0.12,
+  mentorship: 0.18,
+  overtime: 0.45,
+  cornerOffice: 0.38,
+  secondWind: 0.24,
+};

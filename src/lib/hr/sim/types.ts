@@ -194,6 +194,12 @@ export interface Run {
   interview: Interview | null;
   stage: Stage;
   hazards: Hazard[];
+  /** Level-up offers show this many more picks (the corner office perk). */
+  extraPicks: number;
+  /** Whether the hero can still get up once (the second wind perk). */
+  revive: boolean;
+  /** Seconds of not being hurt left, after getting up. */
+  grace: number;
   status: Status;
   /** Seconds played; the clock stops while a pick is waiting. */
   time: number;

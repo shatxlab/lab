@@ -48,6 +48,7 @@ export function generateCoworker(source: Generator, options: { department?: Depa
     department,
     rarity,
     quirks: rollQuirks(source, RARITY[rarity].quirks),
+    perks: [],
     stats: rollStats(source, department, rarity),
     level: 1,
     xp: 0,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AUDIT_CLOSES, FOES, INTERVIEW, KITCHEN, MINI_BOSS_AT, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, FOES, INTERVIEW, KITCHEN, MINI_BOSS_AT, PICKS_OFFERED, SECOND_WIND, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
 import { abandon, choose, createRun, step } from "@/lib/hr/sim/run";
 import type { Input, Run } from "@/lib/hr/sim/types";
 import { starters } from "@/lib/roster/generate";
@@ -244,5 +244,44 @@ describe("the kitchen", () => {
 
   it("is never the place of an interview", () => {
     expect(createRun(plain, 1, 1, { boss: "recruiter", candidateId: 4 }, "kitchen")).toMatchObject({ stage: "openSpace", hazards: [] });
+  });
+});
+
+describe("perks in a run", () => {
+  const withPerks = (...perks: Coworker["perks"]) => createRun({ ...plain, perks }, 5);
+
+  it("start the run with a passive: coffee, gym, sneakers or mentor", () => {
+    expect(withPerks("coffeeRun").passives).toEqual({ coffee: 1 });
+    expect(withPerks("coffeeRun").numbers.cooldown).toBeLessThan(HERO_BASE.cooldown);
+    expect(withPerks("freshSneakers").numbers.speed).toBeGreaterThan(HERO_BASE.speed);
+    expect(withPerks("mentorship").numbers.xp).toBeGreaterThan(1);
+    const gym = withPerks("gymPass");
+    expect(gym.numbers.maxHp).toBeGreaterThan(HERO_BASE.maxHp);
+    expect(gym.hero.hp).toBe(gym.numbers.maxHp);
+  });
+
+  it("raise the signature weapon with overtime, and the offers with the corner office", () => {
+    expect(withPerks("overtime").weapons[0].level).toBe(2);
+    expect(withPerks().weapons[0].level).toBe(1);
+    const run = withPerks("cornerOffice");
+    run.queuedPicks = 1;
+    run.xp = xpToNext(1);
+    run.gems.push({ id: 900, x: run.hero.x, y: run.hero.y, value: 5000, pulled: false });
+    step(run, { dx: 0, dy: 0 });
+    expect(run.picks).toHaveLength(PICKS_OFFERED + 1);
+  });
+
+  it("let the hero get up once, with a few seconds of grace, with the second wind", () => {
+    const run = withPerks("secondWind");
+    run.hero.hp = 0.001;
+    // A foe too tough for the hero's weapons to clear before it touches them.
+    run.foes.push({ id: 999, kind: "replyAll", x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, hurt: 0 });
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("playing");
+    expect(run.revive).toBe(false);
+    expect(run.hero.hp).toBeGreaterThan(run.numbers.maxHp * (SECOND_WIND.hp - 0.05));
+    for (let tick = 0; tick < 60; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("playing");
+    expect(run.hero.hp).toBeGreaterThan(run.numbers.maxHp * (SECOND_WIND.hp - 0.05));
   });
 });

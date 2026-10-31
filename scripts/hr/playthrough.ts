@@ -20,7 +20,7 @@ import { generateCoworker, starters } from '../../src/lib/roster/generate.ts'
 import type { Rarity } from '../../src/lib/roster/types.ts'
 import type { Coworker } from '../../src/lib/roster/types.ts'
 import { ARENA, AUDIT_CLOSES, BOSS_AT, INTERVIEW, MINI_BOSS_AT } from '../../src/lib/hr/sim/balance.ts'
-import { difficultyFor, interviewDifficultyFor, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
+import { choosePerk, difficultyFor, interviewDifficultyFor, perkOffer, perksPending, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
 import { choose, createRun, step } from '../../src/lib/hr/sim/run.ts'
 import type { Input, InterviewBoss, Pick, Run, Stage } from '../../src/lib/hr/sim/types.ts'
 
@@ -116,7 +116,7 @@ function steer(run: Run): Input {
 }
 
 function play(coworker: Coworker, seed: number, verbose: boolean) {
-  const run = createRun(coworker, seed, boss ? interviewDifficultyFor(coworker.level, coworker.rarity) : difficultyFor(coworker.level, coworker.rarity, stage), boss ? { boss, candidateId: 99 } : null, stage)
+  const run = createRun(coworker, seed, boss ? interviewDifficultyFor(coworker.level, coworker.rarity, coworker.perks) : difficultyFor(coworker.level, coworker.rarity, stage, coworker.perks), boss ? { boss, candidateId: 99 } : null, stage)
   let tick = 0
   let input: Input = { dx: 0, dy: 0 }
   let nextReport = 60
@@ -155,9 +155,13 @@ for (const [index, base] of starters().entries()) {
   // A pack card of the starter's department, the same one every run of the script.
   const starter = rarity ? generateCoworker({ rng: 1000 + index, nextId: 10 + index }, { department: base.department, rarity }) : base
   let coworker = starter
-  while (coworker.level < careerLevel) coworker = review(coworker, reviewXpToNext(coworker.level) - coworker.xp).coworker
+  while (coworker.level < careerLevel) {
+    coworker = review(coworker, reviewXpToNext(coworker.level) - coworker.xp).coworker
+    // Each promotion takes the first perk on offer.
+    while (perksPending(coworker) > 0) coworker = choosePerk(coworker, perkOffer(coworker)[0])!
+  }
   if (only && only !== coworker.department) continue
-  console.log(`${coworker.name} (${coworker.rarity} ${coworker.department}, level ${coworker.level}, ${coworker.quirks.join(', ')})`)
+  console.log(`${coworker.name} (${coworker.rarity} ${coworker.department}, level ${coworker.level}, ${coworker.quirks.join(', ')}${coworker.perks.length ? `; perks ${coworker.perks.join(', ')}` : ''})`)
   let teamWins = 0
   const taken: Record<string, number> = {}
   for (let seed = 1; seed <= seeds; seed += 1) {

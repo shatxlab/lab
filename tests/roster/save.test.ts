@@ -58,7 +58,7 @@ describe("normalizeSave", () => {
   it("repairs coworkers field by field", () => {
     const save = normalizeSave({
       coworkers: [
-        { id: 9, name: "  Pat  ", department: "marketing", rarity: "mythic", quirks: ["loyal", "loyal", "bogus", "nightOwl", "caffeinated"], stats: { grit: 500, output: -2 }, level: 0, xp: "lots", status: { kind: "burnedOut" } },
+        { id: 9, name: "  Pat  ", department: "marketing", rarity: "mythic", quirks: ["loyal", "loyal", "bogus", "nightOwl", "caffeinated"], perks: ["secondWind", "secondWind", "bogus", "overtime"], stats: { grit: 500, output: -2 }, level: 0, xp: "lots", status: { kind: "burnedOut" } },
         { id: 9, name: "Duplicate" },
         { name: "No id" },
         "junk",
@@ -71,6 +71,7 @@ describe("normalizeSave", () => {
         department: "interns",
         rarity: "common",
         quirks: ["loyal", "nightOwl"],
+        perks: ["secondWind", "overtime"],
         stats: { grit: MAX_STAT, output: BASE_STAT, hustle: BASE_STAT, focus: BASE_STAT, luck: BASE_STAT },
         level: 1,
         xp: 0,

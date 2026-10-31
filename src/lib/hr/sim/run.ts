@@ -24,6 +24,7 @@ import {
   INVITE_SUMMONS,
   LEAD_CHARGE,
   PAPERWORK,
+  PERK_PASSIVE,
   MAX_FOES,
   MAX_GEMS,
   MAX_PRINTERS,
@@ -37,6 +38,7 @@ import {
   PUSH_FADE,
   RECRUITER_CLONES,
   RED_TAPE,
+  SECOND_WIND,
   SPAWN_DISTANCE,
   STAGES,
   TONER,
@@ -48,7 +50,7 @@ import {
   xpToNext,
 } from "./balance";
 import { Grid } from "./grid";
-import { baseNumbers } from "./hero";
+import { baseNumbers, withPassives } from "./hero";
 import { applyPick, rollPicks } from "./picks";
 import type { Effect, Foe, FoeKind, Hazard, Input, Interview, OwnedWeapon, Run, Shot, Source, Stage, WeaponId } from "./types";
 
@@ -72,6 +74,13 @@ const byId = new Map<number, Foe>();
  */
 export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null, stage: Stage = "openSpace"): Run {
   const base = baseNumbers(coworker);
+  // Perks that start the run with a passive.
+  const passives: Run["passives"] = {};
+  for (const perk of coworker.perks) {
+    const passive = PERK_PASSIVE[perk];
+    if (passive) passives[passive] = 1;
+  }
+  const numbers = withPassives(base, passives);
   const run: Run = {
     version: RUN_VERSION,
     seed,
@@ -81,13 +90,16 @@ export function createRun(coworker: Coworker, seed: number, difficulty = 1, inte
     interview,
     stage: interview ? "openSpace" : stage,
     hazards: [],
+    extraPicks: coworker.perks.includes("cornerOffice") ? 1 : 0,
+    revive: coworker.perks.includes("secondWind"),
+    grace: 0,
     status: "playing",
     time: 0,
     base,
-    numbers: { ...base },
-    hero: { x: ARENA.width / 2, y: ARENA.height / 2, hp: base.maxHp, faceX: 1, faceY: 0, hurt: 0 },
-    weapons: [{ id: DEPARTMENTS[coworker.department].weapon, level: 1, cooldownLeft: 0, spin: 0 }],
-    passives: {},
+    numbers,
+    hero: { x: ARENA.width / 2, y: ARENA.height / 2, hp: numbers.maxHp, faceX: 1, faceY: 0, hurt: 0 },
+    weapons: [{ id: DEPARTMENTS[coworker.department].weapon, level: coworker.perks.includes("overtime") ? 2 : 1, cooldownLeft: 0, spin: 0 }],
+    passives,
     level: 1,
     xp: 0,
     picks: null,
@@ -166,6 +178,7 @@ export function step(run: Run, input: Input): void {
   fadeEffects(run, STEP);
   if (run.status !== "playing" || run.picks) return;
   run.time += STEP;
+  run.grace = Math.max(0, run.grace - STEP);
   moveHero(run, input, STEP);
   spawn(run, STEP);
   tickHazards(run, STEP);
@@ -179,6 +192,13 @@ export function step(run: Run, input: Input): void {
   touchHero(run, STEP);
   reap(run);
   collectGems(run, STEP);
+  if (run.hero.hp <= 0 && run.revive) {
+    run.revive = false;
+    run.hero.hp = run.numbers.maxHp * SECOND_WIND.hp;
+    run.grace = SECOND_WIND.grace;
+    run.foeShots = [];
+    addEffect(run, "pop", run.hero.x, run.hero.y, 60, 0.5);
+  }
   if (run.hero.hp <= 0) {
     run.hero.hp = 0;
     run.status = "lost";
@@ -258,6 +278,7 @@ function touchHero(run: Run, dt: number): void {
 }
 
 function hurtHero(run: Run, amount: number, by: Source): void {
+  if (run.grace > 0) return;
   const taken = amount * run.numbers.taken;
   run.hero.hp -= taken;
   run.takenFrom[by] = (run.takenFrom[by] ?? 0) + taken;

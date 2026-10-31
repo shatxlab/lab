@@ -1,8 +1,9 @@
 import { MAX_STAT, RARITY } from "@/lib/roster/data";
 import { generateCoworker } from "@/lib/roster/generate";
 import { recordSeen } from "@/lib/roster/save";
-import type { Coworker, Rarity, RosterSave, Stat } from "@/lib/roster/types";
-import { PACKS, REVIEW, STAGE_IDS, STAGES } from "./sim/balance";
+import { PERK_IDS, type Coworker, type PerkId, type Rarity, type RosterSave, type Stat } from "@/lib/roster/types";
+import { random } from "@/lib/tower/sim/random";
+import { PACKS, PERK_DIFFICULTY, REVIEW, STAGE_IDS, STAGES } from "./sim/balance";
 import type { Stage } from "./sim/types";
 
 /**
@@ -98,23 +99,46 @@ export function rankOf(level: number): number {
   return Math.floor((Math.max(1, level) - 1) / REVIEW.levelsPerRank);
 }
 
-/** How much tougher the office is for a coworker of this level and rarity (see `PACKS`), on a stage. */
-export function difficultyFor(level: number, rarity: Rarity = "common", stage: Stage = "openSpace"): number {
+/** How much tougher the office is for a coworker of this level, rarity and perks (see `PACKS`), on a stage. */
+export function difficultyFor(level: number, rarity: Rarity = "common", stage: Stage = "openSpace", perks: readonly PerkId[] = []): number {
   const extra = Math.max(0, RARITY[rarity].bonus - RARITY.common.bonus) * PACKS.rarityLevels;
-  return (1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1 + extra)) * STAGES[stage].difficulty;
+  return (1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1 + extra) + perks.reduce((sum, perk) => sum + PERK_DIFFICULTY[perk], 0)) * STAGES[stage].difficulty;
 }
 
 /**
  * Interviews are short, so a coworker has less time to grow into the fight than in a day: they scale at half the
  * day's pace.
  */
-export function interviewDifficultyFor(level: number, rarity: Rarity = "common"): number {
-  return 1 + (difficultyFor(level, rarity) - 1) / 2;
+export function interviewDifficultyFor(level: number, rarity: Rarity = "common", perks: readonly PerkId[] = []): number {
+  return 1 + (difficultyFor(level, rarity, "openSpace", perks) - 1) / 2;
 }
 
 const GROWTH_ORDER: readonly Stat[] = ["output", "grit", "focus", "hustle", "luck"];
 /** The stats a promotion lifts, by `REVIEW.promotionBonus` each. */
 const PROMOTION_STATS: readonly Stat[] = ["grit", "output", "focus"];
+
+/** Promotions that have not had their perk chosen yet. */
+export function perksPending(coworker: Coworker): number {
+  return Math.max(0, rankOf(coworker.level) - coworker.perks.length);
+}
+
+/**
+ * The perks on offer for the next promotion: a few of those the coworker doesn't have, fixed by who they are and how
+ * many they already have, so leaving the screen and coming back shows the same three.
+ */
+export function perkOffer(coworker: Coworker): PerkId[] {
+  const pool = PERK_IDS.filter((perk) => !coworker.perks.includes(perk));
+  const seed = { rng: (coworker.id * 7919 + coworker.perks.length * 104729) >>> 0 };
+  const offer: PerkId[] = [];
+  while (offer.length < REVIEW.perksOffered && pool.length > 0) offer.push(pool.splice(Math.floor(random(seed) * pool.length), 1)[0]);
+  return offer;
+}
+
+/** The coworker with the perk, if a promotion is waiting for one and the perk is on offer; null otherwise. */
+export function choosePerk(coworker: Coworker, perk: PerkId): Coworker | null {
+  if (perksPending(coworker) === 0 || !perkOffer(coworker).includes(perk)) return null;
+  return { ...coworker, perks: [...coworker.perks, perk] };
+}
 
 export interface Review {
   coworker: Coworker;

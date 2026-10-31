@@ -2,12 +2,14 @@ import { BASE_STAT, MAX_QUIRKS, MAX_STAT } from "./data";
 import { starters } from "./generate";
 import {
   DEPARTMENT_IDS,
+  PERK_IDS,
   QUIRK_IDS,
   RARITIES,
   STATS,
   type CodexEntry,
   type Coworker,
   type DepartmentId,
+  type PerkId,
   type QuirkId,
   type Rarity,
   type RosterSave,
@@ -81,6 +83,11 @@ function quirkList(value: unknown, max: number): QuirkId[] {
   return [...new Set(value.filter((quirk): quirk is QuirkId => QUIRK_IDS.includes(quirk as QuirkId)))].slice(0, max);
 }
 
+function perkList(value: unknown): PerkId[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((perk): perk is PerkId => PERK_IDS.includes(perk as PerkId)))];
+}
+
 function nameOf(value: unknown, id: number): string {
   return typeof value === "string" && value.trim() ? value.trim().slice(0, 40) : `#${id}`;
 }
@@ -104,6 +111,7 @@ function normalizeCoworker(raw: unknown): Coworker | null {
     department: oneOf<DepartmentId>(DEPARTMENT_IDS, candidate.department, "interns"),
     rarity: oneOf<Rarity>(RARITIES, candidate.rarity, "common"),
     quirks: quirkList(candidate.quirks, MAX_QUIRKS),
+    perks: perkList(candidate.perks),
     stats: Object.fromEntries(STATS.map((stat) => [stat, Math.min(MAX_STAT, count(stats[stat]) || BASE_STAT)])) as Coworker["stats"],
     level: Math.max(1, count(candidate.level)),
     xp: count(candidate.xp),

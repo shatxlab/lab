@@ -28,13 +28,14 @@ export function possiblePicks(run: Run): Pick[] {
   return picks;
 }
 
-/** Three different picks at random, topped up with a heal and gold once the build is nearly full. */
+/** Three (or more, with the corner office) different picks at random, topped up with a heal and gold once the build is nearly full. */
 export function rollPicks(run: Run): Pick[] {
   const pool = possiblePicks(run);
   const offer: Pick[] = [];
-  while (offer.length < PICKS_OFFERED && pool.length > 0) offer.push(pool.splice(Math.floor(random(run) * pool.length), 1)[0]);
-  if (offer.length < PICKS_OFFERED) offer.push({ kind: "heal" });
-  if (offer.length < PICKS_OFFERED) offer.push({ kind: "gold" });
+  const size = PICKS_OFFERED + run.extraPicks;
+  while (offer.length < size && pool.length > 0) offer.push(pool.splice(Math.floor(random(run) * pool.length), 1)[0]);
+  if (offer.length < size) offer.push({ kind: "heal" });
+  if (offer.length < size) offer.push({ kind: "gold" });
   return offer;
 }
 

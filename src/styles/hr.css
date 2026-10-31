@@ -146,6 +146,40 @@
   box-shadow: inset 0 0 0 3px #e0a21a;
 }
 
+.hr-perks {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+  background: #fff8e1;
+  box-shadow: inset 0 0 0 2px #e0a21a;
+  text-align: left;
+}
+
+.hr-perks h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.hr-perks ul {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hr-perks button {
+  display: grid;
+  width: 100%;
+  gap: 0.15rem;
+  text-align: left;
+}
+
+.hr-perks button span {
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
 .hr-stages {
   display: flex;
   gap: 0.5rem;

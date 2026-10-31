@@ -13,6 +13,10 @@ export type DepartmentId = (typeof DEPARTMENT_IDS)[number];
 /** A department's signature weapon in the hero run. */
 export type WeaponId = "rubberDuck" | "spreadsheet" | "contract" | "businessCard" | "serverRack" | "policyBinder" | "stickyNotes";
 
+/** Permanent powers a coworker earns with promotions (see `src/lib/hr/career.ts`); the hero run turns them into numbers. */
+export const PERK_IDS = ["coffeeRun", "gymPass", "freshSneakers", "mentorship", "overtime", "cornerOffice", "secondWind"] as const;
+export type PerkId = (typeof PERK_IDS)[number];
+
 export const QUIRK_IDS = [
   "caffeinated",
   "stealsLunches",
@@ -46,6 +50,8 @@ export interface Coworker {
   department: DepartmentId;
   rarity: Rarity;
   quirks: QuirkId[];
+  /** One per promotion, chosen by the player; always distinct. */
+  perks: PerkId[];
   stats: Stats;
   level: number;
   xp: number;

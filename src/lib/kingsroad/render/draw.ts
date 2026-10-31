@@ -403,39 +403,39 @@ function drawBallista(ctx: CanvasRenderingContext2D, x: number, y: number, tower
   ctx.restore();
 }
 
-/** A fire arrow: a flaming brand hurled at the foe, a ragged tongue of fire streaming behind it. */
+/** A fire arrow: the plain arrow, a small flame burning at its head and a few embers blowing off behind. */
 function drawFireShot(ctx: CanvasRenderingContext2D, shot: Shot, angle: number, time: number): void {
   const flicker = Math.sin(time * 38 + shot.id * 1.7);
+  const length = 10;
+  drawArrow(ctx, shot.x, shot.y, angle, COLORS.shaft, length);
   ctx.save();
   ctx.translate(shot.x, shot.y);
   ctx.rotate(angle);
-  ctx.globalAlpha = 0.28;
-  circle(ctx, 0, 0, 8 + flicker, "#ff7a1a");
+  // The head sits at length * 0.3 + 3 from the middle; the flame hangs off it and streams back.
+  const tip = length * 0.3 + 3;
+  ctx.globalAlpha = 0.3;
+  circle(ctx, tip - 2, 0, 4.5 + flicker * 0.5, "#ff7a1a");
   ctx.globalAlpha = 1;
-  // Flames trailing behind, longest in the middle: outer red, then orange, then a yellow core.
-  const tongues: [string, number, number][] = [["#c8301c", 15, 4.6], ["#f28a1e", 11, 3.4], ["#ffe08a", 6.5, 2]];
-  for (const [color, length, width] of tongues) {
-    const reach = length + flicker * 2;
+  const tongues: [string, number, number][] = [["#d8421c", 8, 2.6], ["#f6a02a", 5.5, 1.8], ["#ffe08a", 3, 1]];
+  for (const [color, reach, width] of tongues) {
+    const tail = reach + flicker;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(1, -width);
-    ctx.quadraticCurveTo(-reach * 0.5, -width * 1.3 + flicker, -reach, flicker * 1.5);
-    ctx.quadraticCurveTo(-reach * 0.5, width * 1.3 - flicker, 1, width);
+    ctx.moveTo(tip, 0);
+    ctx.quadraticCurveTo(tip - tail * 0.5, -width + flicker * 0.4, tip - tail, flicker * 0.8);
+    ctx.quadraticCurveTo(tip - tail * 0.5, width - flicker * 0.4, tip, 0);
     ctx.closePath();
     ctx.fill();
   }
-  circle(ctx, 1, 0, 3.4, "#ffb23a");
-  circle(ctx, 1.5, 0, 1.8, "#fff4c4");
-  // Sparks thrown off the tail.
-  for (let i = 0; i < 3; i++) {
-    const phase = (time * 5 + i / 3 + shot.id * 0.37) % 1;
+  for (let i = 0; i < 2; i++) {
+    const phase = (time * 5 + i / 2 + shot.id * 0.37) % 1;
     ctx.globalAlpha = 1 - phase;
-    circle(ctx, -6 - phase * 14, Math.sin(i * 2.4 + shot.id) * (2 + phase * 5), 1.1, "#ffc04a");
+    circle(ctx, tip - 6 - phase * 9, Math.sin(i * 2.4 + shot.id) * (1 + phase * 3), 0.9, "#ffc04a");
   }
   ctx.restore();
 }
 
-/** A lune arrow: a blue shooting star dropping out of the sky onto the foe, its tail streaming up behind. */
+/** A lune arrow: a thin streak of blue light falling out of the sky onto the foe, brightest at its leading end. */
 function drawLuneShot(ctx: CanvasRenderingContext2D, shot: Shot, angle: number, time: number): void {
   const total = Math.hypot(shot.toX - shot.fromX, shot.toY - shot.fromY) || 1;
   const left = Math.min(1, Math.hypot(shot.toX - shot.x, shot.toY - shot.y) / total);
@@ -443,39 +443,36 @@ function drawLuneShot(ctx: CanvasRenderingContext2D, shot: Shot, angle: number, 
   const height = 26 * Math.sqrt(left);
   const hx = shot.x;
   const hy = shot.y - height;
-  // Tail points back along where it has come from: up, and toward the tower.
-  const back = Math.atan2(-(height * 0.9 + 6) - Math.sin(angle) * 8, -Math.cos(angle) * 8 - 1);
-  const tailLength = 14 + height * 0.5;
+  // Points along where it is heading: down, and toward the foe.
+  const heading = Math.atan2((height * 0.9 + 6) + Math.sin(angle) * 8, Math.cos(angle) * 8 + 1);
+  const length = 18 + height * 0.4;
   ellipse(ctx, shot.x, shot.y, 3, 1.6, COLORS.shadow);
   ctx.save();
   ctx.translate(hx, hy);
-  ctx.rotate(back);
-  const gradient = ctx.createLinearGradient(0, 0, tailLength, 0);
-  gradient.addColorStop(0, "rgba(200, 225, 255, 0.95)");
-  gradient.addColorStop(0.4, "rgba(90, 150, 255, 0.55)");
+  ctx.rotate(heading);
+  ctx.lineCap = "round";
+  const gradient = ctx.createLinearGradient(0, 0, -length, 0);
+  gradient.addColorStop(0, "rgba(235, 244, 255, 1)");
+  gradient.addColorStop(0.35, "rgba(120, 170, 255, 0.8)");
   gradient.addColorStop(1, "rgba(60, 100, 230, 0)");
-  ctx.fillStyle = gradient;
+  // A soft halo, then the line, then a white-hot core.
+  ctx.globalAlpha = 0.6 + 0.15 * Math.sin(time * 24 + shot.id);
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 4.5;
   ctx.beginPath();
-  ctx.moveTo(0, -3.2);
-  ctx.lineTo(tailLength, 0);
-  ctx.lineTo(0, 3.2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-  ctx.globalAlpha = 0.35 + 0.1 * Math.sin(time * 24 + shot.id);
-  circle(ctx, hx, hy, 7, "#7fb0ff");
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-length, 0);
+  ctx.stroke();
   ctx.globalAlpha = 1;
-  // A four-pointed star head.
-  ctx.fillStyle = "#e8f2ff";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const r = i % 2 === 0 ? 4.4 : 1.5;
-    const a = (i * Math.PI) / 4 + time * 3;
-    ctx.lineTo(hx + Math.cos(a) * r, hy + Math.sin(a) * r);
-  }
-  ctx.closePath();
-  ctx.fill();
-  circle(ctx, hx, hy, 1.6, "#ffffff");
+  ctx.moveTo(1, 0);
+  ctx.lineTo(-length * 0.3, 0);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawShot(ctx: CanvasRenderingContext2D, shot: Shot, time: number): void {

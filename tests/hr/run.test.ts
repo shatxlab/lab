@@ -173,9 +173,12 @@ describe("an interview", () => {
   });
 
   it("is lost when its time runs out with the boss still standing", () => {
-    // A boss nobody can beat, and a hero who cannot fall.
+    // A boss nobody can beat and a hero who cannot fall, joined just before the interview closes.
     const run = createRun(plain, 1, 1e6, interview);
     run.hero.hp = run.numbers.maxHp = 1e12;
+    play(run, INTERVIEW.bossAt + 1);
+    expect(run.status).toBe("playing");
+    run.time = INTERVIEW.closesAt - 0.5;
     play(run, INTERVIEW.closesAt + 1);
     expect(run.status).toBe("lost");
     expect(run.time).toBeGreaterThanOrEqual(INTERVIEW.closesAt);
@@ -232,6 +235,7 @@ describe("the kitchen", () => {
 
   it("brings its own mini-boss and pays more gold", () => {
     const run = kitchen();
+    run.time = MINI_BOSS_AT - 1;
     play(run, MINI_BOSS_AT + 1);
     expect(run.foes.some((foe) => foe.kind === "lunchMonitor")).toBe(true);
     expect(run.foes.some((foe) => foe.kind === "middleManager")).toBe(false);

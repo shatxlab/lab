@@ -9,7 +9,23 @@ import type { WeaponId } from "@/lib/roster/types";
 
 export type { WeaponId };
 
-export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "auditor" | InterviewBoss;
+export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "lunchMonitor" | "auditor" | InterviewBoss;
+
+/** What hurt the hero: a foe, or a hazard of the stage. */
+export type Source = FoeKind | "microwave";
+
+/** Where a day is spent: the open space everyone starts in, then areas with a hazard of their own. */
+export type Stage = "openSpace" | "kitchen";
+
+/** Something fixed to the floor of a stage: a coffee spill that slows the hero, a microwave that fires rings. */
+export interface Hazard {
+  kind: "spill" | "microwave";
+  x: number;
+  y: number;
+  radius: number;
+  /** Seconds until a microwave fires. */
+  timer: number;
+}
 
 /** The monsters a new hire has to beat before they join: a charging lead, an HR manager, a recruiter. */
 export type InterviewBoss = "teamLead" | "hrManager" | "recruiter";
@@ -130,7 +146,7 @@ export interface Drop {
 /** Toner from a printer jam or red tape from the auditor, flying at the hero. */
 export interface FoeShot {
   id: number;
-  from: FoeKind;
+  from: Source;
   x: number;
   y: number;
   vx: number;
@@ -176,6 +192,8 @@ export interface Run {
   difficulty: number;
   /** Set when the run is an interview: no review, no day, and the boss is the only goal. */
   interview: Interview | null;
+  stage: Stage;
+  hazards: Hazard[];
   status: Status;
   /** Seconds played; the clock stops while a pick is waiting. */
   time: number;
@@ -210,8 +228,8 @@ export interface Run {
   /** Damage dealt by each weapon, for the bot's report. */
   dealt: Partial<Record<WeaponId, number>>;
   /** Damage the hero took from each kind of foe, for the bot's report and "what wore me down". */
-  takenFrom: Partial<Record<FoeKind, number>>;
+  takenFrom: Partial<Record<Source, number>>;
   /** The last thing that hurt the hero, for "how did I die". */
-  lastHitBy: FoeKind | null;
+  lastHitBy: Source | null;
   abandoned: boolean;
 }

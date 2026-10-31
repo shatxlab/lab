@@ -4,7 +4,7 @@ import { Pause } from "lucide-react";
 import { clock, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, type HeroFrames, type Sheet } from "@/lib/hr/render/heroes";
 import { drawRun, fitView, stickInput, type Stick, type View } from "@/lib/hr/render/draw";
-import { AUDIT_CLOSES, BOSS_AT, FOES, INTERVIEW, MINI_BOSS_AT, xpToNext } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, BOSS_AT, FOES, INTERVIEW, MINI_BOSS_AT, STAGES, xpToNext } from "@/lib/hr/sim/balance";
 import { abandon, choose, step, STEP } from "@/lib/hr/sim/run";
 import type { FoeKind, Pick, Run } from "@/lib/hr/sim/types";
 import { writeRun } from "@/lib/hr/snapshot";
@@ -250,7 +250,7 @@ export function RunView({
   const next = run.interview
     ? text.interviewClock(text.foes[run.interview.boss], clock(INTERVIEW.closesAt - hud.time))
     : hud.time < MINI_BOSS_AT
-      ? text.next(text.foes.middleManager, clock(MINI_BOSS_AT - hud.time))
+      ? text.next(text.foes[STAGES[run.stage].miniBoss], clock(MINI_BOSS_AT - hud.time))
       : hud.time < BOSS_AT
         ? text.next(text.foes.auditor, clock(BOSS_AT - hud.time))
         : text.auditCloses(clock(AUDIT_CLOSES - hud.time));

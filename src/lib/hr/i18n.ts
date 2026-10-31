@@ -2,7 +2,7 @@ import type { AppLang } from "@/lib/apps/lang";
 import { QUIRKS } from "@/lib/roster/data";
 import type { DepartmentId, Effect, QuirkId, Rarity, Stat } from "@/lib/roster/types";
 import type { Blurb } from "@/lib/tower/i18n";
-import type { FoeKind, PassiveId, WeaponId } from "./sim/types";
+import type { FoeKind, PassiveId, Stage, WeaponId } from "./sim/types";
 
 export interface HrText {
   title: string;
@@ -40,6 +40,9 @@ export interface HrText {
   hiredLine: (name: string) => string;
   interviewFailed: string;
   tryAgain: string;
+  stages: Record<Stage, { name: string; blurb: string }>;
+  whereTo: string;
+  stageLocked: (name: string, level: number) => string;
   startOver: string;
   startOverConfirm: string;
   departments: Record<DepartmentId, string>;
@@ -119,6 +122,12 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     hiredLine: (name) => `${name} joins your cards`,
     interviewFailed: "Interview failed",
     tryAgain: "Try again",
+    stages: {
+      openSpace: { name: "Open space", blurb: "The usual office floor." },
+      kitchen: { name: "Kitchen", blurb: "Coffee spills slow you down and microwaves fire rings of popcorn. Harder, with more gold and XP." },
+    },
+    whereTo: "Where to today?",
+    stageLocked: (name, level) => `${name} opens at level ${level}.`,
     startOver: "Start a new career",
     startOverConfirm: "Start over? Your coworker's level and savings will be lost.",
     departments: {
@@ -191,6 +200,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       meetingInvite: "Meeting Invite",
       printerJam: "Printer Jam",
       middleManager: "Middle Manager",
+      lunchMonitor: "Lunch Monitor",
       auditor: "Auditor",
       teamLead: "Team Lead",
       hrManager: "HR Manager",
@@ -254,6 +264,12 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     hiredLine: (name) => `${name} теперь в вашей коллекции`,
     interviewFailed: "Собеседование провалено",
     tryAgain: "Ещё раз",
+    stages: {
+      openSpace: { name: "Опенспейс", blurb: "Обычный офисный этаж." },
+      kitchen: { name: "Кухня", blurb: "Лужи кофе замедляют, а микроволновки стреляют кольцами попкорна. Сложнее, но больше золота и опыта." },
+    },
+    whereTo: "Куда сегодня?",
+    stageLocked: (name, level) => `${name}: с уровня ${level}.`,
     startOver: "Начать новую карьеру",
     startOverConfirm: "Начать заново? Уровень сотрудника и накопления пропадут.",
     departments: {
@@ -326,6 +342,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       meetingInvite: "Приглашение на встречу",
       printerJam: "Зажевало бумагу",
       middleManager: "Менеджер среднего звена",
+      lunchMonitor: "Контролёр обедов",
       auditor: "Аудитор",
       teamLead: "Тимлид",
       hrManager: "HR-менеджер",

@@ -60,9 +60,11 @@ const INK = "#1a1c2c";
 const FLOOR = "#4a5a6e";
 const FLOOR_ALT = "#46566a";
 const WALL = "#2a3140";
+const KITCHEN_FLOOR = "#9db4b0";
+const KITCHEN_ALT = "#8fa8a4";
 const SHADOW = "rgba(10, 12, 20, 0.28)";
 /** The suit each boss wears; the shirt colours tell the interview bosses from the office ones. */
-const SUIT_HEX: Partial<Record<string, string>> = { middleManager: "#566c86", auditor: "#333c57", teamLead: "#3b5dc9", hrManager: "#d6498a", recruiter: "#38b764" };
+const SUIT_HEX: Partial<Record<string, string>> = { middleManager: "#566c86", auditor: "#333c57", teamLead: "#3b5dc9", hrManager: "#d6498a", recruiter: "#38b764", lunchMonitor: "#ef7d57" };
 
 const SHIRT_HEX: Record<string, string> = {
   red: "#b13e53",
@@ -91,7 +93,8 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, sce
   ctx.save();
   ctx.scale(view.scale, view.scale);
   ctx.translate(-camera.x, -camera.y);
-  drawFloor(ctx, camera, view);
+  drawFloor(ctx, run, camera, view);
+  drawHazards(ctx, run);
   drawAura(ctx, run);
   for (const gem of run.gems) drawGem(ctx, gem.x, gem.y, gem.value);
   for (const drop of run.drops) drawDropShadow(ctx, run, drop);
@@ -108,12 +111,20 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, sce
   if (scene.stick) drawStick(ctx, scene.stick);
 }
 
-function drawFloor(ctx: CanvasRenderingContext2D, camera: { x: number; y: number }, view: View): void {
-  ctx.fillStyle = FLOOR;
+/** A stable pseudo-random number for a tile, so the floor's details stay where they are. */
+function tileHash(x: number, y: number): number {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+function drawFloor(ctx: CanvasRenderingContext2D, run: Run, camera: { x: number; y: number }, view: View): void {
+  const kitchen = run.stage === "kitchen";
+  ctx.fillStyle = kitchen ? KITCHEN_FLOOR : FLOOR;
   ctx.fillRect(0, 0, ARENA.width, ARENA.height);
-  // Carpet tiles, only the ones in view.
-  const tile = 100;
-  ctx.fillStyle = FLOOR_ALT;
+  // Tiles, only the ones in view: big carpet tiles in the open space, small glazed ones in the kitchen.
+  const tile = kitchen ? 50 : 100;
+  ctx.fillStyle = kitchen ? KITCHEN_ALT : FLOOR_ALT;
   const fromX = Math.max(0, Math.floor(camera.x / tile));
   const fromY = Math.max(0, Math.floor(camera.y / tile));
   const toX = Math.min(ARENA.width / tile, Math.ceil((camera.x + view.width / view.scale) / tile));
@@ -121,9 +132,74 @@ function drawFloor(ctx: CanvasRenderingContext2D, camera: { x: number; y: number
   for (let ty = fromY; ty < toY; ty += 1) {
     for (let tx = fromX; tx < toX; tx += 1) if ((tx + ty) % 2 === 0) ctx.fillRect(tx * tile, ty * tile, tile, tile);
   }
+  if (kitchen) {
+    ctx.strokeStyle = "rgba(30, 50, 50, 0.22)";
+    ctx.lineWidth = 1;
+    for (let ty = fromY; ty < toY; ty += 1) for (let tx = fromX; tx < toX; tx += 1) ctx.strokeRect(tx * tile, ty * tile, tile, tile);
+  } else {
+    // Wear on the carpet: speckles, stains and a stray sheet of paper, so the floor isn't a bare checkerboard.
+    for (let ty = fromY; ty < toY; ty += 1) {
+      for (let tx = fromX; tx < toX; tx += 1) {
+        const h = tileHash(tx, ty);
+        const ox = tx * tile + ((h >>> 3) % 70) + 15;
+        const oy = ty * tile + ((h >>> 9) % 70) + 15;
+        if (h % 5 === 0) {
+          ctx.fillStyle = "rgba(20, 28, 40, 0.18)";
+          for (let dot = 0; dot < 4; dot += 1) ctx.fillRect(ox + dot * 6 - ((h >>> dot) % 5), oy + ((h >>> (dot + 2)) % 9), 2, 2);
+        }
+        if (h % 17 === 3) {
+          ctx.fillStyle = "rgba(60, 40, 30, 0.22)";
+          ctx.beginPath();
+          ctx.ellipse(ox, oy, 9, 6, (h % 7) / 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (h % 29 === 7) {
+          ctx.save();
+          ctx.translate(ox, oy);
+          ctx.rotate((h % 11) / 4);
+          ctx.fillStyle = "rgba(244, 244, 244, 0.75)";
+          ctx.fillRect(-6, -4, 12, 8);
+          ctx.restore();
+        }
+      }
+    }
+  }
   ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
   ctx.lineWidth = 6;
   ctx.strokeRect(-3, -3, ARENA.width + 6, ARENA.height + 6);
+}
+
+/** The stage's fixed hazards: coffee spills on the floor and microwaves that flash just before they fire. */
+function drawHazards(ctx: CanvasRenderingContext2D, run: Run): void {
+  for (const hazard of run.hazards) {
+    if (hazard.kind === "spill") {
+      ctx.fillStyle = "rgba(78, 50, 30, 0.85)";
+      ctx.beginPath();
+      ctx.ellipse(hazard.x, hazard.y, hazard.radius, hazard.radius * 0.72, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(140, 100, 66, 0.55)";
+      ctx.beginPath();
+      ctx.ellipse(hazard.x - hazard.radius * 0.2, hazard.y - hazard.radius * 0.15, hazard.radius * 0.45, hazard.radius * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      continue;
+    }
+    const r = hazard.radius;
+    if (hazard.timer < 0.9) {
+      ctx.fillStyle = Math.floor(hazard.timer * 12) % 2 === 0 ? "rgba(255, 226, 138, 0.45)" : "rgba(255, 226, 138, 0.2)";
+      ctx.beginPath();
+      ctx.arc(hazard.x, hazard.y, r * 2.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#e6e9ef";
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(hazard.x - r, hazard.y - r * 0.8, r * 2, r * 1.6);
+    ctx.strokeRect(hazard.x - r, hazard.y - r * 0.8, r * 2, r * 1.6);
+    ctx.fillStyle = "#262838";
+    ctx.fillRect(hazard.x - r * 0.8, hazard.y - r * 0.55, r * 1.1, r * 1.1);
+    ctx.fillStyle = hazard.timer < 0.9 ? "#e0483f" : "#38b764";
+    ctx.fillRect(hazard.x + r * 0.5, hazard.y - r * 0.4, r * 0.3, r * 0.3);
+  }
 }
 
 function ellipseShadow(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number): void {
@@ -292,6 +368,16 @@ function drawFoeShot(ctx: CanvasRenderingContext2D, from: string, x: number, y: 
     ctx.stroke();
     return;
   }
+  if (from === "microwave") {
+    ctx.fillStyle = "#ffe28a";
+    ctx.strokeStyle = "#c28a2a";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    return;
+  }
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(Math.atan2(vy, vx));
@@ -394,6 +480,7 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
       ctx.fillRect(r * 0.6, -r * 0.4, r * 0.3, r * 0.3);
       break;
     case "middleManager":
+    case "lunchMonitor":
     case "teamLead":
     case "hrManager":
     case "recruiter":

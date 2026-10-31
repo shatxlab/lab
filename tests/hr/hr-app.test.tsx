@@ -62,7 +62,7 @@ describe("HrApp", () => {
   });
 
   it("sends the focus in, and a walk-out still moves the day on and saves the gold", async () => {
-    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 2, owned: [2], sealed: [], gold: 7 }));
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 2, owned: [2], sealed: [], stage: "openSpace", gold: 7 }));
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Go to work")[0].click());
     expect(view.container.querySelector("canvas.tower-canvas")).toBeTruthy();
@@ -74,12 +74,12 @@ describe("HrApp", () => {
     expect(view.container.textContent).toContain("+0 review XP");
     expect(localStorage.getItem(RUN_STORAGE_KEY)).toBeNull();
     expect(readSave().day).toBe(1);
-    expect(readCareer()).toEqual({ focusId: 2, owned: [2], sealed: [], gold: 7 });
+    expect(readCareer()).toEqual({ focusId: 2, owned: [2], sealed: [], stage: "openSpace", gold: 7 });
     view.unmount();
   });
 
   it("opens a pack, reveals a sealed card, and hires it only after its interview", async () => {
-    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], sealed: [], gold: PACKS.price + 3 }));
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], sealed: [], stage: "openSpace" as const, gold: PACKS.price + 3 }));
     const view = await mount(<HrApp />);
     await act(async () => (view.container.querySelector(".hr-pack button") as HTMLButtonElement).click());
     expect(view.container.querySelector("#hr-pack-title")?.textContent).toMatch(/^New coworker: /);
@@ -117,10 +117,32 @@ describe("HrApp", () => {
   });
 
   it("keeps the pack closed until there is gold for it", async () => {
-    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], sealed: [], gold: PACKS.price - 1 }));
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], sealed: [], stage: "openSpace" as const, gold: PACKS.price - 1 }));
     const view = await mount(<HrApp />);
     expect((view.container.querySelector(".hr-pack button") as HTMLButtonElement).disabled).toBe(true);
     view.unmount();
+  });
+
+  it("keeps the kitchen locked until the focus reaches its level, then sends them there", async () => {
+    const view = await mount(<HrApp />);
+    await act(async () => buttons(view.container, "Start career")[0].click());
+    const kitchenButton = () => buttons(view.container, "Kitchen")[0];
+    expect(kitchenButton().disabled).toBe(true);
+    expect(view.container.textContent).toContain("Kitchen opens at level 6.");
+    view.unmount();
+
+    const save = readSave();
+    save.coworkers[0] = { ...save.coworkers[0], level: 6 };
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(save));
+    const again = await mount(<HrApp />);
+    const open = () => buttons(again.container, "Kitchen")[0];
+    expect(open().disabled).toBe(false);
+    await act(async () => open().click());
+    expect(readCareer().stage).toBe("kitchen");
+    await act(async () => buttons(again.container, "Go to work")[0].click());
+    expect(readRun()?.stage).toBe("kitchen");
+    expect(readRun()?.hazards.length).toBeGreaterThan(0);
+    again.unmount();
   });
 
   it("starts a new career after confirming", async () => {
@@ -129,7 +151,7 @@ describe("HrApp", () => {
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Start a new career")[0].click());
     expect(view.container.textContent).toContain("Who will you grow?");
-    expect(readCareer()).toEqual({ focusId: null, owned: [], sealed: [], gold: 0 });
+    expect(readCareer()).toEqual({ focusId: null, owned: [], sealed: [], stage: "openSpace", gold: 0 });
     view.unmount();
   });
 

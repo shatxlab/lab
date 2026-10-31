@@ -2,7 +2,8 @@ import { MAX_STAT, RARITY } from "@/lib/roster/data";
 import { generateCoworker } from "@/lib/roster/generate";
 import { recordSeen } from "@/lib/roster/save";
 import type { Coworker, Rarity, RosterSave, Stat } from "@/lib/roster/types";
-import { PACKS, REVIEW } from "./sim/balance";
+import { PACKS, REVIEW, STAGE_IDS, STAGES } from "./sim/balance";
+import type { Stage } from "./sim/types";
 
 /**
  * The journey between runs: the one coworker the player is growing and the gold saved up. Level, XP and the day live
@@ -17,6 +18,8 @@ export interface Career {
   owned: number[];
   /** Ids of cards bought in a pack that are waiting for their interview; they join `owned` once it is beaten. */
   sealed: number[];
+  /** Where the next day is spent; falls back to the open space while the focus is below the stage's level. */
+  stage: Stage;
   /** Gold banked from runs, spent on packs. */
   gold: number;
 }
@@ -36,18 +39,18 @@ function storageOrUndefined(): CareerStorage | undefined {
 }
 
 export function defaultCareer(): Career {
-  return { focusId: null, owned: [], sealed: [], gold: 0 };
+  return { focusId: null, owned: [], sealed: [], stage: "openSpace", gold: 0 };
 }
 
 export function normalizeCareer(raw: unknown): Career {
   if (!raw || typeof raw !== "object") return defaultCareer();
-  const { focusId, owned, sealed, gold } = raw as Partial<Record<keyof Career, unknown>>;
+  const { focusId, owned, sealed, stage, gold } = raw as Partial<Record<keyof Career, unknown>>;
   const whole = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
   const focus = whole(focusId) || null;
   const ids = (list: unknown) => (Array.isArray(list) ? list.map(whole).filter((id) => id > 0) : []);
   // The focus is always owned, so a save from before packs keeps its coworker.
   const own = [...new Set(focus ? [focus, ...ids(owned)] : ids(owned))];
-  return { focusId: focus, owned: own, sealed: [...new Set(ids(sealed))].filter((id) => !own.includes(id)), gold: whole(gold) };
+  return { focusId: focus, owned: own, sealed: [...new Set(ids(sealed))].filter((id) => !own.includes(id)), stage: STAGE_IDS.includes(stage as Stage) ? (stage as Stage) : "openSpace", gold: whole(gold) };
 }
 
 export function readCareer(storage: CareerStorage | undefined = storageOrUndefined()): Career {
@@ -76,8 +79,13 @@ export function clearCareer(storage: CareerStorage | undefined = storageOrUndefi
 }
 
 /** Review XP for a run: a little for every few seconds survived, and a bonus for beating the auditor. */
-export function reviewXp(time: number, won: boolean): number {
-  return Math.floor(Math.max(0, time) / REVIEW.secondsPerXp) + (won ? REVIEW.winBonus : 0);
+export function reviewXp(time: number, won: boolean, stage: Stage = "openSpace"): number {
+  return Math.floor((Math.floor(Math.max(0, time) / REVIEW.secondsPerXp) + (won ? REVIEW.winBonus : 0)) * STAGES[stage].xp);
+}
+
+/** The stage a coworker of this level is actually sent to: the chosen one if they have reached it. */
+export function stageFor(level: number, chosen: Stage): Stage {
+  return level >= STAGES[chosen].unlockLevel ? chosen : "openSpace";
 }
 
 /** Review XP from `level` to the next. */
@@ -90,10 +98,10 @@ export function rankOf(level: number): number {
   return Math.floor((Math.max(1, level) - 1) / REVIEW.levelsPerRank);
 }
 
-/** How much tougher the office is for a coworker of this level and rarity (see `PACKS`). */
-export function difficultyFor(level: number, rarity: Rarity = "common"): number {
+/** How much tougher the office is for a coworker of this level and rarity (see `PACKS`), on a stage. */
+export function difficultyFor(level: number, rarity: Rarity = "common", stage: Stage = "openSpace"): number {
   const extra = Math.max(0, RARITY[rarity].bonus - RARITY.common.bonus) * PACKS.rarityLevels;
-  return 1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1 + extra);
+  return (1 + REVIEW.difficultyPerLevel * (Math.max(1, level) - 1 + extra)) * STAGES[stage].difficulty;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AUDIT_CLOSES, FOES, INTERVIEW, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, FOES, INTERVIEW, KITCHEN, MINI_BOSS_AT, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
 import { abandon, choose, createRun, step } from "@/lib/hr/sim/run";
 import type { Input, Run } from "@/lib/hr/sim/types";
 import { starters } from "@/lib/roster/generate";
@@ -189,5 +189,56 @@ describe("an interview", () => {
     play(easy, INTERVIEW.bossAt + 1);
     const hp = (run: Run) => run.foes.find((foe) => foe.kind === "hrManager")!.maxHp;
     expect(hp(hard)).toBeCloseTo(hp(easy) * 2);
+  });
+});
+
+describe("the kitchen", () => {
+  const kitchen = () => createRun(plain, 3, 1, null, "kitchen");
+
+  it("is laid out from the seed: spills clear of the start, and microwaves in corners", () => {
+    const run = kitchen();
+    const spills = run.hazards.filter((hazard) => hazard.kind === "spill");
+    expect(spills).toHaveLength(KITCHEN.spills);
+    expect(run.hazards.filter((hazard) => hazard.kind === "microwave")).toHaveLength(KITCHEN.microwaves);
+    for (const spill of spills) expect(Math.hypot(spill.x - run.hero.x, spill.y - run.hero.y)).toBeGreaterThanOrEqual(KITCHEN.clearRadius);
+    expect(kitchen().hazards).toEqual(run.hazards);
+    expect(createRun(plain, 3).hazards).toEqual([]);
+  });
+
+  it("slows the hero in a spill, and only there", () => {
+    const run = kitchen();
+    const spill = run.hazards.find((hazard) => hazard.kind === "spill")!;
+    run.hazards = [spill];
+    run.hero.x = spill.x;
+    run.hero.y = spill.y;
+    step(run, { dx: 1, dy: 0 });
+    const slowed = run.hero.x - spill.x;
+    run.hero.x = 700;
+    run.hero.y = 700;
+    run.hazards = [];
+    step(run, { dx: 1, dy: 0 });
+    expect(slowed).toBeCloseTo((run.hero.x - 700) * (1 - KITCHEN.spillSlow), 5);
+  });
+
+  it("fires a ring from each microwave on its timer", () => {
+    const run = kitchen();
+    run.hazards = run.hazards.filter((hazard) => hazard.kind === "microwave").slice(0, 1);
+    run.hazards[0].timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "microwave")).toHaveLength(KITCHEN.ring);
+    expect(run.hazards[0].timer).toBeGreaterThan(KITCHEN.microwaveEvery - 1);
+  });
+
+  it("brings its own mini-boss and pays more gold", () => {
+    const run = kitchen();
+    play(run, MINI_BOSS_AT + 1);
+    expect(run.foes.some((foe) => foe.kind === "lunchMonitor")).toBe(true);
+    expect(run.foes.some((foe) => foe.kind === "middleManager")).toBe(false);
+    expect(STAGES.kitchen.gold).toBeGreaterThan(1);
+  });
+
+  it("is never the place of an interview", () => {
+    expect(createRun(plain, 1, 1, { boss: "recruiter", candidateId: 4 }, "kitchen")).toMatchObject({ stage: "openSpace", hazards: [] });
   });
 });

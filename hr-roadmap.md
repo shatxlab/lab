@@ -23,7 +23,7 @@ steps", then read "Guide for the next session" (at the end) before changing anyt
 1. **Take the user's phone feedback** on the live run and act on it first. Things already suspected (see "Known
    rough edges"): foes look small, the floor is dim, starters are uneven, the stick's feel and the run length are
    untested by a human. Retune with the bot (see the playbook) before adding features.
-2. **Step 4 is mostly built** (see "The career", packs included). Next in it: **stages** (office areas with a hazard each) and **promotion
+2. **Step 4 is mostly built** (see "The career", packs included). Next in it: more **stages** (server room, meeting room, boardroom) and **promotion
    unlocks** (today a promotion is only a title and +1 each to grit, output and focus). Burnout and quitting stay off until
    there is a bench to swap to.
 3. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
@@ -94,6 +94,17 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
   `node /tmp/hr.mjs 30 all - <level> - <boss>`): wins 63% / 60% / 73% at level 1 and 63% / 59% / 78% at level 16
   (team lead / HR manager / recruiter). The bot does badly against a slow ranged boss it kites, so the HR manager
   has the least hp (600).
+- **Stages (built, one so far):** `STAGES` in `balance.ts`, `Run.stage` and `Run.hazards` (`RUN_VERSION` 4), the choice
+  kept in `Career.stage` and shown on the menu ("Where to today?"; a stage below the focus's level is greyed and the
+  run falls back to the open space, `stageFor`). The **Kitchen** opens at level 6 (the first promotion): coffee spills
+  slow the hero by 35% (not the foes), two microwaves in corners fire a ring of 8 popcorn shots every 5 s (turned a
+  little each time), the mini-boss is the **Lunch Monitor** (a quicker, tougher charger) instead of the Middle Manager,
+  tile floor. In return: foe difficulty x1.05, gold x1.25, review XP x1.2. Interviews are always in the open space.
+  The open space got carpet wear (speckles, stains, stray paper) so the floor is less bare. Bot check (30 seeds per
+  department, `node /tmp/hr.mjs 30 all - <level> - - kitchen`): the kitchen wins about 56% at levels 6, 11 and 16 against
+  72% / 74% / 83% in the open space; the microwaves cause 13 to 25% of the damage the bot takes. More stages (server
+  room, meeting room, boardroom) follow the same recipe: a hazard in `Run.hazards`, a mini-boss, multipliers, an
+  unlock level; add the stage to `Stage`, `STAGES`, the floor in `drawFloor`, copy in `i18n.ts`, and run the bot.
 - **Not built in packs:** pity (a guaranteed rare after N packs), duplicates (none possible), a desk cap, selling a card.
 
 ## The idea in one paragraph

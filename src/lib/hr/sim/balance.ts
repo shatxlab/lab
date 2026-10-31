@@ -3,7 +3,7 @@
  * `scripts/hr/playthrough.ts` (usage in its header).
  */
 import type { Effect as QuirkEffect, Stat } from "@/lib/roster/types";
-import type { FoeKind, HeroNumbers, InterviewBoss, PassiveId, WeaponId } from "./types";
+import type { FoeKind, HeroNumbers, InterviewBoss, PassiveId, Stage, WeaponId } from "./types";
 
 /** A walled office floor, about 3 by 3 phone screens. */
 export const ARENA = { width: 1400, height: 1400 } as const;
@@ -101,6 +101,8 @@ export const FOES: Readonly<Record<FoeKind, FoeDef>> = {
   printerJam: { hp: 60, radius: 16, speed: 0, touch: 6, xp: 5, gold: 1, every: 3.5, boss: false },
   /** The mini-boss: walks, then charges at where the hero is. */
   middleManager: { hp: 1000, radius: 22, speed: 55, touch: 30, xp: 60, gold: 25, every: 4, boss: true },
+  /** The kitchen's mini-boss: charges like the middle manager, a little quicker and tougher. */
+  lunchMonitor: { hp: 1300, radius: 21, speed: 60, touch: 30, xp: 70, gold: 30, every: 3.5, boss: true },
   /** The boss: rings of red tape and a reply-all chain now and then. */
   auditor: { hp: 7000, radius: 28, speed: 45, touch: 40, xp: 0, gold: 100, every: 3, boss: true },
   /** Interview bosses (hp before the coworker's difficulty). A lead who charges often and hard. */
@@ -283,3 +285,40 @@ export const REVIEW = {
  * common's counts as `rarityLevels` career levels of difficulty. A lucky pull is stronger, not a walkover.
  */
 export const PACKS = { price: 1200, rarityLevels: 1 } as const;
+
+// ---- Stages ------------------------------------------------------------------------------------------------------
+
+export interface StageDef {
+  /** The career level a coworker needs to be sent here. */
+  unlockLevel: number;
+  /** Multiplies the coworker's difficulty. */
+  difficulty: number;
+  /** Multiply the gold from foes and the review XP from the run, so a harder stage pays. */
+  gold: number;
+  xp: number;
+  /** Comes in place of the middle manager at `MINI_BOSS_AT`. */
+  miniBoss: FoeKind;
+}
+
+export const STAGES: Readonly<Record<Stage, StageDef>> = {
+  openSpace: { unlockLevel: 1, difficulty: 1, gold: 1, xp: 1, miniBoss: "middleManager" },
+  kitchen: { unlockLevel: 6, difficulty: 1.05, gold: 1.25, xp: 1.2, miniBoss: "lunchMonitor" },
+};
+
+export const STAGE_IDS = Object.keys(STAGES) as Stage[];
+
+/** The kitchen: coffee spills that slow the hero (not the foes), and microwaves in the corners firing rings. */
+export const KITCHEN = {
+  spills: 9,
+  spillRadius: 40,
+  /** The share of speed lost standing in a spill. */
+  spillSlow: 0.35,
+  /** No spill lands this close to where the hero starts. */
+  clearRadius: 170,
+  microwaves: 2,
+  microwaveEvery: 5,
+  microwaveRadius: 18,
+  /** Shots in a ring; each ring is turned a little from the last so the gaps move. */
+  ring: 8,
+  shot: { speed: 130, radius: 6, damage: 10, life: 4 },
+} as const;

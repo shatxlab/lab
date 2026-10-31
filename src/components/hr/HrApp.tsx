@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
-import { clearCareer, defaultCareer, difficultyFor, hire, interviewDifficultyFor, openPack, rankOf, readCareer, review, reviewXp, reviewXpToNext, writeCareer, type Career } from "@/lib/hr/career";
+import { clearCareer, defaultCareer, difficultyFor, hire, interviewDifficultyFor, openPack, rankOf, readCareer, review, reviewXp, reviewXpToNext, stageFor, writeCareer, type Career } from "@/lib/hr/career";
 import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
-import { AUDIT_CLOSES, INTERVIEW, interviewBossFor, PACKS } from "@/lib/hr/sim/balance";
+import { AUDIT_CLOSES, INTERVIEW, interviewBossFor, PACKS, STAGE_IDS, STAGES } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import type { Run } from "@/lib/hr/sim/types";
 import { clearRun, readRun, writeRun } from "@/lib/hr/snapshot";
@@ -76,7 +76,10 @@ export default function HrApp() {
     setRun(next);
   };
 
-  const start = (coworker: Coworker) => begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity)));
+  const start = (coworker: Coworker) => {
+    const stage = stageFor(coworker.level, careerRef.current?.stage ?? "openSpace");
+    begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity, stage), null, stage));
+  };
 
   /** The focus fights the boss of a sealed card; winning hires the card. */
   const startInterview = (focusCoworker: Coworker, candidate: Coworker) =>
@@ -116,7 +119,7 @@ export default function HrApp() {
         interviewed = { candidate, hired };
       }
     } else if (before && worker) {
-      const outcome = review(worker, reviewXp(ended.time, ended.status === "won"));
+      const outcome = review(worker, reviewXp(ended.time, ended.status === "won", ended.stage));
       const after: RosterSave = { ...before, day: before.day + 1, coworkers: before.coworkers.map((coworker) => (coworker.id === worker.id ? outcome.coworker : coworker)) };
       writeSave(after);
       setRoster(after);
@@ -140,7 +143,7 @@ export default function HrApp() {
   }, []);
 
   const startCareer = (coworker: Coworker) => {
-    const next: Career = { focusId: coworker.id, owned: [coworker.id], sealed: [], gold: 0 };
+    const next: Career = { focusId: coworker.id, owned: [coworker.id], sealed: [], stage: "openSpace", gold: 0 };
     writeCareer(next);
     setCareer(next);
   };
@@ -159,6 +162,13 @@ export default function HrApp() {
   const makeFocus = (coworker: Coworker) => {
     if (!career) return;
     const next: Career = { ...career, focusId: coworker.id };
+    writeCareer(next);
+    setCareer(next);
+  };
+
+  const chooseStage = (stage: Career["stage"]) => {
+    if (!career) return;
+    const next: Career = { ...career, stage };
     writeCareer(next);
     setCareer(next);
   };
@@ -268,6 +278,29 @@ export default function HrApp() {
                   <CoworkerCard coworker={focus} sheet={sheet} text={text} action={text.goToWork} onAct={() => start(focus)} showCareer />
                 </li>
               </ul>
+              <h2 className="hr-menu-heading">{text.whereTo}</h2>
+              <div className="hr-stages" role="group" aria-label={text.whereTo}>
+                {STAGE_IDS.map((stage) => {
+                  const open = focus.level >= STAGES[stage].unlockLevel;
+                  return (
+                    <button
+                      key={stage}
+                      type="button"
+                      className={`tower-button tower-button-small${stageFor(focus.level, career.stage) === stage ? "" : " tower-button-quiet"}`}
+                      aria-pressed={stageFor(focus.level, career.stage) === stage}
+                      disabled={!open}
+                      onClick={() => chooseStage(stage)}
+                    >
+                      {text.stages[stage].name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="hr-continue-hint">
+                {STAGE_IDS.filter((stage) => focus.level < STAGES[stage].unlockLevel)
+                  .map((stage) => text.stageLocked(text.stages[stage].name, STAGES[stage].unlockLevel))
+                  .join(" ") || text.stages[stageFor(focus.level, career.stage)].blurb}
+              </p>
               <div className="hr-pack">
                 <button type="button" className="tower-button" onClick={buyPack} disabled={career.gold < PACKS.price}>
                   {text.openPack(text.goldAmount(PACKS.price))}

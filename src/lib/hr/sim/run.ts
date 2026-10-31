@@ -20,6 +20,7 @@ import {
   HERO_RADIUS,
   HURT_FLASH,
   INTERVIEW,
+  KITCHEN,
   INVITE_SUMMONS,
   LEAD_CHARGE,
   PAPERWORK,
@@ -37,6 +38,7 @@ import {
   RECRUITER_CLONES,
   RED_TAPE,
   SPAWN_DISTANCE,
+  STAGES,
   TONER,
   WEAPONS,
   hpScale,
@@ -48,11 +50,11 @@ import {
 import { Grid } from "./grid";
 import { baseNumbers } from "./hero";
 import { applyPick, rollPicks } from "./picks";
-import type { Effect, Foe, FoeKind, Input, Interview, OwnedWeapon, Run, Shot, WeaponId } from "./types";
+import type { Effect, Foe, FoeKind, Hazard, Input, Interview, OwnedWeapon, Run, Shot, Source, Stage, WeaponId } from "./types";
 
 /** The fixed tick the page steps the sim with, so every device plays the same run. */
 export const STEP = 1 / 60;
-export const RUN_VERSION = 3;
+export const RUN_VERSION = 4;
 
 /** The biggest foe's radius, which every grid search is widened by. */
 const FOE_PAD = Math.max(...Object.values(FOES).map((foe) => foe.radius));
@@ -65,17 +67,20 @@ const byId = new Map<number, Foe>();
 
 /**
  * `difficulty` is 1 for a first-day coworker and grows with their career level (see `difficultyFor`). With an
- * `interview` the run is a fight against that boss alone, not a day at the office.
+ * `interview` the run is a fight against that boss alone, not a day at the office. A `stage` other than the open space
+ * adds its hazards and its own mini-boss; an interview is always held in the open space.
  */
-export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null): Run {
+export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null, stage: Stage = "openSpace"): Run {
   const base = baseNumbers(coworker);
-  return {
+  const run: Run = {
     version: RUN_VERSION,
     seed,
     rng: seed,
     coworkerId: coworker.id,
     difficulty,
     interview,
+    stage: interview ? "openSpace" : stage,
+    hazards: [],
     status: "playing",
     time: 0,
     base,
@@ -105,6 +110,55 @@ export function createRun(coworker: Coworker, seed: number, difficulty = 1, inte
     lastHitBy: null,
     abandoned: false,
   };
+  run.hazards = run.stage === "kitchen" ? kitchenHazards(run) : [];
+  return run;
+}
+
+/** The kitchen's floor: spills scattered clear of the start, and microwaves in two of the four corners. */
+function kitchenHazards(run: Run): Hazard[] {
+  const hazards: Hazard[] = [];
+  const edge = 90;
+  while (hazards.length < KITCHEN.spills) {
+    const x = randomBetween(run, edge, ARENA.width - edge);
+    const y = randomBetween(run, edge, ARENA.height - edge);
+    if (Math.hypot(x - ARENA.width / 2, y - ARENA.height / 2) < KITCHEN.clearRadius) continue;
+    hazards.push({ kind: "spill", x, y, radius: KITCHEN.spillRadius, timer: 0 });
+  }
+  const corners = [
+    [150, 150],
+    [ARENA.width - 150, 150],
+    [150, ARENA.height - 150],
+    [ARENA.width - 150, ARENA.height - 150],
+  ];
+  for (let index = 0; index < KITCHEN.microwaves; index += 1) {
+    const [x, y] = corners.splice(Math.floor(random(run) * corners.length), 1)[0];
+    hazards.push({ kind: "microwave", x, y, radius: KITCHEN.microwaveRadius, timer: (KITCHEN.microwaveEvery * (index + 1)) / KITCHEN.microwaves });
+  }
+  return hazards;
+}
+
+function tickHazards(run: Run, dt: number): void {
+  for (const hazard of run.hazards) {
+    if (hazard.kind !== "microwave") continue;
+    hazard.timer -= dt;
+    if (hazard.timer > 0) continue;
+    hazard.timer += KITCHEN.microwaveEvery;
+    const turn = run.time * 0.7;
+    for (let index = 0; index < KITCHEN.ring; index += 1) {
+      const angle = turn + (index / KITCHEN.ring) * Math.PI * 2;
+      run.foeShots.push({
+        id: run.nextId++,
+        from: "microwave",
+        x: hazard.x,
+        y: hazard.y,
+        vx: Math.cos(angle) * KITCHEN.shot.speed,
+        vy: Math.sin(angle) * KITCHEN.shot.speed,
+        radius: KITCHEN.shot.radius,
+        damage: KITCHEN.shot.damage,
+        life: KITCHEN.shot.life,
+      });
+    }
+  }
 }
 
 /** Advance the run by one `STEP`. While a pick is waiting, or once the run is over, only the effects fade. */
@@ -114,6 +168,7 @@ export function step(run: Run, input: Input): void {
   run.time += STEP;
   moveHero(run, input, STEP);
   spawn(run, STEP);
+  tickHazards(run, STEP);
   index(run);
   moveFoes(run, STEP);
   index(run);
@@ -171,8 +226,10 @@ function moveHero(run: Run, input: Input, dt: number): void {
     dx /= length;
     dy /= length;
   }
-  hero.x = clampTo(hero.x + dx * run.numbers.speed * dt, HERO_RADIUS, ARENA.width);
-  hero.y = clampTo(hero.y + dy * run.numbers.speed * dt, HERO_RADIUS, ARENA.height);
+  const slowed = run.hazards.some((hazard) => hazard.kind === "spill" && Math.hypot(hero.x - hazard.x, hero.y - hazard.y) < hazard.radius);
+  const speed = run.numbers.speed * (slowed ? 1 - KITCHEN.spillSlow : 1);
+  hero.x = clampTo(hero.x + dx * speed * dt, HERO_RADIUS, ARENA.width);
+  hero.y = clampTo(hero.y + dy * speed * dt, HERO_RADIUS, ARENA.height);
   if (length > 0.1) {
     hero.faceX = dx / Math.min(1, length);
     hero.faceY = dy / Math.min(1, length);
@@ -200,7 +257,7 @@ function touchHero(run: Run, dt: number): void {
   });
 }
 
-function hurtHero(run: Run, amount: number, by: FoeKind): void {
+function hurtHero(run: Run, amount: number, by: Source): void {
   const taken = amount * run.numbers.taken;
   run.hero.hp -= taken;
   run.takenFrom[by] = (run.takenFrom[by] ?? 0) + taken;
@@ -293,7 +350,7 @@ function spawn(run: Run, dt: number): void {
   if (!run.miniBossDone && run.time >= MINI_BOSS_AT) {
     run.miniBossDone = true;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
-    addFoe(run, "middleManager", at.x, at.y);
+    addFoe(run, STAGES[run.stage].miniBoss, at.x, at.y);
   }
   if (!run.bossDone && run.time >= BOSS_AT) {
     run.bossDone = true;
@@ -349,6 +406,7 @@ function act(run: Run, foe: Foe, toHero: number, distance: number): void {
       if (distance <= PRINTER_RANGE) shootAt(run, foe, toHero, TONER);
       break;
     case "middleManager":
+    case "lunchMonitor":
       foe.charge = CHARGE.seconds;
       foe.chargeX = Math.cos(toHero);
       foe.chargeY = Math.sin(toHero);
@@ -467,7 +525,7 @@ function reap(run: Run): void {
       continue;
     }
     run.kills += 1;
-    run.gold += foe.gold * run.numbers.gold;
+    run.gold += foe.gold * run.numbers.gold * STAGES[run.stage].gold;
     if (foe.xp > 0) run.gems.push({ id: run.nextId++, x: foe.x, y: foe.y, value: foe.xp, pulled: false });
     addEffect(run, "pop", foe.x, foe.y, foe.radius, 0.3);
     if (foe.kind === (run.interview?.boss ?? "auditor")) run.status = "won";

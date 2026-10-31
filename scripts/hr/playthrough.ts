@@ -2,7 +2,7 @@
 // change can be judged on whole runs.
 //
 //   npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/hr.mjs
-//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level] [rarity|-] [teamLead|hrManager|recruiter]
+//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level] [rarity|-] [teamLead|hrManager|recruiter|-] [kitchen]
 //
 // With a level, each starter is first grown to that career level (a stat point per level, see `review`) and meets the
 // matching difficulty, to check the career curve. Level 1 is a first-day coworker. With a rarity (uncommon, rare or
@@ -22,7 +22,7 @@ import type { Coworker } from '../../src/lib/roster/types.ts'
 import { ARENA, AUDIT_CLOSES, BOSS_AT, INTERVIEW, MINI_BOSS_AT } from '../../src/lib/hr/sim/balance.ts'
 import { difficultyFor, interviewDifficultyFor, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
 import { choose, createRun, step } from '../../src/lib/hr/sim/run.ts'
-import type { Input, InterviewBoss, Pick, Run } from '../../src/lib/hr/sim/types.ts'
+import type { Input, InterviewBoss, Pick, Run, Stage } from '../../src/lib/hr/sim/types.ts'
 
 /** How far ahead the bot looks, in seconds. */
 const LOOK_AHEAD = 0.5
@@ -116,7 +116,7 @@ function steer(run: Run): Input {
 }
 
 function play(coworker: Coworker, seed: number, verbose: boolean) {
-  const run = createRun(coworker, seed, (boss ? interviewDifficultyFor : difficultyFor)(coworker.level, coworker.rarity), boss ? { boss, candidateId: 99 } : null)
+  const run = createRun(coworker, seed, boss ? interviewDifficultyFor(coworker.level, coworker.rarity) : difficultyFor(coworker.level, coworker.rarity, stage), boss ? { boss, candidateId: 99 } : null, stage)
   let tick = 0
   let input: Input = { dx: 0, dy: 0 }
   let nextReport = 60
@@ -147,7 +147,8 @@ const only = process.argv[3] === 'all' ? undefined : process.argv[3]
 const verbose = process.argv[4] === 'verbose'
 const careerLevel = Number(process.argv[5] ?? 1)
 const rarity = process.argv[6] && process.argv[6] !== '-' ? (process.argv[6] as Rarity) : undefined
-const boss = process.argv[7] as InterviewBoss | undefined
+const boss = process.argv[7] && process.argv[7] !== '-' ? (process.argv[7] as InterviewBoss) : undefined
+const stage = (process.argv[8] ?? 'openSpace') as Stage
 let wins = 0
 let runs = 0
 for (const [index, base] of starters().entries()) {

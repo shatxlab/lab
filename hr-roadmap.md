@@ -4,43 +4,57 @@ The single source of TODOs, design record and handoff notes for the office-cowor
 steps", then read "Guide for the next session" (at the end) before changing anything in `src/lib/roster/` or
 `src/lib/hr/`.
 
-## Status (2026-10-28)
+## Status (2026-10-31)
 
 - **Live and public:** <https://shatx.ru/hr/> (dev: `http://127.0.0.1:4321/lab/hr`, the site's base is `/lab`). Listed
-  under Games on the home page (`src/lib/apps/tools.ts`, id `hr`). The user is about to play it on a phone; their
-  feedback is the next input.
-- **Built:** the shared roster (`src/lib/roster/`), the hero run (sim, bot, renderer, page) with 3 fixed starters, run
-  suspend/resume, English and Russian copy.
-- **Career slice (2026-10-30, built, not yet committed or deployed):** pick one starter to grow, one run = one day,
-  review XP after each run raises career level (+1 stat per level, promotion every 5 levels), foes scale with the level,
-  gold is banked in `lab:hr:v1`. See "The career" below.
-- **Not built:** burnout, quitting, packs (the gold sink), the interview bosses, the HR loop, stages, weapon
-  combinations, the panic button, real foe art, the auto-battler.
-- **Commits:** `3ebf673` roster, `2847ae5` sim and bot, `edff191` page and listing (all on `main`, deployed).
+  under Games on the home page (`src/lib/apps/tools.ts`, id `hr`). The user has played it on a phone for days and won
+  with all three starters; their feedback shaped the direction below.
+- **Built and deployed:**
+  - the shared roster (`src/lib/roster/`) and the hero run (sim, bot, renderer, page), run suspend/resume, English and
+    Russian copy;
+  - **the career** (since 2026-10-30), a journey over weeks: pick one starter, one run = one day, review XP and
+    levels, promotions, difficulty that scales ("The career" below);
+  - **packs** (gold buys a card), **interview bosses** (a card is sealed until the focus beats its boss), **stages**
+    (open space, kitchen from level 6, server room from level 11), **promotion perks** (one of three per promotion);
+  - the hero's camera sits above the stick on phones; sticky notes pierce; career growth is the same for every
+    department.
+- **Not built:** burnout, quitting, pity for packs, a desk cap, selling cards, the HR loop (a daily pool, interviews
+  that reveal quirks, hire / pass / hold), more stages (meeting room, boardroom), weapon combinations, the panic
+  button, real foe art, a final goal for the journey, the auto-battler, the rename.
+- **Commits** (all on `main`, deployed): `3ebf673` roster, `2847ae5` sim and bot, `edff191` page and listing,
+  `a3f866e` camera and stick, `a36087e` career, `8922e0c` balance, `d1de90b` packs, `716133c` interview bosses,
+  `2cd23cb` kitchen, `46c8c79` CI test fix, `d4fc46d` perks, `083be6c` server room.
 
 ## Next steps (start here)
 
-1. **Take the user's phone feedback** on the live run and act on it first. Things already suspected (see "Known
-   rough edges"): foes look small, the floor is dim, starters are uneven, the stick's feel and the run length are
-   untested by a human. Retune with the bot (see the playbook) before adding features.
-2. **Step 4 is mostly built** (see "The career", packs included). Next in it: more **stages** (meeting room, boardroom) and, once a few more perks are wanted, a **bigger perk pool** (a perk per department's weapon, say). Burnout and quitting stay off until
-   there is a bench to swap to.
-3. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
-   reveal quirks, hire / pass / hold, desks, the codex. Then turn `stakes` on and tune the quit chance and the price of
-   keeping someone with the bot (needs the bot to play the meta, not just runs).
-4. **Hero run backlog:** even out the starters (the intern is the weakest, not the easiest), weapon combinations
-   ("evolutions"), the optional panic button, real foe sprites, a falling animation for the hero, an "Overtime"
-   difficulty for desktop.
-5. Later: the auto-battler (Game 3), then the hospital (parked).
+1. **Take the user's phone feedback** on the career first and act on it. What to ask: does one run a day feel like a
+   journey or a grind (the pace: about 8 runs to the first promotion, 35 to 40 to Senior)? Which perks did they pick,
+   and does any feel too strong or too weak? Are the kitchen's microwave rings and the server room's vents fair on a
+   phone, and readable? Are the interview bosses distinct, and is the HR manager (ranged) fun to fight? Is a pack
+   every three runs the right pace? Retune with the bot (playbook, section 5) before adding features.
+2. **More content, in this order of cheapness:** a **bigger perk pool** (a perk per department weapon, say); **more
+   stages** (meeting room with a projector beam, boardroom as a late boss stage; the recipe is under "Stages");
+   **pity for packs** (a guaranteed rare after N packs) and a **desk cap** (a limit on owned cards, and a way to sell
+   or retire one); a **final goal** for the journey so weeks of play lead somewhere (the Director rank is level 26).
+3. **The rename.** Decide the game's name once the focus-character shape has settled ("HR Department" / "Отдел
+   кадров" is the title in `i18n.ts`; the route, code and saves are `hr`, which can stay).
+4. **Step 5: the HR loop** (Game 2 below): a daily pool of candidates from `generateCoworker(save)`, interviews that
+   reveal quirks, hire / pass / hold, the codex. Packs and interview bosses already cover "getting a card"; decide
+   whether the loop replaces packs or sits beside them. Then burnout and quitting (`stakes: true`; they need a bench
+   to swap to, which packs now provide), and tune them with a bot that plays the meta, not just runs.
+5. **Hero run backlog:** weapon combinations ("evolutions"), the optional panic button, real foe sprites, a falling
+   animation for the hero, an "Overtime" difficulty for desktop.
+6. Later: the auto-battler (Game 3). The hospital is a separate game (parked).
 
 ## Direction (2026-10-30, after the user won with all three starters)
 
 Playtest feedback (phone only): foes are a fine size, the floor's contrast is ok but it is a bit boring, the intern felt
 the strongest (the three starters read as three difficulty levels, intern = easy), the run length is right, and the
 stick's thumb covered the view near the bottom of the map. The last is fixed (`cameraFor`: on a tall view the hero sits
-at 40% from the top and the camera runs past the bottom wall; the stick ring is fainter). Not committed yet.
+at 40% from the top and the camera runs past the bottom wall; the stick ring is fainter).
 
-The shape the user and I agreed on, to build step 4 and 5 toward (the roster, quirks and sim stay as they are):
+The shape the user and I agreed on (the roster, quirks and sim stayed as they were). **Everything in this list is built
+except the HR loop's daily pool, the rename and further stages:**
 
 - **A journey, not a menu.** Play one focus coworker and grow them between runs over weeks, tamagotchi style. One run =
   one day, no real-time gating at first (an energy meter can come later). Growth must be slow: intern to senior takes
@@ -57,6 +71,12 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
 
 ## The career (built 2026-10-30; `src/lib/hr/career.ts`, numbers in `REVIEW` in `sim/balance.ts`)
 
+- **Where it lives:** `src/lib/hr/career.ts` (pure: `Career`, review, ranks, difficulty, packs, hire, perks, stages),
+  the numbers in `src/lib/hr/sim/balance.ts` (`REVIEW`, `PACKS`, `INTERVIEW`, `STAGES`, `KITCHEN`, `SERVER_ROOM`,
+  `PERK_DIFFICULTY`), the flow in `src/components/hr/HrApp.tsx` (menu, result panel, saves). Saves: `lab:roster:v1`
+  (each coworker's level, xp, stats, perks; `day`; the codex), `lab:hr:v1` (`Career`: `focusId`, `owned`, `sealed`,
+  `stage`, `gold`), `lab:hr:run:v1` (the run in progress). `finish` in `HrApp` runs when a run ends: a day updates the
+  roster (day, review) and the career (gold); an interview only hires.
 - **Focus coworker:** the menu first asks who to grow (the three starters); after that only the focus is shown, with
   rank, level, review progress, the day and the savings. "Start a new career" (confirm) resets the roster and career.
   Existing saves started fresh by design (no carry-over from the old version).
@@ -68,17 +88,18 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
 - **Why the growth ignores the department:** growth that followed the favourite stat left the hustle-favouring intern
   behind damage-favouring departments as the levels rose (bot: 2/20 wins at level 16). Sticky notes also gained +0.3
   pierce per level (homing shots hit a second and third foe), which brought the intern level with the others.
-- **Difficulty:** `difficultyFor(level)` = 1 + 0.06 per level past 1, passed to `createRun`; it multiplies foe hp
-  (bosses too) and spawn rate by half of it. `Run.difficulty` is in the snapshot (`RUN_VERSION` 2).
+- **Difficulty:** `difficultyFor(level, rarity, stage, perks)` = (1 + 0.06 x (levels past 1 + rarity levels) + the perks'
+  costs) x the stage's multiplier, passed to `createRun` (interviews use `interviewDifficultyFor`: half the excess).
+  It multiplies foe hp (bosses too) and spawn rate by half of it. `Run.difficulty` is in the snapshot.
 - **Bot check** (30 seeds per starter, `node /tmp/hr.mjs 30 all - <level>`): at levels 1 / 6 / 11 / 16 the three starters
   win about 59% / 73% / 73% / 78%, each within noise (about ±9 points) of the others. The bot drifts a little easier
   as the levels rise; if a human finds high levels too easy, raise `difficultyPerLevel`. Difficulty alone moves a
   starter's win rate a lot (1.2 took the intern from 90% to 60%), so retune with it first.
 - **Packs (built):** `openPack` (`career.ts`) spends `PACKS.price` (1200 gold, about one pack per three runs) on one new
   level 1 card, rolled with the roster's rarity odds (60 / 27 / 10 / 3) and added to the roster, the codex and
-  `Career.owned`. The menu shows the reveal, "Your cards" (everyone owned but the focus, each with "Make focus", which
+  `Career.sealed` (it joins `owned` once its interview is beaten). The menu shows the reveal, "Your cards" (everyone owned but the focus, each with "Make focus", which
   swaps the focus and keeps everyone's level). The two starters not picked at the start are not owned; they are not
-  in packs either (pack ids start at 4), so they never show up again.
+  in packs either (pack ids start at 4), so they never show up again until "Start a new career".
 - **Rarity and difficulty:** a rarer card has more bonus stat points, so `difficultyFor(level, rarity)` adds
   `PACKS.rarityLevels` (1) career levels of difficulty per bonus point past a common's. Bot check (30 seeds per
   department, `node /tmp/hr.mjs 30 all - <level> <rarity>`): uncommon / rare / legend win 70% / 68% / 58% at level 1 and
@@ -126,6 +147,8 @@ The shape the user and I agreed on, to build step 4 and 5 toward (the roster, qu
   perks. Re-run it after changing a perk, and check it for the synergies (overtime with the intern's sticky notes is
   the strongest pairing). Interviews use the same costs, halved like the rest.
 - **Not built in packs:** pity (a guaranteed rare after N packs), duplicates (none possible), a desk cap, selling a card.
+- **Run-shape versions:** `RUN_VERSION` is 5 (2 difficulty, 3 interview, 4 stage and hazards, 5 the server room's vents).
+  Perks are in the roster save (`Coworker.perks`), not the run, and `normalizeSave` keeps only known, distinct ones.
 
 ## The idea in one paragraph
 
@@ -151,6 +174,15 @@ and KingsRoad.
   "HR Department" is the shown title (EN) / "Отдел кадров" (RU).
 - **The solutions to sprites, ids, the sim and bot, run length and starters** (below) were proposed and accepted.
 - **Made public** on 2026-10-28 at the user's request, to test on prod.
+- **A journey, not a menu** (2026-10-30): one focus coworker grown over weeks, one run = one day, no real-time gating.
+  Players start fresh (existing progress did not carry over). Hiring stays, as a collection: gold buys a pack, a card is
+  sealed until the focus beats its interview boss, a lost interview costs nothing and can be retried. Coworkers are
+  cards with powers (rarity, quirks, perks).
+- **Balance is a goal, checked with the bot:** every new thing was tuned so the three starters, every rarity, every
+  stage, every interview boss and every perk land in about the same win-rate band (see the numbers above). Rarity,
+  stage and perks all add difficulty rather than being free power.
+- **Gold only, no real money**, for packs.
+- **Hospital** is a separate game, not part of this one.
 
 ## Shared core: the roster (`src/lib/roster/`, pure, seeded; built)
 
@@ -185,7 +217,7 @@ id; the roster builds on the same idea.
 
 - **Controls:** a floating stick (it appears where the thumb lands), or arrow keys / WASD. The hero attacks on its
   own. Escape pauses. An optional "panic button" is still only an idea.
-- **A run:** about **6 minutes** on normal. The Middle Manager (mini-boss) at 2:30, the Auditor at 5:00, and **the
+- **A run** (a day): about **6 minutes** on normal. The Middle Manager (mini-boss) at 2:30, the Auditor at 5:00, and **the
   audit closes at 7:30**: if the Auditor still stands, the run is lost. Beating the Auditor wins. A typical bot win
   lands around 6:00. Level-ups offer 3 picks (new weapon, weapon level, passive, or a heal / gold when the build is
   full); up to 4 weapons (level 6 max) and 4 passives (level 5 max).
@@ -197,27 +229,31 @@ id; the roster builds on the same idea.
   ergonomic chair (damage taken), power tie (damage).
 - **Foes:** Reply-All Storm (swarm), Monday Blob (slow tank, from 1:15), Meeting Invite (summons reply-alls, from
   1:30), Printer Jam (stationary turret that blocks the hero and spits toner, from 2:00, at most 3), the Middle Manager
-  (charges) and the Auditor (rings of red tape, cc's a chain of reply-alls every third ring).
+  (charges) and the Auditor (rings of red tape, cc's a chain of reply-alls every third ring). Stage foes: the Lunch
+  Monitor (kitchen mini-boss, a charger), the Sysadmin (server room mini-boss, fans of pings). Interview bosses: the
+  Team Lead (charges often), the HR Manager (paperwork fans and rings), the Recruiter (calls in clones). Hazards:
+  coffee spills and microwaves (kitchen), vents (server room).
 - **Suspend and resume (built):** the run is plain JSON, saved to `lab:hr:run:v1` when the page is hidden or closed,
   and whenever a level-up offer appears; the menu then offers "Continue the run". Closing the tab just before dying
   therefore does not dodge the fall. **Walk out** (pause → Walk out) counts as falling. The save is cleared when a run
   ends.
-- **Between runs (not built):** gold and "performance review" XP should raise the coworker's permanent stats and
-  unlock a skill tree. Today the result panel shows time, level, kills and gold, and nothing is kept.
+- **Between runs (built):** see "The career" above. The result panel shows time, level, kills, gold, the review (XP,
+  level-up, promotion) and, after a promotion, the perk picker.
 
 ### Starters
 
-The hero run shipped before the HR loop, with the **3 fixed starters**. The plan for them: performance reviews from day
-one, **burnout on, quitting off** (`stakes: false`) until the HR loop lands. The starters are ordinary coworkers in the
-save, so the HR loop needs no save migration. As of now none of that meta exists (see Next steps, step 4).
+The hero run shipped before the HR loop, with the **3 fixed starters** (ids 1 to 3, common, never change). At the
+start of a career the player picks one; the other two are not owned. Burnout and quitting are still off
+(`stakes: false`). The starters are ordinary coworkers in the roster save, and pack cards are generated beside them
+(ids from 4), so there was no save migration.
 
 ### Sim and bot
 
 As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, rendered on a plain canvas by `src/lib/hr/render/`.
 
 - **Files:** `types.ts`, `balance.ts` (every number), `grid.ts`, `hero.ts` (stats and quirks to numbers), `picks.ts`,
-  `run.ts`; `src/lib/hr/snapshot.ts` saves and resumes a run.
-- **API**, on a fixed timestep `STEP = 1/60`: `createRun(coworker, seed)`, `step(run, { dx, dy })` with the stick at
+  `run.ts`; `src/lib/hr/snapshot.ts` saves and resumes a run; `src/lib/hr/career.ts` is the meta layer around it.
+- **API**, on a fixed timestep `STEP = 1/60`: `createRun(coworker, seed, difficulty = 1, interview = null, stage = "openSpace")`, `step(run, { dx, dy })` with the stick at
   most length 1, `choose(run, index)` while `run.picks` is set (`step` does nothing until then), `abandon(run)`.
 - **Arena:** a walled 1400 × 1400 floor; the camera follows the hero and stops at the walls. No obstacles but printers.
 - **Spatial grid:** 64-unit cells rebuilt every step, for projectile-vs-foe, foe-vs-hero and foe separation.
@@ -230,8 +266,9 @@ As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, rendered on a plai
   taken from each foe; overall, the win rate.
 - **Target:** the bot wins about 50–60% on normal, wins land around 6:00. It is sensible but unhurried; a human
   should do better.
-- **As tuned (30 seeds per starter):** 53% overall, wins at 5:37 to 7:05 (median 6:04). Deaths spread across every
-  foe. By starter: Finance 70%, IT 50%, Interns 40%. About 1 second of CPU per run.
+- **As tuned at level 1, before the career (30 seeds per starter):** 53% overall, wins at 5:37 to 7:05. Today's numbers
+  are in "The career" (level 1 about 59%, rising to about 80% at level 16 as growth outpaces the 6% difficulty step;
+  that drift is known). About 1 to 3 seconds of CPU per run.
 
 ### Rendering and page
 
@@ -243,9 +280,13 @@ As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, rendered on a plai
   nobody sees foes spawn), `cameraFor`, `drawRun` (floor, aura, gems, drop shadows, foes sorted by y, hero, ducks,
   shots, foe shots, falling racks, effects, then arrows to off-screen bosses and the stick), `stickInput` (dead zone
   0.15). The hero is drawn at 2 world units per sprite pixel and mirrored when facing left. **Foes are placeholder
-  shapes** drawn in code (envelope, blob, calendar, printer, two suits).
-- `src/components/hr/HrApp.tsx`: menu (title, how-to, "Continue the run", coworker cards with a pixel portrait,
-  quirks, stats, "Send in"), the result panel. `RunView.tsx`: the canvas loop (fixed-step sim, catch-up capped at
+  shapes** drawn in code (envelope, blob, calendar, printer, and suits in a colour per boss). The floor depends on the
+  stage (`drawFloor`: carpet with wear, kitchen tiles, server panels) and `drawHazards` draws spills, microwaves and
+  vents.
+- `src/components/hr/HrApp.tsx`: the menu (title, how-to, "Continue the run", the choose-a-starter screen, then the
+  focus card with rank, level and review progress, the day and savings, the stage choice, "Open a pack", sealed
+  cards with their interview buttons, "Your cards" with "Make focus", any waiting perk picker, "Start a new career"),
+  the pack reveal, and the result panel (review, perk picker, retry for an interview). `RunView.tsx`: the canvas loop (fixed-step sim, catch-up capped at
   0.1 s), the stick, keys on the window, HUD (clock and next boss, gold, health, XP and level, boss bar), level-up cards,
   pause / walk out, saving the run.
 - `src/lib/hr/i18n.ts`: every string, English and Russian together (`HR_TEXT`), plus `quirkLine` and `clock`.
@@ -264,8 +305,7 @@ As in Tower and KingsRoad: `src/lib/hr/sim/` pure and seeded, rendered on a plai
 ## Stakes ("make hiring matter"; not built)
 
 - A coworker who falls in a run is **burned out** for a number of days (cannot be sent out), and has a chance to
-  **quit for good**, rising with the run's difficulty and falling with their loyalty / level. (There is only one
-  difficulty today.)
+  **quit for good**, rising with the run's difficulty and falling with their loyalty / level.
 - Quitting is permanent and visible: a goodbye line and a gap on the desk. Legends are worth the risk.
 - **Paying to keep someone (decided):** the player can spend gold to cut the quit chance (a raise, a day off), and it
   is expensive: costly enough to compete with hiring and upgrades, so it is a choice made for a legend or a favourite,
@@ -288,19 +328,20 @@ sprites exist.
 - **Colony / dungeon sim.** Needs pathfinding, needs, jobs and emergent events. The office in the HR loop could grow
   into a small colony later.
 
-## Guide for the next session (written 2026-10-28, before the user's first phone playtest)
+## Guide for the next session (written 2026-10-28, extended 2026-10-31 for the career)
 
 Read this if you are picking the game up. It says where things are, how to run and check them, how the sim works, which
 knob answers which complaint, what was tried, and what bites.
 
 ### 1. What to do when the user comes back
 
-1. Ask what they felt on the phone: readable? too easy / hard? which starter? where they died? did the stick feel
-   right? was 6 minutes right? any stutter? Ask for screenshots if something looked wrong.
+1. Ask what they felt on the phone: does the journey feel like one (pace, rewards)? perk choices? the kitchen and server
+   room hazards readable and fair? the interview bosses? the stick and camera? any stutter? Ask for screenshots if
+   something looked wrong.
 2. Place each complaint in the playbook (section 5), change one knob at a time, and check it with the bot over 20 to
    30 seeds per starter so a fix for one end doesn't break the other. Keep the win rate at 50–60% and wins near 6:00
    unless the user asks otherwise.
-3. Before building step 4, ask the open questions (section 8): they are design calls.
+3. Before building the HR loop, burnout or the rename, ask the open questions (section 8): they are design calls.
 4. Verify before reporting: `npm test`, `npm run typecheck`, and for UI changes look at the page (section 2). Commit
    only when asked, to `main`, `type(scope): summary` (`feat(hr): ...`, `feat(roster): ...`), staging only the task's
    files (see `AGENTS.md`). Pushing to `main` deploys to prod through `.github/workflows/deploy.yml` (typecheck, test,
@@ -308,15 +349,26 @@ knob answers which complaint, what was tried, and what bites.
 
 ### 2. Running and checking
 
-- **Tests:** `tests/roster/` (generator, save, appearance) and `tests/hr/` (`run.test.ts` sim, `parts.test.ts` grid /
-  hero numbers / weapons / picks, `snapshot.test.ts`, `render.test.ts` view, camera, stick, sprite baking and copy,
-  `hr-app.test.tsx` the menu, a run, walking out, continuing). Run just these with `npx vitest run tests/hr tests/roster`.
+- **Tests:** `tests/roster/` (generator, save, appearance) and `tests/hr/` (`run.test.ts` sim: base run, interviews,
+  kitchen, server room, perks; `career.test.ts` review, ranks, difficulty, packs, hire, perks, stages, save repair;
+  `parts.test.ts` grid / hero numbers / weapons / picks, `snapshot.test.ts`, `render.test.ts` view, camera, stick,
+  sprite baking and copy, `hr-app.test.tsx` the menu, choosing a career, packs, interviews, stages, perks, a run,
+  walking out, continuing). Run just these with `npx vitest run tests/hr tests/roster`. **Keep every test well under
+  5 s:** CI is slower than a laptop and a test that simulates minutes of play timed out there once (jump `run.time`
+  instead of playing it, as the interview and kitchen tests do).
 - **The bot:**
   ```
   npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/hr.mjs
   node /tmp/hr.mjs 30            # 30 seeds per starter
   node /tmp/hr.mjs 5 interns verbose   # one department, a line per minute
+  node /tmp/hr.mjs 30 all - 11        # starters grown to career level 11 (the first perk on each promotion)
+  node /tmp/hr.mjs 30 all - 6 rare    # pack cards of a rarity instead of the starters
+  node /tmp/hr.mjs 30 all - 6 - recruiter   # an interview against a boss (teamLead, hrManager, recruiter)
+  node /tmp/hr.mjs 30 all - 11 - - serverRoom   # a stage (kitchen, serverRoom)
   ```
+  Arguments: seeds, department or `all`, `verbose` or `-`, career level, rarity or `-`, interview boss or `-`, stage.
+  Win rates move about +-9 points between 30-seed runs, so compare 40 or more seeds before trusting a small change.
+  A run takes up to 8 s when it goes long; run several levels in parallel with `&` and `wait`.
   Rebuild with esbuild after every balance change; the bundle doesn't watch.
 - **The page:** `npm run dev` serves at `http://127.0.0.1:4321/lab/hr` (the base is `/lab`; `/hr` alone is a 404).
   The user may already have a dev server running on 4321 (`astro dev` refuses to start a second one and says so);
@@ -336,12 +388,13 @@ knob answers which complaint, what was tried, and what bites.
 
 ### 3. How the sim works (reference)
 
-- **Tick order** (`run.ts` `step`): fade effects → (stop if over or a pick is waiting) → clock → move hero (and push
-  out of printers) → spawn (bosses on time, the horde by `spawnRate`, printers every 25 s) → index the grid → move foes
+- **Tick order** (`run.ts` `step`): fade effects → (stop if over or a pick is waiting) → clock and grace → move hero (and push
+  out of printers; slowed in a kitchen spill) → spawn (an interview: its boss and a thin horde; a day: bosses on time,
+  the horde by `spawnRate`, printers every 25 s) → tick hazards (microwave rings, vent blasts) → index the grid → move foes
   (timers: summon / shoot / charge; walk at the hero, stop at its edge; knockback fades; slow resets) and separate them
   → index again → fire weapons → move shots → land racks → move foe shots → contact damage → reap the dead (gems, gold,
-  pops; the Auditor's death wins) → collect gems (levels queue picks) → lose at 0 hp or when the audit closes, else
-  offer the next queued pick.
+  pops; the Auditor's death, or an interview boss's, wins) → collect gems (levels queue picks) → get up once with
+  the second wind perk, else lose at 0 hp or when the audit (or the interview) closes, else offer the next queued pick.
 - **Units:** world units; the hero's radius is 12; speeds in units per second; damage per hit, contact damage per
   second (`touch`). Foe hp scales with time by `hpScale`, contact by `touchScale`; bosses don't scale; toner and red
   tape don't scale.
@@ -393,6 +446,19 @@ knob answers which complaint, what was tried, and what bites.
 - **A starter lags:** its signature weapon's `base` and `perLevel` (sticky notes for Interns). Note the starters'
   quirks differ too (Noor's clock-watcher costs 15% XP and Finance still wins most).
 - **Levels come too fast / slow:** `xpToNext`, foe `xp`, `HERO_BASE.magnet`.
+- **The career is too easy or hard at high levels:** `REVIEW.difficultyPerLevel` first (difficulty alone moves a win
+  rate far more than stat growth does); then `PERK_DIFFICULTY`, `PACKS.rarityLevels`.
+- **Journey pace (weeks, not days):** `REVIEW.secondsPerXp`, `winBonus`, `toNextBase`, `toNextPerLevel`, `levelsPerRank`;
+  the pace test in `career.test.ts` asserts about a week to the first promotion.
+- **Packs come too often or rarely:** `PACKS.price` against the gold a run pays (a win about 1000, an early loss a few
+  hundred, times the stage's gold).
+- **A stage is too hard or easy:** its `STAGES` difficulty, then the hazard's numbers (`KITCHEN`, `SERVER_ROOM`: damage,
+  period, count) and the mini-boss in `FOES`. Check the share of damage by source in the bot's report: a hazard
+  should be 10 to 30%.
+- **An interview boss is too hard or easy:** its `FOES` hp (the bot kites ranged bosses, so give them less), the
+  `INTERVIEW` horde (`bossOutShare`) and `closesAt`.
+- **A perk is too strong:** raise its `PERK_DIFFICULTY` (they stack past the sum of their costs) or weaken it; test one
+  alone and all three together.
 - **Hard to read on a phone** (render only, `draw.ts`): `fitView`'s 420 (smaller = zoomed in, but keep the view under
   `SPAWN_DISTANCE.min`, a test checks it), foe drawing sizes (you can draw bigger than the hit radius), `FLOOR` /
   `FLOOR_ALT` colours.
@@ -412,20 +478,37 @@ knob answers which complaint, what was tried, and what bites.
 - **Don't commit build output or driver scripts:** `dist/` is the build; keep Playwright scripts and screenshots in
   `/tmp`.
 - **The bot keeps `heading` in a module variable;** fine for the CLI, don't import `steer` into the app.
+- **Carry-over of a new field:** a field added to `Coworker` (like `perks`) must go through `normalizeCoworker` in
+  `roster/save.ts`, and one added to `Career` through `normalizeCareer`, or an old save loses it or breaks. A field added
+  to `Run` needs a `RUN_VERSION` bump.
+- **Hazards read `run.hazards`, set in `createRun`** from the seed with `random(run)`; a new stage with hazards must
+  keep that deterministic or the replay test breaks.
+- **`finish` in `HrApp` reads `rosterRef` and `careerRef`,** not state, because the run view holds the first closure.
+- **`STARTERS.length` is the id cut-off for the starter screen** (ids above it are pack cards).
 
-### 7. Known rough edges (from the headless check, not yet confirmed by the user)
+### 7. Known rough edges
 
-- Foes are small on a phone (an envelope is about 15 px); the carpet is dim and low contrast.
-- The intern starter is the weakest of the three by the bot, though meant to be the easy one.
-- The hero has no falling animation; the hit flash lasts `HURT_FLASH` (0.15 s).
-- Frame rate was measured only on a desktop CPU (60 fps at 300 foes).
+- The bot drifts easier as the career level rises (about 59% at level 1, about 80% at level 16), and it is weak
+  against a slow ranged boss it kites. A human may find both differently.
+- The intern's win rate varies most between runs of the bot (its sticky notes depend on the build); overtime plus the
+  intern is the strongest perk pairing.
+- Perks stack better than their costs add up (see `PERK_DIFFICULTY`); a three-perk coworker is the least tested.
+- The career has no end: Director is level 26 and nothing happens after it. Gold has one sink (packs), and nothing
+  stops collecting cards (no desk cap, no selling).
+- Everything the career added was checked by tests and the bot, but only the camera fix has been confirmed on a phone
+  by the user; the menu, perk picker, pack reveal, kitchen and server room are untested by a human.
+- The hero has no falling animation; the hit flash lasts `HURT_FLASH` (0.15 s). Foes, bosses and hazards are
+  placeholder shapes.
+- Frame rate was measured only on a desktop CPU (60 fps at 300 foes); the hazards were not measured.
 
-### 8. Open questions for the user (ask before building step 4)
+### 8. Open questions for the user
 
-- What does a run's gold buy: stat points per coworker, a shared upgrade shop, or both? Is gold per coworker or for
-  the whole office?
-- How do performance reviews work: XP from runs raising `level`, a point to spend per level, a skill tree per
-  department? How big should a reviewed coworker's edge be over a fresh one?
-- What is a "day" before the HR loop exists (one run = one day?), and how many days does burnout last?
-- With only 3 starters, should burnout be on at all before hiring exists (all 3 burned out = nothing to play)?
-- Should the run's difficulty scale with the coworker's level, so progress doesn't make runs trivial?
+Answered 2026-10-30 (see "Decided with the user"): gold buys packs (cards), reviews are XP that raises levels with a
+perk per promotion, one run is one day, difficulty scales with the level. Still open:
+
+- The game's name, now that the focus is one coworker.
+- Whether runs per real day should be limited (an energy meter), or stay unlimited.
+- What the end of the journey is (a final boss, a last promotion, a prestige reset).
+- Whether burnout and quitting come back, and when (they need the bench that packs now give).
+- How many cards a player may own (a desk cap), and what happens to the extras (sell, retire).
+- Whether pack odds need pity, and what a duplicate-free collection means for a collector's goal.

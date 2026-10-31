@@ -33,6 +33,7 @@
 - `scripts/hr/playthrough.ts` plays hero runs with a bot for each starter (usage in its header): run it over 20 to 30
   seeds per starter after balance changes.
 - Its copy lives in `src/lib/hr/i18n.ts`, English and Russian together.
+- The meta layer (career, packs, interviews, stages, perks) is `src/lib/hr/career.ts` plus the numbers in `src/lib/hr/sim/balance.ts`; the bot takes a career level, rarity, interview boss and stage (see the roadmap's "Running and checking"). Keep tests short: simulate minutes of play by jumping `run.time`, not by playing it, or CI times out.
 
 ## Copy
 

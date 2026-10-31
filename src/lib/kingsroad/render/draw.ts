@@ -403,49 +403,55 @@ function drawBallista(ctx: CanvasRenderingContext2D, x: number, y: number, tower
   ctx.restore();
 }
 
-/** A fire arrow: the plain arrow, a small flame burning at its head and a few embers blowing off behind. */
+/** A fire arrow: the plain arrow with its head wrapped in a living flame that streams back past the fletching. */
 function drawFireShot(ctx: CanvasRenderingContext2D, shot: Shot, angle: number, time: number): void {
   const flicker = Math.sin(time * 38 + shot.id * 1.7);
+  const wobble = Math.sin(time * 27 + shot.id * 0.9);
   const length = 10;
   drawArrow(ctx, shot.x, shot.y, angle, COLORS.shaft, length);
   ctx.save();
   ctx.translate(shot.x, shot.y);
   ctx.rotate(angle);
-  // The head sits at length * 0.3 + 3 from the middle; the flame hangs off it and streams back.
   const tip = length * 0.3 + 3;
+  // A warm glow, then layered tongues: dark red outside, orange, yellow, and a white-hot heart at the head.
   ctx.globalAlpha = 0.3;
-  circle(ctx, tip - 2, 0, 4.5 + flicker * 0.5, "#ff7a1a");
+  circle(ctx, tip - 5, 0, 8 + flicker, "#ff7a1a");
   ctx.globalAlpha = 1;
-  const tongues: [string, number, number][] = [["#d8421c", 8, 2.6], ["#f6a02a", 5.5, 1.8], ["#ffe08a", 3, 1]];
+  const tongues: [string, number, number][] = [["#d8421c", 13, 3.8], ["#f6a02a", 10, 3], ["#ffd45a", 7, 2.1], ["#fff2b8", 4, 1.2]];
   for (const [color, reach, width] of tongues) {
-    const tail = reach + flicker;
+    const tail = reach + flicker * 2;
+    const sway = wobble * width * 0.5;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(tip, 0);
-    ctx.quadraticCurveTo(tip - tail * 0.5, -width + flicker * 0.4, tip - tail, flicker * 0.8);
-    ctx.quadraticCurveTo(tip - tail * 0.5, width - flicker * 0.4, tip, 0);
+    ctx.moveTo(tip + 2, 0);
+    ctx.quadraticCurveTo(tip - tail * 0.3, -width * 1.3 + sway, tip - tail, sway * 1.5);
+    ctx.quadraticCurveTo(tip - tail * 0.3, width * 1.3 + sway, tip + 2, 0);
     ctx.closePath();
     ctx.fill();
   }
-  for (let i = 0; i < 2; i++) {
-    const phase = (time * 5 + i / 2 + shot.id * 0.37) % 1;
+  // Licks of flame breaking off the tongue, and embers blowing away behind.
+  for (let i = 0; i < 5; i++) {
+    const phase = (time * 6 + i / 5 + shot.id * 0.37) % 1;
     ctx.globalAlpha = 1 - phase;
-    circle(ctx, tip - 6 - phase * 9, Math.sin(i * 2.4 + shot.id) * (1 + phase * 3), 0.9, "#ffc04a");
+    circle(ctx, tip - 8 - phase * 14, Math.sin(i * 2.4 + shot.id) * (1.5 + phase * 5), 1.5 - phase * 0.6, i % 2 ? "#ffc04a" : "#f26a1a");
   }
   ctx.restore();
 }
 
-/** A lune arrow: a thin streak of blue light falling out of the sky onto the foe, brightest at its leading end. */
-function drawLuneShot(ctx: CanvasRenderingContext2D, shot: Shot, angle: number, time: number): void {
-  const total = Math.hypot(shot.toX - shot.fromX, shot.toY - shot.fromY) || 1;
-  const left = Math.min(1, Math.hypot(shot.toX - shot.x, shot.toY - shot.y) / total);
-  // It starts high above the tower and comes down as it nears the foe.
-  const height = 26 * Math.sqrt(left);
+/** A lune arrow: a thin streak of blue light lobbed from the tower to the foe along a curved arc. */
+function drawLuneShot(ctx: CanvasRenderingContext2D, shot: Shot, time: number): void {
+  const dx = shot.toX - shot.fromX;
+  const dy = shot.toY - shot.fromY;
+  const total = Math.hypot(dx, dy) || 1;
+  // How far along the arc it is; the foe walks on, so judge by what is left to cover.
+  const progress = Math.min(1, Math.max(0, 1 - Math.hypot(shot.toX - shot.x, shot.toY - shot.y) / total));
+  const peak = arcPeak(shot.fromX, shot.fromY, shot.toX, shot.toY) * 0.45;
+  const height = Math.sin(Math.PI * progress) * peak;
   const hx = shot.x;
   const hy = shot.y - height;
-  // Points along where it is heading: down, and toward the foe.
-  const heading = Math.atan2((height * 0.9 + 6) + Math.sin(angle) * 8, Math.cos(angle) * 8 + 1);
-  const length = 18 + height * 0.4;
+  // Heading on screen: along the ground, minus how fast it is rising.
+  const heading = Math.atan2(dy - Math.cos(Math.PI * progress) * Math.PI * peak, dx);
+  const length = 20;
   ellipse(ctx, shot.x, shot.y, 3, 1.6, COLORS.shadow);
   ctx.save();
   ctx.translate(hx, hy);
@@ -479,7 +485,7 @@ function drawShot(ctx: CanvasRenderingContext2D, shot: Shot, time: number): void
   if (shot.kind === "archer") {
     const angle = Math.atan2(shot.toY - shot.y, shot.toX - shot.x);
     if (shot.burn > 0) drawFireShot(ctx, shot, angle, time);
-    else if (shot.mark > 0) drawLuneShot(ctx, shot, angle, time);
+    else if (shot.mark > 0) drawLuneShot(ctx, shot, time);
     else drawArrow(ctx, shot.x, shot.y, angle, COLORS.shaft, 10);
   } else if (shot.kind === "ballista") {
     drawArrow(ctx, shot.x, shot.y, Math.atan2(shot.toY - shot.fromY, shot.toX - shot.fromX), "#3a2c22", 18);

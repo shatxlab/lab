@@ -403,9 +403,87 @@ function drawBallista(ctx: CanvasRenderingContext2D, x: number, y: number, tower
   ctx.restore();
 }
 
+/** A fire arrow: a flaming brand hurled at the foe, a ragged tongue of fire streaming behind it. */
+function drawFireShot(ctx: CanvasRenderingContext2D, shot: Shot, angle: number, time: number): void {
+  const flicker = Math.sin(time * 38 + shot.id * 1.7);
+  ctx.save();
+  ctx.translate(shot.x, shot.y);
+  ctx.rotate(angle);
+  ctx.globalAlpha = 0.28;
+  circle(ctx, 0, 0, 8 + flicker, "#ff7a1a");
+  ctx.globalAlpha = 1;
+  // Flames trailing behind, longest in the middle: outer red, then orange, then a yellow core.
+  const tongues: [string, number, number][] = [["#c8301c", 15, 4.6], ["#f28a1e", 11, 3.4], ["#ffe08a", 6.5, 2]];
+  for (const [color, length, width] of tongues) {
+    const reach = length + flicker * 2;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(1, -width);
+    ctx.quadraticCurveTo(-reach * 0.5, -width * 1.3 + flicker, -reach, flicker * 1.5);
+    ctx.quadraticCurveTo(-reach * 0.5, width * 1.3 - flicker, 1, width);
+    ctx.closePath();
+    ctx.fill();
+  }
+  circle(ctx, 1, 0, 3.4, "#ffb23a");
+  circle(ctx, 1.5, 0, 1.8, "#fff4c4");
+  // Sparks thrown off the tail.
+  for (let i = 0; i < 3; i++) {
+    const phase = (time * 5 + i / 3 + shot.id * 0.37) % 1;
+    ctx.globalAlpha = 1 - phase;
+    circle(ctx, -6 - phase * 14, Math.sin(i * 2.4 + shot.id) * (2 + phase * 5), 1.1, "#ffc04a");
+  }
+  ctx.restore();
+}
+
+/** A lune arrow: a blue shooting star dropping out of the sky onto the foe, its tail streaming up behind. */
+function drawLuneShot(ctx: CanvasRenderingContext2D, shot: Shot, angle: number, time: number): void {
+  const total = Math.hypot(shot.toX - shot.fromX, shot.toY - shot.fromY) || 1;
+  const left = Math.min(1, Math.hypot(shot.toX - shot.x, shot.toY - shot.y) / total);
+  // It starts high above the tower and comes down as it nears the foe.
+  const height = 26 * Math.sqrt(left);
+  const hx = shot.x;
+  const hy = shot.y - height;
+  // Tail points back along where it has come from: up, and toward the tower.
+  const back = Math.atan2(-(height * 0.9 + 6) - Math.sin(angle) * 8, -Math.cos(angle) * 8 - 1);
+  const tailLength = 14 + height * 0.5;
+  ellipse(ctx, shot.x, shot.y, 3, 1.6, COLORS.shadow);
+  ctx.save();
+  ctx.translate(hx, hy);
+  ctx.rotate(back);
+  const gradient = ctx.createLinearGradient(0, 0, tailLength, 0);
+  gradient.addColorStop(0, "rgba(200, 225, 255, 0.95)");
+  gradient.addColorStop(0.4, "rgba(90, 150, 255, 0.55)");
+  gradient.addColorStop(1, "rgba(60, 100, 230, 0)");
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(0, -3.2);
+  ctx.lineTo(tailLength, 0);
+  ctx.lineTo(0, 3.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = 0.35 + 0.1 * Math.sin(time * 24 + shot.id);
+  circle(ctx, hx, hy, 7, "#7fb0ff");
+  ctx.globalAlpha = 1;
+  // A four-pointed star head.
+  ctx.fillStyle = "#e8f2ff";
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const r = i % 2 === 0 ? 4.4 : 1.5;
+    const a = (i * Math.PI) / 4 + time * 3;
+    ctx.lineTo(hx + Math.cos(a) * r, hy + Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+  circle(ctx, hx, hy, 1.6, "#ffffff");
+}
+
 function drawShot(ctx: CanvasRenderingContext2D, shot: Shot, time: number): void {
   if (shot.kind === "archer") {
-    drawArrow(ctx, shot.x, shot.y, Math.atan2(shot.toY - shot.y, shot.toX - shot.x), shot.burn > 0 ? "#e8662a" : shot.mark > 0 ? "#8fb8e8" : COLORS.shaft, 10);
+    const angle = Math.atan2(shot.toY - shot.y, shot.toX - shot.x);
+    if (shot.burn > 0) drawFireShot(ctx, shot, angle, time);
+    else if (shot.mark > 0) drawLuneShot(ctx, shot, angle, time);
+    else drawArrow(ctx, shot.x, shot.y, angle, COLORS.shaft, 10);
   } else if (shot.kind === "ballista") {
     drawArrow(ctx, shot.x, shot.y, Math.atan2(shot.toY - shot.fromY, shot.toX - shot.fromX), "#3a2c22", 18);
   } else if (shot.kind === "frost") {

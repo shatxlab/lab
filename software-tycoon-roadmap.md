@@ -4,14 +4,70 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Handover (2026-10-28).** The hit stage is now a release cycle (spec, choose, build, versioned release); see "Next steps" and "The release cycle".
+**Handover (2026-11-01).** The hit stage was rebuilt after the player's second report: it is now a turn per release (plan, build, release card). Read "The plan: a turn per release" first; where it disagrees with anything below, it wins. Not committed yet.
+
+**Earlier handover (2026-10-28).** The hit stage is now a release cycle (spec, choose, build, versioned release); see "Next steps" and "The release cycle".
 
 **Earlier handover (2026-10-23, evening).** The one-product pivot is built end to end: phases 0 and A (the café and the hunt for a
 hit, pushed earlier), then B (the hit is the company), C (internal tools and companion products) and D (endings, Absorb, the
 journey) in this session, and a bot playthrough with a first retune (E). Saves are version 7. The work of this session is
 not committed yet (see "Built: Phases B to E" below). **Start with "Next steps".**
 
+## The plan: a turn per release (2026-11-01; built, not played by a person yet)
+
+The player, on a phone: "impossible, overcrowded, over-explained", "research is done automatically", "feature build happens
+automatically even when options are offered, I don't have enough time to choose", "too many buttons that don't explain what they
+do". The causes, all confirmed in the code: 10 game days to choose (15 s at 1x, 7.5 s at 2x), then the PM picked; the dashboard had
+no height limit, so it crushed the office scene to 0 px on a phone, and the notices drawn over the scene went with it; the cards
+sat below it; the effects of Deep work and Strike back lived in hover tooltips, which phones do not have; "build Scale" and
+"finish roadmap items" named things with no button. Fourteen buttons on one screen.
+
+### The loop
+1. **Plan.** The clock stops, with no timer, as soon as the company is free (`GameState.plan`, `awaitingChoice`; `store.running()`
+   checks it). Three release cards, plus one for your own hands. Every card states its effect in numbers and its cost, on the card.
+2. **Build.** The whole company works on the one release. One bar, one line saying what it will do. It ships itself at 100%.
+3. **Release.** A card with what it did (`released` event, `ReleaseCardDialog`), then the next plan.
+
+Nothing runs on a timer and nothing is chosen for the player. The analysts research only when sent: *Research more* (8 days, +15
+clarity, new cards). There is no spec-writing phase any more.
+
+### What the player decided
+- **Research:** the automatic analyst/PM spec writing was the complaint. It is now the *Research more* button.
+- **One hand of cards** (the player was unsure, so this was our call; easy to change after they play): deep work and Strike back are
+  no longer rows of buttons but cards. Deep work takes the whole turn (no release meanwhile). Strike back is instant and leaves
+  the plan open, and the slot refills with a deep work card.
+- **Several floors:** one release at a time for the whole company, and builds must be harder so a second floor does not make them
+  trivial. `RELEASE_MIN_DAYS` (30, up to double for big items) is a floor on any build at the company's full rate, and
+  `RELEASE_FLOOR_WORK` (+75% work per extra floor) keeps extra floors only a little faster.
+- **Agents are research now:** the dials, bills, incidents and `sim/agents.ts` are gone. *AI copilots* (AI wave, +10% work speed) and
+  *Coding agents* (agent era, +15%) are nodes of the research tree.
+- **Rival and friend stay**, as story events and cards. Their numbers moved to Studio -> Company.
+
+### Screen
+Top bar, office scene (`min-height: 24dvh`, always visible, so the notices are too), `HitPanel`: one line about the hit (tap for
+Studio -> Company, the old dashboard read-only) and the plan, the build or your deep work. Side-product floors keep `ProjectPanel`.
+
+### Two traps found by the bot (keep them fixed)
+- Bugs grew with `target`, so raising targets to make builds harder gave 500 open bugs. `Project.scope` holds the real size, unpadded;
+  `releaseBugs` uses it.
+- The clarity reach factor went below 1 for a vague plan and compounds per release: with no analyst, reach fell from 2M to 2k.
+  `clarityReach` is now a bonus only; vagueness pays in rework and bugs.
+
+### Numbers
+Bot, seeds 1 to 12, 12 years: IPO at 6.6 to 8.8 years, with seed 10 at 10.7 (5.9 to 7.7 before, seeds 1 to 4); a release every 36 to 52 days late in the run, about a
+minute at 1x. The bot now plays cards (`plan` in `playthrough.ts`) but never deep work, and hires one analyst. Saves need no
+migration: `plan` is optional, and an old save's `office.spec` and `agents` are ignored.
+
+### Check after the player's run (`plan.choice` and `plan.research` are in the run log)
+- Is a minute of build about right, or dull? `RELEASE_MIN_DAYS`. Do extra floors still feel worth it? `RELEASE_FLOOR_WORK`.
+- Is one hand right, or do they want deep work beside a release? Do they ever pick deep work or *Research more*?
+- Late game: does every plan feel like a real choice, or does the catalogue run dry into Stability?
+- Dead weight to remove once this is liked: `setRoadmap`, `setWorkstream`, `Product.roadmap`, `Office.workstream` for the hit (a
+  side product's floor still uses `releasePlan`), and the bot's `act2`/`planRoadmap`.
+
 ## Next steps (start here)
+
+**Start with "The plan: a turn per release" above; items 0 and 1 below describe the version it replaced.**
 
 **0. The release cycle replaced the roadmap queue (2026-10-27, pushed as b030d4e).** Read "The release cycle" section first; it has
 the design, what was built, the numbers and what is left. The roadmap dialog, the focus dropdowns and the Roadmap button are

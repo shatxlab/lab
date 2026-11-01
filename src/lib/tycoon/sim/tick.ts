@@ -18,7 +18,6 @@ import { pruneModifiers } from './modifiers'
 import { researchDay } from './research'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import { productsDay } from './products'
-import { agentsMonth } from './agents'
 import { deepWorkDay } from './deepwork'
 import { crisisMonth } from './crisis'
 import { friendMonth } from './friend'
@@ -27,7 +26,7 @@ import { rankingDay, rivalArrives, rivalsDay } from './rivals'
 import { checkStage } from './stages'
 import { moraleDay, trainingDay } from './staff'
 import type { GameState, SimEvent } from './types'
-import { specDay } from './cycle'
+import { planDay } from './cycle'
 import { teamDay } from './teams'
 import { workDay } from './work'
 
@@ -43,10 +42,10 @@ export function advanceDay(state: GameState): void {
   fixesDay(state)
   workDay(state)
   teamDay(state)
-  specDay(state)
   rivalsDay(state)
   nemesisDay(state)
   deepWorkDay(state)
+  planDay(state)
   productsDay(state)
   fitDay(state)
   companionsDay(state)
@@ -72,7 +71,6 @@ export function advanceDay(state: GameState): void {
     nemesisMonth(state)
     friendMonth(state)
     crisisMonth(state)
-    agentsMonth(state)
     recordHistory(state)
     journalMonth(state)
   }

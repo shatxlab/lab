@@ -49,6 +49,8 @@ describe('the roadmap and the workstreams', () => {
     const product = state.products[0]
     setRoadmap(state, 50, ['paid_plans', 'onboarding_flow'])
     setWorkstream(state, state.offices[0].id, 'growth')
+    // The hit itself works from the plan (`sim/cycle.ts`); this is how a side product's floor goes on working.
+    state.signatureId = null
     run(state, TEAM_IDLE_DAYS + 1)
     expect(state.offices[0].project?.itemId).toBe('onboarding_flow')
     const reach = product.reach

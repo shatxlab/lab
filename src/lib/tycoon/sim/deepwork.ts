@@ -57,8 +57,17 @@ export function startDeepWork(state: GameState, kindId: string): Result {
   if (blocker) return fail(blocker)
   const kind = getDeepWork(kindId)!
   state.deepWork = { kind: kind.id, startDay: state.day, days: kind.days }
+  state.lastDeepWork = kind.id
   logEntry(state, 'deepwork.start', `Started deep work: ${kind.name}`, { days: kind.days })
   return OK
+}
+
+/** The chance a piece of work would work out if started now, with no help and no risks taken. */
+export function deepChanceOf(state: GameState, kindId: string): number {
+  const me = you(state)
+  const kind = getDeepWork(kindId)
+  if (!me || !kind) return 0
+  return clamp(DEEP_BASE_CHANCE + skillFor(me, kind) / DEEP_SKILL_DIVISOR, DEEP_MIN_CHANCE, DEEP_MAX_CHANCE)
 }
 
 /** The chance it works out, from your skill and what you have chosen. */

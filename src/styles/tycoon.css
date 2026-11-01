@@ -129,7 +129,8 @@
      push them out of the window, whatever size the canvas inside it reports. */
   flex: 1 1 0;
   height: 0;
-  min-height: 0;
+  /* The office is the game: panels scroll before it may disappear, and the notices drawn over it with it. */
+  min-height: 24dvh;
   overflow: hidden;
 }
 
@@ -1872,26 +1873,77 @@
   margin-top: 6px;
 }
 
-/* ---- spec: the requirements a floor's product manager proposes ---- */
+/* ---- the hit: one line about it, then the one thing the company is doing ---- */
 
-.tycoon-root .spec-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 8px;
+.tycoon-root .hit-panel {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
 }
 
-.tycoon-root .spec-card {
+.tycoon-root .hit-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left));
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+  text-align: left;
+}
+
+.tycoon-root .plan {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  padding: 4px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+}
+
+.tycoon-root .plan-head,
+.tycoon-root .plan-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+
+.tycoon-root .plan-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px;
+}
+
+.tycoon-root .plan-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  height: auto;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-2);
   font-size: 13px;
+  text-align: left;
+  white-space: normal;
 }
 
-.tycoon-root .spec-card button {
-  margin-top: auto;
-  align-self: flex-start;
+.tycoon-root .release-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tycoon-root .release-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
 }

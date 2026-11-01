@@ -2,7 +2,7 @@ import { OVERSHOOT_CAP, POINTS_PER_SKILL, REMOTE_SPEED, SKILL_GAIN, WORK_VARIANC
 import { contractDay } from './contracts'
 import { knowledgeSpeed, learn, type Subject } from './knowledge'
 import { teamSpeed } from './careers'
-import { officeOf, teamOfficeId, workersOf } from './offices'
+import { helpersOf, officeOf, teamOfficeId, workersOf } from './offices'
 import { DISCIPLINE_SPEED, statMultiplier } from './modifiers'
 import { rand } from './rng'
 import { isReady } from './scoring'
@@ -48,7 +48,11 @@ export function teamRate(state: GameState, office: Office = state.offices[0], su
 
 /** Days for an office's team (the first office's by default) to reach `target`; Infinity if a needed discipline has no output. */
 export function estimateDays(state: GameState, target: Skills, office: Office = state.offices[0], subject?: Subject | null): number {
-  const rate = teamRate(state, office, subject)
+  return estimateDaysAt(target, teamRate(state, office, subject))
+}
+
+/** Days to reach `target` at this rate; Infinity if a needed discipline has no output. */
+export function estimateDaysAt(target: Skills, rate: Skills): number {
   let days = 0
   for (const d of DISCIPLINES) {
     if (target[d] <= 0) continue
@@ -81,7 +85,9 @@ function officeWorkDay(state: GameState, office: Office): void {
   const cap = project.kind === 'new' || project.kind === 'update' ? OVERSHOOT_CAP : 1
   const skillGain = SKILL_GAIN * statMultiplier(state, 'skillGain')
   const subject = subjectOf(project)
-  for (const employee of workersOf(state, office)) {
+  // A team release is the whole company's: floors with nothing else to do pitch in.
+  const crew = project.byTeam ? [office, ...helpersOf(state, office)].flatMap((floor) => workersOf(state, floor)) : workersOf(state, office)
+  for (const employee of crew) {
     const wanted = dailyContribution(employee, state, subject)
     const gain = skillGain * employeeSkillGain(state, employee)
     const applied = emptySkills()

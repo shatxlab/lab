@@ -398,6 +398,36 @@ export function estimateUpdateReach(state: GameState, productId: number, feature
   return bigger ? reach * (PROJECT_SIZES[bigger].reach / PROJECT_SIZES[product.size].reach) : reach
 }
 
+/** The fit the product would have after an update with these features, finished exactly on target; for the plan's cards. */
+export function estimateUpdateFit(state: GameState, productId: number, featureIds: readonly string[], office: Office | undefined): number {
+  const product = state.products.find((p) => p.id === productId)
+  if (!product) return 0
+  const target = projectTarget(product.productTypeId, featureIds, 'update', product.size)
+  const plan: Project = {
+    id: 0,
+    name: product.name,
+    kind: 'update',
+    parentId: product.id,
+    productTypeId: product.productTypeId,
+    audienceId: product.audienceId,
+    size: product.size,
+    featureIds: [...featureIds],
+    target,
+    progress: { ...target },
+    startDay: state.day,
+    readyNotified: true,
+    hype: 1,
+    alphaOffered: true,
+    bugRisk: 1,
+    contract: null,
+  }
+  const quality = Math.max(product.quality, projectQuality(state, plan))
+  return Math.min(100, releaseFit(state, plan.productTypeId, plan.audienceId, [...product.featureIds, ...featureIds], quality).fit * pmFitFactor(state, office))
+}
+
+/** How much further a release reaches for how clear its plan was. */
+export const clarityReach = (clarity: number): number => 1 + (SPEC_REACH * Math.max(0, clarity - 50)) / 50
+
 /** Bigger releases move reputation further, both ways. */
 function reputationFromRelease(state: GameState, project: Project, quality: number, share: number): void {
   const change = ((quality - REPUTATION_NEUTRAL_QUALITY) / REPUTATION_DIVISOR) * share * PROJECT_SIZES[project.size].reputation
@@ -503,8 +533,8 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   const fit = updateFit(state, product, project, quality)
   const before = { reach: product.reach, fit: product.fit ?? fit, quality: product.quality }
   product.reach = reachAfterUpdate(state, product, project, quality)
-  // A clear spec finds more people for the same work, a vague one fewer.
-  if (project.spec) product.reach *= 1 + (SPEC_REACH * (project.spec.clarity - 50)) / 50
+  // A clear plan finds more people for the same work. A vague one pays in rework and bugs, not in reach: this compounds.
+  if (project.spec) product.reach *= clarityReach(project.spec.clarity)
   product.fit = fit
   product.peakFit = fit
   if (project.pivotsTo) pivot(state, product, project.pivotsTo)

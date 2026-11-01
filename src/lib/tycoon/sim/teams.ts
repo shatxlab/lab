@@ -6,7 +6,6 @@ import { logEntry } from './journal'
 import { getOffice, hasEuropeOffice, officeName, productInWork, teamOf } from './offices'
 import { euShareOf, interest, lastReleaseDay } from './products'
 import { shipProject, startLocalisation, startUpdate } from './project'
-import { cycleDay } from './cycle'
 import { companionsOf } from './companions'
 import { describeRelease } from './releases'
 import { nextStep } from './roadmap'
@@ -199,7 +198,9 @@ export function teamDay(state: GameState): void {
         if (shipProject(state, undefined, office.id).ok) {
           const note = owner?.releases?.at(-1)
           const text = owner && note ? describeRelease(owner, note) : `a release of ${name}`
-          state.events.push({ type: 'notice', text: `${officeName(state, office)} shipped ${text}.` })
+          // The hit's releases get a card of their own; a side product's are news.
+          if (owner && owner.id === state.signatureId) state.events.push({ type: 'released', productId: owner.id })
+          else state.events.push({ type: 'notice', text: `${officeName(state, office)} shipped ${text}.` })
           logEntry(state, 'team.release', `${officeName(state, office)} shipped ${text}`, { office: officeName(state, office) })
         }
       }
@@ -208,8 +209,8 @@ export function teamDay(state: GameState): void {
     office.idleSince ??= state.day
     const product = ownedProduct(state, office)
     if (!product || office.kind !== 'office' || teamOf(state, office).length === 0 || productInWork(state, product.id, true)) continue
-    // A floor with analysts works in cycles (`sim/cycle.ts`): they write a spec and the player chooses what it builds.
-    if (cycleDay(state, office, product)) continue
+    // The hit moves when the player says: the company's plan (`sim/cycle.ts`).
+    if (product.id === state.signatureId) continue
     if (state.day < nextReleaseDay(state, office, product)) continue
     startRelease(state, office, product)
   }

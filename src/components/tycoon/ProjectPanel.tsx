@@ -8,9 +8,7 @@ import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
 import { formatMoney } from '@/lib/tycoon/format'
 import { useGame, useOffice, useStore } from './context'
 import { cssVars } from './style'
-import { SpecPanel } from './SpecPanel'
-import { ownedProduct } from '@/lib/tycoon/sim/teams'
-import { runsCycle } from '@/lib/tycoon/sim/cycle'
+import { cycleProduct } from '@/lib/tycoon/sim/cycle'
 
 function Bar({ project, discipline }: { project: Project; discipline: Discipline }) {
   const progress = project.progress[discipline]
@@ -75,19 +73,14 @@ export function ProjectPanel() {
   const office = useOffice()
   const project = office.project
 
+  // The hit's team works from the company's plan: the panel for that is `HitPanel`.
+  if (cycleProduct(state) && office.productId === state.signatureId && (!project || project.byTeam)) return null
+
   if (!project) {
-    const owned = ownedProduct(state, office)
-    if (owned && office.spec) return <SpecPanel office={office} product={owned} />
     return (
       <section className="project idle">
         <span className="muted">
-          {owned && office.kind === 'office'
-            ? runsCycle(state, office)
-              ? `${owned.name}: the analysts are about to read the product and write the next spec.`
-              : `${owned.name} has no analyst on this floor, so the team only keeps it fresh. Hire an analyst, and a product manager to lead, to write specs.`
-            : office.kind === 'cafe'
-              ? 'Nothing on the go. Small jobs for clients pay for the coffee, and then for a garage.'
-              : 'No project in progress. The team is burning salary.'}
+          {office.kind === 'cafe' ? 'Nothing on the go. Small jobs for clients pay for the coffee, and then for a garage.' : 'No project in progress. The team is burning salary.'}
         </span>
           <div className="idle-actions">
           <button className="primary" onClick={() => store.openDialog({ kind: 'new-project', officeId: office.id })}>

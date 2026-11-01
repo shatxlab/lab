@@ -36,7 +36,7 @@ import { absorbDesks, acquire, acquisitionBlocker, acquisitionPrice, rivalProduc
 import { capacityOf, loadOf } from '../../src/lib/tycoon/sim/scale.ts'
 import { createInitialState } from '../../src/lib/tycoon/sim/state.ts'
 import { sunsetBlocker, sunsetProduct } from '../../src/lib/tycoon/sim/sunset.ts'
-import { agentCost, availableAgents, levelOf, setAutonomy } from '../../src/lib/tycoon/sim/agents.ts'
+import { awaitingChoice, canResearch, chooseCard, researchPlan, researchPlanBlocker } from '../../src/lib/tycoon/sim/cycle.ts'
 import { setWorkstream } from '../../src/lib/tycoon/sim/teams.ts'
 import { nemesisRival, strikeBack, strikeBackBlocker, strikeBackCost } from '../../src/lib/tycoon/sim/nemesis.ts'
 import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
@@ -206,11 +206,6 @@ function act2(h: Product): void {
     const r = openOffice(state, region)
     if (r.ok) say(`opens a floor (${state.offices.length} offices)`)
   }
-  // The rival: strike back whenever it is allowed and they are not already behind.
-  if (state.nemesis && strikeBackBlocker(state) === null && (nemesisRival(state)?.ratio ?? 0) > 0.75 && state.money > 4 * strikeBackCost(state)) {
-    strikeBack(state)
-    say(`strikes back at ${nemesisRival(state)?.name}`)
-  }
   // Europe: localise once an office is there (the Europe stream does it by itself).
   const target = state.rivals.find((r) => acquisitionBlocker(state, r) === null && state.money > acquisitionPrice(state, r) + reserve * 2)
   if (target) {
@@ -219,11 +214,21 @@ function act2(h: Product): void {
   }
 }
 
-/** Agents: turns each one on at "acts, you review" once it exists and the studio can afford a month of it. */
-function agents(): void {
-  for (const kind of availableAgents(state)) {
-    if (levelOf(state, kind.id) === 0 && state.money > 30 * agentCost(state, kind, 2) + 6 * monthlyBurn(state)) setAutonomy(state, kind.id, 2)
+/** The company's plan: researches a vague one once, then hits back, scales full servers, fixes a buggy product, and otherwise takes the first release. */
+function plan(h: Product): void {
+  if (!awaitingChoice(state)) return
+  const cards = state.plan!.cards
+  if (state.plan!.clarity < 60 && researchPlanBlocker(state) === null) {
+    researchPlan(state)
+    return
   }
+  const release = cards.findIndex((c) => c.kind !== 'deep' && c.kind !== 'strike')
+  const strike = cards.findIndex((c) => c.kind === 'strike')
+  const scale = cards.findIndex((c) => c.kind === 'item' && ALL_ITEMS.find((i) => i.id === c.id)?.workstream === 'scale')
+  const polish = cards.findIndex((c) => c.kind === 'polish')
+  const pick = strike >= 0 && state.money > 4 * strikeBackCost(state) ? strike : scale >= 0 && loadOf(h) > 0.6 ? scale : polish >= 0 && h.bugs > 20 ? polish : release
+  // Hitting back takes no time: the plan is still on the table.
+  if (chooseCard(state, pick).ok && awaitingChoice(state)) plan(h)
 }
 
 function research(): void {
@@ -285,9 +290,14 @@ function botStep(): void {
   }
   const h = hit()
   research()
-  agents()
   if (h) freeASlot(h)
   if (h) act2(h)
+  if (h && !canResearch(state)) {
+    const reader = state.candidates.find((c) => !isBuilder(c) && (c.region ?? 'us') === 'us')
+    const floor = state.offices.find((o) => (o.region ?? 'us') === 'us' && freeDesks(state, o) > 0)
+    if (reader && floor && state.money > hireCost(reader) + 3 * monthlyBurn(state)) hire(state, reader.id, floor.id)
+  }
+  if (h) plan(h)
   if (h && ipoBlocker(state) === null) {
     say(`goes public: ${formatMoney(state.money)} cash`)
     goPublic(state)
@@ -306,6 +316,8 @@ for (let i = 0; i < years * 360 && !state.gameOver; i++) {
   }
 }
 console.log(`\nEnded day ${state.day} (${(state.day / 360).toFixed(1)} years): ${state.gameOver ? JSON.stringify(state.ending) : 'still running'}; stage ${STAGES[state.stage].name}; money ${formatMoney(state.money)}; lifetime ${formatMoney(state.lifetimeRevenue)}`)
+const notes = hit()?.releases ?? []
+if (notes.length > 1) console.log(`Last ${notes.length} releases: one every ${Math.round((notes.at(-1)!.day - notes[0].day) / (notes.length - 1))} days (1 day is 1.5 s at 1x)`)
 void DAYS_PER_MONTH
 void GARAGE_PRODUCT_LIMIT
 void localiseBlocker

@@ -5,9 +5,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { AbsorbDialog } from '@/components/tycoon/AbsorbDialog'
 import { StoreContext } from '@/components/tycoon/context'
 import { EmployeeDialog } from '@/components/tycoon/EmployeeDialog'
-import { HitDashboard } from '@/components/tycoon/HitDashboard'
+import { CompanyTab } from '@/components/tycoon/CompanyTab'
+import { HitPanel } from '@/components/tycoon/HitPanel'
+import { ReleaseCardDialog } from '@/components/tycoon/ReleaseCardDialog'
 import { ReleasesDialog } from '@/components/tycoon/ReleasesDialog'
-import { SpecPanel } from '@/components/tycoon/SpecPanel'
 import { IndustryTab } from '@/components/tycoon/IndustryTab'
 import { NewProjectDialog } from '@/components/tycoon/NewProjectDialog'
 import { ProductsTab } from '@/components/tycoon/ProductsTab'
@@ -201,7 +202,7 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     const store = richStore()
     store.state.signatureId = 501
     store.state.products[0].fit = 82
-    const host = mount(store, <HitDashboard />)
+    const host = mount(store, <CompanyTab />)
     expect(host.textContent).toContain('Anchor')
     expect(host.textContent).toContain('% full')
     expect(host.textContent).toContain('Income')
@@ -221,24 +222,31 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     expect(host.textContent).toContain('fit +4')
   })
 
-  it('a finished spec offers requirements to choose from, and choosing starts the build', () => {
+  it('the plan shows what each card does and costs, and playing one starts the build for everyone', () => {
     const store = richStore()
-    const office = store.state.offices[0]
-    office.productId = 501
-    office.spec = {
-      phase: 'choose',
-      startDay: 0,
-      days: 5,
-      clarity: 80,
-      askedDay: store.state.day,
-      proposals: [{ kind: 'polish', id: 'polish', why: '12 open bugs' }],
-    }
-    const host = mount(store, <SpecPanel office={office} product={store.state.products[0]} />)
-    expect(host.textContent).toContain('what should the next release be?')
+    store.state.offices[0].productId = 501
+    store.state.signatureId = 501
+    store.state.plan = { clarity: 80, cards: [{ kind: 'polish', id: 'polish', why: '12 open bugs' }] }
+    const host = mount(store, <HitPanel />)
+    expect(host.textContent).toContain('What next?')
     expect(host.textContent).toContain('Stability')
-    act(() => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Build this')!.click())
-    expect(store.state.offices[0].spec).toBeUndefined()
+    expect(host.textContent).toContain('open bugs')
+    expect(host.textContent).toMatch(/about \d+ days/)
+    expect(store.running()).toBe(false)
+    act(() => host.querySelector<HTMLButtonElement>('.plan-card')!.click())
+    expect(store.state.plan).toBeUndefined()
     expect(store.state.offices[0].project?.spec?.title).toBe('Stability')
+    expect(host.textContent).toContain('days left')
+  })
+
+  it('a release card shows what the release did', () => {
+    const store = richStore()
+    store.state.products[0].releases = [
+      { version: '1.1.0', title: 'Multiplayer', day: 900, by: 'HQ', clarity: 80, reachBefore: 1000, reachAfter: 1200, fitBefore: 70, fitAfter: 74, qualityBefore: 80, qualityAfter: 82, bugsShipped: 3 },
+    ]
+    const host = mount(store, <ReleaseCardDialog productId={501} />)
+    expect(host.textContent).toContain('+20%')
+    expect(host.textContent).toContain('70 → 74')
   })
 
   it('the move out of the garage lists the other products to keep or sell', () => {

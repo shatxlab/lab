@@ -6,7 +6,6 @@ import { abandonContract, acceptContract } from '@/lib/tycoon/sim/contracts'
 import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
 import { startDeepWork } from '@/lib/tycoon/sim/deepwork'
-import { setAutonomy } from '@/lib/tycoon/sim/agents'
 import { strikeBack } from '@/lib/tycoon/sim/nemesis'
 import { acceptBuyout, declineBuyout, goPublic, retireStudio } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
@@ -14,7 +13,7 @@ import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, inGarage, moveOut, moveToGarage, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { foundStudio } from '@/lib/tycoon/sim/founding'
-import { chooseRequirement, discardSpec } from '@/lib/tycoon/sim/cycle'
+import { awaitingChoice, chooseCard, researchPlan } from '@/lib/tycoon/sim/cycle'
 import { setRoadmap } from '@/lib/tycoon/sim/roadmap'
 import { assignProduct, queueFeatures, setWorkstream } from '@/lib/tycoon/sim/teams'
 import { acquire } from '@/lib/tycoon/sim/rivals'
@@ -49,6 +48,7 @@ export type Dialog =
   | { kind: 'releases'; productId: number }
   | { kind: 'ship'; officeId: number }
   | { kind: 'ready'; officeId: number }
+  | { kind: 'release-card'; productId: number }
   | { kind: 'event' }
   /** The studio reached a new stage of its journey. */
   | { kind: 'stage'; stage: number }
@@ -69,7 +69,7 @@ export type Dialog =
       quality: number
     }
   /** Products, stats and milestones in one place. */
-  | { kind: 'studio'; tab?: 'journey' | 'products' | 'industry' | 'stats' | 'milestones' }
+  | { kind: 'studio'; tab?: 'company' | 'journey' | 'products' | 'industry' | 'stats' | 'milestones' }
   | { kind: 'team' }
   /** One person's details: skills, trait, morale, training. */
   | { kind: 'employee'; id: number }
@@ -169,10 +169,10 @@ export interface Store {
   /** What a floor's team does with its product. */
   setWorkstream(officeId: number, workstream: Workstream): Result
   setRoadmap(productId: number, itemIds: readonly string[]): Result
-  /** Picks which requirement of a floor's spec the team builds. */
-  chooseRequirement(officeId: number, index: number): Result
-  /** Sends a floor's spec back to the analysts. */
-  discardSpec(officeId: number): Result
+  /** Plays a card of the company's plan. */
+  chooseCard(index: number): Result
+  /** Sends the analysts back to the numbers: days pass, and the plan comes back clearer. */
+  researchPlan(): Result
   /** Queues the features of a product's next release. */
   queueFeatures(productId: number, featureIds: readonly string[]): Result
   /** Makes a senior analyst the product manager of their office. */
@@ -184,7 +184,6 @@ export interface Store {
   /** Starts a piece of deep work: you build part of the hit by hand. */
   startDeepWork(kindId: string): Result
   /** Sets how much freedom an AI agent has: 0 (off) to 3 (unattended). */
-  setAgent(kindId: string, level: number): Result
   /** Spends weeks of income on a campaign against your rival's customers. */
   strikeBack(): Result
   /** Sells the studio to the company that made an offer: the run ends. */
@@ -225,7 +224,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     if (result.ok) sfx.play(sound)
     return result
   }
-  const running = () => speed.value > 0 && dialog.value === null && !state.gameOver
+  const running = () => speed.value > 0 && dialog.value === null && !state.gameOver && !awaitingChoice(state)
 
   /** Describes a command from the state the player saw, runs it, and writes it to the run's log if it worked. */
   const logged = <R extends Result>(describe: () => Decision, run: () => R): R => {
@@ -285,8 +284,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
         if (event.type === 'breakout') dialogs.push({ kind: 'breakout', productId: event.productId })
         if (event.type === 'stage') dialogs.push({ kind: 'stage', stage: event.stage })
         if (event.type === 'era') dialogs.push({ kind: 'era', era: event.era })
+        if (event.type === 'released') dialogs.push({ kind: 'release-card', productId: event.productId })
         if (event.type === 'breakout') sfx.play('hit')
         if (event.type === 'era') sfx.play('era')
+        if (event.type === 'released') sfx.play('ship')
         if (event.type === 'stage') sfx.play('milestone')
       }
       const ready = events.filter((e) => e.type === 'projectReady')
@@ -316,7 +317,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
         carryMs -= MS_PER_DAY
         advanceDay(state)
         advanced = true
-        if (handleEvents(drainEvents(state))) {
+        // A dialog or a plan waiting for the player stops the clock in the same frame.
+        if (handleEvents(drainEvents(state)) || !running()) {
           carryMs = 0
           break
         }
@@ -557,12 +559,12 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return cue(changed(logged(() => decisions.setWorkstream(state, officeId, workstream), () => setWorkstream(state, officeId, workstream))), 'click')
     },
 
-    chooseRequirement(officeId, index) {
-      return cue(changed(logged(() => decisions.chooseRequirement(state, officeId, index), () => chooseRequirement(state, officeId, index))), 'click')
+    chooseCard(index) {
+      return cue(changed(logged(() => decisions.chooseCard(state, index), () => chooseCard(state, index))), 'click')
     },
 
-    discardSpec(officeId) {
-      return cue(changed(logged(() => decisions.discardSpec(state, officeId), () => discardSpec(state, officeId))), 'click')
+    researchPlan() {
+      return cue(changed(logged(() => decisions.researchPlan(state), () => researchPlan(state))), 'click')
     },
 
     setRoadmap(productId, itemIds) {
@@ -589,10 +591,6 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     startDeepWork(kindId) {
       return cue(changed(logged(() => decisions.startDeepWork(state, kindId), () => startDeepWork(state, kindId))), 'click')
-    },
-
-    setAgent(kindId, level) {
-      return cue(changed(logged(() => decisions.setAgent(state, kindId, level), () => setAutonomy(state, kindId, level))), 'click')
     },
 
     strikeBack() {

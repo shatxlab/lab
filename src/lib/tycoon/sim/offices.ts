@@ -92,6 +92,18 @@ export function workersOf(state: GameState, office: Office): Employee[] {
   return teamOf(state, office).filter((e) => !away.has(e.id))
 }
 
+/** The other floors on this floor's product with nothing of their own to do: they lend a hand on its team release. */
+export function helpersOf(state: GameState, office: Office): Office[] {
+  if (office.productId === undefined) return []
+  return state.offices.filter((o) => o !== office && o.kind === 'office' && o.productId === office.productId && !o.project)
+}
+
+/** The floors that work on the hit and are free to, or building it. */
+export function hitFloors(state: GameState): Office[] {
+  if (state.signatureId === null) return []
+  return state.offices.filter((o) => o.kind === 'office' && o.productId === state.signatureId && teamOf(state, o).length > 0 && (!o.project || o.project.parentId === state.signatureId))
+}
+
 /** Puts someone on the team of another office's project (or back on their own office's with `null`). They keep their desk. */
 export function assignTeam(state: GameState, employeeId: number, officeId: number | null): Result {
   const employee = state.employees.find((e) => e.id === employeeId)

@@ -17,10 +17,8 @@ import { isReady } from '@/lib/tycoon/sim/scoring'
 import { adjustMorale } from '@/lib/tycoon/sim/morale'
 import { changeBond, friendLeaves, friendOf, friendReturns, friendStays } from '@/lib/tycoon/sim/friend'
 import { rally, rallyCost, stepDown } from '@/lib/tycoon/sim/crisis'
-import { incidentHits, rollbackCost } from '@/lib/tycoon/sim/agents'
 import { contractorCost, pairBlocker, steerDeepWork } from '@/lib/tycoon/sim/deepwork'
 import { DEEP_WORK } from './deepwork'
-import { AGENT_KINDS } from './agents'
 import { addModifier } from '@/lib/tycoon/sim/modifiers'
 import { pick, rand } from '@/lib/tycoon/sim/rng'
 import { DISCIPLINES, type Discipline, type GameState, type Office, type Project } from '@/lib/tycoon/sim/types'
@@ -743,41 +741,6 @@ export const SCRIPTED_EVENTS: readonly RandomEvent[] = [
         },
       }),
     ],
-  },
-
-  {
-    id: 'agent_incident',
-    title: 'An agent went off script',
-    weight: 1,
-    when: (s) => s.agents !== undefined,
-    text: ({ data }) => {
-      const kind = AGENT_KINDS[data.kind]
-      return `The ${kind?.name.toLowerCase() ?? 'agent'} ${kind?.incident ?? 'did something unexpected'}. It has not noticed.`
-    },
-    choices: ({ state, data }) => {
-      const kind = AGENT_KINDS[data.kind]
-      return [
-        choice(state, {
-          label: 'Roll it back and review the work',
-          cost: rollbackCost(state),
-          note: 'nothing is lost; the agent stays on',
-          apply: () => `You roll it back. The ${kind?.name.toLowerCase() ?? 'agent'} carries on, supervised for a day.`,
-        }),
-        choice(state, {
-          label: 'Let it ride',
-          note: 'free, and it will cost you',
-          apply: () => (kind ? incidentHits(state, kind) : 'Nothing happens.'),
-        }),
-        choice(state, {
-          label: 'Pull the plug on it',
-          note: 'it goes off; turn it back on when you trust it',
-          apply: () => {
-            if (kind && state.agents) state.agents[kind.id] = 0
-            return `The ${kind?.name.toLowerCase() ?? 'agent'} is switched off.`
-          },
-        }),
-      ]
-    },
   },
 
   {

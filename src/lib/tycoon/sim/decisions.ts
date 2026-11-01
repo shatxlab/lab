@@ -3,7 +3,6 @@ import { getFeature } from '@/lib/tycoon/data/features'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getResearch } from '@/lib/tycoon/data/research'
 import { getDeepWork } from '@/lib/tycoon/data/deepwork'
-import { AUTONOMY, getAgentKind } from '@/lib/tycoon/data/agents'
 import { strikeBackCost } from './nemesis'
 import { getWorkItem, WORKSTREAM_INFO } from '@/lib/tycoon/data/workstreams'
 import { title } from './careers'
@@ -160,11 +159,6 @@ export const decisions = {
     return ['deepwork.pick', `Chose deep work: ${kind?.name ?? kindId}`, { kind: kindId, days: kind?.days ?? 0, insight: Math.round(state.insight) }]
   },
 
-  setAgent(state: GameState, kindId: string, level: number): Decision {
-    const kind = getAgentKind(kindId)
-    return ['agent.set', `${kind?.name ?? 'An agent'}: ${AUTONOMY[level]?.name ?? level}`, { kind: kindId, level, before: state.agents?.[kindId] ?? 0, employees: state.employees.length }]
-  },
-
   strikeBack(state: GameState): Decision {
     const rival = state.rivals.find((r) => r.id === state.nemesis?.rivalId)
     return ['nemesis.strike', `Went after ${rival?.name ?? 'the rival'}'s customers`, { cost: strikeBackCost(state), ratio: Math.round((rival?.ratio ?? 0) * 100) / 100 }]
@@ -208,15 +202,13 @@ export const decisions = {
     return ['team.workstream', `${officeLabel(state, officeId)}: ${WORKSTREAM_INFO[workstream].name}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), workstream }]
   },
 
-  chooseRequirement(state: GameState, officeId: number, index: number): Decision {
-    const office = getOffice(state, officeId)
-    const product = office && ownedProduct(state, office)
-    const proposal = office?.spec?.proposals[index]
-    return ['team.spec.choice', `${officeLabel(state, officeId)}: ${proposal ? describeProposal(proposal).title : 'a requirement'}${product ? ` for ${product.name}` : ''}`, { office: officeLabel(state, officeId), requirement: proposal?.id ?? '', clarity: office?.spec?.clarity ?? 0 }]
+  chooseCard(state: GameState, index: number): Decision {
+    const card = state.plan?.cards[index]
+    return ['plan.choice', `Chose ${card ? describeProposal(card).title : 'a card'}`, { kind: card?.kind ?? '', card: card?.id ?? '', clarity: state.plan?.clarity ?? 0 }]
   },
 
-  discardSpec(state: GameState, officeId: number): Decision {
-    return ['team.spec.discard', `${officeLabel(state, officeId)} sent the spec back`, { office: officeLabel(state, officeId) }]
+  researchPlan(state: GameState): Decision {
+    return ['plan.research', 'Sent the analysts back to the numbers', { clarity: state.plan?.clarity ?? 0 }]
   },
 
   setRoadmap(state: GameState, productId: number, itemIds: readonly string[]): Decision {

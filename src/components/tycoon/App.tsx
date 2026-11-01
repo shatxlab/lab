@@ -6,7 +6,7 @@ import { CashBanner } from './CashBanner'
 import { DialogHost } from './DialogHost'
 import { OfficeTabs } from './OfficeTabs'
 import { ActiveFixes } from './FixControls'
-import { HitDashboard } from './HitDashboard'
+import { HitPanel } from './HitPanel'
 import { ProjectPanel } from './ProjectPanel'
 import { Toasts } from './Toasts'
 import { TopBar } from './TopBar'
@@ -36,7 +36,7 @@ export function App({ store }: { store: Store }) {
           </div>
         </div>
         <OfficeTabs />
-        <HitDashboard />
+        <HitPanel />
         <ActiveFixes />
         <ProjectPanel />
         <DialogHost />

@@ -1,4 +1,5 @@
 import { AbsorbDialog } from './AbsorbDialog'
+import { ReleaseCardDialog } from './ReleaseCardDialog'
 import { ReleasesDialog } from './ReleasesDialog'
 import { useSignal, useStore } from './context'
 import { BreakoutDialog, EraDialog, GameOverDialog, OfferDialog, ReadyDialog, ResultDialog, StageDialog } from './dialogs'
@@ -19,6 +20,8 @@ export function DialogHost() {
       return <NewProjectDialog updateOf={dialog.updateOf} officeId={dialog.officeId} grow={dialog.grow} />
     case 'releases':
       return <ReleasesDialog productId={dialog.productId} />
+    case 'release-card':
+      return <ReleaseCardDialog productId={dialog.productId} />
     case 'queue':
       return <NewProjectDialog updateOf={dialog.productId} queue />
     case 'ship':

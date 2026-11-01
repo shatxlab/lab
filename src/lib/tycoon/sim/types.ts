@@ -151,6 +151,8 @@ export interface Project {
   polishes?: boolean
   /** A release the product's own team started (`sim/teams.ts`): it ships by itself when every bar is full. */
   byTeam?: boolean
+  /** What a team release really adds, in points: bugs come from this, not from the extra work of a bigger company. */
+  scope?: number
   /** The spec a floor's product manager wrote for this release (`sim/cycle.ts`); it names the version and sets how much rework the build needs. */
   spec?: ReleaseSpec
   /** Client work: who it is for, what it pays on delivery, and when it is due. Null for everything else. */
@@ -167,27 +169,25 @@ export interface ReleaseSpec {
   bump: Bump
   /** How clear the spec was, 0..100: it sets the rework and the bugs of the build, and a little of the reach it wins. */
   clarity: number
+  /** What the card said it would do, to show while it is built. */
+  promise?: string
 }
 
-/** A requirement a floor's product manager proposes for the next release. `id` is a feature id, a roadmap item id or a step. */
+/** A card in the company's plan: a release, or something for your own hands. `id` is a feature id, a roadmap item id, a step or a kind of deep work. */
 export interface Proposal {
-  kind: 'feature' | 'item' | 'polish' | 'compliance' | 'localise'
+  kind: 'feature' | 'item' | 'polish' | 'compliance' | 'localise' | 'deep' | 'strike'
   id: string
   /** Why the analysts think so, in a sentence, from the product's own numbers. */
   why: string
 }
 
-/** A floor's spec in the making: the analysts read the product, the product manager writes it, then the player chooses. */
-export interface Spec {
-  phase: 'writing' | 'choose'
-  startDay: number
-  /** Days the writing takes; the choice then waits for the player. */
-  days: number
+/** What the company does next: the cards on the table. The clock stops until the player picks one (`sim/cycle.ts`). */
+export interface Plan {
   clarity: number
-  /** Set once the writing is done. */
-  proposals: Proposal[]
-  /** The day the choice was put to the player; the product manager picks for them after a while. */
-  askedDay?: number
+  /** Empty while the analysts research. */
+  cards: Proposal[]
+  /** The player sent the analysts back to the numbers: the clock runs until this day, then new cards are dealt. */
+  researchUntil?: number
 }
 
 /** A line in a product's release history. */
@@ -411,6 +411,8 @@ export type SimEvent =
   | { type: 'randomEvent' }
   /** A bigger company offered to buy the studio (see `GameState.exit`). */
   | { type: 'offer' }
+  /** The hit's team shipped a release: time to show what it did. */
+  | { type: 'released'; productId: number }
   /** Passive news for a toast; `sound` asks the UI to play a jingle with it. */
   | { type: 'notice'; text: string; sound?: NoticeSound }
 
@@ -432,8 +434,6 @@ export interface Office {
   workstream?: Workstream
   /** The day the team ran out of work, to give the player a few days before the next release starts by itself. */
   idleSince?: number
-  /** The spec this floor's product manager is writing, or waiting on the player to choose from (`sim/cycle.ts`). */
-  spec?: Spec
 }
 
 /**
@@ -548,10 +548,10 @@ export interface GameState {
   nemesesBeaten?: number
   /** The piece of deep work you are on, if any; see `sim/deepwork.ts`. */
   deepWork?: DeepWork
-  /** How much freedom each AI agent has (0 to 3); a missing one is off. See `sim/agents.ts`. */
-  agents?: Record<string, number>
-  /** For a while the agents' bill is multiplied: a runaway loop. */
-  billSpike?: { until: number; mult: number }
+  /** The last piece of deep work you took on, so the next plan offers something else. */
+  lastDeepWork?: string
+  /** What the company does next, while that is up to the player; see `sim/cycle.ts`. */
+  plan?: Plan
   /** Your oldest friend and what became of them; see `sim/friend.ts`. */
   friendArc?: FriendArc
   /** Months in a row the company has doubted you, and whether you have rallied it once; see `sim/crisis.ts`. */

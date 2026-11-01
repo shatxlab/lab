@@ -49,6 +49,8 @@ export function productWorkBlocker(state: GameState, office: Office, product: Pr
 export function updateBlocker(state: GameState, office: Office, product: Product, byTeam = false): string | null {
   const busy = productWorkBlocker(state, office, product, byTeam)
   if (busy) return busy
+  // The company's own releases are paced by the build itself.
+  if (byTeam) return null
   const wait = UPDATE_MIN_AGE_DAYS - (state.day - lastReleaseDay(product))
   return wait > 0 ? `Wait ${wait} more day${wait === 1 ? '' : 's'}` : null
 }

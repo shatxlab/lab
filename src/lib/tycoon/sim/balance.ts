@@ -715,24 +715,6 @@ export const RALLY_CASH_SHARE = 0.25
 export const RALLY_MORALE = 20
 export const RALLY_SETBACK = 0.2
 
-// AI agents
-/** An agent's bill grows with the team it serves: one plus a share of this many people. */
-export const AGENT_COST_PEOPLE = 8
-/** Safeguards that cut the chance of an incident: finished roadmap items on the hit, and the most they can cut. */
-export const AGENT_OVERSIGHT: Record<string, number> = { observability: 0.3, test_automation: 0.2, chaos_testing: 0.15 }
-export const AGENT_OVERSIGHT_CAP = 0.6
-/** Rolling back an incident costs this many days of everything the agents cost. */
-export const AGENT_ROLLBACK_DAYS = 12
-/** What an incident does if you let it ride. */
-export const AGENT_BUGS = 10
-export const AGENT_QUALITY_LOSS = 3
-export const AGENT_INSIGHT_LOSS = 20
-export const AGENT_FIT_LOSS = 4
-/** Of the incidents, this share also run up the bill (a loop that never stops): the bill multiplies for these days. */
-export const AGENT_RUNAWAY_SHARE = 0.25
-export const AGENT_RUNAWAY_MULT = 3
-export const AGENT_RUNAWAY_DAYS = 20
-
 // Deep work: the founder builds the hit's flagship pieces by hand
 /** The chance of success is this, plus your skill over the divisor, plus help, minus the bold penalty; never outside the limits. */
 export const DEEP_BASE_CHANCE = 0.5
@@ -749,13 +731,15 @@ export const DEEP_CONTRACTOR_DAYS = 8
 export const DEEP_FRIEND_BOND_MIN = 50
 export const DEEP_FRIEND_BOND_GAIN = 4
 
-/* The release cycle (`sim/cycle.ts`): analysts and the product manager write a spec, then the team builds it. */
-/** Days a spec takes to write at no clarity; clearer teams are faster, down to the minimum. */
-export const SPEC_BASE_DAYS = 12
-export const SPEC_MIN_DAYS = 4
-/** Days the player has to choose before the product manager picks for them. */
-export const SPEC_DECIDE_DAYS = 10
-/** How many requirements a spec proposes. */
+/* The release cycle (`sim/cycle.ts`): the player picks a card, the whole company builds it, the release shows what it did. */
+/** Sending the analysts back to the numbers takes this many days and makes the plan this much clearer. */
+export const PLAN_RESEARCH_DAYS = 8
+export const PLAN_RESEARCH_CLARITY = 15
+/** However big the company, a release of one unit of work takes at least this many days. */
+export const RELEASE_MIN_DAYS = 30
+/** Each floor past the first takes on this share more work: a bigger company builds bigger releases, so it is only a little faster. */
+export const RELEASE_FLOOR_WORK = 0.75
+/** How many release cards a plan deals; a card for your own hands comes on top. */
 export const SPEC_PROPOSALS = 3
 /** A vague spec makes the build this share bigger and its bugs this share likelier, at clarity 0; none at clarity 100. */
 export const SPEC_REWORK = 0.6

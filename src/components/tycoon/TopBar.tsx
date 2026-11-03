@@ -1,4 +1,5 @@
 import { getStage } from '@/lib/tycoon/data/stages'
+import { ipoBlocker } from '@/lib/tycoon/sim/exit'
 import { netPerDay } from '@/lib/tycoon/sim/economy'
 import { deskCount } from '@/lib/tycoon/sim/offices'
 import { researchDaysLeft } from '@/lib/tycoon/sim/research'
@@ -53,6 +54,7 @@ export function TopBar() {
           Research{researchDaysLeft(state) !== null && <small> · {researchDaysLeft(state)}d</small>}
         </button>
         <button onClick={() => store.openDialog({ kind: 'studio' })}>Studio</button>
+        {ipoBlocker(state) === null && <button className="ipo-ready" onClick={() => store.openDialog({ kind: 'ipo' })}>Ring the bell · IPO</button>}
         <button onClick={() => store.openDialog({ kind: 'menu' })}>Menu</button>
       </div>
     </header>

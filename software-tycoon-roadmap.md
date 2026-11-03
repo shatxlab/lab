@@ -4,6 +4,12 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
+**Handover (2026-11-03; Stage 0 implemented locally, uncommitted).** The player completed the release-turn version
+through IPO, sale, retirement and a fourth founding. Their latest decisions supersede the old clock-stopping loop.
+Read **"Operating a company: implementation plan"** and **"Stage 0 built and checked"** first. Founder continuity,
+café furniture, Studio overflow and IPO discovery are fixed. Operating/economy mechanics are unchanged: the global
+release turn remains until Stage 2. No commits, pushes or deployments. Next proposed work is Stage 1, after approval.
+
 **Handover (2026-11-01).** The hit stage was rebuilt after the player's second report: it is now a turn per release (plan, build, release card). Read "The plan: a turn per release" first; where it disagrees with anything below, it wins. Not committed yet.
 
 **Earlier handover (2026-10-28).** The hit stage is now a release cycle (spec, choose, build, versioned release); see "Next steps" and "The release cycle".
@@ -67,7 +73,9 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
-**Start with "The plan: a turn per release" above; items 0 and 1 below describe the version it replaced.**
+**Current priority (2026-11-03): follow "Operating a company: implementation plan" below.** The player has supplied
+the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
+again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
 **0. The release cycle replaced the roadmap queue (2026-10-27, pushed as b030d4e).** Read "The release cycle" section first; it has
 the design, what was built, the numbers and what is left. The roadmap dialog, the focus dropdowns and the Roadmap button are
@@ -102,6 +110,307 @@ when the PM chose unasked. Look at:
 - A version 6 save loads with its directions mapped to workstreams, but it has no hit roadmap and may be past stages whose
   goals changed; fine for a test, not worth migrating further.
 - Researches about running many products (licensing, the portfolio) were not reworked; they still exist.
+
+## Operating a company: implementation plan (2026-11-03; not implemented)
+
+### Scope and authority
+
+This records the latest player discussion and an inspection of the actual implementation, initially on a clean `main`.
+The planning task changed only this roadmap; the subsequently authorised Stage 0 implementation is recorded below.
+This section wins where earlier design records disagree. Older sections remain as implementation history.
+
+**The target:** operate limited capacity across concurrent company responsibilities and initiatives, understand
+what the work accomplishes, and build a persistent founder career. Do not replace one release choice with ten
+repetitive floor choices, or five permanent assignments that reduce the game to watching income compound.
+
+### Agreed decisions (do not reopen without a concrete implementation problem)
+
+- One floor is one delivery team; assign the whole team, not percentages of its individual people.
+- Profession leads manage their profession: a dev lead reviews/promotes developers, a design lead designers, etc.
+  Coverage can initially cross the company; a local profession lead takes over their floor when appointed.
+  Exact coverage/appointment rules are a design proposal to validate, not a reason to add another dropdown per employee.
+- Leads operate automatically under company policy. Their management skill should matter; automation must not
+  become unreliable busywork for the player. Manual employee inspection remains optional.
+- Separate specialist progression (Senior -> Staff -> Principal) from leadership. Not every senior wants to manage.
+  An ambitious senior blocked by an occupied lead position can eventually leave, with warning and response options.
+  Extra lead posts require genuine organisational scope; do not invent empty posts as a retention exploit.
+- Shared ecosystem workstreams serve the flagship and related companion products; e.g. a Data Platform plus an AI
+  companion. Not a return to an unrelated product portfolio, nor a separate upkeep team for every companion.
+- Standing responsibilities coexist with finite initiatives. No task queues, no automatic selection deadline,
+  and no global pause while choosing the next roadmap task. Other teams and the business continue.
+- Growth has visible, concrete requirements. Sustained neglect first slows growth, then can cause warned,
+  recoverable deterioration and user losses. Healthy products should retain organic momentum.
+- IPO still ends this company's chapter. Announce eligibility and make the achievement meaningful/discoverable.
+- Continuing a successful journey preserves founders' identities/appearance; ask only for the new company name.
+- Personal fortune, career standing and company operating capital are different. Choose the next investment and
+  ambition together. Neither the flat $150K cap nor an automatic $100M deposit is the intended design.
+- One floor uses its floor scene; two or more purchased floors use building-only presentation. Selecting a floor
+  selects its operations context, not an interior scene. Remove Team "Show" and obsolete per-person desk controls.
+- Prototype desktop building-left/operations-right; mobile must stay usable without squeezing that arrangement.
+- Simplify Studio, fold post-hit product actions into operations, audit research, fix Industry modal scrolling,
+  and give the founders a café-specific table with naturally positioned cups.
+
+### Evidence from the supplied run
+
+Source: the player's 2026-11-03 version-7 journal export, 1,812 entries over 5,418 days. It is an event journal,
+**not an importable full save**. Do not commit the raw log or manufacture a saved state from its summary.
+
+- Bright Interactive: 111 employee promotion actions versus 36 `plan.choice` actions; 120 people and 10 offices at
+  IPO. Strong evidence that individual reviews dominate interaction at scale.
+- Wren reached 11,526,076 users; IPO snapshot income was $2,412,957/day, valuation $10,639,530,505. Monthly snapshots
+  miss that final peak ($2,283,649/day), so do not use the top-level `peakIncome` as definitive career peak.
+- Ember Gate: sold from the garage, so do not force it through post-hit office operations just to support this redesign.
+- Halcyon: two hits, Ivory and Meridian; three shipped products, one retired; ended with 12 employees. Migration
+  must support existing multiple-hit/side-product states, not assume only one live product exists.
+- Chapter 4 begins immediately at the export's end. Summary company stats reset while journal/tenure/world persist.
+  Telemetry should label career and chapter scopes explicitly.
+- The player's key complaint: income/reach grow without a clear understanding of what operating tasks change.
+  This needs both causal explanations and consequential simulation, not tooltips alone.
+
+### Code audit: retain, replace, and watch
+
+| Area | What exists now | Implication |
+|---|---|---|
+| Clock and plans | `store.ts: running()` stops for **any dialog** and `awaitingChoice`; `sim/cycle.ts` owns one `state.plan` | Removing one pause check alone is not a parallel-operations implementation. Routine planning/results must be nonmodal. Keep intentional pause and deliberate blocking decisions explicit. |
+| Company-wide builds | `cycle.ts` chooses one lead floor, sums helper output and scales target by extra floors and minimum days; `work.ts` borrows workers via `offices.ts: helpersOf` | Replace implicit whole-company labour and floor-count work inflation with explicit assignment accounting. An employee cannot contribute to two streams on the same day. Recalculate ETAs accordingly. |
+| Older parallel engine | `teams.ts` still has per-office projects/releases/workstreams, but `teamDay` skips automatic starts on the signature product | Reuse project execution and effects, not the old ranked queue or automatic plan/spec selection. Do not simply expose the old workstream dropdown. |
+| Ownership | `teams.ts: assignProduct` removes another office's ownership; `offices.ts` also separates desk `officeId` and remote `teamId` with a speed penalty in `work.ts` | Product ownership cannot represent shared ecosystem streams. Simplify physical/team membership while preserving capacity, regions, hiring and acquisition placement. Migrate remote assignments deliberately before removing desk controls. |
+| Careers | `careers.ts: leadOf` picks any highest-level builder on a floor, irrespective of profession; Junior/Mid/Senior/Lead is one numeric ladder in `balance.ts`; promotions are individual actions | Profession leadership and IC levels need explicit representation, not more values appended to `LEVELS` (which would make specialists count as leads). Existing morale/readiness/departure hooks are reusable. |
+| Growth | `scale.ts: growWorld` compounds healthy hits daily at `HIT_GROWTH_RATE=0.003`; built items persistently add capacity/pay/reach; `fit.ts` already models neglect | Preserve organic demand, fit, retention and constraints, but expose their causes and connect standing capacity to a bounded service level. Don't apply another unbounded growth multiplier per floor. |
+| Research | `research.ts` uses a single paid calendar timer, independent of employee capacity | If research becomes a staffed stream, explicitly replace/integrate the timer; do not leave a second free path. Distinguish technology research, audience analysis and people-management skill. |
+| Ecosystem | `companions.ts` supports Reach/Keep products with health and upkeep dependence, two shared side-product slots; `data/companions.ts` has six templates but no AI companion | Reuse health/relationship hooks; add type-appropriate initiatives and explicit costs. Preserve existing companions/side products rather than deleting them. |
+| Growth/actions | `ProductsTab.tsx` owns grow/update/promote/localise/fix/retire/licence actions; `lifecycle.ts`, `project.ts`, `unlocks.ts` implement them | Move capabilities to operations before removing this tab. Pre-hit project hunting remains. Existing stage-based size locks aren't the new concrete operating-readiness gates. |
+| Scene switching | `App.tsx` is a vertical stack; `BuildingOverlay.tsx` explicitly sets `view='floor'`; `TycoonApp.tsx` switches Pixi scenes; panels depend on selected office | Derive scene mode from actual floor count; decouple selected operations context from scene mode. Check two-region/mobile switching and scene-host ResizeObserver. |
+| Studio overflow | `StudioDialog.tsx` has six tabs; `.tabs` is a non-wrapping flex row; `.modal` owns overflow and its sticky `.actions` footer shares that container | Credible cause of crowding and footer horizontal movement. Needs browser reproduction: contain table horizontal scrolling, allow children to shrink, and separate stable chrome from scrollable body. Don't just hide overflow and clip data. |
+| Café art | `OfficeScene.ts: furnishDesks` still furnishes café workstations through office desk geometry and places cups at desk offsets | Give the café its own founder-table layout/anchors, preserving laptops/poses, guest routes, counter and depth ordering. Moving cup pixels alone won't fix the table. |
+| Identity | `chapters.ts: carried` clones founders but assigns new IDs; `render-support/characters.ts: appearanceFor` hashes ID, consumed through `render/atlas.ts` | Persist an appearance seed/identity independent of simulation IDs; preserve existing world-ID uniqueness. FoundingDialog unconditionally shows the analyst-name input. |
+| Exits/wealth | `exit.ts` has IPO blocker/valuation/ending, but eligibility action lives in `MenuDialog.tsx`; `chapters.ts` seeds 1% of worth clamped $15K-$150K | Reuse exit gates; add once-per-company eligibility announcement and persistent action. Separate valuation, liquid proceeds and new-company investment. Current legacy records are not a personal-finance ledger. |
+| Persistence/testing | Save version 7 with explicit validation/upgrades in `state.ts`; substantial sim/UI tests; latest bot plays global cards | A real schema migration is required for changed semantics. Update bot/store tests, not just functions. Browser harness `scripts/tycoon/e2e.mjs` has obsolete imports and undeclared browser tooling; it isn't a working acceptance gate yet. |
+
+### Staged implementation (each stage leaves a coherent, playable build)
+
+**0. Low-risk fixes and baseline fixtures** — original feedback 6–9 and 11; no economy retune.
+- Separate persistent founder appearance from IDs, omit personal-name editing on successful continuation, retain
+  first-run naming and existing failed-chapter behaviour unless separately changed. Add multi-chapter regression tests.
+- Fix Studio shrinking/table scroll containment and footer structure, with narrow-width browser reproduction.
+- Announce first IPO eligibility once per company, explain valuation/ending, support "not now", and keep an obvious
+  way back. Persist acknowledgement; loading an already-eligible save must not hide it or repeatedly announce it.
+- Recompose café founder furniture/cups while retaining crowd and seating behaviour.
+- Create deterministic café, one-floor, multi-floor/Europe, 120-person and eligible-IPO test fixtures from sim helpers.
+  Preserve the supplied log as external evidence only. No product-control removals yet.
+
+**1. Explain the business and define the operating contract** — prerequisite to capacity tuning.
+- Add a shared read model for current demand/growth constraints, revenue, costs, product health and effective team
+  capacity. Surface actual causes already computed by products/fit/scale/economy; do not invent retrospective attribution.
+- Every initiative: intended outcome, affected product/ecosystem, team requirements, cash/upkeep and displaced work;
+  separate immediate effects from delayed demand. Every standing assignment: provided service, demand, headroom and risk.
+- Record snapshots/deltas at decisions and outcomes; describe associations honestly, not "this caused all growth".
+- Add compact "why growing / what's limiting / what changed" information to the main operations area before deep UI work.
+- Nail down minimal saved assignment types, blocking-vs-informational events, and day-order rules in tests. Concrete
+  stream roster/costs/review cadence are tuning proposals, not player-approved numbers.
+
+**2. Parallel operations vertical slice** — replaces the global release turn, with a minimal usable operations UI.
+- One explicit assignment per floor: finite initiative, standing responsibility, or clearly idle. No hidden helper
+  labour and no queue. Allow an explicit later reassignment; show progress/cost consequences before confirmation.
+- Implement at least a finite product initiative alongside a standing reliability assignment, then expand to broad
+  market growth and research responsibilities. Missing professional skills must produce a visible blocker/slowdown,
+  not an unexplained infinite ETA; analyst-only work should not require engineering points.
+- Idle teams do not choose initiatives automatically. An explicit standing responsibility can continue without another
+  click; completion leaves its team awaiting an assignment while all others run. Warn without forcing a modal.
+- Reuse project scope/quality/bug/effect functions. Remove global helper aggregation, floor-count target inflation and
+  the global plan/deep-work mutex for routine company work together; preserve the earlier scope-vs-target bug fix.
+- Audit same-product parallel release conflicts: reserve unique initiatives, prevent duplicate unlocks, apply additive
+  changes safely, assign versions at completion, attribute release notes correctly. Standing work cannot also build.
+- Manual pause still works. Routine planning, research refresh and release summaries must not pause the business through
+  the generic dialog rule. Important event choices can remain explicitly blocking; no silent speed-up of those events.
+- **Gate:** with two teams, choosing/waiting on team A never halts team B or charges/credits A's staff to both streams.
+  Do not ship a halfway state that merely removes `awaitingChoice` while every floor still joins one release.
+
+**3. Professional management and careers** — original feedback 1.
+- Separate IC seniority, leadership appointment/coverage, and management skill. Preserve existing pay/experience on load;
+  grandfather existing Leads with deterministic scope, flag conflicts rather than silently demoting or removing people.
+- Shared profession coverage until a local lead exists; deterministic coverage on reassignment/departure and no duplicate
+  reviewer. Review analysts/PMs too: the player must not inherit a second manual roster outside builder professions.
+- Automatic periodic reviews under company policy and payroll guardrails. Aggregate reports instead of one popup per
+  person. Budget pressure is an exception decision, not 120 approvals. Management affects coaching/review capability;
+  weaker leads do not randomly miss an earned promotion and make the player audit everyone.
+- Specialist and management ambitions; Staff/Principal contributions; genuine lead openings. Warned career conversations,
+  response windows and possible departures reuse knowledge-transfer/morale systems without double departure rolls.
+- **Gate:** a 120-person company can complete reviews with no employee-list scrolling; appointments, budget changes and
+  retention problems still give the player meaningful choices. Founders/CEO/CTO and save-roundtrip tests remain valid.
+
+**4. Ecosystem initiatives, milestone gates and research audit** — original feedback 10 and 13.
+- Convert post-hit grow/promote/update/localise/companions/retire and relevant licensing/contract capabilities into the
+  single operating entry point. No orphaned action or hidden bypass in the store/sim. Keep pre-hit project creation.
+- Add suited companion initiatives (including AI around a Data Platform), their shared-service demand and measurable value.
+  Review the fixed two-slot limit against the new capacity model; don't silently remove old side products to make room.
+- Concrete readiness for each scale transition: show requirements and effects before committing. Use effective current
+  capacity/health and actual completed capabilities, not arbitrary title checks. Avoid circular gates between research,
+  next-size projects and stage advancement; preserve viable paths for all product types and a small early-sale studio.
+- Audit every research ID as keep/rework/merge/retire: real effect, available UI path, stage/era gate, companion usefulness,
+  saved-ID compatibility, carry-over meaning. Resolve overlaps (e.g. research CI pipeline vs built CI tool) explicitly.
+- Separate persistent founder knowledge from facilities/company practices that need re-establishment. Do not silently strip
+  the player's 30 completed unlocks; migrate with documented retained benefits/equivalents.
+- **Gate:** a growing business eventually requires reallocation/expansion; unattended growth is not perpetual free money,
+  but neglect is warned and recoverable. Product size matters for opportunities, not arbitrary user caps alone.
+
+**5. Finish the stable workspace and navigation** — original feedback 2–5 and 8.
+- Desktop prototype: building left, operations right, stable scene dimensions. Mobile: compact building/team overview
+  above operations, no alternating full scenes. Two floors total triggers building mode, including one in each region.
+- Floor selection highlights the assignment/context without opening an interior. Keep individual inspection possible
+  through People, not scene navigation. Remove "Show", floor-back navigation, obsolete office tabs/view persistence.
+- One team per floor also removes the old desk-vs-remote-team split: migrate assignments before retiring the per-person
+  desk/remote controls and penalty. Keep deliberate team staffing transfers, regional limits and free-capacity rules.
+- Proposed Studio grouping: Company (summary + metrics), Industry (markets + competitors), Journey (chapters +
+  milestones). Keep People and Research accessible through their management surfaces. This is a prototype to validate,
+  not a decree to cram three old tabs inside one large modal. Update direct-link dialog types/defaults and empty states.
+- Remove the post-hit Products tab and generic Start project entry only after feature parity in operations. Preserve
+  ecosystem overview, history and pre-hit product discovery; audit keyboard/touch paths as well as visible buttons.
+- **Gate:** phone-sized width, large fonts and long names never move the Close control sideways, hide operations, crush
+  the canvas or require interior jumps. Confirm with real browser geometry, not only jsdom render tests.
+
+**6. Career fortune and next-venture setup** — original feedback 11–12.
+- Add personal wealth/career standing independently of company cash and legacy valuations. Each exit yields an explicit,
+  explained liquid/non-liquid outcome; do not count IPO market cap as cash or credit an exit twice after reload.
+- Offer investment + ambition presets with an affordable range and previews of starting team/footprint, commitments,
+  scope/readiness goals and runway. Modest studio remains possible; ambitious starts skip obsolete café busywork rather
+  than simply gifting enough cash to trivialise the same progression.
+- Choose exact exit ownership/liquidity assumptions and preset amounts during this stage; no invented final percentages
+  in this plan. Avoid a tax/dilution simulator unless it creates useful choices.
+- Carry identity, skills, world time and relationships deliberately. Migrate existing `legacy` into labelled historical
+  records; do not claim old valuations are exact reconstructable founder proceeds. Preserve bankrupt/ousted branches.
+- **Gate:** multi-chapter test of IPO -> venture -> sale -> venture -> retirement, reload at each transition, finite
+  affordable investments, no negative/double-spent fortune, stable sprites and one company-name field.
+
+**7. Balance, usability and acceptance** — before calling the iteration complete.
+- Update the bot for allocations, leadership, milestones and founding choices; remove dependencies on hidden true-fit
+  information in at least one policy. Keep an optimistic policy as a lower-bound benchmark, not the only balance test.
+- Run several seeds during each economy change, then at least 12 seeds for final pace checks; compare intentional
+  operation, unattended baseline, neglect/recovery and diverse venture starts. Don't tune only to the fastest IPO.
+- Measure decision frequency and effects, per-team utilisation, bottlenecks, assignment changes, promotion workload,
+  departures, costs, companion contribution, time to milestones and chapter outcomes. Log elapsed game days, not wall
+  time inflated by the removed pauses. Keep career peak/tenure separate from current-company metrics.
+- Run full test/typecheck/build and repaired browser smoke suite: café, garage, single floor, two buildings, 120 employees,
+  long Industry tables, IPO and continuing chapters. Player verification follows; bot success is not UX approval.
+
+### Persistence and test strategy
+
+- Plan an explicit v7 -> new-version upgrade for semantic changes, with validation for assignments, appointments,
+  appearance, career and one-time milestones. Increment when the first semantic schema change lands; keep each later
+  incremental schema readable and tested. Do not rely on optional fields to pretend the old global plan still makes sense.
+- Preserve active projects/progress and completed research/item IDs. Translate a global release into one explicit team
+  assignment with a clearly explained remaining estimate (no surprise restart or free completed build); other teams
+  await assignment. Translate an unchosen global plan into nonblocking opportunities. Deterministically resolve old
+  remote memberships/capacity conflicts without deleting people or changing regions behind the player's back.
+- Main existing tests to extend: `cycle`, `work`, `teams`, `workstreams`, `careers`, `staff`, `people`, `knowledge`,
+  `companions`, `scale`, `pressure`, `economy`, `research-mechanisms`, `sizes`, `endings`, `exit`, `chapters`, `founders`,
+  `characters`, `cafe`, `layout`, `store`, `save`, `state`, `journal`, `ui-smoke` (all in `tests/tycoon/`). Add focused
+  operations/coverage/attribution fixtures rather than rewriting tests to accept any new output.
+- Restore a usable browser harness: existing `e2e.mjs` imports nonexistent `render/characters.ts`/`render/layout.ts`,
+  references the old start-money constant and uses `puppeteer-core`/`pngjs` not declared here. Fix the harness/tooling
+  before treating screenshot/layout results as evidence; no production testing/deployment without approval.
+
+### Initial inspection/check status (before dependency setup)
+
+- Inspected roadmap/guide, state/store/tick, cycle/work/teams/offices, growth/fit/economy connections, careers, research,
+  companions, chapter/exit paths, React dialogs/workspace, Pixi identity/café layout, CSS and related tests/bot.
+- This checkout has no installed project dependencies. Attempted `npm test`: `sh: 1: vitest: not found`.
+  Attempted `npm run typecheck`: `sh: 1: astro: not found`. Neither check passed; no browser verification or build was
+  performed. These are environment blockers, not demonstrated application regressions. Dependency setup and baseline
+  verification are the first engineering step, using the lockfile, before implementing stage 0.
+- The player approved dependency setup and Stage 0 after this inspection. See the built/check record below.
+  No extra broad questionnaire is needed. Resolve exact numbers and scope trade-offs with concrete prototypes/tests.
+- Never commit raw run logs. Follow `AGENTS.md`: stay on `main`, no commit/push/deploy until requested.
+
+## Stage 0 built and checked (2026-11-03; local, uncommitted)
+
+Authorised: "Begin dependency setup and Stage 0". No economy retune, operations redesign, commits, pushes or deployment.
+
+### What changed
+
+- **Founder continuity:** `Employee.appearanceSeed` separates appearance from per-chapter world IDs. Existing saves
+  fall back to the current employee ID, preserving their current look; carrying a founder fixes that seed for future
+  chapters. Both Pixi renderers use the same helper. New IDs remain unique; no rewriting world references to preserve
+  a sprite. Already-lost historical appearances cannot be reconstructed from a journal and are not guessed.
+- **Company-only naming after success:** `companyOnlyFounding` preserves the analyst's name in both the dialog and sim
+  command, even after a successful ending without the friend present. Failed/bankrupt/ousted restarts and first-run
+  naming retain the old flow. Founding logs use the actual preserved name.
+- **Café furniture (final, after several player-rejected experiments):** reverted to the original arrangement: the
+  founders sit at the two generic office desks, facing each other. Only three visual changes were kept: desk tops are
+  white (`atlas.whiteDesk`, recolouring the pack's yellow `#ffcd75` while keeping outlines; the freestanding desk trim is
+  light grey), the founders' cups are brown (`drawDeskCup`; guests' cups are unchanged), and each cup stands on the desk's
+  clear strip directly below its laptop, centred (`render-support/cafe-desk.ts`). A friend/analyst joining a third seat
+  uses the same code. The experiment with a freestanding table, window-ledge seating and rear-view sprites was removed.
+- **Modal overflow and tab crowding:** Modal now has a shrinkable scroll body and optional stable footer. Studio Close
+  is outside that scroll body. Tabs wrap rather than crowd; wide Industry tables own horizontal scrolling. A real
+  browser exposed an additional grid auto-minimum-width issue; `.tab-panel` uses `minmax(0, 1fr)` to fix the root cause.
+  Other dialogs retain actions inside their body with corrected margins; their title no longer scrolls away.
+- **IPO discovery:** a dedicated eligibility celebration with valuation explanation, optional postponement and explicit
+  two-step ending confirmation. First eligible live day announces it; eligible saved games announce it on load, queued
+  behind pending decisions when necessary. Dismissal is saved per company in `exit.ipoAcknowledged`. Top-bar IPO action
+  remains visible while eligible, and Menu links to the same confirmation. IPO still ends the chapter; no wealth changes.
+- **Compatibility:** both new save fields are optional and validated. Version remains 7: no existing operation meaning
+  changed, and old saves retain defaults. The semantic assignment/career migration planned for later stages is still
+  required. Tests cover malformed new fields and round-trips; the normalizer preserves IPO acknowledgement.
+
+### Player refinement history: café presentation
+
+- Latest: founder pair now shares one continuous brown tabletop without centre outlines/gap/inner legs; both
+  seats, chairs, laptops and cups shift inward two scene pixels. Both guest tables use the same brown top and trim.
+  Cup palette/positions relative to laptops unchanged. Odd extra founder seat retains its own table. Chromium
+  screenshot inspected; typecheck and all 1,202 Tycoon tests passed (`NODE_ENV=development`).
+
+- Superseding visual request: reverted founder cups to the prior dark-lid/orange-body/white-band palette, and changed
+  founder desk tops to brown (`atlas.brownDesk`, `#99633f`) with darker brown trim. Layout/anchors and guest cups unchanged.
+  Chromium screenshot inspected using local browser libraries. Typecheck passed; all 1,202 Tycoon tests passed with
+  `NODE_ENV=development` (the earlier `act is not a function` failures were from the production environment).
+
+- Latest request: keep white desks, make founder cups entirely brown. Removed the white cup band and used brown
+  tones for lid, body and shading in `OfficeScene.ts`; guest cups are unchanged. Typecheck passed with a 1 GB heap.
+  Tycoon tests: 1,175 passed / 27 failed (`TypeError: act is not a function`). Full suite timed out after 200 seconds.
+  Browser verification blocked by missing Chromium library `libatk-1.0.so.0`; no updated screenshot verified.
+
+- The first small-table, margin, outlined-cup and window-seating/rear-sprite experiments were rejected, then reverted.
+  Their code, tests and art are gone. The final design is only the white-desk, brown-cup, below-laptop adjustment above.
+- Check: **67 Tycoon files / 1,202 tests passed** and typecheck passed; Chromium desktop/phone render of the café was
+  inspected. The full non-Tycoon suite and production build were not rerun after this revert (before it, the build passed).
+
+### Tests and tooling
+
+- Installed locked dependencies using `npm ci --include=dev`; the inherited `NODE_ENV=production` otherwise omitted the
+  test tools. No manifest/lockfile changes. Audit reported 7 dependency issues including dev dependencies (3 moderate,
+  3 high, 1 critical); no automatic updates or `npm audit fix` performed.
+- Baseline: original Tycoon tests **66 files / 1,185 tests passed** with `NODE_ENV=test`. Initial full-suite run inherited
+  production React and produced `act is not a function`; do not diagnose those as app regressions. Default TypeScript
+  heap exhausted around 512 MB; a scoped 1,200 MB heap passed baseline and final checks without changing service settings.
+- Added **17 regressions** in `tests/tycoon/stage0.test.tsx`: multiple chapter transitions, saved appearance/names,
+  successful solo continuation, first/failed founding behaviour, fixture/save validity, IPO eligibility/load/queue/
+  acknowledgement/confirmation and invalidation, modal footer structure, café geometry.
+- Full-suite final command: `NODE_ENV=test NODE_OPTIONS=--max-old-space-size=1024 npm test -- --maxWorkers=2`.
+  **182 files passed, 1 failed; 2,582 tests passed, 1 failed. All 67 Tycoon files / 1,202 tests passed.**
+  The failure was already present in the pre-change baseline:
+  `tests/hr/run.test.ts:59 > step > keeps foes, shots and gems under their caps`
+  `Error: Test timed out in 5000ms.` It fails in isolation at the same default timeout; retry with
+  `--testTimeout=15000` passes all 25 HR run tests (the slow case took ~5.8 seconds). HR code/tests were not changed.
+- Final `NODE_ENV=development NODE_OPTIONS=--max-old-space-size=1200 npm run typecheck`: **passed**.
+- Final `NODE_ENV=production NODE_OPTIONS=--max-old-space-size=1200 npm run build`: **passed**, 11 static pages.
+- Added six deterministic synthetic saves in `tests/tycoon/stage0-fixtures.ts`, generated with
+  `scripts/tycoon/stage0-fixtures.ts`: café, one floor, Europe/two floors, 120 people/ten floors, eligible IPO, continued
+  chapter. They are not a reconstructed player save. Generator usage is in its header; generated JSON stays in `/tmp`.
+- Added `scripts/tycoon/stage0-browser.mjs`, a separate working Playwright smoke harness rather than silently treating
+  the old `e2e.mjs` as repaired. Start local dev/preview, generate fixtures, supply Playwright as described in the header.
+  Browser tooling was installed under `/tmp/lab-browser-tools`, Chromium in the user cache; missing shared libraries
+  were downloaded/extracted under `/tmp/lab-browser-libs`, not installed system-wide. Here, supply
+  `LD_LIBRARY_PATH=/tmp/lab-browser-libs/root/usr/lib/x86_64-linux-gnu` along with `PLAYWRIGHT_MODULE`.
+- Chromium checks passed on both dev and the **local production build**, without bypassing its CSP: 1280x900,
+  390x844 and 320x740, enlarged text, Industry horizontal scrolling with an unmoved visible Close, non-overlapping
+  tabs, café/one-floor/Europe/continued scenes, only company naming after continuation, persisted IPO dismissal,
+  rediscovery and two-step ending. No uncaught browser errors. Inspected café and mobile modal screenshots.
+  Production-preview screenshots: `/tmp/lab-stage0-production-shots/` (temporary, not versioned).
+- `git diff --check`: passed. Stay on `main`; no commit/push/deploy until asked.
+
+**Next:** player review of this slice, then Stage 1's business explanations and operating contract. Do not claim
+parallel streams, automatic employee reviews, menu consolidation or founder fortune have been implemented yet.
 
 ## First player run, and the Spore direction (2026-10-25; design only, nothing built)
 

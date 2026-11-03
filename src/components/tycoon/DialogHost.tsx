@@ -1,3 +1,4 @@
+import { IpoDialog } from './IpoDialog'
 import { AbsorbDialog } from './AbsorbDialog'
 import { ReleaseCardDialog } from './ReleaseCardDialog'
 import { ReleasesDialog } from './ReleasesDialog'
@@ -61,6 +62,8 @@ export function DialogHost() {
       return <StudioDialog tab={dialog.tab} />
     case 'absorb':
       return <AbsorbDialog rivalId={dialog.rivalId} />
+    case 'ipo':
+      return <IpoDialog />
     case 'offer':
       return <OfferDialog />
     case 'founding':

@@ -17,6 +17,8 @@ export const isBuilder = (employee: { role: Role }): boolean => employee.role !=
 export interface Employee {
   id: number
   name: string
+  /** Stable visual identity, independent of world IDs reassigned between chapters. Older saves use id. */
+  appearanceSeed?: number
   role: Role
   skills: Skills
   /** Monthly salary; paid daily as salary / DAYS_PER_MONTH. */
@@ -665,6 +667,8 @@ export interface Ending {
 }
 
 export interface ExitState {
+  /** The IPO eligibility celebration was dismissed in this company. Absent means not yet acknowledged. */
+  ipoAcknowledged?: boolean
   /** Offers turned down so far; each makes the next one better. */
   declined: number
   /** No offer before this day. */

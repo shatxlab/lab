@@ -7,12 +7,12 @@ import { resolveRandomEvent } from '@/lib/tycoon/sim/events'
 import { clearOnCall, setOnCall, startFix, stopFix } from '@/lib/tycoon/sim/fixes'
 import { startDeepWork } from '@/lib/tycoon/sim/deepwork'
 import { strikeBack } from '@/lib/tycoon/sim/nemesis'
-import { acceptBuyout, declineBuyout, goPublic, retireStudio } from '@/lib/tycoon/sim/exit'
+import { acceptBuyout, declineBuyout, goPublic, ipoBlocker, retireStudio } from '@/lib/tycoon/sim/exit'
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
 import { assignTeam, getOffice, inGarage, moveOut, moveToGarage, openOffice, transfer } from '@/lib/tycoon/sim/offices'
-import { foundStudio } from '@/lib/tycoon/sim/founding'
+import { companyOnlyFounding, foundStudio, you } from '@/lib/tycoon/sim/founding'
 import { awaitingChoice, chooseCard, researchPlan } from '@/lib/tycoon/sim/cycle'
 import { setRoadmap } from '@/lib/tycoon/sim/roadmap'
 import { assignProduct, queueFeatures, setWorkstream } from '@/lib/tycoon/sim/teams'
@@ -80,6 +80,8 @@ export type Dialog =
   | { kind: 'game-over' }
   /** A bigger company wants to buy the studio. */
   | { kind: 'offer' }
+  /** Celebrate IPO eligibility and confirm the optional company ending. */
+  | { kind: 'ipo' }
   | { kind: 'founding' }
 
 export interface Toast {
@@ -201,6 +203,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   const speed = signal<Speed>(initialSpeed)
   // A game saved while an event was waiting resumes on that event.
   const dialog = signal<Dialog>(state.pendingEvent ? { kind: 'event' } : state.exit.pending ? { kind: 'offer' } : null)
+  if (dialog.value === null && !state.exit.ipoAcknowledged && ipoBlocker(state) === null) dialog.value = { kind: 'ipo' }
   const toasts = signal<Toast[]>([])
   const selectedOffice = signal(state.offices[0].id)
   const view = signal<SceneView>(inGarage(state) ? 'floor' : 'building')
@@ -208,6 +211,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   const officeFor = (officeId?: number) => officeId ?? selectedOffice.value
   /** Dialogs that arrived on the same day as the one on screen; shown as each is closed. */
   let queue: Exclude<Dialog, null>[] = []
+  if (dialog.value?.kind !== 'ipo' && !state.exit.ipoAcknowledged && ipoBlocker(state) === null) queue.push({ kind: 'ipo' })
   let carryMs = 0
   let nextToastId = 1
 
@@ -290,6 +294,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
         if (event.type === 'released') sfx.play('ship')
         if (event.type === 'stage') sfx.play('milestone')
       }
+      if (!state.exit.ipoAcknowledged && ipoBlocker(state) === null && dialog.value?.kind !== 'ipo' && !queue.some((d) => d.kind === 'ipo')) {
+        dialogs.push({ kind: 'ipo' })
+        sfx.play('milestone')
+      }
       const ready = events.filter((e) => e.type === 'projectReady')
       for (const event of ready) dialogs.push({ kind: 'ready', officeId: event.officeId })
       if (ready.length > 0) sfx.play('ready')
@@ -335,6 +343,12 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     closeDialog() {
+      if (dialog.value?.kind === 'ipo' && !state.exit.ipoAcknowledged) {
+        state.exit.ipoAcknowledged = true
+        queue = queue.filter((d) => d.kind !== 'ipo')
+        logEntry(state, 'ipo.acknowledged', 'Considered going public; kept running the company')
+        bump()
+      }
       dialog.value = queue.shift() ?? null
     },
 
@@ -523,7 +537,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     },
 
     found(yourName, studioName) {
-      return changed(logged(() => decisions.found(yourName, studioName), () => foundStudio(state, yourName, studioName)))
+      const name = companyOnlyFounding(state) ? (you(state)?.name ?? yourName) : yourName
+      return changed(logged(() => decisions.found(name, studioName), () => foundStudio(state, name, studioName)))
     },
 
     moveToGarage() {

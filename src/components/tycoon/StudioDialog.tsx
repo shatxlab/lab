@@ -28,7 +28,9 @@ export function StudioDialog({ tab: initial }: { tab?: Tab }) {
   const [tab, setTab] = useState<Tab>(initial ?? (hasHit ? 'company' : 'products'))
 
   return (
-    <Modal title="Studio" onClose={() => store.closeDialog()}>
+    <Modal title="Studio" onClose={() => store.closeDialog()} footer={
+      <div className="actions"><button onClick={() => store.closeDialog()}>Close</button></div>
+    }>
       <div className="tabs" role="tablist" aria-label="Studio">
         {TABS.filter((t) => t.id !== 'company' || hasHit).map((t) => (
           <button key={t.id} role="tab" aria-selected={t.id === tab} className={t.id === tab ? 'active' : ''} onClick={() => setTab(t.id)}>
@@ -43,9 +45,6 @@ export function StudioDialog({ tab: initial }: { tab?: Tab }) {
         {tab === 'industry' && <IndustryTab />}
         {tab === 'stats' && <StatsTab />}
         {tab === 'milestones' && <MilestonesTab />}
-      </div>
-      <div className="actions">
-        <button onClick={() => store.closeDialog()}>Close</button>
       </div>
     </Modal>
   )

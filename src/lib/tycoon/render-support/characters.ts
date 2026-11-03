@@ -144,3 +144,8 @@ export function recolor(pixels: Uint8ClampedArray | Uint8Array, width: number, c
     }
   }
 }
+
+/** A person's visual seed survives chapter ID reassignment; old saves retain their current appearance. */
+export function employeeLook(person: { id: number; appearanceSeed?: number }): number {
+  return person.appearanceSeed ?? person.id
+}

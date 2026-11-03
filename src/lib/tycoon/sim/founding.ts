@@ -64,9 +64,15 @@ export function rollStudioName(taken: readonly string[] = [], random: () => numb
   return `${from(STUDIO_HEADS, random)} ${from(STUDIO_TAILS, random)} Labs`
 }
 
+/** Continuing a successful career names a company, not a different person. Failed restarts retain the old naming flow. */
+export function companyOnlyFounding(state: GameState): boolean {
+  const previousEnding = state.legacy?.at(-1)?.ending
+  return state.freshChapter === true && (state.chapter ?? 1) > 1 && previousEnding !== 'bankrupt' && previousEnding !== 'ousted'
+}
+
 /** Why these names can't be used, or null when they can. */
 export function foundingBlocker(state: GameState, yourName: string, studioName: string): string | null {
-  const person = yourName.trim()
+  const person = companyOnlyFounding(state) ? (you(state)?.name ?? '') : yourName.trim()
   const studio = studioName.trim()
   if (!person) return 'Give yourself a name'
   if (!studio) return 'Give the studio a name'
@@ -79,7 +85,7 @@ export function foundingBlocker(state: GameState, yourName: string, studioName: 
 export function foundStudio(state: GameState, yourName: string, studioName: string): Result {
   const blocker = foundingBlocker(state, yourName, studioName)
   if (blocker) return fail(blocker)
-  you(state)!.name = yourName.trim()
+  if (!companyOnlyFounding(state)) you(state)!.name = yourName.trim()
   state.studioName = studioName.trim()
   delete state.freshChapter
   return OK

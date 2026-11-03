@@ -10,6 +10,8 @@ import { chairTucked, CHAIR_TUCK, hasComputer, vacancyFor, type Vacancy } from '
 import { blinkingAt, hash, momentAt } from '../render-support/activity'
 import { KEEPSAKE_TOP, keepsakeFor, keepsakeX } from '../render-support/keepsakes'
 import { POSE_PAD, STEP_CYCLE, WALK_CYCLE, type Pose } from '../render-support/poses'
+import { employeeLook } from '../render-support/characters'
+import { deskCupAnchor } from '../render-support/cafe-desk'
 import { CafeCrowd, CAFE_DOOR_X, CAFE_LANE, COUNTER_LEFT, COUNTER_TOP, SEATS, type Bubble, type CafeFigure, type Cup } from '../render-support/cafe'
 import { pathLength, pathToDoors, pointAlong, routePath, walkoutPath, type Point } from '../render-support/walkout'
 import { chooseErrand, chooseSpot, nextOutAt, poseAtSpot, SPOTS, spotFree, stayFor, type Errand, type Spot, type Stay } from '../render-support/breaks'
@@ -54,13 +56,19 @@ const CYAN = 0x73eff7
 const LEAF = 0x38b764
 const LIME = 0xa7f070
 const NIGHT = 0x1a1c2c
+const CUP_LID = 0x333c57
+const CUP_BODY = 0xef7d57
+const CUP_BAND = 0xf4f4f4
+const CUP_SHADE = 0xb13e53
+const CAFE_TABLE_TOP = 0x99633f
+const CAFE_DESK_TRIM = 0x70452e
 
 const colorNumber = (hex: string): number => Number.parseInt(hex.slice(1), 16)
 
 /** Where a workstation's occupant sits in an arrangement: horizontal centre, and the top of a 23-row person's head. */
-function seat(arrangement: Arrangement, index: number): { x: number; y: number } {
+function seat(arrangement: Arrangement, index: number, cafe = false): { x: number; y: number } {
   const [px, py] = partitionAt(arrangement, index >> 1)
-  return { x: px + seatX((index & 1) === 1), y: py + 5 }
+  return { x: px + seatX((index & 1) === 1) + (cafe ? ((index & 1) === 1 ? -2 : 2) : 0), y: py + 5 }
 }
 
 /** The sprites face right; whoever sits on the right of a partition has their computer to the left. */
@@ -98,9 +106,10 @@ class EmployeeSprite {
     private readonly look: (pose?: Pose, blink?: boolean) => Texture,
     arrangement: Arrangement,
     desk: number,
+    cafe = false,
   ) {
     const texture = look()
-    const seated = seat(arrangement, desk)
+    const seated = seat(arrangement, desk, cafe)
     // The pack's people are 21 to 24 rows tall, mostly in the size of their heads: seat them all by their feet,
     // so everyone sits at the same height and reaches the keyboard the same way.
     const y = seated.y + FEET_ROW - (texture.height - 1)
@@ -271,6 +280,15 @@ function drawCup(g: Graphics, { x, bottom, alpha }: Cup): void {
   g.rect(left, bottom - 5, 4, 1).fill({ color: DARK, alpha })
   g.rect(left, bottom - 4, 4, 4).fill({ color: WHITE, alpha })
   g.rect(left, bottom - 3, 4, 2).fill({ color: WOOD, alpha })
+}
+
+/** The founders' desk cup, 4x3: a dark lid over an orange body with a white band. */
+function drawDeskCup(g: Graphics, x: number, bottom: number): void {
+  const left = x - 2
+  g.rect(left, bottom - 3, 4, 1).fill(CUP_LID)
+  g.rect(left, bottom - 2, 4, 1).fill(CUP_BAND)
+  g.rect(left, bottom - 1, 4, 1).fill(CUP_BODY)
+  g.rect(left + 3, bottom - 1, 1, 1).fill(CUP_SHADE)
 }
 
 /** Whether a desk's screen is dark (nobody there), lit but still, or showing someone typing. */
@@ -1089,7 +1107,7 @@ export class OfficeScene {
     }
     g.fill(MORTAR)
 
-    // The tables, each a marble top on one leg, with a stool on the side the guest sits. A guest's cup is put on
+    // The tables, each a brown wooden top on one leg, with a stool on the side the guest sits. A guest's cup is put on
     // the table by the crowd while they sit there, so an empty table is bare.
     const decor: [FrameName, number, number, boolean?][] = [
       ['plant', 2, 97],
@@ -1099,7 +1117,7 @@ export class OfficeScene {
       const table = rightwards ? x + 8 : x - 26
       g.rect(x - 4, feet - 11, 9, 2).fill(WOOD).rect(x - 4, feet - 9, 9, 1).fill(RUST)
       g.rect(x - 3, feet - 8, 1, 8).rect(x + 3, feet - 8, 1, 8).fill(NIGHT)
-      g.rect(table, feet - 15, 18, 2).fill(WHITE).rect(table, feet - 13, 18, 1).fill(BLOCK)
+      g.rect(table, feet - 15, 18, 2).fill(CAFE_TABLE_TOP).rect(table, feet - 13, 18, 1).fill(CAFE_DESK_TRIM)
       g.rect(table + 8, feet - 12, 2, 11).rect(table + 4, feet - 1, 10, 1).fill(NIGHT)
     }
     bg.addChild(g)
@@ -1292,14 +1310,28 @@ export class OfficeScene {
       const [px, py] = partitionAt(this.arrangement, i >> 1)
       const right = (i & 1) === 1
       const vacancy = this.options.vacancies && !this.occupied.has(i) ? vacancyFor(i, this.vacated.has(i)) : null
+      const cafe = this.shown?.kind === 'cafe'
+      const seatShift = cafe ? (right ? -2 : 2) : 0
       const chair = atlas.frame(CHAIRS[i % CHAIRS.length])
       const tuck = vacancy && chairTucked(vacancy) ? (right ? -CHAIR_TUCK : CHAIR_TUCK) : 0
-      this.chairs.addChild(placed(chair, px + chairX(right, chair.width) + tuck, py + CHAIR_TOP, right))
+      this.chairs.addChild(placed(chair, px + chairX(right, chair.width) + tuck + seatShift, py + CHAIR_TOP, right))
 
-      const deskX = px + (right ? 40 : 19)
-      this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
-      if (this.shown?.kind !== 'office' || !partitionInFront(this.arrangement, i >> 1, desks)) {
-        this.desks.addChild(freestandingDesk(right)).position.set(deskX, py + 11)
+      const deskX = px + (right ? 40 : 19) + seatShift
+      if (cafe) {
+        // One continuous top per pair: no central gap, doubled outlines or inner legs.
+        if (!right) {
+          const width = i + 1 < desks ? 34 : DESK_WIDTH
+          const table = this.desks.addChild(new Graphics())
+          table.rect(deskX, py + 11, width, 22).fill(DARK)
+          table.rect(deskX + 1, py + 11, width - 2, 18).fill(CAFE_TABLE_TOP)
+          table.rect(deskX + 1, py + 30, width - 2, 1).fill(CAFE_DESK_TRIM)
+          table.rect(deskX, py + 33, 2, 2).rect(deskX + width - 2, py + 33, 2, 2).fill(DARK)
+        }
+      } else {
+        this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
+        if (this.shown?.kind !== 'office' || !partitionInFront(this.arrangement, i >> 1, desks)) {
+          this.desks.addChild(freestandingDesk(right)).position.set(deskX, py + 11)
+        }
       }
       if (!vacancy || hasComputer(vacancy)) {
         const stations: Workstation[] = []
@@ -1314,8 +1346,8 @@ export class OfficeScene {
         this.stations.set(i, stations)
       }
       if (vacancy) this.dressVacantDesk(vacancy, deskX, py, right)
-      // At the café everyone has a paper cup from the counter on the desk, standing beside the laptop, past its lid.
-      else if (this.shown?.kind === 'cafe') drawCup(this.desks.addChild(new Graphics()), { x: deskX + (right ? 3 : DESK_WIDTH - 3), bottom: py + 26, alpha: 1 })
+      // At the café everyone has a cup from the counter on the desk, below the laptop and centred on it.
+      else if (cafe) drawDeskCup(this.desks.addChild(new Graphics()), ...deskCupAnchor(deskX, py, right))
     }
   }
 
@@ -1364,7 +1396,8 @@ export class OfficeScene {
     for (const id of ids) {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
-      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(id, pose, blink), this.arrangement, desk)
+      const look = employeeLook(state.employees.find((e) => e.id === id)!)
+      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(look, pose, blink), this.arrangement, desk, this.shown?.kind === 'cafe')
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }
@@ -1416,7 +1449,7 @@ export class OfficeScene {
         total += work.points[d]
         if (work.points[d] > work.points[top]) top = d
       }
-      const { x, y } = seat(this.arrangement, desk)
+      const { x, y } = seat(this.arrangement, desk, this.shown?.kind === 'cafe')
       const { x: screenX, y: screenY } = this.toScreen(x, y - 2)
       if (total >= 1) this.addPopup(this.numberPopup(Math.round(total), work.fixing ? BUG_RED : colorNumber(DISCIPLINE_COLORS[top]), work.fixing), screenX, screenY)
     }

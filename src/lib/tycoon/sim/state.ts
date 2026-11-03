@@ -133,6 +133,7 @@ function validEmployee(v: unknown): boolean {
     isObj(v) &&
     isNum(v.id) &&
     typeof v.name === 'string' &&
+    (v.appearanceSeed === undefined || (Number.isSafeInteger(v.appearanceSeed) && (v.appearanceSeed as number) >= 0)) &&
     ALL_ROLES.some((r) => r === v.role) &&
     (v.analysis === undefined || isNum(v.analysis)) &&
     (v.region === undefined || knownRegion(v.region)) &&
@@ -332,6 +333,8 @@ function validState(v: unknown): v is GameState {
     isNum(v.debtDays) &&
     isNum(v.lastEventDay) &&
     (v.recentEvents === undefined || (Array.isArray(v.recentEvents) && v.recentEvents.every((id) => typeof id === 'string'))) &&
+    isObj(v.exit) &&
+    (v.exit.ipoAcknowledged === undefined || typeof v.exit.ipoAcknowledged === 'boolean') &&
     isNum(v.investorDeals) &&
     isNum(v.lastOutingDay) &&
     Array.isArray(v.milestones) &&
@@ -457,7 +460,7 @@ function dropRemovedContent(raw: unknown): unknown {
   upgraded.lastNewProductDay = isNum(raw.lastNewProductDay) ? raw.lastNewProductDay : -10000
   upgraded.ending = isObj(raw.ending) ? { worth: 0, ...raw.ending } : null
   const exit = isObj(raw.exit) ? raw.exit : {}
-  upgraded.exit = { declined: isNum(exit.declined) ? exit.declined : 0, nextDay: isNum(exit.nextDay) ? exit.nextDay : 0, pending: isObj(exit.pending) ? exit.pending : null, firstDay: isNum(exit.firstDay) ? exit.firstDay : null, closed: exit.closed === true }
+  upgraded.exit = { declined: isNum(exit.declined) ? exit.declined : 0, nextDay: isNum(exit.nextDay) ? exit.nextDay : 0, pending: isObj(exit.pending) ? exit.pending : null, firstDay: isNum(exit.firstDay) ? exit.firstDay : null, closed: exit.closed === true, ...(exit.ipoAcknowledged === undefined ? {} : { ipoAcknowledged: exit.ipoAcknowledged }) }
   upgraded.market = { ...initialMarket(), ...(isObj(raw.market) ? raw.market : {}) }
   if (Array.isArray(raw.milestones)) upgraded.milestones = raw.milestones.filter((id) => typeof id === 'string' && getMilestone(id))
   // Research this build no longer knows is dropped; an active one that vanished is simply cancelled.

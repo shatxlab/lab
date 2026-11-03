@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BARISTA } from '@/lib/tycoon/data/events'
-import { foundingBlocker, NAME_MAX, rollPersonName, rollStudioName, studioNameOf, you } from '@/lib/tycoon/sim/founding'
+import { companyOnlyFounding, foundingBlocker, NAME_MAX, rollPersonName, rollStudioName, studioNameOf, you } from '@/lib/tycoon/sim/founding'
 import { useGame, useStore } from './context'
 import { Modal } from './Modal'
 
@@ -12,6 +12,7 @@ export function FoundingDialog() {
   const [studioName, setStudioName] = useState(() => studioNameOf(state))
   const [message, setMessage] = useState('')
   const friend = state.employees.find((e) => e.founder && e !== you(state))
+  const companyOnly = companyOnlyFounding(state)
   const blocker = foundingBlocker(state, yourName, studioName)
 
   const start = () => {
@@ -43,7 +44,7 @@ export function FoundingDialog() {
           if (!blocker) start()
         }}
       >
-        <label className="founding-field">
+        {!companyOnly && <label className="founding-field">
           <span>Your name</span>
           <span className="founding-input">
             <input value={yourName} maxLength={NAME_MAX} autoComplete="off" onInput={(event) => setYourName(event.currentTarget.value)} />
@@ -51,7 +52,7 @@ export function FoundingDialog() {
               🎲
             </button>
           </span>
-        </label>
+        </label>}
         <label className="founding-field">
           <span>The studio</span>
           <span className="founding-input">
@@ -66,10 +67,10 @@ export function FoundingDialog() {
             </button>
           </span>
         </label>
-        <p className="muted">
+        {companyOnly ? <p className="muted">{you(state)?.name}{friend ? ` and ${friend.name}` : ''}: a continuing journey, a new company.</p> : <p className="muted">
           You are the studio's analyst: you study users and read the market. Take on small jobs for clients to pay for a
           garage, and room for two more people.
-        </p>
+        </p>}
         {(message || blocker) && <p className="bad">{message || blocker}</p>}
         <div className="actions">
           <button type="submit" className="primary" disabled={blocker !== null}>

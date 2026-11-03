@@ -4,6 +4,7 @@ import { overallProgress } from '@/lib/tycoon/sim/scoring'
 import type { Employee, GameState, Office, Region, Role } from '@/lib/tycoon/sim/types'
 import type { Atlas, FrameName } from './atlas'
 import { CHAIR_TOP, DESK_WIDTH, FEET_ROW, freestandingDesk, placed } from './furniture'
+import { employeeLook } from '../render-support/characters'
 import { momentAt } from '../render-support/activity'
 import { chairX, seatX } from '../render-support/layout'
 import { POSE_PAD } from '../render-support/poses'
@@ -262,7 +263,7 @@ class FloorView {
       seen.add(employee.id)
       let person = this.persons.get(employee.id)
       if (!person) {
-        person = new Person(this.atlas, employee.id)
+        person = new Person(this.atlas, employeeLook(employee))
         this.persons.set(employee.id, person)
         this.people.addChild(person.sprite)
       }

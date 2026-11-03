@@ -200,6 +200,37 @@ Source: the player's 2026-11-03 version-7 journal export, 1,812 entries over 5,4
   Preserve the supplied log as external evidence only. No product-control removals yet.
 
 **1. Explain the business and define the operating contract** — prerequisite to capacity tuning.
+
+**Implementation progress (2026-11-03, Stage 1 follow-up to Stage 0 `cce9283`):**
+- `sim/business.ts`: pure current-state daily revenue/cost/net/runway, hit demand-pull constraints and deduplicated
+  available builder capacity. `scale.worldGrowth` is shared by the display and simulation (no growth/economy retune).
+- Main-screen Business today is an informational disclosure inside the same scrolling area as plans, not a separate
+  flex child that can crowd plan controls off a phone. Rates are not user/revenue forecasts; capacity is not staffed work.
+- Each existing cycle card has an outcome/staffing/cost disclosure: product affected, effect timing, delayed demand,
+  upfront cash, extra tool upkeep, continuing costs, required build output, contributing floors and displaced work.
+  Zero-output disciplines are visible blockers, enforced by `chooseCard` too. Localisation previews reuse wage-cushion
+  budget validation instead of promising affordability the command would reject.
+- `businessDecisions` is optional, validated, chapter-local save metadata (last 24 accepted decisions). Before snapshots
+  precede costs/effects; releases complete by exact project ID, deep work at its outcome, and strikes immediately.
+  Failed commands record nothing. Old v7 saves need no invented baselines; unknown historical effects are not reconstructed.
+- What changed shows observed decision-to-completion deltas with an explicit non-attribution caveat. Completion
+  measurements are at the action boundary, not end of day: fixes/work → team releases → rivals/nemesis → deep work/plans
+  → users/fit/companions → revenue/costs → later staff/research/journey work. Integration tests pin release snapshots
+  before the users/income pass. These deltas include intervening activity; do not present them as isolated treatment effects.
+- `operating-contract.ts` defines a strict future one-of idle/finite initiative/standing assignment shape, validates its
+  JSON shape, and defines service/provided/demand/unit/headroom/risk. Reliability/growth/research numbers are NOT tuned.
+  Proposed event policy keeps random choices/offers/endings blocking and routine outcomes informational. These are
+  tested Stage 2 boundaries, NOT attached to Office or wired into the legacy clock yet. Activating them requires the
+  semantic save migration and full parallel slice together; do not merely remove the old pause check.
+- Verification: **70 Tycoon files / 1,218 tests passed**, typecheck passed, production build passed. Full repository run:
+  **184 files / 2,596 tests passed; 1 failure**: `tests/hr/run.test.ts` → `keeps foes, shots and gems under their caps`
+  exceeded its 5,000 ms timeout. Isolated retry also timed out; no HR code/config was changed. Two subsequently added
+  Tycoon UI tests passed in the 1,218-test run. Production Chromium: 1280/390/320px, no page errors, modal or horizontal
+  overflow; reproducible fixtures/harness are `scripts/tycoon/stage1-{fixtures.ts,browser.mjs}`.
+**Handoff:** Stage 1's existing-cycle explanation/snapshot slice is implemented. Review the contracts before Stage 2;
+actual standing service demand/cost formulas, Office migration, reservation/conflict rules and nonblocking execution
+remain Stage 2 work, not features secretly enabled here. Do not claim live parallel operations or staffed research.
+
 - Add a shared read model for current demand/growth constraints, revenue, costs, product health and effective team
   capacity. Surface actual causes already computed by products/fit/scale/economy; do not invent retrospective attribution.
 - Every initiative: intended outcome, affected product/ecosystem, team requirements, cash/upkeep and displaced work;

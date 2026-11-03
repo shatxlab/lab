@@ -1,3 +1,4 @@
+import { completeBusinessDecision } from './business-history'
 import { getDeepWork, DEEP_WORK, type DeepWorkKind } from '@/lib/tycoon/data/deepwork'
 import {
   DEEP_BASE_CHANCE,
@@ -159,5 +160,6 @@ export function deepWorkDay(state: GameState): void {
   const text = conclude(state, kind, ok, work.bold === true)
   state.events.push({ type: 'notice', text: `${kind.name}: ${text}`, sound: ok ? 'milestone' : undefined })
   logEntry(state, ok ? 'deepwork.done' : 'deepwork.failed', `${kind.name} ${ok ? 'worked out' : 'did not work out'}`, { chance: Math.round(chance * 100), bold: work.bold === true, helped: work.helped === true })
+  if (state.signatureId !== null) completeBusinessDecision(state, state.signatureId)
   delete state.deepWork
 }

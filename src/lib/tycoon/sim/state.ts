@@ -312,11 +312,23 @@ function validOffice(v: unknown, products: unknown[]): boolean {
   return true
 }
 
+function validBusinessSnapshot(v: unknown): boolean {
+  return isObj(v) && ['day', 'cash', 'revenue', 'net', 'users', 'fit', 'bugs', 'reach', 'capacity'].every((key) => isNum(v[key]))
+}
+
+function validBusinessDecisions(v: unknown): boolean {
+  return Array.isArray(v) && v.length <= 24 && v.every((entry) =>
+    isObj(entry) && isNum(entry.productId) && (entry.projectId === undefined || isNum(entry.projectId)) &&
+    typeof entry.title === 'string' && entry.title.length <= 200 && ['release', 'deep', 'strike'].includes(String(entry.kind)) &&
+    validBusinessSnapshot(entry.before) && (entry.after === undefined || validBusinessSnapshot(entry.after)))
+}
+
 /** True when `v` has the full shape of a GameState and refers only to content that exists. */
 function validState(v: unknown): v is GameState {
   return (
     isObj(v) &&
     v.version === STATE_VERSION &&
+    (v.businessDecisions === undefined || validBusinessDecisions(v.businessDecisions)) &&
     isNum(v.rng) &&
     isNum(v.day) &&
     isNum(v.money) &&

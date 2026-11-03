@@ -1,7 +1,7 @@
 import { getDeepWork } from '@/lib/tycoon/data/deepwork'
-import { formatCount } from '@/lib/tycoon/format'
+import { formatCount, formatMoney } from '@/lib/tycoon/format'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
-import { buildDaysLeft, canResearch, cardText, cycleProduct, researchPlanBlocker } from '@/lib/tycoon/sim/cycle'
+import { buildDaysLeft, canResearch, cardText, initiativePreview, cycleProduct, researchPlanBlocker } from '@/lib/tycoon/sim/cycle'
 import { deepWorkChance } from '@/lib/tycoon/sim/deepwork'
 import { nemesisRival } from '@/lib/tycoon/sim/nemesis'
 import { helpersOf } from '@/lib/tycoon/sim/offices'
@@ -9,6 +9,7 @@ import { loadOf } from '@/lib/tycoon/sim/scale'
 import { overallProgress } from '@/lib/tycoon/sim/scoring'
 import { PLAN_RESEARCH_DAYS } from '@/lib/tycoon/sim/balance'
 import type { Plan, Product } from '@/lib/tycoon/sim/types'
+import { BusinessPanel } from './BusinessPanel'
 import { useGame, useStore } from './context'
 
 /** The hit in one line; a tap opens the numbers behind it. */
@@ -52,17 +53,29 @@ function PlanCards({ hit, plan }: { hit: Product; plan: Plan }) {
       <div className="plan-cards">
         {plan.cards.map((card, index) => {
           const text = cardText(state, hit, card, plan.clarity)
+          const contract = initiativePreview(state, hit, card, plan.clarity)
           return (
-            <button key={`${card.kind}:${card.id}`} className="plan-card" disabled={text.blocker !== null} onClick={() => store.chooseCard(index)}>
-              <strong>
-                {text.title}
-                {text.version && <small className="muted"> {text.version}</small>}
-              </strong>
-              <span className="good">{text.effect}</span>
-              <small className="muted">
-                {card.why} · {text.blocker ?? text.cost}
-              </small>
-            </button>
+            <div className="initiative-option" key={`${card.kind}:${card.id}`}>
+              <button className="plan-card" disabled={text.blocker !== null} onClick={() => store.chooseCard(index)}>
+                <strong>
+                  {text.title}
+                  {text.version && <small className="muted"> {text.version}</small>}
+                </strong>
+                <span className="good">{text.effect}</span>
+                <small className="muted">
+                  {card.why} · {text.blocker ?? text.cost}
+                </small>
+              </button>
+              <details className="initiative-contract">
+                <summary>Outcome, staffing & costs</summary>
+                <p>Affects {hit.name}. {contract.immediate}</p>
+                <p>{contract.delayed}</p>
+                <p>Upfront: {formatMoney(contract.upfrontCash)} · added tool upkeep: {formatMoney(contract.addedDailyUpkeep)}/day. {contract.costNote}</p>
+                <p>{contract.displaced}</p>
+                {contract.floors.length > 0 && <p>Build requirements: {Object.entries(contract.target).filter(([, value]) => value > 0).map(([key, value]) => `${key} ${Math.ceil(value)} pts (${contract.rate[key as keyof typeof contract.rate].toFixed(1)}/day)`).join('; ')}.</p>}
+                {contract.blocker && <p className="warn">{contract.blocker}</p>}
+              </details>
+            </div>
           )
         })}
       </div>
@@ -121,6 +134,7 @@ export function HitPanel() {
           </div>
         </section>
       )}
+      <BusinessPanel />
     </div>
   )
 }

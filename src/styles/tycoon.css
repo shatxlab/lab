@@ -1996,3 +1996,13 @@
   font-size: 18px;
   font-weight: 700;
 }
+
+.tycoon-root .business-panel { margin: 8px 12px; padding: 12px; border: 1px solid var(--border, #44445c); border-radius: 8px; overflow-wrap: anywhere; min-width: 0; }
+.tycoon-root .business-panel summary { cursor: pointer; }
+.tycoon-root .business-panel p { margin: 8px 0; font-size: .9rem; }
+
+.tycoon-root .initiative-option { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.tycoon-root .initiative-option .plan-card { width: 100%; flex: 1; }
+.tycoon-root .initiative-contract { padding: 8px; font-size: .85rem; overflow-wrap: anywhere; }
+.tycoon-root .initiative-contract summary { cursor: pointer; }
+.tycoon-root .initiative-contract p { margin: 8px 0; }

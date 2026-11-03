@@ -1,3 +1,4 @@
+import { businessSnapshot, recordBusinessDecision } from './business-history'
 import { audienceFor } from '@/lib/tycoon/data/audiences'
 import { getDeepWork } from '@/lib/tycoon/data/deepwork'
 import { FEATURES, getFeature } from '@/lib/tycoon/data/features'
@@ -26,7 +27,7 @@ import {
 import { deepChanceOf, deepWorkBlocker, startDeepWork } from './deepwork'
 import { isAnalyst } from './insight'
 import { activeProjects, helpersOf, hitFloors, inGarage, productInWork, staffOf, teamOf } from './offices'
-import { clarityReach, estimateUpdateFit, estimateUpdateReach, euGain, projectBudget, projectTarget, startLocalisation, startUpdate } from './project'
+import { budgetBlocker, clarityReach, estimateUpdateFit, estimateUpdateReach, euGain, projectBudget, projectTarget, startLocalisation, startUpdate } from './project'
 import { missingFeatures } from './products'
 import { rand } from './rng'
 import { LOVED_AT, SHRUGGED_AT } from './scoring'
@@ -383,13 +384,43 @@ export function cardText(state: GameState, product: Product, card: Proposal, cla
     title,
     version: nextVersion(product, bump),
     effect: releaseEffect(state, lead, product, card, clarity),
-    cost: `${budget > 0 ? `${formatMoney(budget)} · ` : ''}about ${days} days`,
-    blocker: !lead ? 'Nobody is free to build it' : budget > state.money ? 'Not enough money' : null,
+    cost: `${budget > 0 ? `${formatMoney(budget)} · ` : ''}${Number.isFinite(days) ? `about ${days} days` : 'missing required build skills'}`,
+    blocker: !lead ? 'Nobody is free to build it' : !Number.isFinite(days) ? 'Missing required build skills' : budgetBlocker(state, budget),
+  }
+}
+
+/** A decision contract for the existing cycle, not a promise of Stage 2 parallel staffing. */
+export function initiativePreview(state: GameState, product: Product, card: Proposal, clarity: number) {
+  const text = cardText(state, product, card, clarity)
+  const lead = leadFloor(state)
+  const finite = card.kind !== 'deep' && card.kind !== 'strike'
+  const target = finite && lead ? releaseTarget(state, lead, product, card, clarity) : emptySkills()
+  const rate = finite && lead ? crewRate(state, lead, product) : emptySkills()
+  const missing = DISCIPLINES.filter((discipline) => target[discipline] > 0 && rate[discipline] <= 0)
+  const floors = finite && lead ? [lead, ...helpersOf(state, lead)].map((office) => office.id) : []
+  const item = card.kind === 'item' ? getWorkItem(card.id) : undefined
+  return {
+    productId: product.id,
+    title: text.title,
+    outcome: text.effect,
+    immediate: card.kind === 'strike' ? 'Rival setback applies immediately.' : card.kind === 'deep'
+      ? 'No immediate product improvement; outcome is uncertain and resolves at completion.'
+      : 'Product changes apply when the release ships, not when work starts.',
+    delayed: 'Demand, user adoption and revenue develop later alongside market conditions and other work; no guaranteed return.',
+    upfrontCash: card.kind === 'strike' ? strikeBackCost(state) : card.kind === 'localise'
+      ? projectBudget(projectTarget(product.productTypeId, [], 'update', product.size)) : 0,
+    addedDailyUpkeep: item?.effect.upkeep ?? 0,
+    target, rate, floors, missing,
+    blocker: text.blocker ?? (missing.length ? `Missing build output: ${missing.join(', ')}` : null),
+    displaced: finite ? `${floors.length} floor(s) contribute under the current shared-release rules; their builders cannot build a second release at the same time. Existing bug-fixing pairs stay on fixes.`
+      : card.kind === 'deep' ? 'Uses the founder’s time and prevents another release while deep work is active.'
+      : 'No build time; the plan remains open for another choice.',
+    costNote: 'Payroll, rent and existing hosting/tool costs continue. Staffing is not free; previews exclude future hosting changes from additional users.',
   }
 }
 
 /** Plays a card. Hitting back takes no time, so the player still chooses; anything else ends the plan. */
-export function chooseCard(state: GameState, index: number): Result {
+function chooseCardAction(state: GameState, index: number): Result {
   const plan = state.plan
   const card = plan?.cards[index]
   const product = cycleProduct(state)
@@ -409,8 +440,26 @@ export function chooseCard(state: GameState, index: number): Result {
   }
   const lead = leadFloor(state)
   if (!lead) return fail('Nobody is free to build it')
+  const blocker = cardText(state, product, card, plan.clarity).blocker
+  if (blocker) return fail(blocker)
   const result = startBuild(state, lead, product, card, plan.clarity)
   if (result.ok) delete state.plan
+  return result
+}
+
+/** Record only accepted decisions, before their immediate costs/effects are applied. */
+export function chooseCard(state: GameState, index: number): Result {
+  const product = cycleProduct(state)
+  const card = state.plan?.cards[index]
+  if (!product || !card) return fail('There is no such card')
+  const before = businessSnapshot(state, product)
+  const result = chooseCardAction(state, index)
+  if (result.ok) {
+    const project = state.offices.find((office) => office.project?.parentId === product.id)?.project
+    recordBusinessDecision(state, product, describeProposal(card).title,
+      card.kind === 'deep' ? 'deep' : card.kind === 'strike' ? 'strike' : 'release', before,
+      card.kind === 'deep' || card.kind === 'strike' ? undefined : project?.id)
+  }
   return result
 }
 

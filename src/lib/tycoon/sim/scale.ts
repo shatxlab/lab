@@ -55,12 +55,21 @@ export const worldOf = (product: Pick<Product, 'world' | 'hit'>): number => (pro
 /**
  * A hit finds more people each day while it is healthy and its servers are not full; Growth work speeds it up, and it
  * slows as the product fills the market it is in (the Europe share is counted with the rest).
+ * Shared demand-pull calculation, not a user-growth forecast.
  */
+export function worldGrowth(product: Product, boost = 0) {
+  const health = hitHealth(product)
+  const room = Math.max(0, 1 - product.users / (marketCap(product.productTypeId, 'us', true) * (1 + (product.euShare ?? 0))))
+  const capacityBlocked = product.hit && product.users >= capacityOf(product) && health >= 0
+  const rate = !product.hit || capacityBlocked ? 0 : health >= 0
+    ? HIT_GROWTH_RATE * health * room * (1 + itemEffects(product).reach + boost)
+    : HIT_GROWTH_RATE * health
+  return { health, room, capacityBlocked, rate }
+}
+
 export function growWorld(product: Product, boost = 0): void {
   if (!product.hit) return
-  if (product.users >= capacityOf(product) && hitHealth(product) >= 0) return
-  const room = Math.max(0, 1 - product.users / (marketCap(product.productTypeId, 'us', true) * (1 + (product.euShare ?? 0))))
-  const health = hitHealth(product)
-  const rate = health >= 0 ? HIT_GROWTH_RATE * health * room * (1 + itemEffects(product).reach + boost) : HIT_GROWTH_RATE * health
-  product.world = Math.max(1, worldOf(product) * (1 + rate))
+  const growth = worldGrowth(product, boost)
+  if (growth.capacityBlocked) return
+  product.world = Math.max(1, worldOf(product) * (1 + growth.rate))
 }

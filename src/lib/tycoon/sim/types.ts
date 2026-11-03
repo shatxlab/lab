@@ -485,7 +485,31 @@ export interface RivalProduct {
   hit: boolean
 }
 
+/** Compact, chapter-local measurements at a decision or its completion boundary. */
+export interface BusinessSnapshot {
+  day: number
+  cash: number
+  revenue: number
+  net: number
+  users: number
+  fit: number
+  bugs: number
+  reach: number
+  capacity: number
+}
+
+export interface BusinessDecision {
+  productId: number
+  projectId?: number
+  title: string
+  kind: 'release' | 'deep' | 'strike'
+  before: BusinessSnapshot
+  after?: BusinessSnapshot
+}
+
 export interface GameState {
+  /** Last 24 decisions in this company; absent in older saves. Measurements, not attribution. */
+  businessDecisions?: BusinessDecision[]
   version: number
   /** Seeded RNG state (mulberry32); mutated by `rand`. */
   rng: number

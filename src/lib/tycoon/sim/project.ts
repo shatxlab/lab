@@ -1,3 +1,4 @@
+import { completeBusinessDecision } from './business-history'
 import { formatMoney } from '@/lib/tycoon/format'
 import { audienceFor, audiencesOf } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
@@ -343,7 +344,9 @@ export function shipProject(state: GameState, campaign?: Tier, officeId?: number
   const project = office?.project
   if (!office || !project) return fail('No project to ship')
   if (project.kind !== 'new' && project.kind !== 'update') return fail('Client work has nothing to ship')
-  return project.kind === 'update' ? shipUpdate(state, office, project) : shipNewProduct(state, office, project, campaign)
+  const result = project.kind === 'update' ? shipUpdate(state, office, project) : shipNewProduct(state, office, project, campaign)
+  if (result.ok && project.kind === 'update' && project.parentId !== null) completeBusinessDecision(state, project.parentId, project.id)
+  return result
 }
 
 /** The fit a product has once this update ships at `quality`: all its features, for its audience (a new one if it pivots), at its best quality yet. */

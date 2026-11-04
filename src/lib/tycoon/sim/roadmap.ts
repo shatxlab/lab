@@ -3,6 +3,7 @@ import { getFeature } from '@/lib/tycoon/data/features'
 import { COMPLIANCE_FEATURE } from '@/lib/tycoon/data/regions'
 import { ALL_ITEMS, getWorkItem, type WorkItem } from '@/lib/tycoon/data/workstreams'
 import { formatCount } from '@/lib/tycoon/format'
+import { operating } from './services'
 import { companionBlocker } from './companions'
 import { activeProjects, hasEuropeOffice } from './offices'
 import { euShareOf } from './products'
@@ -19,7 +20,11 @@ export function itemBlocker(state: GameState, product: Product, item: WorkItem):
     if (product.id !== state.signatureId) return 'Launch companions from the flagship ecosystem'
     const companion = getCompanion(item.companionId)
     if (!companion) return 'Unknown companion'
-    if (product.users < item.minUsers) return `From ${formatCount(item.minUsers)} users`
+    // Paid scope is a second route for low-volume professional products. Preserve every old traffic
+    // unlock and legacy admission rule; size never waives suited type, research, care or actual build work.
+    if (product.users < item.minUsers && !(operating(state) && product.size !== 'small')) {
+      return operating(state) ? `Needs Medium product scope or ${formatCount(item.minUsers)} users` : `From ${formatCount(item.minUsers)} users`
+    }
     return companionBlocker(state, companion)
   }
   if (item.workstream === 'europe' && euShareOf(product) === 0) return 'Localise the product for Europe first'

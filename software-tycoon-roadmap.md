@@ -88,7 +88,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, plus the local capacity/research-audit and v11 knowledge/practice carry-over slices below). The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the local family/scope acceptance slice below). The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -682,7 +682,7 @@ Chromium scale-readiness acceptance passes at **1280, 390 and 320px**, including
 no modal, JavaScript errors or horizontal overflow. Harness: `stage4-scale-fixtures.ts`, `stage4-scale-browser.mjs`;
 screenshots `/tmp/tycoon-stage4-scale-shots`. The prior product-action and ecosystem Chromium harnesses also pass at all three widths.
 
-### Stage 4 progress: companion capacity and complete research audit (2026-11-04; local, uncommitted)
+### Stage 4 progress: companion capacity and complete research audit (2026-11-04; checkpoint 45747db on main)
 
 The readiness checkpoint was committed and pushed as **`f614faf`**. This continuation completes the companion-limit
 review and the **35-ID research audit**, but does **not** implement the founder-knowledge/company-practice persistence
@@ -825,9 +825,9 @@ explicit, non-destructive migration and next-chapter previews. The audit above s
 it is not a claim that carry-over is already changed. Wider family/human checks and Stage 7's unattended, affordability
 and 12-seed gates remain open. Do not call Stage 4 complete.
 
-### Stage 4 progress: learned knowledge versus company practices (2026-11-04; local, uncommitted)
+### Stage 4 progress: learned knowledge versus company practices (2026-11-04; checkpoint 45747db on main)
 
-**Implemented locally, not pushed.** This extends the still-local capacity/audit slice above, not a new checkpoint.
+**Committed and pushed as `45747db`.** This checkpoint includes the capacity/audit slice above.
 All **35 saved research IDs** now have explicit carry metadata: **8 knowledge**, **25 practice**, **1 mixed**
 (`ux_research`) and **1 repeatable study**. No ID was merged/retired and no effect was silently removed from an
 existing company. The audit table above is the historical proposal; its K/P/M/R assignments are now implemented.
@@ -901,6 +901,64 @@ seed **8 bankrupt 1444**; seed **10 still Europe 4320**, **$1.01B cash / $1.26B 
 Stage 6 larger next-venture ambitions/founder economics and Stage 7 unattended/human/12-seed gates. Stage 4 is not
 claimed complete merely because the research split now works. Existing early bankruptcies, the default seed-10 rivalry
 horizon and plentiful late cash are not fixed by a persistence/UI slice. Do not commit until asked.
+
+### Stage 4 progress: product-family scope and neglect/recovery acceptance (local, after 45747db)
+
+**Checkpoint:** `45747db`, `feat(tycoon): preserve founder knowledge across company ventures`, was committed/pushed
+on the explicit “commit and continue” request. Subsequent work below is local and not committed.
+
+**Family matrix exposed a real opportunity gate.** At 20× each type's base audience, 9 of 12 product families were
+still rejected by the inherited universal **300,000-user** companion-initiative gate. Cloud's base audience is 400;
+Data Platform's is 500. The matrix initially failed at the real `assignOperation` boundary, not a rendering assertion.
+Do not “fix” this acceptance by inflating all synthetic professional products to consumer-scale users or bypassing
+paid delivery with `launchCompanion`.
+
+**Narrow operating rule change:** a completed **Medium-or-larger product scope OR the original 300,000-user path**
+now admits suitable companion work in Operations. Scope is earned by the existing explicitly paid grow action; it is
+not granted by selecting a companion. Small high-traffic products retain their old opportunity; legacy pre-Operations
+admission is unchanged. AI type/era/reputation/learned-knowledge checks remain required, as do one actual build floor,
+normal build time/payroll, hosting and finite reliability coverage. No user/revenue/cost coefficients, default bot
+policy, free slot/worker, automatic picker or save shape changed. The paid work must finish before a companion exists;
+larger product size does not mint server capacity. Preview copy explains the alternative and normal remaining gates.
+Other items' user gates and chapter targets are not silently retuned by this change.
+
+**New acceptance matrix:** 12 real product types, **52 simulation cases plus 2 UI cases**. Tests use real employee
+contributions/variance, normal minimum release time and payroll: **no injection of completed target/progress**. They
+cover paid growth and reload, exact upfront cost, no gifted servers, finite throughput, atomic rejection at zero cash,
+both scope/traffic paths, unchanged legacy restriction, and AI gate rejection through the new low-volume route.
+For each family, companion work is delivered, then 400 product/cost-kernel days are run without care or new releases.
+Assets and bills remain, value disappears, and idle floors do not auto-select a repair. Reload/reallocation fixes the
+backlog but does not refresh stale products; a real staffed polishing release restores companion value. The flagship
+still needs its own release; the test explicitly rejects falsely restored company-health readiness.
+
+**Important limit:** these are production-kernel acceptance tests, not an unattended full-clock economy forecast.
+They do not silently answer random events, run morale/career/market policies, or prove profitability/survival; the
+high-cash fixture isolates capacity and bills, while the zero-cash case tests rejection rather than affordability
+balance. Full unattended, human and 12-seed gates remain open. Do not call Stage 4 complete based on this matrix.
+
+**Verification:** all **86 Tycoon files / 1,409 tests pass**, including the **54 new acceptance/UI cases**.
+Full repository: **201 files / 2,789 tests pass**, sole failure still
+`tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — **`Test timed out in 5000ms.`**
+Unrelated HR/timeout unchanged. Final typecheck and production build pass. Logs: `/tmp/stage4-family-full.log`,
+`-types.log`, `-build.log` (full run completed in 351 seconds; exit 1 is the known HR failure).
+
+**Browser:** all **12 low-volume cases** pass (Medium Cloud, Data, XR and Small Cloud × **1280, 390, 320px**).
+At 8,000 users the Medium fixtures show the suited opportunity and its scope/traffic/care terms, then save a real
+pending floor initiative, not an instant companion. The Small Cloud control does not show the opportunity. Actual
+care remains assigned to the other floor. Assertions include normal autosave, unchanged users while paused, no
+JS errors, page/operations/preview horizontal overflow or blocking modal, and manual pause. Phone screenshot visually
+checked. Log `/tmp/stage4-family-browser.log`; images `/tmp/tycoon-stage4-family-shots`.
+
+**Default-policy bot comparison:** all four results match checkpoint `45747db` exactly: seed **1 IPO 3381**,
+**$297.05M** cash; seed **2 bankrupt 1717**; seed **8 bankrupt 1444**; seed **10 Europe at 4320**,
+**$1.01B cash / $1.26B lifetime**. No default policy changed to exercise or manufacture a win from the new scope path;
+the family matrix explicitly exercises paid growth instead. Early failures, the seed-10 rivalry horizon, remaining
+family-wide numeric goals/item thresholds and plentiful late cash are **not resolved**. Logs:
+`/tmp/stage4-family-bot-{1,2,8,10}.log`; aggregate `-bots.exit` is 0.
+
+Scripts: `stage4-family-fixtures.ts`, `stage4-family-browser.mjs`; tests:
+`operating-family-acceptance.test.ts`, `companion-scope-ui.test.tsx`. No player journal used. Do not commit this follow-up
+unless requested.
 
 **5. Finish the stable workspace and navigation** — original feedback 2–5 and 8.
 - Desktop prototype: building left, operations right, stable scene dimensions. Mobile: compact building/team overview

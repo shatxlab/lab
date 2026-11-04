@@ -348,7 +348,7 @@ describe('warned retention and durable migration', () => {
     }))
     const upgraded = deserialize(serialize(s))!
     expect(upgraded).not.toBeNull()
-    expect(upgraded.version).toBe(9)
+    expect(upgraded.version).toBe(10)
     expect(upgraded.employees[0].career!.appointment?.scope).toBe('company')
     expect(upgraded.employees.slice(1).every((e) => e.career!.appointment?.scope === 1)).toBe(true)
     expect(upgraded.employees[2].career!.appointment?.conflict).toBe(true)

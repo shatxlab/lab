@@ -2025,3 +2025,7 @@
 .tycoon-root .people-management p { overflow-wrap: anywhere; }
 .tycoon-root .people-management .career-conversation { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
 .tycoon-root .people-management button { max-width: 100%; white-space: normal; }
+
+/* Keep commercial controls readable inside native disclosures at phone widths. */
+.product-commercial-body { display: flex; flex-direction: column; gap: .6rem; min-width: 0; padding-top: .6rem; }
+.product-commercial-body .tiers > div { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }

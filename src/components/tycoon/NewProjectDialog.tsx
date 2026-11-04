@@ -4,7 +4,7 @@ import { FEATURES } from '@/lib/tycoon/data/features'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { CONTRACT_DEPOSIT, DAYS_PER_MONTH, SURVEY_COST, GROW_MAX_FEATURES, MARKET_COLD, MARKET_HOT, MAX_FEATURES, PROJECT_SIZES, UPDATE_MAX_FEATURES, WORK_SCALE } from '@/lib/tycoon/sim/balance'
 import { eraAt, expectedFeatures } from '@/lib/tycoon/data/eras'
-import { contractBlocker } from '@/lib/tycoon/sim/contracts'
+import { contractBlocker, contractOfferBlocker } from '@/lib/tycoon/sim/contracts'
 import { newProductBlocker, nextSize } from '@/lib/tycoon/sim/lifecycle'
 import { monthlyBurn } from '@/lib/tycoon/sim/economy'
 import { marketDemand } from '@/lib/tycoon/sim/market'
@@ -38,7 +38,7 @@ function marketTone(demand: number): string {
 }
 
 /** The jobs clients are offering, each with how long this office's team would take. */
-function ClientWork({ office }: { office: Office }) {
+export function ClientWork({ office, productId }: { office: Office; productId?: number }) {
   const store = useStore()
   const state = useGame()
   const [error, setError] = useState<{ offerId: number; reason: string } | null>(null)
@@ -55,7 +55,8 @@ function ClientWork({ office }: { office: Office }) {
       </p>
       {state.contracts.length === 0 && <p className="muted">No one is offering work right now.</p>}
       <div className="contracts">
-        {state.contracts.map((offer) => {
+        {state.contracts.filter((offer) => productId === undefined || offer.productId === undefined || offer.productId === productId).map((offer) => {
+          const offerBlocker = contractOfferBlocker(state, office, offer)
           const days = estimateDays(state, offer.target, office)
           const tight = days > offer.days
           return (
@@ -79,10 +80,11 @@ function ClientWork({ office }: { office: Office }) {
                   {offer.expiresDay !== undefined && ` · on offer for ${Math.max(0, offer.expiresDay - state.day)} more days`}
                 </small>
               </div>
-              <button className="primary" disabled={blocker !== null} title={blocker ?? undefined} onClick={() => take(offer)}>
+              <button className="primary" disabled={offerBlocker !== null} title={offerBlocker ?? undefined} onClick={() => take(offer)}>
                 Take it · {formatMoney(offer.pay)}
                 <small> · {formatMoney(Math.round(offer.pay * CONTRACT_DEPOSIT))} now</small>
               </button>
+              {offerBlocker && <small className="warn">{offerBlocker}</small>}
               {error?.offerId === offer.id && <p className="bad action-note">{error.reason}</p>}
             </div>
           )

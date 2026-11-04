@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { PORTFOLIO_LIMIT, PROJECT_SIZES, SALE_MIN_INCOME, PROMO_MIN_EFFECT, PROMO_RECOVERY_DAYS, PROMOTIONS } from '@/lib/tycoon/sim/balance'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
+import { operating } from '@/lib/tycoon/sim/services'
 import { inGarage } from '@/lib/tycoon/sim/offices'
 import { localiseBlocker } from '@/lib/tycoon/sim/lifecycle'
 import { projectBudget, projectTarget } from '@/lib/tycoon/sim/project'
@@ -112,6 +113,14 @@ function ProductRow({ product }: { product: Product }) {
   const missing = missingFeatures(product, state.day)
   const audience = audienceFor(product.productTypeId, product.audienceId)
   const feedback = feedbackFor(state, product)
+
+  if (operating(state)) return <div className="product">
+    <strong>{product.name}{product.hit ? ' 🚀' : ''}</strong>
+    <small>{PROJECT_SIZES[product.size].name} {type.name} · {productPhase(state, product)} · {formatCount(product.users)} users · {formatMoney(productRevenue(product))}/day</small>
+    <small>{bugs} open bugs · {stale ? 'needs an update' : 'fresh'} · {updates} updates · lifetime {formatMoney(product.totalRevenue)}</small>
+    <p>Manage this product through Company operations: select its product context for initiatives, shared care and commercial decisions.</p>
+    <button onClick={() => store.closeDialog()}>Back to operations</button>
+  </div>
 
   return (
     <div className="product">
@@ -328,7 +337,7 @@ export function ProductsTab() {
           {newProductBlocker(state) && ` · ${newProductBlocker(state)}`}
         </p>
       )}
-      <OnCallPanel />
+      {!operating(state) && <OnCallPanel />}
       {products.map((p) => (
         <ProductRow key={p.id} product={p} />
       ))}

@@ -28,7 +28,7 @@ import { monthlyBurn } from './economy'
 import { logEntry } from './journal'
 import { marketDemand } from './market'
 import { activeProjects, hasEuropeOffice, inGarage, productInWork, teamOf } from './offices'
-import { euShareOf, interest, lastReleaseDay, revenueForUsers, settledUsers, targetUsers } from './products'
+import { bugDensity, euShareOf, interest, lastReleaseDay, revenueForUsers, settledUsers, targetUsers } from './products'
 import { computeReach } from './scoring'
 import { undiscovered } from './fit'
 import { projectFit } from './project'
@@ -42,6 +42,7 @@ const price = (amount: number, floor: number) => Math.max(floor, Math.round(amou
 export function productWorkBlocker(state: GameState, office: Office, product: Product, byTeam = false): string | null {
   if (!byTeam && office.assignment && office.assignment.kind !== 'idle') return 'Reassign the floor in Operations first'
   if (office.project) return 'A project is in progress'
+  if (office.assignment && state.offices.some((o) => o !== office && o.project?.parentId === product.id && (o.project.grows || o.project.pivotsTo))) return 'Another team is changing this product’s scope or audience'
   if (teamOf(state, office).length === 0) return 'Hire someone first'
   return productInWork(state, product.id, byTeam) ? 'Another team is working on it' : null
 }
@@ -212,10 +213,15 @@ export function nextSize(size: ProjectSize): ProjectSize | null {
 }
 
 /** Why `office` can't start growing `product` into the next size, or null when it can. */
-export function growBlocker(state: GameState, office: Office, product: Product): string | null {
+export function growBlocker(state: GameState, office: Office, product: Product, byTeam = false): string | null {
   const next = nextSize(product.size)
   if (!next) return 'Already as big as a product gets'
   if (state.day - product.releaseDay < GROW_MIN_AGE_DAYS) return `Too young: ${GROW_MIN_AGE_DAYS - (state.day - product.releaseDay)} more days`
+  if (byTeam && office.assignment) {
+    if (state.offices.some((o) => o !== office && o.project?.parentId === product.id)) return 'Finish other work on this product before growing it'
+    if (bugDensity(product) >= 10) return 'Fix product bugs before expanding scope'
+    return productPhase(state, product) === 'Fading' ? 'Bring it back to life with an update first' : null
+  }
   const busy = updateBlocker(state, office, product)
   if (busy) return busy
   const lock = sizeLock(state, next, office)

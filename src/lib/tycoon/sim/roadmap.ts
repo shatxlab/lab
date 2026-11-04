@@ -16,6 +16,7 @@ export const ROADMAP_LIMIT = 12
 export function itemBlocker(state: GameState, product: Product, item: WorkItem): string | null {
   if ((product.built ?? []).includes(item.id)) return 'Built already'
   if (item.companionId) {
+    if (product.id !== state.signatureId) return 'Launch companions from the flagship ecosystem'
     const companion = getCompanion(item.companionId)
     if (!companion) return 'Unknown companion'
     if (product.users < item.minUsers) return `From ${formatCount(item.minUsers)} users`

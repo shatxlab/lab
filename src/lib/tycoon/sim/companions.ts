@@ -1,6 +1,9 @@
+import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { getCompanion, type Companion } from '@/lib/tycoon/data/companions'
 import { COMPANION_CARE_FIT, COMPANION_KEEP_PAY, COMPANION_KEEP_RETENTION, COMPANION_REACH_BOOST, COMPANION_SHARE, COMPANION_SLOTS, DAYS_PER_MONTH } from './balance'
+import { COMPANION_SERVICE_DEMAND, operating, productService } from './services'
 import { bugDensity, interest } from './products'
+import { productTypeLock } from './unlocks'
 import type { GameState, Product } from './types'
 
 /** The live companions of the hit, and the side products kept from the garage: those who take the second-product slots. */
@@ -22,18 +25,32 @@ export function companionBlocker(state: GameState, companion: Companion): string
   if (!hit) return 'Needs a hit'
   if (!companion.suits.includes(hit.productTypeId)) return `Does not suit ${hit.name}`
   if (state.products.some((p) => p.companionId === companion.id)) return 'Already launched'
+  if (companion.id === 'ai_assistant') {
+    const lock = productTypeLock(state, getProductType(companion.productTypeId))
+    if (lock) return lock
+  }
   return freeSlots(state) > 0 ? null : 'Both second-product slots are taken: retire a side product or a companion'
 }
 
-/** What the hit gets from its healthy companions. */
+/** Old saves retain their pre-operations effects; live operations must actually supply care. */
+export function companionCoverage(state: GameState): number {
+  if (!operating(state)) return looksAfterCompanions(state) ? 1 : 0
+  const hit = state.products.find((p) => p.id === state.signatureId)
+  if (!hit) return 0
+  const service = productService(state, hit, 'reliability')
+  return Math.min(1, service.provided / Math.max(COMPANION_SERVICE_DEMAND, service.demand))
+}
+
+/** What the hit gets from its healthy companions, bounded by shared care in operating companies. */
 export function companionEffects(state: GameState): { reach: number; retention: number; pay: number } {
   const total = { reach: 0, retention: 0, pay: 0 }
+  const coverage = operating(state) ? companionCoverage(state) : 1
   for (const product of companionsOf(state)) {
     if (!companionHealthy(state, product)) continue
-    if (product.role === 'reach') total.reach += COMPANION_REACH_BOOST
+    if (product.role === 'reach') total.reach += COMPANION_REACH_BOOST * coverage
     else {
-      total.retention += COMPANION_KEEP_RETENTION
-      total.pay += COMPANION_KEEP_PAY
+      total.retention += COMPANION_KEEP_RETENTION * coverage
+      total.pay += COMPANION_KEEP_PAY * coverage
     }
   }
   return total
@@ -74,7 +91,7 @@ export function launchCompanion(state: GameState, companionId: string): Product 
   return product
 }
 
-/** True while some floor works on the hit's Companions stream: the people the companions cost the hit. */
+/** Legacy care flag. Operating effects and reach use measured companionCoverage instead. */
 export const looksAfterCompanions = (state: GameState): boolean => state.offices.some((o) => o.kind === 'office' && (o.assignment ? o.assignment.kind === 'standing' && o.assignment.service === 'reliability' && o.assignment.productId === state.signatureId : o.workstream === 'companions' && o.productId === state.signatureId))
 
 /** Once a month the companions follow the hit: their reach is a slice of its users while they are looked after. */
@@ -82,9 +99,10 @@ export function companionsDay(state: GameState): void {
   if (state.day % DAYS_PER_MONTH !== 0) return
   const hit = state.products.find((p) => p.id === state.signatureId)
   if (!hit) return
+  const coverage = companionCoverage(state)
   for (const product of companionsOf(state)) {
     // A companion nobody looks after is left to fade on its own.
-    if (!looksAfterCompanions(state)) continue
-    product.reach = Math.max(product.reach, hit.users * COMPANION_SHARE)
+    if (coverage <= 0) continue
+    product.reach = Math.max(product.reach, hit.users * COMPANION_SHARE * coverage)
   }
 }

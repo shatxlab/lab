@@ -1,6 +1,6 @@
 import { PROFESSIONS, professionOf } from '../../src/lib/tycoon/sim/career-profile.ts'
 import { appointProfessionLead, appointmentBlocker, appointmentIssue, respondCareerConcern } from '../../src/lib/tycoon/sim/people-management.ts'
-import { assignOperation, operationChoices } from '../../src/lib/tycoon/sim/operations.ts'
+import { assignOperation, operationChoices, operationPreview } from '../../src/lib/tycoon/sim/operations.ts'
 import { serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
 // A scripted playthrough of the whole one-product game: the café, the garage hunt, the move out with the hit, then
 // the workstreams, Europe, companions, tools, Absorb and the IPO. Prints a timeline so pacing can be judged.
@@ -8,6 +8,8 @@ import { serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
 //   npx esbuild scripts/tycoon/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/playthrough.mjs
 //   node /tmp/playthrough.mjs [seed] [years] [quiet]
 //
+// OPERATING_GROWTH=1 also prioritises affordable scope expansion after server/Europe work.
+// The default policy stays unchanged for before/after comparison.
 // SAVE_DIR=<dir> also writes the game as it enters each stage (stage-N.json), to load into the real UI.
 // The bot is an optimistic player: it reads the true fit of a release (a real player reads it through an analyst's eye).
 
@@ -261,9 +263,10 @@ function parallel(h: Product): void {
     const options = operationChoices(state, h, floor)
     const card = options.find((c) => c.kind === 'item' && ALL_ITEMS.find((item) => item.id === c.id)?.workstream === 'scale' && loadOf(h) > 0.6)
       ?? options.find((c) => c.kind === 'compliance' || c.kind === 'localise')
+      ?? (process.env.OPERATING_GROWTH === '1' ? options.find((c) => c.kind === 'grow' && operationPreview(state, floor, h, c).blocker === null && state.money > operationPreview(state, floor, h, c).cash + monthlyBurn(state) * 6) : undefined)
       ?? options.find((c) => c.kind === 'feature')
       ?? options.find((c) => c.kind === 'item') ?? options[0]
-    if (card && card.kind !== 'deep' && card.kind !== 'strike') assignOperation(state, floor.id, { kind: 'initiative', productId: h.id, proposal: { kind: card.kind, id: card.id } }, true)
+    if (card) assignOperation(state, floor.id, { kind: 'initiative', productId: h.id, proposal: { kind: card.kind, id: card.id } }, true)
   }
 }
 

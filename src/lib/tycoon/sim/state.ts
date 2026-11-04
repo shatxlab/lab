@@ -13,6 +13,7 @@ import { STAGES } from '@/lib/tycoon/data/stages'
 import { CAFE_START_MONEY, LEVELS, OFFICE_KINDS } from './balance'
 import { refreshContracts } from './contracts'
 import { createRivals, rivalsArrive } from './rivals'
+import { audiencesOf } from '@/lib/tycoon/data/audiences'
 import { ALL_ROLES, generateAnalyst, generateEmployee, refreshCandidates, ROLES, salaryOf } from './hiring'
 import { rollStudioName } from './founding'
 import { rand } from './rng'
@@ -27,9 +28,10 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } 
  * Version 6 put a café before the garage, a journey stage of its own, so every later stage moved up one.
  * Version 8 replaces the global hit turn with explicit floor reservations and staffed office research.
  * Version 9 separates specialist grades, profession appointments and automatic company reviews.
- * Version 3 to 8 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
+ * Version 10 records explicit growth/pivot initiatives; paid v9 work is preserved.
+ * Version 3 to 9 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
  */
-export const STATE_VERSION = 9
+export const STATE_VERSION = 10
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
@@ -211,6 +213,9 @@ function validProject(v: unknown): boolean {
     typeof v.readyNotified === 'boolean' &&
     isNum(v.hype) &&
     typeof v.alphaOffered === 'boolean' &&
+    (v.grows === undefined || knownSize(v.grows)) &&
+    !(v.grows !== undefined && v.pivotsTo !== undefined) &&
+    (v.pivotsTo === undefined || (typeof v.pivotsTo === 'string' && audiencesOf(v.productTypeId as string).some((a) => a.id === v.pivotsTo))) &&
     (v.localises === undefined || typeof v.localises === 'boolean') &&
     isNum(v.bugRisk) &&
     (v.contract === null ||
@@ -320,6 +325,9 @@ function validOffice(v: unknown, products: unknown[]): boolean {
     if (a.kind === 'initiative' && (!isObj(v.project) || v.project.id !== a.projectId || v.project.parentId !== a.productId)) return false
     if (a.kind === 'initiative' && a.proposal.kind === 'item' && !ALL_ITEMS.some((item) => item.id === a.proposal.id)) return false
     if (a.kind === 'initiative' && a.proposal.kind === 'feature' && !knownFeature(a.proposal.id)) return false
+    if (a.kind === 'initiative' && isObj(v.project) && ((v.project.grows && a.proposal.kind !== 'grow') || (v.project.pivotsTo && a.proposal.kind !== 'pivot'))) return false
+    if (a.kind === 'initiative' && a.proposal.kind === 'pivot' && (!isObj(v.project) || v.project.pivotsTo !== a.proposal.id || !audiencesOf(v.project.productTypeId as string).some((audience) => audience.id === a.proposal.id))) return false
+    if (a.kind === 'initiative' && a.proposal.kind === 'grow' && (!isObj(v.project) || v.project.grows !== a.proposal.id || !PROJECT_SIZE_IDS.includes(a.proposal.id as typeof PROJECT_SIZE_IDS[number]))) return false
   }
   const project = v.project
   if (project === null) return true
@@ -513,7 +521,18 @@ export function deserialize(json: string): GameState | null {
     const raw: unknown = JSON.parse(json)
     const from = isObj(raw) && typeof raw.version === 'number' ? raw.version : 0
     const legacy = upgradeFromV6(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw))))
-    const parsed = dropRemovedContent(isObj(legacy) && (legacy.version === 7 || legacy.version === 8) ? { ...legacy, version: STATE_VERSION } : legacy)
+    const parsed = dropRemovedContent(isObj(legacy) && (legacy.version === 7 || legacy.version === 8 || legacy.version === 9) ? { ...legacy, version: STATE_VERSION } : legacy)
+    if (from >= 7 && from < 10 && isObj(parsed) && Array.isArray(parsed.offices)) {
+      for (const office of parsed.offices) {
+        if (!isObj(office) || !isObj(office.project) || (!office.project.grows && !office.project.pivotsTo) || !isObj(office.assignment)) continue
+        const proposal = office.project.pivotsTo ? { kind: 'pivot', id: office.project.pivotsTo } : { kind: 'grow', id: office.project.grows }
+        if (office.assignment.kind === 'initiative') office.assignment.proposal = proposal
+        else if (office.assignment.kind === 'idle') {
+          office.assignment = { kind: 'initiative', productId: office.project.parentId, projectId: office.project.id, proposal, startedDay: office.project.startDay }
+          office.project.byTeam = true
+        }
+      }
+    }
     if (!validState(parsed)) return null
     const state: GameState = { ...parsed, dayWork: [], events: [] }
     if (from < 8) initialiseOperations(state)

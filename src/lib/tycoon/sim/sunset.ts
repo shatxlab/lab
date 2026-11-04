@@ -45,6 +45,11 @@ export function sunsetProduct(state: GameState, productId: number, options: { pl
 
   state.fixes = state.fixes.filter((f) => f.productId !== product.id)
   state.products = state.products.filter((p) => p.id !== product.id)
+  state.contracts = state.contracts.filter((c) => c.productId !== product.id)
+  for (const office of state.offices) {
+    if (office.productId === product.id) delete office.productId
+    if (office.assignment?.kind === 'standing' && office.assignment.productId === product.id) office.assignment = { kind: 'idle' }
+  }
   const outcome = sunsetOutcome(product)
   const price = outcome === 'sold' ? salePrice(product) : 0
   const buyer = outcome === 'sold' ? buyerFor(state, product) : undefined

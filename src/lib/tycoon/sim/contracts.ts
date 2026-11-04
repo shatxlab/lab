@@ -178,6 +178,21 @@ export function contractBlocker(state: GameState, office: Office): string | null
   return teamOf(state, office).length === 0 ? 'Hire someone first' : null
 }
 
+/** Per-offer validation shared by the inline board and command; previews are not authority. */
+export function contractOfferBlocker(state: GameState, office: Office, offer: ContractOffer): string | null {
+  const busy = contractBlocker(state, office)
+  if (busy) return busy
+  if (offer.expiresDay !== undefined && offer.expiresDay < state.day) return 'That offer has expired'
+  if (office.assignment) {
+    const rate = teamRate(state, office)
+    const missing = DISCIPLINES.filter((d) => offer.target[d] > 0 && rate[d] <= 0)
+    if (missing.length) return `Missing build skills: ${missing.join(', ')}`
+  }
+  if (offer.productId !== undefined && !state.products.some((p) => p.id === offer.productId)) return 'That product is gone'
+  if (offer.productId !== undefined && productInWork(state, offer.productId)) return 'Another team is working on it'
+  return null
+}
+
 /** Takes a job on in an office (the first by default). It pays when every bar is full. */
 export function acceptContract(state: GameState, offerId: number, officeId?: number): Result {
   if (state.gameOver) return fail('Game over')
@@ -185,7 +200,7 @@ export function acceptContract(state: GameState, offerId: number, officeId?: num
   if (!office) return fail('Unknown office')
   const offer = state.contracts.find((c) => c.id === offerId)
   if (!offer) return fail('That job is gone')
-  const blocker = contractBlocker(state, office)
+  const blocker = contractOfferBlocker(state, office, offer)
   if (blocker) return fail(blocker)
   const product = offer.productId === undefined ? undefined : state.products.find((p) => p.id === offer.productId)
   if (offer.productId !== undefined && !product) return fail('That product is gone')

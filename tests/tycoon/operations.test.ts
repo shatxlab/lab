@@ -198,7 +198,7 @@ describe('v8 persistence boundary', () => {
     s.employees[1].teamId = s.offices[1].id
     s.plan = { clarity: 80, cards: [] }
     const restored = deserialize(serialize(s))!
-    expect(restored.version).toBe(9)
+    expect(restored.version).toBe(10)
     expect(restored.plan).toBeUndefined()
     expect(restored.employees.every((e) => e.teamId === undefined)).toBe(true)
     expect(restored.offices[0].assignment?.kind).toBe('initiative')

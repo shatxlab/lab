@@ -1,3 +1,4 @@
+import { operating } from '@/lib/tycoon/sim/services'
 import { useState } from 'react'
 import { downloadJournal, startNewGame, startNextChapter } from '@/lib/tycoon/browser'
 import { chapterKind } from '@/lib/tycoon/sim/chapters'
@@ -110,9 +111,9 @@ export function ResultDialog({ productId, reputationDelta, early, unlocked, upda
       )}
       <div className="actions">
         <button onClick={() => store.closeDialog()}>Close</button>
-        <button className="primary" onClick={() => store.openDialog({ kind: 'new-project' })}>
+        {!operating(state) && <button className="primary" onClick={() => store.openDialog({ kind: 'new-project' })}>
           Next project
-        </button>
+        </button>}
       </div>
     </Modal>
   )

@@ -130,7 +130,7 @@ export function startProject(
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
-  if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
+  if (office.assignment) return fail('Use ecosystem initiatives in Operations')
   if (office.project) return fail('A project is already in progress')
   if (teamOf(state, office).length === 0) return fail('Hire someone first')
   const type = PRODUCT_TYPES.find((t) => t.id === productTypeId)
@@ -195,14 +195,17 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
+  if (office.assignment && !byTeam) return fail('Choose an initiative in Operations')
   if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
-  const blocker = grow ? growBlocker(state, office, product) : updateBlocker(state, office, product, byTeam)
+  const blocker = grow ? growBlocker(state, office, product, byTeam) : updateBlocker(state, office, product, byTeam)
   if (blocker) return fail(blocker)
+  if (office.project) return fail('A project is in progress')
   const bigger = grow ? nextSize(product.size) : null
   const problem = checkFeatures(state, featureIds, grow ? GROW_MAX_FEATURES : UPDATE_MAX_FEATURES)
   if (problem) return fail(problem)
+  if (office.assignment && state.offices.some((o) => o !== office && o.project?.parentId === product.id && featureIds.some((id) => o.project!.featureIds.includes(id)))) return fail('Another team has reserved this feature')
   const repeated = featureIds.find((id) => product.featureIds.includes(id))
   if (repeated) return fail(`${getFeature(repeated).name} is already in ${product.name}`)
   const target = bigger ? growTarget(product.productTypeId, featureIds, product.size, bigger) : projectTarget(product.productTypeId, featureIds, 'update', product.size)
@@ -231,17 +234,18 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     contract: null,
   }
   if (office.assignment) office.assignment = { kind: 'initiative', productId: product.id, projectId: office.project.id,
-    proposal: { kind: featureIds.length ? 'feature' : 'polish', id: featureIds[0] ?? 'polish' }, startedDay: state.day }
+    proposal: { kind: bigger ? 'grow' : featureIds.length ? 'feature' : 'polish', id: bigger ?? featureIds[0] ?? 'polish' }, startedDay: state.day }
   return OK
 }
 
 /** Why `product` can't pivot to `audienceId` from `office` now, or null when it can. */
-export function pivotBlocker(state: GameState, office: Office, product: Product, audienceId: string): string | null {
+export function pivotBlocker(state: GameState, office: Office, product: Product, audienceId: string, byTeam = false): string | null {
   if (product.hit) return 'A hit has found its people'
   if (product.pivoted) return 'It has pivoted once already'
   if (!audiencesOf(product.productTypeId).some((a) => a.id === audienceId)) return 'Unknown audience'
-  if (audienceId === (product.audienceId ?? audiencesOf(product.productTypeId)[0]?.id)) return 'It is already for them'
-  return updateBlocker(state, office, product)
+  if (audienceId === audienceFor(product.productTypeId, product.audienceId).id) return 'It is already for them'
+  if (byTeam && office.assignment && state.offices.some((o) => o !== office && o.project?.parentId === product.id)) return 'Finish other work on this product before pivoting it'
+  return updateBlocker(state, office, product, byTeam)
 }
 
 /** The work of a pivot: an update's, without new features, but not the cheap maintenance kind. */
@@ -256,14 +260,15 @@ export function pivotTarget(product: Product): Skills {
  * new audience at once; when it ships, most of its users leave (they came for what it was), it starts again as a
  * launch, and its fit is the new audience's. A product pivots once.
  */
-export function startPivot(state: GameState, productId: number, audienceId: string, officeId?: number): Result {
+export function startPivot(state: GameState, productId: number, audienceId: string, officeId?: number, byTeam = false): Result {
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
+  if (office.assignment && !byTeam) return fail('Choose an initiative in Operations')
   if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
-  const blocker = pivotBlocker(state, office, product, audienceId)
+  const blocker = pivotBlocker(state, office, product, audienceId, byTeam)
   if (blocker) return fail(blocker)
   office.project = {
     id: state.nextId++,
@@ -310,9 +315,11 @@ export function startLocalisation(state: GameState, productId: number, officeId?
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
+  if (office.assignment && !byTeam) return fail('Choose an initiative in Operations')
   if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
+  if (office.assignment && state.offices.some((o) => o !== office && o.project?.parentId === product.id && o.project.localises)) return fail('Another team is localising this product')
   const blocker = localiseBlocker(state, office, product, byTeam)
   if (blocker) return fail(blocker)
   const target = projectTarget(product.productTypeId, [], 'update', product.size)

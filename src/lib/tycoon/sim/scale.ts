@@ -14,9 +14,10 @@ export function loadOf(product: Product): number {
   return product.hit ? product.users / capacityOf(product) : 0
 }
 
-/** What the studio pays for servers per day: its hits' users, at a price each. */
+/** Hits and operating companions pay per user; legacy pre-operations side products are unchanged. */
 export function hostingCost(state: GameState): number {
-  return state.products.reduce((sum, p) => sum + (p.hit ? p.users * HOSTING_PER_USER_DAY : 0), 0)
+  const operating = state.offices.some((o) => o.assignment !== undefined)
+  return state.products.reduce((sum, p) => sum + (p.hit || (operating && (p.role === 'reach' || p.role === 'keep')) ? p.users * HOSTING_PER_USER_DAY : 0), 0)
 }
 
 /** What each of a product's users pays, relative to the type's price: Monetisation work raises it. */

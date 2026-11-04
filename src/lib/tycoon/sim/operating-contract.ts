@@ -4,9 +4,12 @@ import type { Proposal, SimEvent } from './types'
  * Keep exactly one value per floor: no queue, implicit helpers or simultaneous standing/build work.
  * Legacy v7 work is migrated at the persistence boundary.
  */
+export type OperationInitiative = Exclude<Proposal['kind'], 'deep' | 'strike'> | 'grow' | 'pivot'
+export type OperationProposal = { kind: OperationInitiative; id: string; why: string }
+
 export type FloorAssignment =
   | { kind: 'idle' }
-  | { kind: 'initiative'; productId: number; projectId: number; proposal: { kind: Exclude<Proposal['kind'], 'deep' | 'strike'>; id: string }; startedDay: number }
+  | { kind: 'initiative'; productId: number; projectId: number; proposal: { kind: OperationInitiative; id: string }; startedDay: number }
   | { kind: 'standing'; productId: number; service: 'reliability' | 'growth' | 'research'; startedDay: number }
 
 /** Strict shape gate for the future saved value. Referential/content checks belong to migration. */
@@ -23,7 +26,7 @@ export function isFloorAssignment(value: unknown): value is FloorAssignment {
   const proposal = data.proposal as Record<string, unknown> | null
   return !!proposal && typeof proposal === 'object' && !Array.isArray(proposal) &&
     Object.keys(proposal).every((key) => ['kind', 'id'].includes(key)) &&
-    ['feature', 'item', 'polish', 'compliance', 'localise'].includes(String(proposal.kind)) &&
+    ['feature', 'item', 'polish', 'compliance', 'localise', 'grow', 'pivot'].includes(String(proposal.kind)) &&
     typeof proposal.id === 'string' && proposal.id.length > 0 && proposal.id.length <= 200
 }
 

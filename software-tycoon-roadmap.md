@@ -88,7 +88,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is next. The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem and operating-action slices below). The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -482,6 +482,136 @@ Stage 4 without adding a hidden subsidy, global pause, automatic initiative pick
   the player's 30 completed unlocks; migrate with documented retained benefits/equivalents.
 - **Gate:** a growing business eventually requires reallocation/expansion; unattended growth is not perpetual free money,
   but neglect is warned and recoverable. Product size matters for opportunities, not arbitrary user caps alone.
+
+### Stage 4 progress: shared ecosystem care (2026-11-04; checkpoint on main)
+
+**Scope:** the companion/shared-service vertical slice, not completion of Stage 4. The new AI data assistant is a
+Keep companion suited to Data Platform. Its finite operating initiative needs the AI Product's real era, reputation
+and Machine Learning unlock; existing companions retain their previous availability. Companion launches are offered
+only from the flagship context. Company-wide launch reservations and the existing two slots still apply. Retained
+side products are preserved; the capacity-based replacement for the two-slot limit is **not** implemented yet.
+
+**Actual capacity, not a boolean care flag:** flagship reliability demand now includes flagship + live companion
+bug generation/pending bugs/backlog and **0.25 service points/day per companion** for integration/support. One service
+point can otherwise fix one bug. Each reliability team's output pays its proportional share of that overhead, then
+splits its remaining fixing budget across ecosystem open bugs. More companions cannot multiply fixing capacity;
+unrelated retained side products do not enter this pool. A direct reliability assignment on a companion still fixes
+that product only; it does not supply shared flagship care. Team payroll/rent continue to be charged once.
+
+**Value, costs and recovery:** in operating companies, healthy companions' existing reach/retention/pay bonuses scale
+by supplied / demanded flagship reliability, capped at 100%. Zero shared coverage means zero flagship bonus. Monthly
+companion reach following uses the same fraction instead of treating any token assignment as full care. Existing
+freshness/bug health rules and unhealthy-companion fit pressure remain; shared care fixes bugs, **not** release age.
+Select the companion context and assign an update when stale. Operating companion users now incur the existing
+per-user hosting rate; nonoperating legacy states and unrelated non-hit side products keep their old hosting rules.
+The 0.25 care cost is an initial tuning value, not a player-approved final balance target.
+
+**UI and persistence:** previews spell out full-care bonuses, the slot, ongoing service/hosting demand and loss of
+bonus without coverage. Operations shows shared coverage, current bonuses, slot availability and each companion's
+health/recovery route. No new modal or automatic assignment. No new saved shape/version: these are content additions
+and live service/economy formulas on existing v9 assignments/products. Old completed research, side products and paid
+initiative progress are untouched; old saves will see the new care/hosting costs when running operations. Added
+regressions cover launch gates, side-product context, reservations, slot preservation, reload/completion, shared
+fixing budgets, hosting, neglect/reallocation, freshness and the nonmodal health panel. Synthetic browser entry points:
+`scripts/tycoon/stage4-fixtures.ts` and `stage4-browser.mjs` (same external Playwright setup as Stage 3).
+
+**Verification:** final Tycoon suite **75 files / 1,274 tests passed** (11 new tests). Typecheck and production build
+pass. Full repository run, with the correct test environment: **190 files passed / 1 failed; 2,654 tests passed /
+1 failed**. The failure is the existing `tests/hr/run.test.ts` -> `step > keeps foes, shots and gems under their caps`:
+`Error: Test timed out in 5000ms.` No HR code or timeout was changed. Test shell requires `NODE_ENV=test`; the gateway
+shell defaults to production, where React `act` is absent. On Node 26 also use `NODE_OPTIONS=--no-experimental-webstorage`
+(and `--max-old-space-size=1024` for memory-heavy checks). Initial runs without those environment overrides are not
+valid regression evidence. Run full suite/typecheck/build sequentially on this 2GB host.
+
+Production-preview Chromium passes at **1280, 390 and 320px**: discover AI initiative and its cost/value preview,
+assign shared care and observe coverage/bonus recovery, show reassignment consequences/cancel without a modal, no
+page/operations/preview horizontal overflow and no JS errors. Screenshots: `/tmp/tycoon-stage4-shots`. Example harness:
+`LD_LIBRARY_PATH=/tmp/lab-browser-libs/root/usr/lib/x86_64-linux-gnu PLAYWRIGHT_MODULE=/tmp/lab-browser-tools/node_modules/playwright/index.mjs BASE_URL=http://127.0.0.1:4322/tycoon/ node scripts/tycoon/stage4-browser.mjs`.
+
+Four deliberate 12-year comparison seeds (same optimistic bot, **not** a win-rate estimate): seed 1 IPO day **3,428**
+(9.5 years), $111.70M operating cash; seed 2 bankrupt day **1,717**; seed 8 bankrupt day **1,444**; seed 10 still
+running at day **4,320**, Europe, $775.06M cash / $1.02B lifetime revenue. Seed 10 previously IPO'd day 4,219 in Stage 3:
+this comparison is **not regression-free**, and the strong cash variation needs investigation with the scale-readiness
+and bot-policy work rather than a hidden subsidy/auto-picker. Late retained releases remain ~31 days apart. Existing
+early-studio failures are unchanged. These checks do not establish good balance or satisfy Stage 7's 12-seed/human gate.
+
+**Superseded handoff:** the following operating-action slice implements the main product/commercial entry points.
+The research audit, company-practice carry-over, capacity-based slot review and company-scale milestones are still open.
+
+### Stage 4 progress: operating actions and paid scope expansion (2026-11-04; checkpoint on main)
+
+**One operating entry point:** finite feature/polish/compliance/localisation/companion releases are joined by explicit
+Grow-to-next-size and retained-product Pivot-to-audience initiatives. They preview one floor's required discipline
+output, duration, cash/reserves and outcome before assignment; replacing paid work warns that progress and upfront
+costs are lost. There is no task queue, global planning pause or automatic selection. Scope/audience changes reserve
+the product exclusively; other independent products/standing work continue. Conflicts are enforced in both the
+operations command and low-level project execution. Unknown/stale sizes or audiences fail without releasing the old
+assignment or spending cash. Proposal metadata is normalised before saving, so a preview's `why` cannot poison a save.
+
+**Growth readiness, first boundary only:** the product must be old enough (existing 240-day maturity), fresh enough
+not to be fading, below the existing noticeable-bug-density threshold, funded with the existing wage reserve, and
+backed by actual design/engineering/QA output on the chosen floor. Only the next size is allowed. Managed growth no
+longer waits for an arbitrary journey title; this avoids the enterprise-size / next-stage circularity. Pre-hit project
+size/title rules remain unchanged. Growth reuses the real growth target, budget, reach/size/freshness effects, automatic
+release/versioning and decision/outcome snapshots. Growing scope **does not** add server capacity or promise users.
+The full company-scale milestone/capability requirements remain a separate unfinished Stage 4 task.
+
+**Commercial controls:** the selected product has a nonmodal disclosure for paid promotion (recovery, cost, delivery
+window and conditional gross payback), researched automatic-promotion policy, licensing/ending a licence, and a
+confirmed product sale/retirement with proceeds, morale/reputation consequences and a clear distinction from a company
+exit. These are cash/policy decisions, not fictitious delivery-team assignments. The post-hit Products tab is now a
+read-only catalogue/history summary with a return to operations; it is **not** removed yet (Stage 5). Direct legacy
+new-product/update/grow/localisation/pivot commands reject managed offices; pre-hit creation/hunting remain available.
+The old next-project shortcut is hidden for carried post-hit releases. A legacy no-audience product can pivot to any
+real audience, rather than incorrectly treating the first listed audience as already selected.
+
+**Client work:** the same inline board exposes ordinary and context-relevant enterprise offers, team-only ETAs,
+deadlines and deposits. Taking work requires an idle floor; missing operating skills, expired offers and enterprise
+product conflicts are explained and enforced by the command. A contract's project reserves that floor (its assignment
+stays idle underneath); it cannot also run a standing service or another initiative. Delivery settles automatically,
+leaves the floor idle and picks nothing next. Reassigning an active contract is blocked even with the generic
+confirmation: use explicit abandonment, which previews and charges the deposit refund/reputation loss. This closes
+an actual deposit-erasure loophole. Taking a job while manually paused now **preserves pause** in operating companies;
+pre-hit convenience behaviour is unchanged. Selling/retiring a product immediately idles directly assigned standing
+teams and removes its outstanding enterprise offers, so an immediate reload cannot retain dangling references.
+
+**Save v10:** grow/pivot reservations are distinct from maintenance. V9 paid work retains exact target/progress,
+project ID, cash and staff/management policy; old mislabeled growth/pivot metadata is translated before validation.
+An idle-labeled old pivot/growth becomes an explicit team initiative without restarting its paid progress. Other
+carried projects retain their existing handling. V3–v8 still follow the established earlier migration steps; no
+second founder-pay or people-management migration is run for v9. New saves reject unknown/mismatched scope/audience
+reservations and projects claiming both grow and pivot. Repeated reload is idempotent. No research IDs or founder
+knowledge benefits are removed in this slice.
+
+**Checks for the operating-action follow-up:** final Tycoon regression suite **76 files / 1,292 tests passed**,
+18 more tests than the ecosystem checkpoint. The full repository run during this slice passed **191 files / 2,670
+tests**, with the same single unrelated HR failure: `tests/hr/run.test.ts` -> `step > keeps foes, shots and gems under
+their caps`, `Error: Test timed out in 5000ms.` Two subsequent UI/low-level-guard regressions are included in the final
+Tycoon count; do not describe the entire repository as green. The updated selected-office store test now exercises
+client work after transfer instead of expecting an unrelated post-hit new product to start; it still checks the
+selected office receives the project. This slice is committed as the Stage 4 ecosystem/operating-actions checkpoint on main.
+
+The default optimistic bot policy is retained for comparison: seeds **1/2/8/10** reproduce the ecosystem checkpoint
+exactly (IPO day 3,428 / bankrupt 1,717 / bankrupt 1,444 / still running 4,320). Optional `OPERATING_GROWTH=1` prioritises
+a currently available next-size initiative after server/Europe work, preserving six months of operating costs; it
+is a bot choice, not simulation automation. Separate 12-year runs: seed 1 IPO **3,525** (9.8 years), $227.14M cash;
+seed 10 still running **4,320**, Europe, $771.44M cash / $1.01B lifetime revenue. Neither resolves seed 10 or the cash
+variation; do not tune a subsidy around these two optional-policy samples or call them a win-rate estimate. Late
+retained releases remain ~31 days apart. Growth readiness in this slice is not the final company-scale balance model.
+
+Final typecheck and production build pass. Real production-preview Chromium passes both the new product-action
+acceptance and the earlier ecosystem acceptance at **1280, 390 and 320px**. Screenshots:
+`/tmp/tycoon-stage4-actions-shots`. Browser fixture/harness: `stage4-fixtures.ts`, `stage4-actions-browser.mjs` (same
+local preview/external Playwright environment as above). It covers growth preview/assignment, warned progress loss, taking client work while paused,
+cancel/confirm contract abandonment, paid promotion/policy, licensing blocker, product-sale/retirement confirmation
+and cancel, no blocking modal/JS errors or horizontal overflow. Phone commercial disclosures have a dedicated
+vertical body so licensing blockers and the retirement heading cannot run into one another.
+
+**Still next in Stage 4:** complete company-scale milestone/capability gates and their visible requirements; review
+the two-slot limit using effective shared capacity; audit **every** research ID (effect, UI path, gates, overlaps,
+compatibility and carry-over), then implement persistent founder knowledge vs company-practice semantics with an
+explicit migration. Do not call Stage 4 complete or remove the post-hit catalogue based on these slices. Keep the
+two early affordability failures and Stage 7's unattended/human acceptance gate visible.
 
 **5. Finish the stable workspace and navigation** — original feedback 2–5 and 8.
 - Desktop prototype: building left, operations right, stable scene dimensions. Mobile: compact building/team overview

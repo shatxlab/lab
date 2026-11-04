@@ -202,7 +202,7 @@ describe('team commands', () => {
   })
 
   it('fire removes an employee; moving out and opening offices grow the desk count and show the new office', () => {
-    const store = createStore(makeState([makeEmployee(100), makeEmployee(101)]), 0)
+    const store = createStore(makeState([makeEmployee(100), makeEmployee(101, { design: 50, engineering: 50, qa: 50 })]), 0)
     expect(store.fire(100).ok).toBe(true)
     expect(store.state.employees).toHaveLength(1)
 
@@ -216,10 +216,12 @@ describe('team commands', () => {
     expect(deskCount(store.state)).toBe(24)
     expect(store.selectedOffice.value).toBe(store.state.offices[1].id)
 
-    // Commands go to the office on screen: the new one has nobody to start a project with.
+    // Client work goes to the office on screen; unrelated new products use the pre-hit flow only.
     expect(store.startProject('web_app', []).ok).toBe(false)
+    const offer = store.state.contracts[0]
+    expect(store.acceptContract(offer.id).ok).toBe(false)
     expect(store.transfer(101, store.state.offices[1].id).ok).toBe(true)
-    expect(store.startProject('web_app', []).ok).toBe(true)
+    expect(store.acceptContract(offer.id).ok).toBe(true)
     expect(store.state.offices[1].project).not.toBeNull()
     expect(store.state.offices[0].project).toBeNull()
   })

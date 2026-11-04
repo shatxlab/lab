@@ -453,7 +453,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       const result = logged(() => decisions.acceptContract(state, offerId, officeFor(officeId)), () => acceptContract(state, offerId, officeFor(officeId)))
       if (!result.ok) return result
       dialog.value = null
-      if (speed.value === 0) speed.value = 1
+      if (speed.value === 0 && !operating(state)) speed.value = 1
       bump()
       sfx.play('click')
       return result

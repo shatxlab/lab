@@ -19,14 +19,27 @@ export function serviceOutput(state: GameState, office: Office, service: Standin
   return Math.min(rate.engineering, rate.qa) / 20
 }
 
+/** Companions share flagship reliability; unrelated retained products do not. */
+export function reliabilityProducts(state: GameState, product: Product): Product[] {
+  return product.id === state.signatureId
+    ? [product, ...state.products.filter((p) => p.role === 'reach' || p.role === 'keep')]
+    : [product]
+}
+
+/** Routine integration/support costs, in the same service points as fixing one bug. */
+export const COMPANION_SERVICE_DEMAND = 0.25
+export function companionServiceDemand(state: GameState, product: Product): number {
+  return product.id === state.signatureId ? (reliabilityProducts(state, product).length - 1) * COMPANION_SERVICE_DEMAND : 0
+}
+
 export function productService(state: GameState, product: Product, service: StandingService['service']): StandingService {
   const provided = state.offices.reduce((sum, o) => {
     const a = o.assignment
     return sum + (a?.kind === 'standing' && a.service === service && a.productId === product.id ? serviceOutput(state, o, service) : 0)
   }, 0)
-  const demand = service === 'reliability' ? bugsFoundPerDay(product) + product.pendingBugs * BUG_SURFACE_RATE + product.bugs / 60
+  const demand = service === 'reliability' ? reliabilityProducts(state, product).reduce((sum, p) => sum + bugsFoundPerDay(p) + p.pendingBugs * BUG_SURFACE_RATE + p.bugs / 60, 0) + companionServiceDemand(state, product)
     : service === 'growth' ? 1 + product.users / 500_000 : state.research.active ? 1 : 0
-  return standingService(service, provided, demand, service === 'reliability' ? 'bugs/day' : 'specialist days/day')
+  return standingService(service, provided, demand, service === 'reliability' ? 'service points/day' : 'specialist days/day')
 }
 
 /** A staffed campaign accelerates healthy organic demand by at most 25%, never per-floor compounding. */

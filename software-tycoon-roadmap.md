@@ -4,15 +4,17 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-04; Stage 5 teams/navigation, local).** The requested Stage 4 family/scope checkpoint
-is committed/pushed on `main` as **`9ad1d21`**; nothing was deployed. Save version remains **11**. New work after that
-checkpoint is **uncommitted**: stable company workspace, physical-team UI/boundary checks, Company/Industry/Journey
-navigation with preserved ecosystem/history/discovery, current-company metrics and phone/keyboard follow-through.
+**Current handover (2026-11-04; Stage 6 standalone finance model, local).** Stage 5 workspace/teams/navigation
+and the delegated prototype founder terms are committed/pushed on `main` as **`3c6c7a4`**; nothing was deployed.
+Save version remains **11**. New work is **uncommitted**: a standalone, replay-validated founder-finance ledger and
+39 model tests. Read **"Stage 6 model checkpoint"** below before continuing. No GameState/save/UI integration,
+automatic settlement, paid founding, charter readiness or consulting has shipped. The selected terms in
+**"Stage 6 decision: prototype founder economics"** remain provisional, not measured final balance.
 Read the latest Stage 4 family acceptance and both Stage 5 progress sections, especially **"physical teams and
 navigation parity"**. Stage 4's broader numeric goals/item gates, affordability and unattended acceptance are **not
-complete**. The player has now delegated prototype founder economics; read **"Stage 6 decision: prototype founder economics"**.
-Those rules are selected/documented, not implemented or validated. Next is the versioned finance/charter ledger, then the remaining
-Stage 4/7 economic and full-career acceptance gates. Historical valuations must not silently become personal cash.
+complete**. Next is the integrated v12 identity/finance/charter schema and atomic persistence boundary, then paid
+founding/interlude/UI and the remaining Stage 4/7 economic/full-career acceptance gates. Historical valuations
+must not silently become personal cash.
 The player requested the remaining plan step by step and will try a new run **after** implementation/acceptance, not
 between slices. Do not restore release turns, choice timers or automatic assignments. Prototype terms are explicit
 assumptions, not final tuned numbers or reconstructed historical proceeds.
@@ -101,7 +103,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation implementation is now local (read both Stage 5 progress sections). Stage 6 prototype founder terms are now selected/documented below (player delegated); implement the finance/charter ledger and founding/interlude model before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation is committed/pushed as `3c6c7a4` (read both Stage 5 progress sections). Stage 6 prototype founder terms are selected/documented below (player delegated), and the standalone finance ledger is implemented/tested (read "Stage 6 model checkpoint"); integrate v12 saves/charter, atomic settlement and paid founding/interlude before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -1114,7 +1116,30 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
 - **Gate:** multi-chapter test of IPO -> venture -> sale -> venture -> retirement, reload at each transition, finite
   affordable investments, no negative/double-spent fortune, stable sprites and one company-name field.
 
-### Stage 6 decision: prototype founder economics (selected, not implemented)
+### Stage 6 model checkpoint (2026-11-04; standalone, uncommitted)
+
+- `sim/founder-finance.ts` provides a version-1 pure ledger, one career/company identity per transaction stream,
+  immutable append/replay, initial/legacy origins, five exit distributions, explicit ended-legacy adoption/decline,
+  whole-dollar safe-integer validation, funding quotes and private-cash investment permission. Stored balance and
+  distribution claims are recomputed, not trusted. Ownership is fixed by origin/founder count, not current staff.
+- **Not integrated:** no imports from GameState, no save-schema bump, no live exit hooks or new-company replacement,
+  no actual hiring/cost adapter, charter readiness, consulting or UI. `investInCompany` only books financial permission;
+  it does not prove that a world quote/staff selection is valid or that storage succeeded. Existing runtime remains unchanged.
+- **Verified:** 39 new model tests; all **91 Tycoon files / 1,471 tests** pass; typecheck and production build pass.
+  Full repository run: **206 files / 2,851 tests pass**, sole known unrelated HR failure remains
+  `tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — `Test timed out in 5000ms.`
+  Use `NODE_ENV=test` for Vitest (this shell defaults to production, which disables React `act`), and
+  `NODE_OPTIONS=--max-old-space-size=1280` for typecheck on this server (default Node heap ran out around 512 MB).
+- Tests cover all five payouts, negative/zero closing sale pots, odd dollars/near-MAX_SAFE_INTEGER rounding,
+  sale closing-pot semantics, conflicting/repeated settlements and JSON reloads, unaffordable/custom funding,
+  caller-mutation isolation, earlier wealth retained through failures, legacy active/ended assumptions and
+  IPO → venture → sale → venture → retirement **at ledger level only**. This is not a played full-career gate.
+- **Next:** integrate v12 identities/charter and atomic settlement/founding persistence with recoverable failures,
+  revalidated actual world costs/local staff, legacy adoption UI and consulting/interlude. Still required: storage
+  failure/stale-tab tests, paid physical hiring, world advancement, readiness gates and full observed-policy acceptance.
+  No balance coefficients changed; no new bot/browser acceptance claimed for this model-only slice. Nothing deployed.
+
+### Stage 6 decision: prototype founder economics (selected; standalone model only)
 
 **Authority/status.** The player explicitly chose **"Choose and document prototype founder economics"** after the
 Stage 5 acceptance report. The following are selected prototype rules, **not measured/final balance** and not a

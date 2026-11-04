@@ -4,7 +4,6 @@ import { RESEARCH } from '@/lib/tycoon/data/research'
 import { DEEP_WORK } from '@/lib/tycoon/data/deepwork'
 import { researchBlocker, researchDaysLeft } from '@/lib/tycoon/sim/research'
 import { deepWorkBlocker } from '@/lib/tycoon/sim/deepwork'
-import { strikeBackBlocker } from '@/lib/tycoon/sim/nemesis'
 import { operationChoices, operationPreview, reassignmentCost, type OperationChoice, type Initiative } from '@/lib/tycoon/sim/operations'
 import { officeName } from '@/lib/tycoon/sim/offices'
 import { productService, serviceOutput } from '@/lib/tycoon/sim/services'
@@ -17,6 +16,7 @@ import { CONTRACT_ABANDON_REPUTATION } from '@/lib/tycoon/sim/balance'
 import { contractBalance } from '@/lib/tycoon/sim/contracts'
 import { ClientWork } from './NewProjectDialog'
 import { ProductOperations } from './ProductOperations'
+import { ScaleReadinessPanel } from './ScaleReadinessPanel'
 import { BusinessPanel } from './BusinessPanel'
 import { useGame, useOffice, useStore } from './context'
 
@@ -96,6 +96,7 @@ export function OperationsPanel() {
     <nav className="operations-teams" aria-label="Delivery teams">{state.offices.map((o) => <button key={o.id} aria-pressed={o.id === office.id} onClick={() => store.selectOffice(o.id)}>
       <strong>{officeName(state, o)}</strong><small>{o.project ? o.project.name : o.assignment?.kind === 'standing' ? o.assignment.service : 'Idle — awaiting assignment'}</small>
     </button>)}</nav>
+    <ScaleReadinessPanel />
     {project && <section className="plan build"><strong>{project.name}</strong><small>{Number.isFinite(days) ? `About ${days} days remaining` : 'Blocked: missing required build skills'}. Only this team contributes.</small>
       {project.contract && <div>
         <p>Client deadline: day {project.contract.dueDay}. Remaining payment if delivered today: {formatMoney(contractBalance(state, project.contract))}. Late delivery loses the second half; no team can also take an initiative.</p>
@@ -129,7 +130,6 @@ export function OperationsPanel() {
       {active ? <p>{RESEARCH.find((node) => node.id === active.id)?.name}: {Number.isFinite(researchLeft) ? `about ${researchLeft} days left` : 'stalled — assign analysts to research'}</p> : <p>Research needs a paid project and a standing research team.</p>}
       {!active && RESEARCH.filter((node) => !node.repeatable && researchBlocker(state, node) === null).map((node) => <button key={node.id} onClick={() => store.startResearch(node.id)}>{node.name} · {formatMoney(node.cost)} · {node.days} specialist days</button>)}
       {state.deepWork ? <p>Founder deep work: {state.deepWork.kind}. Delivery teams continue; the founder is not counted twice.</p> : DEEP_WORK.filter((kind) => deepWorkBlocker(state, kind.id) === null).map((kind) => <button key={kind.id} onClick={() => store.startDeepWork(kind.id)}>{kind.name} · {kind.days} days of founder time</button>)}
-      <button disabled={strikeBackBlocker(state) !== null} onClick={() => store.strikeBack()}>Strike back</button>
     </details>
     <BusinessPanel />
   </div>

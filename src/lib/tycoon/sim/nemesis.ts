@@ -219,6 +219,18 @@ export function strikeBackBlocker(state: GameState): string | null {
   return state.money < strikeBackCost(state) ? 'Not enough money' : null
 }
 
+/** The same bounded ratio change is used by the preview and execution. */
+const afterStrike = (ratio: number) => clamp(ratio - NEMESIS_STRIKE_SETBACK, NEMESIS_MIN_RATIO, NEMESIS_MAX_RATIO)
+
+export function strikeBackPreview(state: GameState) {
+  const rival = nemesisRival(state)
+  if (!rival || !state.nemesis) return null
+  const ratio = rival.ratio ?? 1
+  return { name: rival.name, ratio, after: afterStrike(ratio), cost: strikeBackCost(state),
+    threshold: NEMESIS_BEAT_RATIO, leadDays: state.nemesis.leadDays, requiredDays: NEMESIS_BEAT_DAYS,
+    cooldown: NEMESIS_STRIKE_COOLDOWN, blocker: strikeBackBlocker(state) }
+}
+
 /** A campaign aimed at their customers: it costs weeks of income, and sets them back. */
 export function strikeBack(state: GameState): Result {
   const blocker = strikeBackBlocker(state)
@@ -226,7 +238,7 @@ export function strikeBack(state: GameState): Result {
   const rival = nemesisRival(state)!
   const cost = strikeBackCost(state)
   state.money -= cost
-  rival.ratio = clamp((rival.ratio ?? 1) - NEMESIS_STRIKE_SETBACK, NEMESIS_MIN_RATIO, NEMESIS_MAX_RATIO)
+  rival.ratio = afterStrike(rival.ratio ?? 1)
   state.nemesis!.struckDay = state.day
   state.events.push({ type: 'notice', text: `You went after ${rival.name}'s customers. They will feel it.` })
   return OK

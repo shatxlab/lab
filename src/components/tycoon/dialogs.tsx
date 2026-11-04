@@ -1,3 +1,4 @@
+import { stageProgress } from '@/lib/tycoon/sim/stages'
 import { operating } from '@/lib/tycoon/sim/services'
 import { useState } from 'react'
 import { downloadJournal, startNewGame, startNextChapter } from '@/lib/tycoon/browser'
@@ -289,6 +290,8 @@ export function BreakoutDialog({ productId }: { productId: number }) {
 export function StageDialog({ stage }: { stage: number }) {
   const store = useStore()
   const reached = getStage(stage)
+  const state = useGame()
+  const goals = stageProgress(state, stage)
 
   return (
     <Modal title={`New chapter: ${reached.name}`} onClose={() => store.closeDialog()}>
@@ -303,9 +306,9 @@ export function StageDialog({ stage }: { stage: number }) {
           </ul>
         </div>
       )}
-      {reached.goals.length > 0 && (
+      {goals.length > 0 && (
         <p className="muted">
-          Next: {reached.goals.map((g) => g.label.toLowerCase()).join('; ')}. The Studio's Journey tab tracks it.
+          Next: {goals.map((g) => g.label.toLowerCase()).join('; ')}. The Studio's Journey tab tracks it.
         </p>
       )}
       <div className="actions">

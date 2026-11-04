@@ -88,7 +88,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem and operating-action slices below). The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem and operating-action checkpoints, plus the company-readiness checkpoint below). The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -554,7 +554,7 @@ backed by actual design/engineering/QA output on the chosen floor. Only the next
 longer waits for an arbitrary journey title; this avoids the enterprise-size / next-stage circularity. Pre-hit project
 size/title rules remain unchanged. Growth reuses the real growth target, budget, reach/size/freshness effects, automatic
 release/versioning and decision/outcome snapshots. Growing scope **does not** add server capacity or promise users.
-The full company-scale milestone/capability requirements remain a separate unfinished Stage 4 task.
+At this checkpoint, company-scale milestone/capability requirements remained unfinished; the later local readiness slice addresses the chapter gates.
 
 **Commercial controls:** the selected product has a nonmodal disclosure for paid promotion (recovery, cost, delivery
 window and conditional gross payback), researched automatic-promotion policy, licensing/ending a licence, and a
@@ -607,11 +607,86 @@ cancel/confirm contract abandonment, paid promotion/policy, licensing blocker, p
 and cancel, no blocking modal/JS errors or horizontal overflow. Phone commercial disclosures have a dedicated
 vertical body so licensing blockers and the retirement heading cannot run into one another.
 
-**Still next in Stage 4:** complete company-scale milestone/capability gates and their visible requirements; review
-the two-slot limit using effective shared capacity; audit **every** research ID (effect, UI path, gates, overlaps,
-compatibility and carry-over), then implement persistent founder knowledge vs company-practice semantics with an
-explicit migration. Do not call Stage 4 complete or remove the post-hit catalogue based on these slices. Keep the
-two early affordability failures and Stage 7's unattended/human acceptance gate visible.
+### Stage 4 progress: concrete company readiness and rivalry diagnosis (2026-11-04; checkpoint on main)
+
+The previous ecosystem/operating-action checkpoint was committed and pushed as **`f46a06c`**. This continuation
+changes the chapter gates, not their economic milestones or the IPO exit contract. **Stage 4 is still incomplete.**
+
+**Shared requirement source:** `sim/stages.ts:stageProgress` combines the retained business goals with
+`sim/scale-readiness.ts:scaleRequirements`. Simulation advancement, Journey, the new inline Company operations
+readiness disclosure, chapter announcements and bot diagnostics use that same current-state read model. Do not read
+`data/STAGES.goals` directly for managed intermediate chapters: its old headcount goals remain only for the legacy /
+pre-operating path. IPO's final global-company goals are deliberately unchanged.
+
+- **First floor → HQ:** retain 200K users and a completed Scale capability; replace “12 people” with one output-capable
+  floor and a complete, genuinely effective delivery team. Maintenance delivery must fit the product-size freshness
+  window, using actual team rates (training, roles, fixing, management and knowledge included), maximum clarity rework
+  and the actual 30-day release minimum. No implicit helper floors or cross-floor stitching of incomplete skills.
+- **HQ → Europe:** retain 1M users / $30K daily income; require two output-capable floors, capacity for the current
+  1M-user milestone, a separate available/working flagship delivery team, live shared reliability coverage, fit ≥50,
+  freshness ≥60% and bug density <10. Empty buildings, full desks and senior titles are not sufficient/necessary.
+- **Europe → Global:** retain the European building, completed localisation, 3M users and rivalry victory; require three
+  output-capable floors including effective local European capacity, current 3M-user server provision, delivery,
+  health and shared-care requirements. An empty EU shell no longer substitutes for a regional team.
+- An idle team may demonstrate *capability*, but it does not perform work or produce free service. A standing service
+  cannot also supply delivery readiness. A floor building another product / doing client work / growing or pivoting
+  the hit is not a simultaneously available maintenance team. Standing care uses actual live service output/demand.
+- The first iteration tried provisioning the *next* chapter's 1M/3M/10M server target and requiring health before HQ.
+  The seed checks exposed a fragile first-floor expansion/care bootstrap; this was rejected. Final gates use current
+  business milestones, and health/shared-care requirements begin only after HQ can open a separate care floor.
+- Earned chapters are never revoked. A v10 already-global save remains IPO-eligible under its original contract even
+  if it currently lacks these new intermediate capabilities. No save shape changed, no unlocks were removed, and no
+  migration/version bump, RNG consumption, automatic assignment, extra worker capacity or hidden subsidy was added.
+  Small early-sale studios retain their existing sale/retirement paths.
+
+**Visible previews:** Company operations has a collapsible “Next scale step” checklist with actual progress,
+recovery instructions and next-chapter effects. Journey and chapter announcements show the same requirements.
+The rivalry decision now explains the rival ratio, 90-day lead progress, paid campaign's exact upfront cost, immediate
+bounded ratio change, cooldown and blocker. It explicitly says that this is a cash decision, not a floor build, and
+not an instant victory. Preview and command share the same ratio-change function.
+
+**Seed 10 diagnosis, not an alleged permanent softlock:** exporting the original day-4320 bot state showed every
+Europe goal met except rivalry: Halcyon ratio **2.20**, lead progress **0/90**, 10 floors / 120 people, 29.93M flagship
+users, fit ~92 and reliability 3.84 provided / 1.37 demanded. The bank balance alone does not lower the rival's ratio.
+The parallel bot had no paid-response call, unlike its old global-plan policy. It could still buy the rival later:
+replaying that exact synthetic save with the default policy reaches IPO **4373** after absorbing Halcyon on day
+4372. Explicit `RIVAL_RESPONSE=1` spends **$15.08M** on day 4320 (ratio 2.20 → 2.00), makes the acquisition affordable
+on day 4321, and reaches IPO **4322**. Thus the original 12-year result was a horizon/policy limitation, not proof of
+an unwinnable game. This is a replay of a late state, not a new full-game victory or a win-rate measurement.
+
+**Bot comparability:** default parallel policy remains unchanged. `RIVAL_RESPONSE=1` is an explicit optional paid
+campaign policy, using authoritative command blockers, the old four-campaign-cost requirement and six months of
+burn left afterward. It never lives in the simulation. An unguarded/default-on trial regressed early affordability;
+even with the reserve, optional seed 10 bankrupted at day **2262**. Keep that caveat: a useful late decision is not a
+universally good early strategy. `DIAGNOSTICS=1` prints unmet goals/live constraints; `FINAL_SAVE=<path>` exports a
+synthetic final save, and `BOT_RESUME=<path>` resumes it for an explicitly additional number of years. Never use or
+commit the player's journals as fixtures.
+
+**Final default-policy comparisons (12-year limit, not a win-rate estimate):** seed 1 IPO **3362** ($294.96M
+cash / ~$1B lifetime); seed 2 bankrupt **1717**; seed 8 bankrupt **1444**; seed 10 still Europe **4320**
+($682.12M cash / $878.53M lifetime). Seed 10 meets every new live readiness requirement but still lacks rivalry
+victory; the default bot intentionally does not automatically spend on a campaign. These results are not identical
+timelines to the checkpoint because the intermediate chapter gates changed. Existing affordability failures and the
+late income/rivalry policy horizon remain open; no revenue/cost coefficients were retuned to hide them.
+
+**Verification:** all **79 Tycoon files / 1,312 tests** pass. The final full repository run reports **194 files /
+2,692 tests passing**, with the one previously known unrelated failure:
+`tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — `Test timed out in 5000ms.`
+Do not change HR or its timeout as part of this task. Final typecheck and production build pass.
+Logs: `/tmp/stage4-readiness-full.log`, `-done-types.log`, `-done-build.log`, `-baseline-bots.log`, `-final-replay.log`
+(all prefixed `/tmp/stage4-readiness`).
+The focused new coverage is **20 tests** (13 readiness, 5 preview/bot-policy, 2 UI), including compact teams, incomplete
+split teams, training/empty floors, no double staffing, meaningful delivery cadence, live care recovery, regional
+capacity, save round trips, grandfathered IPO eligibility, pure previews and paid/cooldown enforcement. Production
+Chromium scale-readiness acceptance passes at **1280, 390 and 320px**, including deliberate spending, preserved pause,
+no modal, JavaScript errors or horizontal overflow. Harness: `stage4-scale-fixtures.ts`, `stage4-scale-browser.mjs`;
+screenshots `/tmp/tycoon-stage4-scale-shots`. The prior product-action and ecosystem Chromium harnesses also pass at all three widths.
+
+**Still next in Stage 4:** review the two-slot limit using effective shared capacity; audit **every** research ID
+(effect, UI path, gates, overlaps, compatibility and carry-over), then implement persistent founder knowledge vs
+company-practice semantics with an explicit migration. Validate the new readiness gates across more families / human
+choices; these four-seed checks do not close Stage 7's unattended-growth, affordability, 12-seed or human acceptance
+gates. Do not call Stage 4 complete or remove the post-hit catalogue based on these slices.
 
 **5. Finish the stable workspace and navigation** — original feedback 2–5 and 8.
 - Desktop prototype: building left, operations right, stable scene dimensions. Mobile: compact building/team overview

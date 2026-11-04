@@ -1,3 +1,4 @@
+import { stageProgress } from '@/lib/tycoon/sim/stages'
 import { STAGES } from '@/lib/tycoon/data/stages'
 import { useGame } from './context'
 
@@ -15,6 +16,7 @@ export function JourneyTab() {
       )}
       <ol className="stages">
         {STAGES.map((stage, index) => {
+          const goals = stageProgress(state, index)
           const status = index < state.stage ? 'done' : index === state.stage ? 'current' : 'ahead'
           return (
             <li key={stage.id} className={`stage ${status}`}>
@@ -26,14 +28,15 @@ export function JourneyTab() {
               </div>
               {status !== 'ahead' && <p className="muted">{stage.blurb}</p>}
               {status === 'ahead' && stage.unlocks.length > 0 && <p className="muted">Opens: {stage.unlocks.join(', ')}</p>}
-              {status === 'current' && stage.goals.length > 0 && (
+              {status === 'current' && goals.length > 0 && (
                 <ul className="goals">
-                  {stage.goals.map((goal) => {
-                    const met = goal.check(state)
+                  {goals.map((goal) => {
+                    const met = goal.met
                     return (
                       <li key={goal.id} className={met ? 'met' : ''}>
                         <span>{met ? '✓' : '○'}</span> {goal.label}
-                        {!met && goal.progress && <small className="muted"> · {goal.progress(state)}</small>}
+                        {!met && goal.progress && <small className="muted"> · {goal.progress}</small>}
+                        {!met && goal.remedy && <small className="muted"> · {goal.remedy}</small>}
                       </li>
                     )
                   })}

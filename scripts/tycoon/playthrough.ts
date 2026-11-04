@@ -1,7 +1,8 @@
+import { operatingRivalResponse } from './operating-policy.ts'
 import { PROFESSIONS, professionOf } from '../../src/lib/tycoon/sim/career-profile.ts'
 import { appointProfessionLead, appointmentBlocker, appointmentIssue, respondCareerConcern } from '../../src/lib/tycoon/sim/people-management.ts'
 import { assignOperation, operationChoices, operationPreview } from '../../src/lib/tycoon/sim/operations.ts'
-import { serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
+import { productService, serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
 // A scripted playthrough of the whole one-product game: the café, the garage hunt, the move out with the hit, then
 // the workstreams, Europe, companions, tools, Absorb and the IPO. Prints a timeline so pacing can be judged.
 //
@@ -10,12 +11,16 @@ import { serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
 //
 // OPERATING_GROWTH=1 also prioritises affordable scope expansion after server/Europe work.
 // The default policy stays unchanged for before/after comparison.
+// RIVAL_RESPONSE=1 explicitly opts the parallel bot into paid rivalry campaigns; default policy is unchanged.
+// BOT_RESUME=<path> resumes a validated synthetic save; [years] then means additional years.
+// DIAGNOSTICS=1 prints the outstanding stage goals and live operating constraints at the end.
+// FINAL_SAVE=<path> writes the final synthetic bot state for diagnosis/replay (never a player journal).
 // SAVE_DIR=<dir> also writes the game as it enters each stage (stage-N.json), to load into the real UI.
 // The bot is an optimistic player: it reads the true fit of a release (a real player reads it through an analyst's eye).
 
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import process from 'node:process'
-import { serialize } from '../../src/lib/tycoon/sim/state.ts'
+import { deserialize, serialize } from '../../src/lib/tycoon/sim/state.ts'
 import { audiencesOf } from '../../src/lib/tycoon/data/audiences.ts'
 import { FEATURES } from '../../src/lib/tycoon/data/features.ts'
 import { ALL_ITEMS } from '../../src/lib/tycoon/data/workstreams.ts'
@@ -52,12 +57,17 @@ import { isBuilder, type BuilderRole, type GameState, type Office, type Product,
 import { marketDemand } from '../../src/lib/tycoon/sim/market.ts'
 import { MARKET_COLD, TAKEOFF_MAX_CROWDING } from '../../src/lib/tycoon/sim/balance.ts'
 import { interest, marketCrowding, missingFeatures, targetUsers } from '../../src/lib/tycoon/sim/products.ts'
+import { stageProgress } from '../../src/lib/tycoon/sim/stages.ts'
 import { STAGES } from '../../src/lib/tycoon/data/stages.ts'
 
 const seed = Number(process.argv[2] ?? 1)
 const years = Number(process.argv[3] ?? 12)
 const quiet = process.argv[4] === 'quiet'
-const state = createInitialState(seed)
+const state: GameState = (() => {
+  const loaded = process.env.BOT_RESUME ? deserialize(readFileSync(process.env.BOT_RESUME, 'utf8')) : createInitialState(seed)
+  if (!loaded) throw new Error('Invalid synthetic bot resume state')
+  return loaded
+})()
 const log: string[] = []
 const say = (text: string) => {
   const line = `Y${(state.day / 360 + 1).toFixed(2)} d${state.day} ${text}`
@@ -246,6 +256,8 @@ function act2(h: Product): void {
 
 /** Explicit operations policy: research uses the analyst floor, one team covers reliability, others build. */
 function parallel(h: Product): void {
+  const response = process.env.RIVAL_RESPONSE === '1' ? operatingRivalResponse(state) : null
+  if (response && strikeBack(state).ok) say(`strikes back at ${response.name}: ${formatMoney(response.cost)}, ratio ${response.ratio.toFixed(2)} -> ${response.after.toFixed(2)}`)
   const researchNode = RESEARCH.filter((n) => !n.repeatable && !state.research.done.includes(n.id) && state.money > n.cost + monthlyBurn(state) * 3)
     .find((n) => n.requires.every((id) => state.research.done.includes(id)))
   for (const [i, floor] of state.offices.entries()) {
@@ -373,6 +385,14 @@ for (let i = 0; i < years * 360 && !state.gameOver; i++) {
   }
 }
 console.log(`\nEnded day ${state.day} (${(state.day / 360).toFixed(1)} years): ${state.gameOver ? JSON.stringify(state.ending) : 'still running'}; stage ${STAGES[state.stage].name}; money ${formatMoney(state.money)}; lifetime ${formatMoney(state.lifetimeRevenue)}`)
+if (process.env.DIAGNOSTICS === '1') {
+  const h = hit()
+  console.log(JSON.stringify({ stage: STAGES[state.stage].name, goals: stageProgress(state),
+    ipo: ipoBlocker(state), offices: state.offices.map((o) => ({ id: o.id, region: o.region, staff: staffOf(state, o).length, assignment: o.assignment, project: o.project?.name })),
+    product: h && { type: h.productTypeId, users: h.users, fit: h.fit, size: h.size, built: h.built, bugs: h.bugs, interest: interest(h, state.day), capacity: capacityOf(h), reliability: productService(state, h, 'reliability') },
+    nemesis: nemesisRival(state)?.name, ratio: nemesisRival(state)?.ratio, leadDays: state.nemesis?.leadDays, beaten: state.nemesesBeaten }, null, 2))
+}
+if (process.env.FINAL_SAVE) writeFileSync(process.env.FINAL_SAVE, serialize(state))
 const notes = hit()?.releases ?? []
 if (notes.length > 1) console.log(`Last ${notes.length} releases: one every ${Math.round((notes.at(-1)!.day - notes[0].day) / (notes.length - 1))} days (1 day is 1.5 s at 1x)`)
 void DAYS_PER_MONTH

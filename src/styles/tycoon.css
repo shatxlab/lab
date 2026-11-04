@@ -2029,3 +2029,6 @@
 /* Keep commercial controls readable inside native disclosures at phone widths. */
 .product-commercial-body { display: flex; flex-direction: column; gap: .6rem; min-width: 0; padding-top: .6rem; }
 .product-commercial-body .tiers > div { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+
+.scale-requirements { padding-left: 1.2rem; display: flex; flex-direction: column; gap: .7rem; }
+.scale-requirements li, .rivalry-preview { min-width: 0; overflow-wrap: anywhere; }

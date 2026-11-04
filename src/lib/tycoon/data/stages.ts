@@ -67,10 +67,10 @@ export const STAGES: readonly Stage[] = [
     id: 'breakout',
     name: 'First floor',
     blurb: 'The hit pays for a real office. Now make it big.',
-    unlocks: ['Flagship projects', 'Workstreams for the hit: Scale, Growth and Monetisation, ranked on its roadmap'],
+    unlocks: ['Flagship projects', 'Independent floor initiatives and standing responsibilities for the flagship ecosystem'],
     goals: [
       { id: 'hit_200k', label: 'Grow your hit to 200,000 users', check: (s) => hitUsers(s) >= 200_000, progress: (s) => upTo(hitUsers(s), 200_000) },
-      { id: 'first_scale', label: 'Build servers for your hit: finish a Scale item on its roadmap', check: (s) => (s.products.find((p) => p.id === s.signatureId)?.built ?? []).some((id) => getWorkItem(id)?.workstream === 'scale') },
+      { id: 'first_scale', label: 'Build servers for your hit: complete a Scale initiative', check: (s) => (s.products.find((p) => p.id === s.signatureId)?.built ?? []).some((id) => getWorkItem(id)?.workstream === 'scale') },
       { id: 'team_12', label: 'Fill an office: a team of 12', check: (s) => s.employees.length >= 12, progress: (s) => upTo(s.employees.length, 12) },
     ],
   },
@@ -81,7 +81,7 @@ export const STAGES: readonly Stage[] = [
     unlocks: [
       'More floors for headquarters, and a building in Europe',
       'Absorbing a rival that competes with your hit: its users move to the hit, its best people take your empty desks',
-      'Internal tools and companion products on the roadmap',
+      'Internal-tool and companion-product initiatives in Company operations',
     ],
     goals: [
       { id: 'hit_1m', label: 'Grow your hit to 1 million users', check: (s) => hitUsers(s) >= 1_000_000, progress: (s) => upTo(hitUsers(s), 1_000_000) },

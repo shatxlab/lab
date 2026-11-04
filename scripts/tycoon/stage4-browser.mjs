@@ -23,7 +23,7 @@ try {
     const operations = page.getByLabel('Company operations', { exact: true })
     const health = page.getByRole('region', { name: 'Ecosystem health' })
     assert.match(await health.innerText(), /Shared reliability coverage: 0%/)
-    assert.match(await health.innerText(), /1 of 2 slots free/)
+    assert.match(await health.innerText(), /No fixed companion-count limit/)
     await operations.getByRole('combobox', { name: 'Finite initiative' }).selectOption('item:companion:ai_assistant')
     const contract = operations.locator('.initiative-contract')
     assert.match(await contract.innerText(), /0.25 shared reliability/)

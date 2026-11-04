@@ -8,7 +8,7 @@ export const DISCIPLINE_SPEED: Record<Discipline, Stat> = {
   qa: 'qaSpeed',
 }
 
-/** Product of every active temporary modifier and every finished research effect on `stat`; 1 when there are none. */
+/** Product of every active temporary modifier and every current-company research effect (never an inactive learned blueprint) on `stat`; 1 when there are none. */
 export function statMultiplier(state: GameState, stat: Stat): number {
   let mult = 1
   for (const m of state.modifiers) {

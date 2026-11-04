@@ -1,7 +1,8 @@
 import { careerSpeed } from './career-profile'
 import { professionWorkMultiplier } from './people-management'
-import { BUG_SURFACE_RATE } from './balance'
+import { BUG_SURFACE_RATE, INCIDENT_RELIABILITY_MULTIPLIER } from './balance'
 import { bugsFoundPerDay } from './products'
+import { isResearched } from './unlocks'
 import { staffOf } from './offices'
 import { teamRate } from './work'
 import { standingService, type StandingService } from './operating-contract'
@@ -16,7 +17,7 @@ export function serviceOutput(state: GameState, office: Office, service: Standin
     .reduce((sum, e) => sum + (e.analysis ?? 0) / 50 * (state.peopleManagement ? careerSpeed(e) * professionWorkMultiplier(state, e) : 1), 0)
   if (service === 'research') return analysis
   if (service === 'growth') return analysis + rate.design / 20
-  return Math.min(rate.engineering, rate.qa) / 20
+  return Math.min(rate.engineering, rate.qa) / 20 * (operating(state) && isResearched(state, 'incident_management') ? INCIDENT_RELIABILITY_MULTIPLIER : 1)
 }
 
 /** Companions share flagship reliability; unrelated retained products do not. */

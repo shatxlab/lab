@@ -1,3 +1,4 @@
+import { knowsResearch, learnedResearchIds, researchPrerequisiteMet } from './research-knowledge'
 import { operating, serviceOutput } from './services'
 import { AUDIENCES, getAudience } from '@/lib/tycoon/data/audiences'
 import { eraIndexAt, eraPhrase, ERAS } from '@/lib/tycoon/data/eras'
@@ -14,7 +15,7 @@ export function studyTargets(state: GameState): string[] {
 
 /** Why `id` can't be started right now, or null when it can. */
 export function researchBlocker(state: GameState, node: ResearchNode): string | null {
-  if (!node.repeatable && isResearched(state, node.id)) return 'Done'
+  if (!node.repeatable && (isResearched(state, node.id) || (node.carry === 'knowledge' && knowsResearch(state, node.id)))) return 'Done'
   if (state.research.active?.id === node.id) return 'In progress'
   if (state.research.active) return 'Busy with other research'
   if (node.era !== undefined && node.era > eraIndexAt(state.day)) return `Not until ${eraPhrase(ERAS[node.era])}`
@@ -22,7 +23,7 @@ export function researchBlocker(state: GameState, node: ResearchNode): string | 
     const name = getStage(node.stage).name.toLowerCase()
     return `Not until the studio is ${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}`
   }
-  const missing = node.requires.find((id) => !isResearched(state, id))
+  const missing = node.requires.find((id) => !researchPrerequisiteMet(state, node, id))
   if (missing) return `Needs ${getResearch(missing)?.name ?? missing}`
   if (node.repeatable === 'audience' && studyTargets(state).length === 0) return 'Every audience is studied'
   if (operating(state) && !state.offices.some((o) => o.assignment?.kind === 'standing' && o.assignment.service === 'research' && serviceOutput(state, o, 'research') > 0)) return 'Assign a floor with analysts to research first'
@@ -71,6 +72,7 @@ export function researchDay(state: GameState): void {
     return
   }
   state.research.done.push(node.id)
+  state.research.known = learnedResearchIds(state)
   state.events.push({ type: 'notice', text: completionText(node), sound: 'research' })
 }
 

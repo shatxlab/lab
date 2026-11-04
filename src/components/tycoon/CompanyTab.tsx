@@ -7,6 +7,7 @@ import { floorCycle } from '@/lib/tycoon/sim/cycle'
 import { formatVersion, versionOf } from '@/lib/tycoon/sim/releases'
 import { productIncome } from '@/lib/tycoon/sim/economy'
 import { companionEffects, companionsOf, freeSlots } from '@/lib/tycoon/sim/companions'
+import { operating } from '@/lib/tycoon/sim/services'
 import { usersIn } from '@/lib/tycoon/sim/products'
 import { capacityOf, hostingCost, loadOf } from '@/lib/tycoon/sim/scale'
 import { releaseKey } from '@/lib/tycoon/sim/fit'
@@ -101,7 +102,7 @@ export function CompanyTab() {
       </div>
       <small className="muted">
         {companionsOf(state).length === 0
-          ? `No companion products yet (${freeSlots(state)} slot${freeSlots(state) === 1 ? '' : 's'} free).`
+          ? operating(state) ? 'No companion products yet. No fixed companion-count limit; review effective shared care in Company operations.' : `No companion products yet (${freeSlots(state)} slot${freeSlots(state) === 1 ? '' : 's'} free).`
           : `Companions: ${companionsOf(state).map((p) => `${p.name} (${p.role})`).join(', ')}.`}
       </small>
     </section>

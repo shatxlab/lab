@@ -63,13 +63,13 @@ describe('operating ecosystem', () => {
     s.products.push(side)
     expect(itemBlocker(s, side, getWorkItem('companion:mobile_app')!)).toMatch(/flagship ecosystem/)
     expect(assignOperation(s, s.offices[0].id, { kind: 'initiative', productId: p.id, proposal: { kind: 'item', id: 'companion:ai_assistant' } }).ok).toBe(true)
-    expect(assignOperation(s, s.offices[1].id, { kind: 'initiative', productId: p.id, proposal: { kind: 'item', id: 'companion:mobile_app' } })).toMatchObject({ ok: false, reason: 'A companion launch is already reserved' })
+    expect(assignOperation(s, s.offices[1].id, { kind: 'initiative', productId: p.id, proposal: { kind: 'item', id: 'companion:ai_assistant' } })).toMatchObject({ ok: false, reason: 'This companion launch is already reserved' })
   })
 
-  it('preserves retained side products and the two-slot limit', () => {
+  it('preserves retained side products without using them to block managed companions', () => {
     const s = setup()
     s.products.push(makeProduct({ id: s.nextId++, role: 'side' }), makeProduct({ id: s.nextId++, role: 'side' }))
-    expect(launchCompanion(s, 'ai_assistant')).toBeNull()
+    expect(launchCompanion(s, 'ai_assistant')).not.toBeNull()
     expect(s.products.filter((p) => p.role === 'side')).toHaveLength(2)
   })
 

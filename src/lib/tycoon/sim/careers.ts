@@ -22,7 +22,7 @@ import { PM_RESEARCH, salaryOf } from './hiring'
 import { depart } from './knowledge'
 import { adjustMorale } from './morale'
 import { staffOf } from './offices'
-import { isResearched } from './unlocks'
+import { knowsResearch } from './unlocks'
 import { rand } from './rng'
 import { fail, isBuilder, OK, type BuilderRole, type Discipline, type Employee, type GameState, type Office, type Result } from './types'
 
@@ -104,7 +104,7 @@ export function pmOf(state: GameState, office: Office): Employee | undefined {
 export function pmBlocker(state: GameState, employee: Employee): string | null {
   if (employee.role !== 'analyst') return 'Only an analyst can become a product manager'
   // A founder analyst needs no course in it: the studio is theirs to steer.
-  if (!employee.founder && !isResearched(state, PM_RESEARCH)) return 'Research Product management first'
+  if (!employee.founder && !knowsResearch(state, PM_RESEARCH)) return 'Research Product management first'
   if (employee.level < ANALYST_MAX_LEVEL) return 'They need to be a senior analyst first'
   if ((employee.analysis ?? 0) < PM_MIN_ANALYSIS) return `Needs ${PM_MIN_ANALYSIS} analysis skill`
   const wait = PM_AFTER_DAYS - (state.day - employee.levelDay)

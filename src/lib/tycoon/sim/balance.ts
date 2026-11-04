@@ -459,8 +459,10 @@ export const FIT_MISSING_PRESSURE = 0.06
 export const FIT_RECOVERY = 0.15
 /** Below the takeoff fit a hit keeps this share of its users at a fit of zero, rising to all of them at the takeoff fit: churn follows fit. */
 export const HIT_RETENTION_FLOOR = 0.4
-/** Second products: the slots they and side products share, the slice of the hit's users they start with, and what they do. */
+/** Legacy retained catalogue: the slots side products share (managed companions use live care), the slice of the hit's users they start with, and what they do. */
 export const COMPANION_SLOTS = 2
+/** Incident management improves paid standing reliability output, never delivery or worker count. */
+export const INCIDENT_RELIABILITY_MULTIPLIER = 1.1
 export const COMPANION_SHARE = 0.12
 /** A healthy Reach companion speeds the hit's growth by this share; a Keep one wins back this share of lost users and adds this much to what users pay. */
 export const COMPANION_REACH_BOOST = 0.4

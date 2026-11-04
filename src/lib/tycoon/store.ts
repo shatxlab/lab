@@ -210,8 +210,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   const sfx = options.sfx ?? silentSfx()
   const version = signal(0)
   const speed = signal<Speed>(initialSpeed)
-  // A game saved while an event was waiting resumes on that event.
-  const dialog = signal<Dialog>(state.pendingEvent ? { kind: 'event' } : state.exit.pending ? { kind: 'offer' } : null)
+  // Restore an ended company’s transfer decision as well as pending events/offers.
+  const dialog = signal<Dialog>(state.gameOver ? { kind: 'game-over' } : state.pendingEvent ? { kind: 'event' } : state.exit.pending ? { kind: 'offer' } : null)
   if (dialog.value === null && !state.exit.ipoAcknowledged && ipoBlocker(state) === null) dialog.value = { kind: 'ipo' }
   const toasts = signal<Toast[]>([])
   const selectedOffice = signal(state.offices[0].id)

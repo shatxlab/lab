@@ -388,7 +388,9 @@ export interface Modifier {
 }
 
 export interface ResearchState {
-  /** Finished research ids. */
+  /** Learned non-repeatable research, including inactive company-practice blueprints; survives all endings. */
+  known: string[]
+  /** Completed active research in this company (not an archive of inactive practices). */
   done: string[]
   /** What is being researched now; one thing at a time. */
   /** `target` is what a repeatable study is about (an audience id). */

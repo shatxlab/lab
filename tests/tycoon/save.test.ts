@@ -69,12 +69,12 @@ describe('saveGame / loadGame', () => {
     expect(storage.getItem(BACKUP_KEY)).toBe('{"version":1,"oops":true}')
   })
 
-  it('ignores a save from a finished game', () => {
+  it('retains a finished company for the explicit next-venture decision', () => {
     const storage = new MemoryStorage()
     const state = playedState()
     state.gameOver = true
     saveGame(state, storage)
-    expect(loadGame(storage)).toBeNull()
+    expect(loadGame(storage)?.gameOver).toBe(true)
     expect(storage.getItem(BACKUP_KEY)).toBeNull()
   })
 
@@ -110,12 +110,13 @@ describe('importSave', () => {
     expect(storage.writes).toBe(0)
   })
 
-  it('rejects a finished game', () => {
+  it('imports a finished company without discarding the carry-over decision', () => {
     const storage = new MemoryStorage()
     const state = playedState()
     state.gameOver = true
-    expect(importSave(serialize(state), storage).ok).toBe(false)
-    expect(storage.writes).toBe(0)
+    expect(importSave(serialize(state), storage).ok).toBe(true)
+    expect(loadGame(storage)?.gameOver).toBe(true)
+    expect(storage.writes).toBe(1)
   })
 
   it('reports a storage failure', () => {
@@ -176,7 +177,7 @@ describe('createAutosave', () => {
     expect(storage.writes).toBe(0)
   })
 
-  it('deletes the save when the game is over', () => {
+  it('saves the ended company until the player explicitly chooses the next chapter', () => {
     const { storage, store } = setup()
     vi.advanceTimersByTime(AUTOSAVE_MS)
     expect(storage.getItem(SAVE_KEY)).not.toBeNull()
@@ -184,6 +185,6 @@ describe('createAutosave', () => {
     store.state.gameOver = true
     store.version.value += 1
     vi.advanceTimersByTime(AUTOSAVE_MS)
-    expect(storage.getItem(SAVE_KEY)).toBeNull()
+    expect(loadGame(storage)?.gameOver).toBe(true)
   })
 })

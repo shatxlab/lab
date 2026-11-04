@@ -528,7 +528,7 @@ function buildItem(state: GameState, product: Product, item: WorkItem): void {
   if (item.companionId) {
     const companion = launchCompanion(state, item.companionId)
     if (companion) {
-      state.events.push({ type: 'notice', text: `${companion.name} is out: it will make ${product.name} bigger while a floor on Companions looks after it.`, sound: 'milestone' })
+      state.events.push({ type: 'notice', text: `${companion.name} is out: its bonus to ${product.name} depends on freshness, bug health and effective shared reliability coverage.`, sound: 'milestone' })
     }
     return
   }

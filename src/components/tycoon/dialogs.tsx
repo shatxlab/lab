@@ -16,6 +16,7 @@ import { projectQuality } from '@/lib/tycoon/sim/project'
 import { useGame, useOffice, useStore } from './context'
 import { formatCount, formatDate, formatMoney, qualityLabel } from '@/lib/tycoon/format'
 import { you as founderAnalyst } from '@/lib/tycoon/sim/founding'
+import { ResearchCarryover } from './ResearchCarryover'
 import { Modal } from './Modal'
 
 export function ReadyDialog({ officeId }: { officeId: number }) {
@@ -199,9 +200,10 @@ export function GameOverDialog() {
       )}
       {chapter === 'restart' && (
         <p className="muted">
-          The team is gone and so is your friend. You could start again at a café table, alone, with half of what you learned and a smaller name.
+          The team is gone and so is your friend. You could start again at a café table, alone, with a smaller name. Your completed learning and audience studies are not halved.
         </p>
       )}
+      {chapter && <ResearchCarryover />}
       <div className="actions">
         <button onClick={() => downloadJournal(state)}>Export run log</button>
         <button onClick={startNewGame}>New game</button>

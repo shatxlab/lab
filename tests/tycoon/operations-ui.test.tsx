@@ -47,7 +47,8 @@ it('shows shared ecosystem health and measured bonuses without a blocking dialog
   act(() => root!.render(<StoreContext.Provider value={store}><HitPanel /></StoreContext.Provider>))
   const panel = () => document.querySelector('[aria-label="Ecosystem health"]')!
   expect(panel().textContent).toContain('Shared reliability coverage: 0%')
-  expect(panel().textContent).toContain('1 of 2 slots free')
+  expect(panel().textContent).toContain('1 companion')
+  expect(panel().textContent).toContain('No fixed companion-count limit')
   expect(panel().textContent).toContain('fresh and healthy')
   act(() => { store.assignOperation(state.offices[0].id, { kind: 'standing', productId: state.signatureId!, service: 'reliability' }) })
   expect(panel().textContent).not.toContain('Shared reliability coverage: 0%')

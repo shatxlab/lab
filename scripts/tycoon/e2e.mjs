@@ -187,7 +187,7 @@ async function scenarioResearch(browser) {
   state.lastEventDay = 80
   state.money = 100000
   state.reputation = 15
-  state.research = { done: ['ci_pipeline'], active: { id: 'code_review', finishDay: 81 } }
+  state.research = { known: ['ci_pipeline'], done: ['ci_pipeline'], active: { id: 'code_review', finishDay: 81 } }
   const { page, close, problems, waitFor, click, text, shot, stats } = await openGame(browser, { save: serialize(state) })
 
   await click('2×')

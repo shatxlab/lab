@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { companionCoverage, companionEffects, companionsOf, companionHealthy, freeSlots } from '@/lib/tycoon/sim/companions'
+import { companionCoverage, companionEffects, companionsOf, companionHealthy, ecosystemCapacity } from '@/lib/tycoon/sim/companions'
 import { RESEARCH } from '@/lib/tycoon/data/research'
 import { DEEP_WORK } from '@/lib/tycoon/data/deepwork'
 import { researchBlocker, researchDaysLeft } from '@/lib/tycoon/sim/research'
@@ -12,7 +12,7 @@ import { estimateDaysAt, teamRate } from '@/lib/tycoon/sim/work'
 import { DISCIPLINES, emptySkills } from '@/lib/tycoon/sim/types'
 import type { Office, Product } from '@/lib/tycoon/sim/types'
 import { formatMoney } from '@/lib/tycoon/format'
-import { CONTRACT_ABANDON_REPUTATION } from '@/lib/tycoon/sim/balance'
+import { CONTRACT_ABANDON_REPUTATION, HOSTING_PER_USER_DAY } from '@/lib/tycoon/sim/balance'
 import { contractBalance } from '@/lib/tycoon/sim/contracts'
 import { ClientWork } from './NewProjectDialog'
 import { ProductOperations } from './ProductOperations'
@@ -47,9 +47,15 @@ function AssignmentEditor({ office, product }: { office: Office; product: Produc
     {preview && proposal && <div className="initiative-contract">
       <strong>{preview.title} · {Number.isFinite(preview.days) ? `about ${preview.days} days` : 'blocked'}</strong>
       <p className="good">{preview.effect}</p>
+      {preview.companionForecast && <div className="companion-forecast" aria-label="Companion capacity forecast">
+        <p>Care after assigning this floor: {preview.companionForecast.provided.toFixed(2)} provided / {preview.companionForecast.demand.toFixed(2)} forecast service points/day · {Math.floor(preview.companionForecast.coverage * 100)}% coverage.</p>
+        <small>Includes {preview.companionForecast.bugDemand.toFixed(2)} added traffic-bug demand and {preview.companionForecast.reservedDemand.toFixed(2)} demand from other pending launches. This floor's previous care output is excluded.</small>
+        <p>Initial users: {preview.companionForecast.users.toLocaleString('en-US')} · forecast extra hosting {formatMoney(preview.companionForecast.users * HOSTING_PER_USER_DAY)}/day. Based on today's traffic and quality; demand can change before delivery.</p>
+      </div>}
       <p>Affects {product.name} at release. Demand, users and revenue follow later, not a guaranteed return.</p>
       <p>Upfront {formatMoney(preview.cash)} · added upkeep {formatMoney(preview.upkeep)}/day. Payroll, rent and hosting continue.</p>
       <p>Only this floor contributes. Clarity {preview.clarity}%. {DISCIPLINES.filter((d) => preview.target[d] > 0).map((d) => `${d}: ${Math.ceil(preview.target[d])} pts at ${preview.rate[d].toFixed(1)}/day`).join('; ')}.</p>
+      {preview.warning && <p className="warn">{preview.warning}</p>}
       {preview.blocker && <p className="warn">{preview.blocker}</p>}
       <button disabled={!!preview.blocker} onClick={() => apply({ kind: 'initiative', productId: product.id, proposal: { kind: proposal.kind as Initiative, id: proposal.id } })}>Assign initiative</button>
     </div>}
@@ -88,6 +94,7 @@ export function OperationsPanel() {
   if (project) for (const d of DISCIPLINES) left[d] = Math.max(0, project.target[d] - project.progress[d])
   const days = project ? estimateDaysAt(left, teamRate(state, office, { typeId: project.productTypeId, productId: project.parentId })) : 0
   const companions = companionsOf(state)
+  const capacity = ecosystemCapacity(state)
   const effects = companionEffects(state)
   const active = state.research.active
   const researchLeft = researchDaysLeft(state)
@@ -120,8 +127,11 @@ export function OperationsPanel() {
         <p>Uses this floor only. Finish or explicitly abandon its current work, and stop standing coverage before taking a job. Estimates and deadlines apply to this team, not spare company capacity.</p>
         <ClientWork key={`${office.id}:${product.id}`} office={office} productId={product.id} />
       </details></>}
-    {companions.length > 0 && <section className="plan" aria-label="Ecosystem health">
-      <strong>Flagship ecosystem · {freeSlots(state)} of 2 slots free</strong>
+    {capacity && <section className="plan" aria-label="Ecosystem health">
+      <strong>Flagship ecosystem · {companions.length} companion{companions.length === 1 ? '' : 's'}</strong>
+      <p>No fixed companion-count limit. Effective shared care, hosting and healthy releases determine value; retained products are not removed to make room.</p>
+      <p>Care capacity: {capacity.provided.toFixed(2)} provided / {capacity.liveDemand.toFixed(2)} live service points/day. Pending launches: {capacity.pending} · forecast extra demand {capacity.reservedDemand.toFixed(2)}/day · forecast headroom {capacity.headroom.toFixed(2)}/day.</p>
+      {capacity.headroom < 0 && <p className="warn">Shared care is over capacity. Reallocate engineering/QA, fix the backlog or reduce the ecosystem deliberately; no product is automatically retired.</p>}
       <p>Shared reliability coverage: {Math.round(companionCoverage(state) * 100)}%. Bonuses scale with coverage; stale or buggy companions provide no bonus. Reassign capacity or ship an update to recover.</p>
       <p>Current flagship bonuses: +{Math.round(effects.reach * 100)}% reach · +{Math.round(effects.retention * 100)}% retention · +{Math.round(effects.pay * 100)}% pay.</p>
       {companions.map((p) => <p key={p.id}>{p.name}: {companionHealthy(state, p) ? 'fresh and healthy' : 'needs an update or bug fixes'} · {Math.ceil(p.bugs)} open bugs. Select this product above to assign an update.</p>)}

@@ -38,7 +38,8 @@ describe('chapters', () => {
     expect(next.employees).toHaveLength(2)
     expect(next.employees.every((e) => e.founder && next.offices.some((o) => o.id === e.officeId))).toBe(true)
     expect(you(next)?.name).toBe(you(old)?.name)
-    expect(next.research.done).toEqual(old.research.done)
+    expect(next.research.done).toEqual([])
+    expect(next.research.known).toEqual(old.research.done)
     expect(next.money).toBe(seedMoney(old))
     expect(next.money).toBeLessThan(old.money)
     expect(next.reputation).toBe(48)
@@ -47,12 +48,13 @@ describe('chapters', () => {
     expect(next.rivals).toEqual(old.rivals)
   })
 
-  it('after a bad ending leave you alone with half of it, a smaller name and the starting money', () => {
+  it('after a bad ending keep all learning but leave you alone without active company practices', () => {
     const old = endedStudio('bankrupt')
     const next = nextChapter(old)!
     expect(next.employees).toHaveLength(1)
     expect(you(next)?.name).toBe(you(old)?.name)
-    expect(next.research.done).toEqual(old.research.done.slice(0, 2))
+    expect(next.research.done).toEqual([])
+    expect(next.research.known).toEqual(old.research.done)
     expect(next.money).toBeLessThan(10_000)
     expect(next.reputation).toBe(20)
   })

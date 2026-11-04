@@ -29,9 +29,10 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } 
  * Version 8 replaces the global hit turn with explicit floor reservations and staffed office research.
  * Version 9 separates specialist grades, profession appointments and automatic company reviews.
  * Version 10 records explicit growth/pivot initiatives; paid v9 work is preserved.
- * Version 3 to 9 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
+ * Version 11 archives learned research separately from current-company activation; v10 benefits remain active.
+ * Version 3 to 10 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
  */
-export const STATE_VERSION = 10
+export const STATE_VERSION = 11
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
@@ -65,7 +66,7 @@ export function createInitialState(seed: number): GameState {
     market: initialMarket(),
     modifiers: [],
     pendingEvent: null,
-    research: { done: [], active: null },
+    research: { known: [], done: [], active: null },
     lastEventDay: 0,
     investorDeals: 0,
     lastOutingDay: -1000,
@@ -122,6 +123,9 @@ function validModifier(v: unknown): boolean {
 function validResearch(v: unknown): boolean {
   return (
     isObj(v) &&
+    Array.isArray(v.known) &&
+    v.known.every((id) => typeof id === 'string' && !!getResearch(id) && !getResearch(id)?.repeatable) &&
+    new Set(v.known).size === v.known.length &&
     Array.isArray(v.done) &&
     v.done.every((id) => typeof id === 'string') &&
     (v.active === null || (isObj(v.active) && typeof v.active.id === 'string' && isNum(v.active.finishDay) && (v.active.remainingWork === undefined || (isNum(v.active.remainingWork) && v.active.remainingWork >= 0)) && (v.active.target === undefined || typeof v.active.target === 'string')))
@@ -506,7 +510,9 @@ function dropRemovedContent(raw: unknown): unknown {
     const research = raw.research
     const done = Array.isArray(research.done) ? research.done.filter((id) => typeof id === 'string' && getResearch(id)) : research.done
     const active = isObj(research.active) && !getResearch(String(research.active.id)) ? null : research.active
-    upgraded.research = { ...research, done, active }
+    const known = Array.isArray(research.known) && research.known.every((id) => typeof id === 'string')
+      ? research.known.filter((id) => getResearch(id)) : research.known
+    upgraded.research = { ...research, known, done, active }
   }
   if (isObj(upgraded.pendingEvent) && !getRandomEvent(String(upgraded.pendingEvent.id))) upgraded.pendingEvent = null
   return upgraded
@@ -521,7 +527,11 @@ export function deserialize(json: string): GameState | null {
     const raw: unknown = JSON.parse(json)
     const from = isObj(raw) && typeof raw.version === 'number' ? raw.version : 0
     const legacy = upgradeFromV6(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw))))
-    const parsed = dropRemovedContent(isObj(legacy) && (legacy.version === 7 || legacy.version === 8 || legacy.version === 9) ? { ...legacy, version: STATE_VERSION } : legacy)
+    const parsed = dropRemovedContent(isObj(legacy) && (legacy.version === 7 || legacy.version === 8 || legacy.version === 9 || legacy.version === 10) ? { ...legacy, version: STATE_VERSION } : legacy)
+    if (from >= 3 && from <= 10 && isObj(parsed) && isObj(parsed.research) && Array.isArray(parsed.research.done)) {
+      // Archive current completions without resetting paid work, current benefits, people or chapter history.
+      parsed.research.known = [...new Set(parsed.research.done.filter((id) => typeof id === 'string' && getResearch(id) && !getResearch(id)?.repeatable))]
+    }
     if (from >= 7 && from < 10 && isObj(parsed) && Array.isArray(parsed.offices)) {
       for (const office of parsed.offices) {
         if (!isObj(office) || !isObj(office.project) || (!office.project.grows && !office.project.pivotsTo) || !isObj(office.assignment)) continue

@@ -3,6 +3,8 @@ import { getAudience } from '@/lib/tycoon/data/audiences'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
 import { BRANCHES, RESEARCH, unlocksOf, type ResearchNode } from '@/lib/tycoon/data/research'
 import { researchBlocker, researchDaysLeft, studyTargets } from '@/lib/tycoon/sim/research'
+import { knowsResearch } from '@/lib/tycoon/sim/research-knowledge'
+import { ResearchCarryover } from './ResearchCarryover'
 import { isResearched } from '@/lib/tycoon/sim/unlocks'
 import { useGame, useStore } from './context'
 import { formatMoney } from '@/lib/tycoon/format'
@@ -12,7 +14,9 @@ import { cssVars } from './style'
 function ResearchRow({ node }: { node: ResearchNode }) {
   const store = useStore()
   const state = useGame()
-  const done = isResearched(state, node.id)
+  const known = !node.repeatable && knowsResearch(state, node.id)
+  const done = isResearched(state, node.id) || (node.carry === 'knowledge' && known)
+  const inactive = known && !done && (node.carry === 'practice' || node.carry === 'mixed')
   const active = state.research.active?.id === node.id
   const blocker = researchBlocker(state, node)
   const { features, productTypes, abilities } = unlocksOf(node.id)
@@ -28,14 +32,16 @@ function ResearchRow({ node }: { node: ResearchNode }) {
           {formatMoney(node.cost)} · {node.days} {state.offices.some((o) => o.assignment) ? 'specialist days' : 'days'}
         </span>
       </div>
+      <small className="muted">{node.carry === 'knowledge' ? 'Founder knowledge · retained across ventures' : node.carry === 'study' ? 'Completed audience results · retained across ventures' : node.carry === 'mixed' ? 'Content knowledge retained; company practice needs activation' : 'Company practice · needs re-establishment in each new company'}</small>
       <p className="muted">{node.description}</p>
+      {inactive && <p className="warn">Blueprint known — inactive in this company. Re-establish for the normal full price and work shown above; no automatic spending.{node.carry === 'mixed' ? ' Accessibility permission is already retained; the speed multiplier is not active.' : ''}</p>}
       {(features.length > 0 || productTypes.length > 0 || abilities.length > 0) && (
         <p className="unlocks">
           Unlocks: {[...productTypes.map((t) => `${t} (product)`), ...features, ...abilities].join(', ')}
         </p>
       )}
       {done && !node.repeatable ? (
-        <span className="good">✓ Done</span>
+        <span className="good">{node.carry === 'knowledge' ? '✓ Knowledge retained' : '✓ Active in this company'}</span>
       ) : (
         <>
           {node.repeatable && targets.length > 0 && (
@@ -85,6 +91,7 @@ export function ResearchDialog() {
         <p className="muted">{staffed ? 'Nothing is being researched. Assign a floor with analysts to research, then pay for a project. Reassignment pauses progress, not the company.' : 'Nothing is being researched. Research runs in the background while you work on projects.'}</p>
       )}
 
+      <details><summary>Next-venture carry-over preview</summary><ResearchCarryover /></details>
       <div className="research-branches">
         {BRANCHES.map((branch) => (
           <section key={branch.id} className="research-branch">

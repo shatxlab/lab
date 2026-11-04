@@ -1,9 +1,12 @@
+import { knowsResearch } from './research-knowledge'
+export { knowsResearch } from './research-knowledge'
 import { getResearch } from '@/lib/tycoon/data/research'
 import { eraIndexAt, eraPhrase, ERAS } from '@/lib/tycoon/data/eras'
 import { getStage } from '@/lib/tycoon/data/stages'
 import { PROJECT_SIZES } from './balance'
 import type { Feature, GameState, Office, ProductType, ProjectSize } from './types'
 
+/** Active completion in this company. Never union this with learned practice blueprints. */
 export function isResearched(state: GameState, id: string): boolean {
   return state.research.done.includes(id)
 }
@@ -17,7 +20,7 @@ export function productTypeLock(state: GameState, type: ProductType): string | n
   const reasons: string[] = []
   if (type.era > eraIndexAt(state.day)) return `Not until ${eraPhrase(ERAS[type.era])}`
   if (type.unlockReputation > state.reputation) reasons.push(`Reputation ${type.unlockReputation}`)
-  if (type.requiresResearch && !isResearched(state, type.requiresResearch)) {
+  if (type.requiresResearch && !knowsResearch(state, type.requiresResearch)) {
     reasons.push(`Research: ${researchName(type.requiresResearch)}`)
   }
   return reasons.length > 0 ? reasons.join(' · ') : null
@@ -25,7 +28,7 @@ export function productTypeLock(state: GameState, type: ProductType): string | n
 
 /** Why a feature can't be chosen yet, or null when it can. */
 export function featureLock(state: GameState, feature: Feature): string | null {
-  if (feature.requiresResearch && !isResearched(state, feature.requiresResearch)) {
+  if (feature.requiresResearch && !knowsResearch(state, feature.requiresResearch)) {
     return `Research: ${researchName(feature.requiresResearch)}`
   }
   return null

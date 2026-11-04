@@ -26,7 +26,7 @@ import { getTrait } from '@/lib/tycoon/data/traits'
 import { statMultiplier } from './modifiers'
 import { pick, randRange } from './rng'
 import { pickTrait, startingMorale } from './staff'
-import { isResearched } from './unlocks'
+import { knowsResearch } from './unlocks'
 import {
   DISCIPLINES,
   fail,
@@ -151,7 +151,7 @@ export function generateEmployee(state: GameState, role: BuilderRole, region: Re
 function poolFor(state: GameState, region: Region): Employee[] {
   const candidates: Employee[] = []
   for (let i = 0; i < CANDIDATE_COUNT; i++) {
-    if (i === CANDIDATE_COUNT - 1 && isResearched(state, ANALYST_RESEARCH)) {
+    if (i === CANDIDATE_COUNT - 1 && knowsResearch(state, ANALYST_RESEARCH)) {
       candidates.push(generateAnalyst(state, region))
       continue
     }

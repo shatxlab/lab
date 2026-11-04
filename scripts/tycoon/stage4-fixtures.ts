@@ -1,7 +1,7 @@
 // Synthetic ecosystem acceptance state, never reconstructed from the player's journal.
 import { writeFileSync } from 'node:fs'
 import { stage0Fixture } from '../../tests/tycoon/stage0-fixtures'
-import { dayOfEra } from '../../tests/tycoon/helpers'
+import { dayOfEra, makeProduct } from '../../tests/tycoon/helpers'
 import { initialiseOperations } from '../../src/lib/tycoon/sim/operations'
 import { initialisePeopleManagement } from '../../src/lib/tycoon/sim/people-management'
 import { launchCompanion } from '../../src/lib/tycoon/sim/companions'
@@ -16,6 +16,11 @@ for (const offer of s.contracts) offer.expiresDay = s.day + 100
 initialiseOperations(s)
 initialisePeopleManagement(s)
 launchCompanion(s, 'mobile_app')
+if (process.env.CAPACITY_REVIEW === '1') {
+  launchCompanion(s, 'free_edition')
+  launchCompanion(s, 'integrations')
+  s.products.push(makeProduct({ id: s.nextId++, name: 'Retained ledger', role: 'side' }), makeProduct({ id: s.nextId++, name: 'Retained planner', role: 'side' }))
+}
 s.events = []
 s.lastEventDay = s.day
 s.exit.closed = true

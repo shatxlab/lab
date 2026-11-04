@@ -55,7 +55,7 @@ export function saveGame(state: GameState, storage: KeyValueStorage): boolean {
   }
 }
 
-/** The saved game, or null when there is none, it is unreadable, or that game already ended. */
+/** The saved company, including an ended company awaiting an explicit next-venture decision. */
 export function loadGame(storage: KeyValueStorage): GameState | null {
   let raw: string | null
   try {
@@ -66,7 +66,7 @@ export function loadGame(storage: KeyValueStorage): GameState | null {
   if (raw === null) return null
 
   const state = deserialize(raw)
-  if (state) return state.gameOver ? null : state
+  if (state) return state
   try {
     storage.setItem(BACKUP_KEY, raw)
   } catch {
@@ -87,7 +87,6 @@ export function clearSave(storage: KeyValueStorage): void {
 export function importSave(text: string, storage: KeyValueStorage): Result {
   const state = deserialize(text)
   if (!state) return fail('That file is not a save from this version of the game.')
-  if (state.gameOver) return fail('That save is from a game that already ended.')
   if (!saveGame(state, storage)) return fail('The browser would not store the save.')
   return OK
 }
@@ -102,15 +101,14 @@ export interface Autosave {
 /**
  * Saves at most once per `delayMs` while the game changes. A throttle, not a debounce:
  * the store changes every frame at speed, so waiting for quiet would never save.
- * A finished game deletes its save.
+ * Finished companies remain saved until the player explicitly starts a new game or venture.
  */
 export function createAutosave(store: Store, storage: KeyValueStorage, delayMs = AUTOSAVE_MS): Autosave {
   let timer: ReturnType<typeof setTimeout> | null = null
 
   const write = () => {
     timer = null
-    if (store.state.gameOver) clearSave(storage)
-    else saveGame(store.state, storage)
+    saveGame(store.state, storage)
   }
   const unsubscribe = store.version.subscribe(() => {
     if (timer === null) timer = setTimeout(write, delayMs)

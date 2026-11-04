@@ -1,4 +1,5 @@
 import { audienceFor, audiencesOf } from '@/lib/tycoon/data/audiences'
+import { companionLaunchForecast } from './companions'
 import { getCompanion } from '@/lib/tycoon/data/companions'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { COMPLIANCE_FEATURE } from '@/lib/tycoon/data/regions'
@@ -22,7 +23,7 @@ export type Initiative = OperationInitiative
 export type OperationChoice = { kind: 'idle' } | { kind: 'standing'; service: StandingService['service']; productId: number }
   | { kind: 'initiative'; productId: number; proposal: { kind: Initiative; id: string } }
 
-/** Reservations are product-scoped except companion unlocks, whose slots are company-wide. */
+/** Product capabilities reserve product scope; each companion identity is reserved company-wide. */
 export function initiativeBlocker(state: GameState, product: Product, proposal: { kind: Initiative; id: string }, except?: Office): string | null {
   if (proposal.kind === 'pivot') {
     if (product.hit) return 'A hit has found its people'
@@ -42,7 +43,7 @@ export function initiativeBlocker(state: GameState, product: Product, proposal: 
     if (o === except || !o.project) continue
     const p = o.project
     const companion = proposal.kind === 'item' && getWorkItem(proposal.id)?.companionId
-    if (companion && p.itemId && getWorkItem(p.itemId)?.companionId) return 'A companion launch is already reserved'
+    if (companion && p.itemId && getWorkItem(p.itemId)?.companionId === companion) return 'This companion launch is already reserved'
     if (p.parentId !== product.id) continue
     if (p.grows || p.pivotsTo) return 'Another team is changing this product’s scope or audience'
     if ((proposal.kind === 'item' && p.itemId === proposal.id) || (proposal.kind === 'localise' && p.localises) ||
@@ -86,13 +87,13 @@ export function operationPreview(state: GameState, office: Office, product: Prod
     const missing = DISCIPLINES.filter((d) => target[d] > 0 && rate[d] <= 0)
     return { title: isPivot ? `Pivot to ${audience?.name ?? 'unknown audience'}` : next ? `Grow to ${PROJECT_SIZES[next].name}` : 'Already a Flagship',
       effect: isPivot ? 'Keeps built capabilities but changes the audience at release; most current users leave, loyalty resets and the product launches again. A product can pivot only once. Not a guaranteed better fit.' : `Expands product scope at release and renews freshness; estimated reach +${Math.max(0, Math.round((estimateUpdateReach(state, product.id, [], true) / Math.max(1, product.reach) - 1) * 100))}%. Larger sizes open client opportunities; server capacity, fit and demand still govern users. Not a guaranteed return.`,
-      clarity: clarityOf(state, office), scope, target, rate, days, cash, upkeep: 0,
+      companionForecast: null, warning: null, clarity: clarityOf(state, office), scope, target, rate, days, cash, upkeep: 0,
       blocker: initiativeBlocker(state, product, proposal, office) ?? (missing.length ? `Missing build skills: ${missing.join(', ')}` : budgetBlocker(state, cash)) }
   }
   const card: Proposal = { kind: proposal.kind, id: proposal.id, why: '' }
   // Validate identifiers before content getters; callers can preview stale/untrusted choices.
   const invalid = proposal.kind === 'item' && !getWorkItem(proposal.id) ? 'Unknown item' : proposal.kind === 'feature' && (() => { try { getFeature(proposal.id); return false } catch { return true } })() ? 'Unknown feature' : null
-  if (invalid) return { title: 'Unavailable initiative', effect: '', clarity: 0, scope: { design: 0, engineering: 0, qa: 0 }, target: { design: 0, engineering: 0, qa: 0 }, rate: { design: 0, engineering: 0, qa: 0 }, days: 0, cash: 0, upkeep: 0, blocker: invalid }
+  if (invalid) return { companionForecast: null, warning: null, title: 'Unavailable initiative', effect: '', clarity: 0, scope: { design: 0, engineering: 0, qa: 0 }, target: { design: 0, engineering: 0, qa: 0 }, rate: { design: 0, engineering: 0, qa: 0 }, days: 0, cash: 0, upkeep: 0, blocker: invalid }
   const clarity = clarityOf(state, office)
   const scope = releaseScope(product, card, clarity)
   const target = { ...scope }
@@ -103,8 +104,9 @@ export function operationPreview(state: GameState, office: Office, product: Prod
   const cash = proposal.kind === 'localise' ? projectBudget(projectTarget(product.productTypeId, [], 'update', product.size)) : 0
   const missing = DISCIPLINES.filter((d) => target[d] > 0 && rate[d] <= 0)
   const companion = proposal.kind === 'item' ? getCompanion(getWorkItem(proposal.id)?.companionId ?? '') : undefined
-  const companionEffect = companion ? `Launches ${companion.name}. At full shared care, while fresh and healthy: ${companion.role === 'reach' ? `+${Math.round(COMPANION_REACH_BOOST * 100)}% flagship reach` : `+${Math.round(COMPANION_KEEP_RETENTION * 100)}% retention and +${Math.round(COMPANION_KEEP_PAY * 100)}% pay`}. Uses one of two ecosystem slots and adds ${COMPANION_SERVICE_DEMAND} shared reliability service points/day, plus bug demand and hosting at $${HOSTING_PER_USER_DAY}/user/day. No coverage means no flagship bonus; upkeep does not refresh stale releases.` : null
-  return { title: describeProposal(card).title, effect: companionEffect ?? releaseEffect(state, office, product, card, clarity), clarity,
+  const forecast = companion ? companionLaunchForecast(state, companion, office.id) : null
+  const companionEffect = companion ? `Launches ${companion.name}. At full shared care, while fresh and healthy: ${companion.role === 'reach' ? `+${Math.round(COMPANION_REACH_BOOST * 100)}% flagship reach` : `+${Math.round(COMPANION_KEEP_RETENTION * 100)}% retention and +${Math.round(COMPANION_KEEP_PAY * 100)}% pay`}. No fixed companion-count limit in operating companies; effective shared care bounds value. Adds ${COMPANION_SERVICE_DEMAND} shared reliability service points/day, plus bug demand and hosting at $${HOSTING_PER_USER_DAY}/user/day. No coverage means no flagship bonus; upkeep does not refresh stale releases.` : null
+  return { companionForecast: forecast, warning: forecast && forecast.coverage < 1 ? `Shared reliability would cover only ${Math.floor(forecast.coverage * 100)}% at today's demand after assigning this floor. Reallocate a separate care team or accept reduced companion value; existing products remain intact.` : null, title: describeProposal(card).title, effect: companionEffect ?? releaseEffect(state, office, product, card, clarity), clarity,
     scope, target, rate, days, cash, upkeep: proposal.kind === 'item' ? getWorkItem(proposal.id)?.effect.upkeep ?? 0 : 0,
     blocker: initiativeBlocker(state, product, proposal, office) ?? (missing.length ? `Missing build skills: ${missing.join(', ')}` : budgetBlocker(state, cash)) }
 }

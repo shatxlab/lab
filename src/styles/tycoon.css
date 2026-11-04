@@ -2032,3 +2032,7 @@
 
 .scale-requirements { padding-left: 1.2rem; display: flex; flex-direction: column; gap: .7rem; }
 .scale-requirements li, .rivalry-preview { min-width: 0; overflow-wrap: anywhere; }
+
+.research-carryover { min-width: 0; overflow-wrap: anywhere; }
+.research-carryover ul { padding-left: 1.2rem; }
+.research-carryover li { margin-block: .5rem; }

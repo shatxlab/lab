@@ -92,7 +92,7 @@ describe('starting and finishing research', () => {
     expect(startResearch(state, 'nope').ok).toBe(false)
     expect(startResearch(state, 'ml_foundations')).toEqual({ ok: false, reason: 'Not until the AI wave' })
     state.day = dayOfEra(3)
-    expect(startResearch(state, 'ml_foundations')).toEqual({ ok: false, reason: 'Needs CI pipeline' })
+    expect(startResearch(state, 'ml_foundations')).toEqual({ ok: false, reason: 'Needs CI engineering practice' })
 
     state.money = 100
     expect(startResearch(state, 'ci_pipeline')).toEqual({ ok: false, reason: 'Not enough money' })
@@ -114,7 +114,7 @@ describe('starting and finishing research', () => {
     state.day = dayOfEra(2)
     finish(state, 'ci_pipeline')
     const node = getResearch('cloud_infra')!
-    expect(researchBlocker(state, node)).toBe('Needs Test automation')
+    expect(researchBlocker(state, node)).toBe('Needs QA automation practice')
     finish(state, 'test_automation')
     expect(researchBlocker(state, node)).toBeNull()
   })
@@ -133,7 +133,7 @@ describe('starting and finishing research', () => {
     researchDay(state)
     expect(state.research.done.filter((id) => id === 'ci_pipeline')).toHaveLength(1)
     expect(state.research.active).toBeNull()
-    expect(state.events.filter((e) => e.type === 'notice' && e.text.includes('CI pipeline'))).toHaveLength(1)
+    expect(state.events.filter((e) => e.type === 'notice' && e.text.includes('CI engineering practice'))).toHaveLength(1)
   })
 
   it('finishes through the daily tick', () => {
@@ -297,16 +297,16 @@ describe('saving with research', () => {
 
   it('drops research this build does not know', () => {
     const raw = JSON.parse(serialize(richState()))
-    raw.research = { done: ['ci_pipeline', 'removed_later'], active: { id: 'also_removed', finishDay: 9 } }
-    expect(deserialize(JSON.stringify(raw))!.research).toEqual({ done: ['ci_pipeline'], active: null })
+    raw.research = { known: [], done: ['ci_pipeline', 'removed_later'], active: { id: 'also_removed', finishDay: 9 } }
+    expect(deserialize(JSON.stringify(raw))!.research).toEqual({ known: [], done: ['ci_pipeline'], active: null })
   })
 
   it('drops unusable research entries but rejects a broken active one', () => {
     const raw = JSON.parse(serialize(richState()))
-    raw.research = { done: [3, null, 'ci_pipeline'], active: null }
+    raw.research = { known: [], done: [3, null, 'ci_pipeline'], active: null }
     expect(deserialize(JSON.stringify(raw))!.research.done).toEqual(['ci_pipeline'])
 
-    raw.research = { done: [], active: { id: 'ci_pipeline', finishDay: 'soon' } }
+    raw.research = { known: [], done: [], active: { id: 'ci_pipeline', finishDay: 'soon' } }
     expect(deserialize(JSON.stringify(raw))).toBeNull()
   })
 })

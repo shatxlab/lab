@@ -1,3 +1,4 @@
+import { INCIDENT_RELIABILITY_MULTIPLIER } from '@/lib/tycoon/sim/balance'
 import type { Stat } from '@/lib/tycoon/sim/types'
 import { FEATURES } from './features'
 import { PRODUCT_TYPES } from './productTypes'
@@ -15,6 +16,8 @@ export interface ResearchNode {
   id: string
   name: string
   branch: Branch
+  /** Knowledge survives ventures; practices need current-company activation; mixed also retains content permission. */
+  carry: 'knowledge' | 'practice' | 'mixed' | 'study'
   /** One line for the dialog; the unlocks are listed separately. */
   description: string
   cost: number
@@ -34,10 +37,13 @@ export interface ResearchNode {
   ability?: string
 }
 
+const reliabilityPercent = Math.round((INCIDENT_RELIABILITY_MULTIPLIER - 1) * 100)
+
 export const RESEARCH: readonly ResearchNode[] = [
   // Design
   {
     id: 'ux_research',
+    carry: 'mixed',
     name: 'UX research lab',
     branch: 'design',
     description: 'Design work is 8% faster.',
@@ -48,6 +54,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'design_system',
+    carry: 'practice',
     name: 'Design system',
     branch: 'design',
     description: 'Everything you ship looks more polished: +2% quality.',
@@ -60,9 +67,10 @@ export const RESEARCH: readonly ResearchNode[] = [
   // Engineering
   {
     id: 'ci_pipeline',
-    name: 'CI pipeline',
+    carry: 'practice',
+    name: 'CI engineering practice',
     branch: 'engineering',
-    description: 'Engineering work is 8% faster.',
+    description: 'Company engineering practice: engineering work is 8% faster. Separate from the built Deploy pipeline tool, which speeds all delivery and has daily upkeep.',
     cost: 6000,
     days: 20,
     requires: [],
@@ -70,6 +78,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'code_review',
+    carry: 'practice',
     name: 'Code review culture',
     branch: 'engineering',
     description: 'People learn from each other: skills grow 20% faster.',
@@ -80,9 +89,10 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'ml_foundations',
+    carry: 'knowledge',
     name: 'Machine learning',
     branch: 'engineering',
-    description: 'Your engineers learn to build with models.',
+    description: 'Your engineers learn to build with models. Also enables the AI data assistant companion when its other product gates are met.',
     cost: 25000,
     days: 45,
     requires: ['ci_pipeline'],
@@ -91,6 +101,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'realtime_stack',
+    carry: 'knowledge',
     name: 'Realtime stack',
     branch: 'engineering',
     description: 'Sockets, presence, and conflict-free sync.',
@@ -104,9 +115,10 @@ export const RESEARCH: readonly ResearchNode[] = [
   // Quality
   {
     id: 'test_automation',
-    name: 'Test automation',
+    carry: 'practice',
+    name: 'QA automation practice',
     branch: 'qa',
-    description: 'QA work is 10% faster.',
+    description: 'Company QA practice: QA work is 10% faster. Separate from a product’s Test automation initiative, which fixes bugs and raises that product’s quality.',
     cost: 6000,
     days: 20,
     requires: [],
@@ -114,6 +126,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'beta_program',
+    carry: 'practice',
     name: 'Beta program',
     branch: 'qa',
     description: 'Real users find the bugs first: +2% quality.',
@@ -124,20 +137,22 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'incident_management',
+    carry: 'practice',
     name: 'Incident management',
     branch: 'qa',
-    description: 'Put a developer and a tester on call: every bug that is reported is picked up and fixed as it comes, and they work on their office\'s project when nothing is open.',
+    description: `Operating companies: standing reliability teams provide ${reliabilityPercent}% more service output, using the same staff. Before Operations, unlocks a developer/tester on-call pair; it does not restore individual fixing pairs in managed companies.`,
     cost: 30000,
     days: 40,
     requires: ['test_automation'],
     effects: [],
-    ability: 'an on-call fixing pair',
+    ability: `+${reliabilityPercent}% standing reliability output in Operations; legacy on-call fixing before Operations`,
   },
   {
     id: 'cloud_infra',
+    carry: 'knowledge',
     name: 'Cloud infrastructure',
     branch: 'qa',
-    description: 'Reliable, scalable hosting from day one.',
+    description: 'Learn cloud architecture: unlocks Serverless backend, Cloud Platform and Data Platform. It does not add server capacity; complete Scale initiatives for that.',
     cost: 22000,
     days: 40,
     requires: ['test_automation', 'ci_pipeline'],
@@ -148,6 +163,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   // Business
   {
     id: 'marketing_dept',
+    carry: 'practice',
     name: 'Marketing department',
     branch: 'business',
     description: 'Everything you sell earns 3% more.',
@@ -158,6 +174,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'brand_partnerships',
+    carry: 'practice',
     name: 'Brand partnerships',
     branch: 'business',
     description: 'Everything you sell earns another 3% more.',
@@ -168,6 +185,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'marketing_automation',
+    carry: 'practice',
     name: 'Marketing automation',
     branch: 'business',
     description: 'Set a product to promote itself whenever the bank can spare it, so you stop clicking Promote every month.',
@@ -179,6 +197,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'payroll_automation',
+    carry: 'practice',
     name: 'Payroll automation',
     branch: 'business',
     description: 'Less admin: wages cost 5% less.',
@@ -189,6 +208,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'recruiting_network',
+    carry: 'practice',
     name: 'Recruiting network',
     branch: 'business',
     description: 'Candidates arrive 6% more skilled.',
@@ -199,6 +219,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'user_research',
+    carry: 'knowledge',
     name: 'User research',
     branch: 'business',
     description: 'A desk for people who study users. Analysts gather insight that shows what an audience likes, and read launch feedback as it comes in.',
@@ -211,6 +232,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'product_management',
+    carry: 'knowledge',
     name: 'Product management',
     branch: 'business',
     description: 'A senior analyst can become the product manager of an office: its products reach more people and break out more often.',
@@ -223,6 +245,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'audience_study',
+    carry: 'study',
     name: 'Audience study',
     branch: 'business',
     description: 'Commission a study of one audience: afterwards you see what it thinks of every feature. Can be done again for another audience.',
@@ -236,6 +259,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'enterprise_sales',
+    carry: 'practice',
     name: 'Enterprise sales',
     branch: 'business',
     description: 'A sales team that lands big clients: enterprise contracts appear on the board, paid in proportion to the studio’s biggest products.',
@@ -248,6 +272,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'licensing',
+    carry: 'practice',
     name: 'Licensing programme',
     branch: 'business',
     description: 'License a Flagship product to other companies: it pays a steady fee on top of what its own users bring.',
@@ -260,6 +285,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'knowledge_base',
+    carry: 'practice',
     name: 'Knowledge base',
     branch: 'engineering',
     description: 'Write things down: when someone leaves, part of what they knew about your products stays with the team.',
@@ -272,9 +298,10 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'platform_apis',
+    carry: 'knowledge',
     name: 'Platform APIs',
     branch: 'business',
-    description: 'Open your products to third parties.',
+    description: 'Learn plugin-marketplace architecture. Unlocks the Plugin marketplace feature; it is separate from the Integrations marketplace companion initiative.',
     cost: 18000,
     days: 35,
     requires: ['marketing_dept'],
@@ -283,6 +310,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   // Second and third steps of the plain speed lines: dearer, and they wait for later eras and a bigger studio.
   {
     id: 'security_practice',
+    carry: 'practice',
     name: 'Security practice',
     branch: 'qa',
     description: 'Threat modelling and audits as a habit: +2% quality on everything you ship.',
@@ -294,9 +322,10 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'data_sovereignty',
+    carry: 'practice',
     name: 'Data sovereignty',
     branch: 'business',
-    description: 'Contracts and hosting in every jurisdiction: everything you sell earns another 3% more.',
+    description: 'Commercial practice for regulated markets: everything you sell earns another 3% more. Does not provision data centres or automatically ship Data residency.',
     cost: 80000,
     days: 55,
     requires: ['security_practice', 'cloud_infra'],
@@ -305,6 +334,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'agent_frameworks',
+    carry: 'knowledge',
     name: 'Agent frameworks',
     branch: 'engineering',
     description: 'Software that plans and acts on its own: your engineers learn to build with it.',
@@ -316,6 +346,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'ai_copilots',
+    carry: 'practice',
     name: 'AI copilots',
     branch: 'engineering',
     description: 'Models that write and review code beside your people: all development is 10% faster.',
@@ -327,6 +358,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'coding_agents',
+    carry: 'practice',
     name: 'Coding agents',
     branch: 'engineering',
     description: 'Agents that take a task and bring back the finished work: all development is another 15% faster.',
@@ -338,6 +370,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'spatial_computing',
+    carry: 'knowledge',
     name: 'Spatial computing',
     branch: 'engineering',
     description: 'Tracking, depth and sound in three dimensions.',
@@ -349,6 +382,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'ux_research_2',
+    carry: 'practice',
     name: 'UX research lab II',
     branch: 'design',
     description: 'Design work is another 6% faster.',
@@ -361,6 +395,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'ux_research_3',
+    carry: 'practice',
     name: 'UX research lab III',
     branch: 'design',
     description: 'Design work is another 6% faster.',
@@ -373,6 +408,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'ci_pipeline_2',
+    carry: 'practice',
     name: 'CI pipeline II',
     branch: 'engineering',
     description: 'Engineering work is another 6% faster.',
@@ -385,6 +421,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'ci_pipeline_3',
+    carry: 'practice',
     name: 'CI pipeline III',
     branch: 'engineering',
     description: 'Engineering work is another 6% faster.',
@@ -397,6 +434,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'test_automation_2',
+    carry: 'practice',
     name: 'Test automation II',
     branch: 'qa',
     description: 'QA work is another 8% faster.',
@@ -409,6 +447,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'test_automation_3',
+    carry: 'practice',
     name: 'Test automation III',
     branch: 'qa',
     description: 'QA work is another 8% faster.',
@@ -421,6 +460,7 @@ export const RESEARCH: readonly ResearchNode[] = [
   },
   {
     id: 'brand_partnerships_2',
+    carry: 'practice',
     name: 'Global partnerships',
     branch: 'business',
     description: 'Everything you sell earns another 3% more.',

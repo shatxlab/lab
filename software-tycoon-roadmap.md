@@ -88,7 +88,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem and operating-action checkpoints, plus the company-readiness checkpoint below). The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, plus the local capacity/research-audit and v11 knowledge/practice carry-over slices below). The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -682,11 +682,225 @@ Chromium scale-readiness acceptance passes at **1280, 390 and 320px**, including
 no modal, JavaScript errors or horizontal overflow. Harness: `stage4-scale-fixtures.ts`, `stage4-scale-browser.mjs`;
 screenshots `/tmp/tycoon-stage4-scale-shots`. The prior product-action and ecosystem Chromium harnesses also pass at all three widths.
 
-**Still next in Stage 4:** review the two-slot limit using effective shared capacity; audit **every** research ID
-(effect, UI path, gates, overlaps, compatibility and carry-over), then implement persistent founder knowledge vs
-company-practice semantics with an explicit migration. Validate the new readiness gates across more families / human
-choices; these four-seed checks do not close Stage 7's unattended-growth, affordability, 12-seed or human acceptance
-gates. Do not call Stage 4 complete or remove the post-hit catalogue based on these slices.
+### Stage 4 progress: companion capacity and complete research audit (2026-11-04; local, uncommitted)
+
+The readiness checkpoint was committed and pushed as **`f614faf`**. This continuation completes the companion-limit
+review and the **35-ID research audit**, but does **not** implement the founder-knowledge/company-practice persistence
+split. Stage 4 is therefore still in progress.
+
+**Companion capacity decision:** operating companies no longer have a hard two-companion admission limit. Shared
+service demand already charges 0.25 integration points/day/companion plus live traffic, pending/open bugs and hosting;
+measured coverage scales their bonuses and monthly reach following. A third companion is a deliberate resource choice,
+not a free slot or an automatic entitlement to full benefit. All suited, non-duplicate companions still need normal
+initiative delivery and content/era/reputation/research gates. The content catalogue is finite. Undercoverage is warned,
+recoverable and allowed: loss of care during delivery cannot erase an already-paid launch at completion.
+
+- Pure `ecosystemCapacity` / `companionLaunchForecast` read models show provided care, live demand, forecast demand
+  from in-flight launches, headroom and projected coverage, initial users and hosting. Preview and launch share the same
+  draft construction, including traffic-bug demand, without consuming money, IDs or RNG.
+- A launch forecast **excludes the selected build floor's old reliability output**. It does not present one floor as
+  simultaneously delivering the initiative and supplying care. Current in-flight companion demand is informational,
+  not a second service bill; duplicate old reservations are de-duplicated, and replacing a floor excludes its old project.
+  Distinct companion identities may now build concurrently on distinct floors; only the same companion identity is
+  reserved company-wide. Removing the count cap also removes the obsolete blanket single-companion-build lock.
+- The live ecosystem card appears even before the first companion, warns on negative forecast headroom, and explains
+  recovery. Pending demand disappears when a project is deliberately cancelled or is replaced by live delivered demand.
+- Existing companions, retained side products and paid launch progress survive save/reload. Retained-catalogue / acquisition
+  admission still uses its **legacy** two-product allowance (`freeSlots`); this slice does not expand those unrelated rules
+  or silently retire anything. Unmanaged legacy calls retain their old two-slot companion checks. No save shape/version
+  changed. All real loaded managed games use the new operating path.
+
+**Research corrections from the audit:**
+- `ci_pipeline` remains the same saved research ID and +8% engineering multiplier; displayed as **CI engineering
+  practice**. The built `ci_pipeline` item remains **Deploy pipeline**, +10% delivery speed with $80/day upkeep.
+  They are intentionally separate, additive layers; neither silently replaces the other or reinterprets saved IDs.
+- `test_automation` research is displayed as **QA automation practice**, +10% QA speed. The identically named built
+  product item still fixes half its open bugs and adds 3 product-quality points. No extra QA multiplier is minted by
+  confusing their namespaces.
+- `incident_management` had become a paid post-hit no-op because individual fixing pairs are blocked in Operations.
+  It now gives standing reliability **+10% effective service output** using the same assigned engineering/QA team.
+  Existing completed IDs gain that benefit; the legacy on-call ability remains pre-Operations only. It does not add
+  builders, restore the old pair path, create idle service or accelerate delivery. The coefficient lives in `balance.ts`.
+- Cloud infrastructure's actual benefit is architecture/content unlocks, not free server capacity. Platform APIs unlocks
+  the Plugin marketplace feature, not the Integrations companion. Data sovereignty is a revenue practice, not a free
+  data-centre/Data residency delivery. Copy now says so; Machine learning also names its AI-companion connection.
+
+#### Research audit — all saved IDs, current consumers/gates, overlap and carry meaning
+
+**UI route for every row:** Research dialog lists every node and its live blocker/unlocks; Company operations also
+lists currently startable non-repeatables. Paid Audience study remains available in Research. Managed research requires
+a standing team with actual analyst/PM output; no assignment means no free progress. Effects are consumed through
+`statMultiplier` (delivery/service rates, release quality, revenue, wages, candidate generation and skill growth);
+ability/content consumers are identified below. The audit keeps all 35 IDs: **no merge/retire or silent unlock removal**.
+
+**Historical audit proposal at the capacity checkpoint; implemented by the v11 local slice below:** **K** = persistent founder knowledge / content
+permission; **P** = a company practice to re-establish with an explicitly preserved learned blueprint; **M** = split
+knowledge/unlock from company multiplier; **R** = preserve studied-audience results, not a fictitious completed repeatable
+node. At this audit checkpoint `nextChapter` still carried every completed node after a good ending / the first half
+after failure and lost `surveyed`; the v11 slice below replaces that old behavior. Every completed current-company
+benefit remains active. The migration requirements were to preserve all old done IDs in the current company and known
+equivalents, show next-venture retained/inactive benefits and re-establishment terms **before** the decision, and avoid
+the arbitrary first-half knowledge loss; those requirements are implemented below. Do not invent final founder-fortune or ambition-preset numbers here (Stage 6).
+
+| Saved ID | Disposition | Actual effect / unlock | Current era / stage / prerequisites | Carry meaning / consumer / overlap |
+|---|---|---|---|---|
+| `ux_research` | Keep / split later | designSpeed ×1.08; Accessibility suite | none; needs none | M: Accessibility permission is knowledge; design lab speed is a company practice. Neither auto-ships a11y. |
+| `design_system` | Keep | quality ×1.02 | none; needs `ux_research` | P: Release quality multiplier, not an automatic product update. |
+| `ci_pipeline` | Keep / clarify | engineeringSpeed ×1.08 | none; needs none | P: Engineering practice; distinct from built Deploy pipeline, both saved IDs retained. |
+| `code_review` | Keep | skillGain ×1.2 | none; needs `ci_pipeline` | P: Skill-growth multiplier via employeeSkillGain; not a free staff grade/promotion. |
+| `ml_foundations` | Keep | Recommendations (ML); Voice interface; AI Product | The AI wave; needs `ci_pipeline` | K: AI Product gate also gates AI data assistant; does not auto-build companion or feature. |
+| `realtime_stack` | Keep | Realtime collaboration | The app boom; needs `ci_pipeline` | K: Realtime feature permission; must still build the feature. |
+| `test_automation` | Keep / clarify | qaSpeed ×1.1 | none; needs none | P: QA speed; distinct from product Test automation bug/quality initiative. |
+| `beta_program` | Keep | quality ×1.02 | none; needs `test_automation` | P: Quality multiplier on releases; not a permanent staffed QA floor. |
+| `incident_management` | Rework (implemented) | +10% standing reliability output in Operations; legacy on-call fixing before Operations | none; needs `test_automation` | P: +10% standing reliability; legacy onCallUnlocked only before Operations. No worker duplication. |
+| `cloud_infra` | Keep / clarify | Serverless backend; Cloud Platform; Data Platform | The cloud years; needs `test_automation`, `ci_pipeline` | K: Cloud/Data Platform + Serverless permission; capacity comes from actual Scale builds. |
+| `marketing_dept` | Keep | revenue ×1.03 | none; needs none | P: Revenue multiplier on paying products; does not create users or a growth team. |
+| `brand_partnerships` | Keep | revenue ×1.03 | none; needs `marketing_dept` | P: Revenue practice; distinct from built Partner integrations reach/churn capability. |
+| `marketing_automation` | Keep | automatic promotion of a product | none; needs `brand_partnerships` | P: setAutoPromo / promoDay: explicit product policy and real campaign spending; not initiative picking. |
+| `payroll_automation` | Keep | wage ×0.95 | none; needs none | P: monthlySalaries wage multiplier; applies to the current employer. |
+| `recruiting_network` | Keep | candidateSkill ×1.06 | none; needs none | P: generateEmployee candidate-skill multiplier; no free employees or leadership coverage. |
+| `user_research` | Keep | hiring analysts | Indie studio; needs `marketing_dept` | K: hiring candidate gate + insight/survey workflow; analysts still need hiring and staffing. |
+| `product_management` | Keep | product managers | First floor; needs `user_research` | K: becomePm gate for non-founders; actual seniority/analysis/office requirements remain. |
+| `audience_study` | Keep / carry fix next | studying an audience for money | Indie studio; needs `user_research` | R: Paid alternative to insight survey; records surveyed target, never research.done; current chapter transfer loses results. |
+| `enterprise_sales` | Keep | enterprise contracts | Headquarters; needs `brand_partnerships` | P: refreshContracts / enterprise offers; distinct from built Enterprise contracts pay multiplier. |
+| `licensing` | Keep | licensing a flagship | Europe; needs `enterprise_sales` | P: licenceBlocker / license controls; still needs an eligible Flagship, not free recurring income. |
+| `knowledge_base` | Keep | handing knowledge over | First floor; needs `code_review` | P: handover on departure; distinct from carried individual product/type knowledge and founder skill. |
+| `platform_apis` | Keep / clarify | Plugin marketplace | none; needs `marketing_dept` | K: Plugin marketplace feature permission; not Public API (already available) or Integrations companion. |
+| `security_practice` | Keep | quality ×1.02 | The trust years; needs `test_automation_2` | P: Quality multiplier; does not gate Encryption feature or auto-complete compliance. |
+| `data_sovereignty` | Keep / clarify | revenue ×1.03 | The sovereign cloud; needs `security_practice`, `cloud_infra` | P: Revenue multiplier only; not Data residency permission or European data-centre capacity. |
+| `agent_frameworks` | Keep | AI agents | The agent era; needs `ml_foundations` | K: AI agents feature permission; separate from Coding agents work-speed practice. |
+| `ai_copilots` | Keep | workSpeed ×1.1 | The AI wave; needs `ml_foundations` | P: workSpeed multiplier on builders, including their service rates; not analyst research output. |
+| `coding_agents` | Keep | workSpeed ×1.15 | The agent era; needs `ai_copilots`, `agent_frameworks` | P: Additional builder workSpeed multiplier, not an autonomous initiative chooser. |
+| `spatial_computing` | Keep | Spatial mode; Hand tracking; Spatial audio; XR Experience | The spatial years; needs `realtime_stack` | K: XR type and three feature permissions; era/reputation/build costs still apply. |
+| `ux_research_2` | Keep | designSpeed ×1.06 | The cloud years; First floor; needs `design_system` | P: Additional design speed; same lab practice line, no duplicated accessibility unlock. |
+| `ux_research_3` | Keep | designSpeed ×1.06 | The platform age; Headquarters; needs `ux_research_2` | P: Additional design speed; company-scale practice, not a founder title gate. |
+| `ci_pipeline_2` | Keep | engineeringSpeed ×1.06 | The cloud years; First floor; needs `code_review` | P: Additional engineering speed, independent of built tool upkeep. |
+| `ci_pipeline_3` | Keep | engineeringSpeed ×1.06 | The platform age; Headquarters; needs `ci_pipeline_2` | P: Additional engineering speed; not a second Deploy pipeline product item. |
+| `test_automation_2` | Keep | qaSpeed ×1.08 | The cloud years; First floor; needs `beta_program` | P: Additional QA speed, not a second product-quality build. |
+| `test_automation_3` | Keep | qaSpeed ×1.08 | The platform age; Headquarters; needs `test_automation_2` | P: Additional QA speed; real staff bottlenecks and demand still matter. |
+| `brand_partnerships_2` | Keep | revenue ×1.03 | The AI wave; Headquarters; needs `marketing_automation` | P: Additional revenue multiplier, not physical foreign offices or paid campaign automation. |
+
+**Next-slice consumer rule:** content permissions must consult learned knowledge, while `statMultiplier` and Incident
+management's service bonus must consult **active current-company practices**, not merely a known blueprint. Show that
+difference in Research and the next-chapter preview. Decide prerequisite knowledge versus facility activation explicitly;
+do not accidentally re-enable every multiplier through a union-style `isResearched` helper. Carry completed `surveyed`
+results from both paid and insight studies, while an unfinished paid study remains current-company work. Grandfather
+all existing completed effects in the current company; reset/re-establishment only follows an explained new-company choice.
+
+**Audit acceptance:** all stage/era/dependency gates above remain enforced as written. No new research depends on the
+chapter it is required to unlock, no family is forced to buy an unrelated technology solely for headcount progression,
+and early-sale studios retain their existing path. Company-wide multipliers are not evidence of an allocated floor.
+Learned content permissions, practice activation and paid study results need separate persistence/preview treatment;
+a single `research.done` list cannot honestly represent all three across ventures.
+
+**Verification / comparisons:** final **82 Tycoon files / 1,326 tests** pass, including 14 new tests (9 capacity,
+4 research audit, 1 UI), updated legacy assertions, concurrent distinct launches with identity-only reservations and
+save/reload, cancellation, no double staffing, coverage loss/recovery, paid third delivery after care removal and all
+35 saved research IDs. Final typecheck and production build pass. The full repository run earlier in this slice
+reported **197 files / 2,705 tests passing**, with only the same unrelated
+`tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — `Test timed out in 5000ms.`
+The later one-test reservation follow-up is included in the final Tycoon suite; unrelated HR and its timeout were not
+changed. Final capacity/research, ecosystem, product-action and scale-readiness Chromium harnesses all pass at
+**1280, 390 and 320px**, without JS errors, blocking modals or horizontal overflow, and preserving manual pause.
+An earlier combined browser invocation hit its outer 150-second tool limit after the first three harnesses and two
+scale widths; the standalone scale rerun and final full four-harness rerun pass. Screenshots were visually checked
+at phone width. Logs: `/tmp/stage4-capacity-full.log`, `-done-tycoon.log`, `-done-types.log`, `-done-build.log`,
+`-final-bots.log`, and `-done-stage4-*-browser.log` (all prefixed `/tmp/stage4-capacity`).
+
+Final four-seed default-policy 12-year comparisons (not a win-rate estimate; no bot-policy changes in this slice):
+**seed 1 IPO day 3381**, $297.05M cash / ~$1B lifetime; **seed 2 bankrupt 1717**; **seed 8 bankrupt 1444**;
+**seed 10 still Europe day 4320**, $1.01B cash / $1.26B lifetime. Seed 10 still lacks only rivalry victory, ratio
+**2.20**, lead progress **0/90**, while care is **3.79 provided / 1.77 demanded**. Do not claim it is fixed by this slice
+or that plentiful late cash / the early affordability failures are solved. An earlier serial-launch trial gave seed
+10 IPO 4090, but that is **not** the final parallel-companion result; retain the final comparison rather than the best
+experimental timeline. No revenue/cost coefficients were tuned to make these seeds win.
+
+ Browser harness `stage4-capacity-browser.mjs` uses a purely synthetic fixture
+with 3 companions and 2 retained products (`CAPACITY_REVIEW=1 stage4-fixtures.ts`). It checks a fourth-launch forecast,
+loss of the care floor before reassignment, explicit confirmation, pending demand, pause, renamed research, mobile
+geometry and JavaScript errors. No player journal is used or committed.
+
+**Next at this capacity checkpoint (superseded by the v11 slice below):** implement the persistent founder-knowledge / company-practice / studied-audience split with
+explicit, non-destructive migration and next-chapter previews. The audit above supplies all IDs and overlap decisions;
+it is not a claim that carry-over is already changed. Wider family/human checks and Stage 7's unattended, affordability
+and 12-seed gates remain open. Do not call Stage 4 complete.
+
+### Stage 4 progress: learned knowledge versus company practices (2026-11-04; local, uncommitted)
+
+**Implemented locally, not pushed.** This extends the still-local capacity/audit slice above, not a new checkpoint.
+All **35 saved research IDs** now have explicit carry metadata: **8 knowledge**, **25 practice**, **1 mixed**
+(`ux_research`) and **1 repeatable study**. No ID was merged/retired and no effect was silently removed from an
+existing company. The audit table above is the historical proposal; its K/P/M/R assignments are now implemented.
+
+**Save v11 / non-destructive migration.** `research.known` archives learned non-repeatable IDs; `research.done`
+continues to mean completion active in the current company. The shared learned read model also treats current
+completions as proof of knowledge. Versions 3–10 are migrated through their existing compatibility paths, archiving
+all current completions without resetting `done`, active paid research/progress, paid floor initiatives, cash, RNG,
+people/appointments/salaries, or earlier chapter history. Current-version archives are validated; malformed/non-string,
+duplicate or fictitious repeatable completions in `known` are rejected, with the existing unknown-content-ID tolerance.
+The v10 regression fixture explicitly includes staffed people management, an in-progress paid initiative and research.
+
+**Explicit new-company contract, for every ending (sold/retired/IPO/bankrupt/ousted):**
+- All learned research blueprints and completed `surveyed` results survive, including both paid and insight studies.
+  Bankruptcy no longer arbitrarily forgets the first/last half of research. Inactive blueprints survive repeated ventures
+  even if never re-established. Repeatable audience study does not invent a completed research node.
+- Pure knowledge permissions remain available; product reputation/era/team and other normal gates still apply. Content
+  and analyst/PM availability consult knowledge; multipliers, incident care, licensing, enterprise sales, automation
+  and knowledge-base practices still consult **current-company activation**, never the archive union.
+- Mixed UX retains Accessibility permission immediately, but its +8% design practice is inactive until re-established.
+- Company practices require an explicit normal research action at **full original cash cost and base work**. No discount,
+  automatic activation, automatic spending, second research queue, free team, or hidden subsidy. Establishing a practice
+  needs its prerequisite practices active here; pure knowledge prerequisites remain learned. Learning new theory can
+  build on learned prerequisite blueprints. Office/era gates are not waived. Staffed research still requires actual
+  assigned analyst/PM output; the legacy pre-Operations timer is unchanged.
+- Unfinished paid research remains intact when loading the current company, but is not transferred/refunded when the
+  player deliberately leaves it. Products/tools/assignments remain company assets. Seed-money/reputation/founder/people
+  rules are otherwise unchanged; no Stage 6 fortune/ambition preset numbers are invented.
+
+**Visible before the decision.** Research rows distinguish retained knowledge, current active practice and known but
+inactive blueprints. Research has a read-only transfer preview; both successful and failed ending dialogs show the
+same pure preview before continuing, with retained content/results, per-practice full prices/base work, prerequisite,
+company-stage and era requirements, capacity terms and unfinished-work warning. Resuming an ended save now restores
+its ending/transfer dialog (all five kinds tested). Browser acceptance exposed the old save layer discarding/rejecting
+ended companies: loading/importing/autosaving now retains the ended company until an explicit new-game/next-venture
+decision. Closing or reloading must not silently delete founder knowledge. All five kinds cover import, autosave flush,
+reload and dialog restoration; already-deleted historical saves cannot be reconstructed.
+Chapter transfer copies the journal before adding its entry, avoiding mutation of the ended source snapshot.
+
+**Verification:** final Tycoon suite **84 files / 1,355 tests pass**, including **29 new carry-over unit/UI cases**;
+final typecheck and production build pass. Full repository run: **199 files / 2,735 tests pass**, sole failure remains
+`tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — **`Test timed out in 5000ms.`**
+Unrelated HR and its timeout were not changed. The final full run includes the ended-save retention/import/autosave
+follow-up and all five restoration cases; it completed in 345 seconds. An earlier full attempt hit the outer
+200-second tool limit; background runs completed normally. Final logs: `/tmp/stage4-knowledge-durable-full.log`,
+`-durable-types.log`, `-durable-build.log`; the earlier standalone Tycoon run is `-final-tycoon.log`.
+
+**Real browser acceptance:** all **12 cases** (v10 current company, retired ending, bankrupt ending and the next
+venture × **1280, 390, 320px**) pass in `stage4-research-browser.mjs`. Both ending cases reload before the decision,
+then actually continue, confirm the founding dialog, reopen Research and reload again. Assertions verify retained
+33 completed synthetic blueprints / 2 surveyed results, no unfinished project or active CI practice, unchanged normal
+seed money, manual pause, reachable Continue/Close, no JS errors and no page/modal/preview horizontal overflow. The
+33-node fixture intentionally leaves CI III unfinished; it is not a claim that there are only 33 non-repeatable nodes.
+Prices and stage/era/prerequisite details are expanded in all widths; phone screenshots were visually checked.
+Generator: `stage4-research-fixtures.ts`; files `/tmp/tycoon-stage4-research-*.json`; screenshot directory
+`/tmp/tycoon-stage4-research-shots`; successful final log `/tmp/stage4-knowledge-durable-browser.log`. Initial harness
+failures exposed the finished-save deletion policy and were not counted as acceptance; it is now fixed/tested above.
+**Regression rerun on the final build:** capacity/research, ecosystem, product-action and scale-readiness harnesses
+also pass at all three widths (**12 more cases**, **24 total browser cases**). All five harnesses pass with no JS errors,
+horizontal overflow or lost manual pause; the ending harness additionally checks real durable next-venture transitions.
+Regression logs: `/tmp/stage4-knowledge-stage4-*-browser.log`; aggregate
+`/tmp/stage4-knowledge-regression-browser.exit` is 0.
+
+**Four-seed default-policy comparison:** rebuilt the bot from current code, no policy or economic coefficients changed.
+Results exactly match the final capacity baseline: seed **1 IPO 3381**, **$297.05M** cash; seed **2 bankrupt 1717**;
+seed **8 bankrupt 1444**; seed **10 still Europe 4320**, **$1.01B cash / $1.26B lifetime**, only rivalry unmet
+(ratio **2.20**, **0/90** lead days). This persistence split does not fix those balance/strategy issues. Logs:
+`/tmp/stage4-knowledge-bot-{1,2,8,10}.log`; aggregate `/tmp/stage4-knowledge-bots.exit` is 0.
+
+**Still open:** broader product-family, affordability and neglect/recovery acceptance, Stage 5 stable workspace,
+Stage 6 larger next-venture ambitions/founder economics and Stage 7 unattended/human/12-seed gates. Stage 4 is not
+claimed complete merely because the research split now works. Existing early bankruptcies, the default seed-10 rivalry
+horizon and plentiful late cash are not fixed by a persistence/UI slice. Do not commit until asked.
 
 **5. Finish the stable workspace and navigation** — original feedback 2–5 and 8.
 - Desktop prototype: building left, operations right, stable scene dimensions. Mobile: compact building/team overview

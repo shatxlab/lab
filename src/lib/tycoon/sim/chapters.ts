@@ -1,3 +1,4 @@
+import { researchTransferPreview } from './research-knowledge'
 import { CAFE_START_MONEY } from './balance'
 import { refreshContracts } from './contracts'
 import { rollStudioName, you } from './founding'
@@ -35,9 +36,6 @@ const RESTART_MONEY = CAFE_START_MONEY * 2
 /** Reputation kept into the next chapter: most of it after a good ending, a little after a bad one. */
 const REPUTATION_KEPT: Record<ChapterKind, number> = { continue: 0.6, restart: 0.25 }
 
-/** The share of the research you finished that you still know after a bad ending. */
-const RESEARCH_KEPT_AFTER_FAIL = 0.5
-
 /** The money a good ending starts the next chapter with. */
 export function seedMoney(state: GameState): number {
   const worth = state.ending?.worth ?? studioWorth(state)
@@ -58,7 +56,8 @@ function carried(person: Employee, officeId: number, id: number): Employee {
 /**
  * The state of the next chapter, or null while the run has not ended. The world carries on (the day, the rivals and
  * the market); the studio does not. After a good ending you and your friend start again from the café with the
- * research you finished; after a bad one you start alone, with half of it, a smaller name and the starting money.
+ * knowledge you learned; company practices stay behind. After a bad ending you start alone,
+ * but do not arbitrarily forget half your learning or completed audience studies.
  */
 export function nextChapter(state: GameState): GameState | null {
   const kind = chapterKind(state)
@@ -89,12 +88,13 @@ export function nextChapter(state: GameState): GameState | null {
   next.market = state.market
   next.modifiers = state.modifiers.filter((m) => m.expiresDay > state.day)
   next.milestones = state.milestones
-  next.journal = state.journal
+  next.journal = [...state.journal]
   next.history = state.history
   next.recentEvents = state.recentEvents
 
-  const keep = kind === 'continue' ? state.research.done.length : Math.floor(state.research.done.length * RESEARCH_KEPT_AFTER_FAIL)
-  next.research = { done: state.research.done.slice(0, keep), active: null }
+  const transfer = researchTransferPreview(state)
+  next.research = { known: transfer.known, done: transfer.knowledge.filter((n) => n.carry === 'knowledge').map((n) => n.id), active: null }
+  next.surveyed = transfer.audiences
   next.reputation = Math.round(state.reputation * REPUTATION_KEPT[kind])
   next.money = kind === 'continue' ? seedMoney(state) : RESTART_MONEY
 
@@ -114,7 +114,7 @@ export function nextChapter(state: GameState): GameState | null {
     next,
     kind === 'continue' ? 'chapter.continue' : 'chapter.restart',
     kind === 'continue' ? `Started something new${friend ? ` with ${friend.name}` : ''}` : `Started again, alone: ${me.name}`,
-    { chapter: next.chapter, money: next.money, reputation: next.reputation, research: next.research.done.length },
+    { chapter: next.chapter, money: next.money, reputation: next.reputation, research: next.research.done.length, learnedResearch: next.research.known.length, practiceBlueprints: transfer.practices.length, studiedAudiences: next.surveyed.length },
   )
   return next
 }

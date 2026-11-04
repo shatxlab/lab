@@ -4,11 +4,13 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-04; Stage 6 standalone finance model, local).** Stage 5 workspace/teams/navigation
-and the delegated prototype founder terms are committed/pushed on `main` as **`3c6c7a4`**; nothing was deployed.
-Save version remains **11**. New work is **uncommitted**: a standalone, replay-validated founder-finance ledger and
-39 model tests. Read **"Stage 6 model checkpoint"** below before continuing. No GameState/save/UI integration,
-automatic settlement, paid founding, charter readiness or consulting has shipped. The selected terms in
+**Current handover (2026-11-04; Stage 6 prepared save/transaction boundary, local).** Stage 5 workspace/teams/navigation
+and the delegated prototype founder terms are committed/pushed as **`3c6c7a4`**; the standalone finance model and its
+39 tests are committed/pushed as **`f9e231d`**. Nothing was deployed. Live save version remains **11**.
+New work is **uncommitted**: a prepared v12 career-envelope codec and exclusive-lock settlement/adoption transactions,
+with 33 new tests. Read **"Stage 6 prepared persistence checkpoint"** below before continuing. These APIs are deliberately
+not wired to live v11 autosave/UI: the old chapter path still grants seed money, so enabling finance first would be unsafe.
+Automatic live settlement, paid founding, charter readiness and consulting have not shipped. The selected terms in
 **"Stage 6 decision: prototype founder economics"** remain provisional, not measured final balance.
 Read the latest Stage 4 family acceptance and both Stage 5 progress sections, especially **"physical teams and
 navigation parity"**. Stage 4's broader numeric goals/item gates, affordability and unattended acceptance are **not
@@ -1116,7 +1118,37 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
 - **Gate:** multi-chapter test of IPO -> venture -> sale -> venture -> retirement, reload at each transition, finite
   affordable investments, no negative/double-spent fortune, stable sprites and one company-name field.
 
-### Stage 6 model checkpoint (2026-11-04; standalone, uncommitted)
+### Stage 6 prepared persistence checkpoint (2026-11-04; uncommitted, not enabled)
+
+- `career-save.ts` prepares an explicit **v12 career envelope** containing the validated v11 engine payload,
+  versioned finance ledger and current company charter. This envelope is intentionally rejected by live v11
+  `deserialize`/import; **do not store it through the live browser flow yet**. The engine schema remains 11.
+  `createCareerSave` takes externally allocated career/company identities; it does not consume gameplay RNG or IDs.
+  The migration API takes a supported legacy save plus an externally selected identity and publishes no private credit.
+- The codec cross-validates current company/ambition, ending facts/closing cash, closed vs active status, chronology,
+  initial-career chapter count and recognition date against replay. It preserves game money, people, paid projects,
+  research/knowledge, markets, RNG and historical valuations. Reload never reconstructs or repairs financial balances.
+  Ended-legacy adoption is explicit and durable; opposite later decisions are rejected, same-decision retries are harmless.
+- `career-transactions.ts` prepares a **single-write game+ledger+charter commit** under a shared exclusive Web Lock.
+  Source bytes are checked **inside** the lock, so a stale tab cannot replace the new persisted career. No unsafe
+  unlocked fallback. Atomic localStorage quota failure leaves the prior ending recoverable; retry does not double-credit.
+  Identity proposals are snapshotted before waiting for the lock. There is no separate balance key or history cash-out.
+- **Critical rollout dependency:** these transaction APIs are not called by the live game. Before enabling v12,
+  replace the legacy `seedMoney`/`RESTART_MONEY` chapter grants with actual paid founding and recovery, then put
+  **all** live writers (autosave, reset, import and company replacement) under the same lock/token discipline.
+  A locked transaction cannot protect against the still-unlocked v11 autosave; no claim of live cross-tab safety yet.
+  Live exit-boundary/persistence wiring, UI and full storage-backed founding tests remain required.
+- **Verified:** 33 new codec/transaction tests, including actual sale/retirement/bankruptcy/ousting engine endings,
+  all five distribution kinds, migration preservation, retries/reloads, stale/concurrent confirmations, refused reads,
+  denied locks and failed writes. Full repository: **208 files / 2,884 tests pass**, only the known unrelated
+  `tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` fails with `Test timed out in 5000ms.`
+  All **1,504 Tycoon tests** pass in that run; typecheck/build pass. No UI/balance changes, bot or browser acceptance
+  claimed. Nothing committed/pushed/deployed for this slice.
+- **Next:** build the paid founding/world-cost adapter against this envelope, plus consulting recovery and charter
+  readiness. Then wire the complete flow to browser storage/UI atomically, test all live writers and stale tabs, and
+  run Stage 4/7 acceptance. The player should still wait to begin their new run.
+
+### Stage 6 model checkpoint (2026-11-04; standalone, committed as `f9e231d`)
 
 - `sim/founder-finance.ts` provides a version-1 pure ledger, one career/company identity per transaction stream,
   immutable append/replay, initial/legacy origins, five exit distributions, explicit ended-legacy adoption/decline,

@@ -2016,3 +2016,12 @@
 .operations-panel select { width: 100%; min-width: 0; max-width: 100%; }
 .operations-panel p, .operations-panel small { overflow-wrap: anywhere; }
 .operation-service, .operation-confirm { display: flex; flex-direction: column; gap: .35rem; padding: .6rem; border: 1px solid #45514b; border-radius: .4rem; }
+
+/* Company people policy stays usable above a 120-person roster, including on a narrow phone. */
+.tycoon-root .people-management details { margin-top: 0.65rem; }
+.tycoon-root .people-management label { display: block; margin: 0.55rem 0; }
+.tycoon-root .people-management select,
+.tycoon-root .people-management input:not([type='checkbox']) { display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+.tycoon-root .people-management p { overflow-wrap: anywhere; }
+.tycoon-root .people-management .career-conversation { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
+.tycoon-root .people-management button { max-width: 100%; white-space: normal; }

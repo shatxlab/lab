@@ -1,3 +1,5 @@
+import { careerSpeed } from './career-profile'
+import { professionWorkMultiplier } from './people-management'
 import { BUG_SURFACE_RATE } from './balance'
 import { bugsFoundPerDay } from './products'
 import { staffOf } from './offices'
@@ -11,7 +13,7 @@ export const operating = (state: GameState): boolean => state.offices.some((o) =
 export function serviceOutput(state: GameState, office: Office, service: StandingService['service']): number {
   const rate = teamRate(state, office)
   const analysis = staffOf(state, office).filter((e) => (e.role === 'analyst' || e.role === 'pm') && !e.training && e.title !== 'CEO' && !(e.founder && state.deepWork))
-    .reduce((sum, e) => sum + (e.analysis ?? 0) / 50, 0)
+    .reduce((sum, e) => sum + (e.analysis ?? 0) / 50 * (state.peopleManagement ? careerSpeed(e) * professionWorkMultiplier(state, e) : 1), 0)
   if (service === 'research') return analysis
   if (service === 'growth') return analysis + rate.design / 20
   return Math.min(rate.engineering, rate.qa) / 20

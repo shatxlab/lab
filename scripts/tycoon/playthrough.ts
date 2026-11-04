@@ -1,3 +1,5 @@
+import { PROFESSIONS, professionOf } from '../../src/lib/tycoon/sim/career-profile.ts'
+import { appointProfessionLead, appointmentBlocker, appointmentIssue, respondCareerConcern } from '../../src/lib/tycoon/sim/people-management.ts'
 import { assignOperation, operationChoices } from '../../src/lib/tycoon/sim/operations.ts'
 import { serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
 // A scripted playthrough of the whole one-product game: the café, the garage hunt, the move out with the hit, then
@@ -63,6 +65,30 @@ const say = (text: string) => {
 
 foundStudio(state, 'Bot', 'Botworks')
 const hit = () => state.products.find((p) => p.id === state.signatureId)
+
+let lastPeopleDecision = -Infinity
+function managePeople(): void {
+  if (!state.peopleManagement || state.day - lastPeopleDecision < 30) return
+  lastPeopleDecision = state.day
+  // Explicit optimistic bot policy, not a game-side appointment/conversation default.
+  for (const e of state.employees) if (e.career?.appointment && appointmentIssue(state, e)) appointProfessionLead(state, e.id, null)
+  let appointments = 0
+  for (const profession of PROFESSIONS) {
+    for (const scope of ['company' as const, ...state.offices.map((o) => o.id)]) {
+      const candidates = state.employees.filter((e) => professionOf(e) === profession && !e.career?.appointment && (e.career?.grade ?? 0) >= 2)
+        .sort((a, b) => Number(b.career!.ambition === 'leadership') - Number(a.career!.ambition === 'leadership') || b.career!.management - a.career!.management || a.id - b.id)
+      const candidate = candidates.find((e) => appointmentBlocker(state, e, scope) === null)
+      if (candidate && appointProfessionLead(state, candidate.id, scope).ok) appointments++
+    }
+  }
+  for (const e of state.employees) if (e.career?.concern) {
+    // This policy readily agrees an IC alternative; human acceptance/neglect policies still need Stage 7 testing.
+    if (e.career.concern.kind === 'leadership') respondCareerConcern(state, e.id, 'specialist')
+    else if (!e.career.concern.discussed) respondCareerConcern(state, e.id, 'discuss')
+  }
+  const review = state.peopleManagement.reports.at(-1)
+  if (review) say(`people: ${review.reviewed} reviewed, ${review.promoted} promoted, ${review.deferred} budget/policy deferrals; ${appointments} appointments`)
+}
 
 function answerEvent(): void {
   const view = describePendingEvent(state)
@@ -294,7 +320,8 @@ function botStep(): void {
     }
   }
   dispatchFixers()
-  for (const e of state.employees) if (careerBlocker(state, e) === null) promote(state, e.id)
+  managePeople()
+  if (!state.peopleManagement) for (const e of state.employees) if (careerBlocker(state, e) === null) promote(state, e.id)
 
   if (state.offices.some((o) => o.kind === 'cafe')) {
     for (const office of state.offices) if (!office.project) takeJob(office)

@@ -1,3 +1,5 @@
+import { careerGradeName } from './career-profile'
+import { gradeBlocker, peopleDay, promoteCareer, reviewerOf } from './people-management'
 import { toolEffects } from './tools'
 import {
   ANALYST_MAX_LEVEL,
@@ -44,7 +46,7 @@ export function roleName(employee: Employee): string {
 /** "Senior developer", "Lead tester", "Mid product manager"... */
 export function title(employee: Employee): string {
   if (employee.title) return employee.title
-  return `${LEVELS[employee.level].name} ${roleName(employee)}`
+  return `${careerGradeName(employee)} ${roleName(employee)}${employee.career?.appointment && !employee.career.appointment.conflict ? ' · profession lead' : ''}`
 }
 
 /** The level someone with this primary skill is hired at, up to `max`. */
@@ -56,6 +58,7 @@ export function levelForSkill(skill: number, max: number): number {
 
 /** Why this person can't be promoted now, or null when they can. */
 export function promotionBlocker(state: GameState, employee: Employee): string | null {
+  if (employee.career) return gradeBlocker(state, employee)
   if (employee.role === 'analyst' && employee.level >= ANALYST_MAX_LEVEL) return 'A senior analyst can become a product manager'
   const next = LEVELS[employee.level + 1]
   if (!next) return 'Already a Lead'
@@ -68,6 +71,8 @@ export function promotionBlocker(state: GameState, employee: Employee): string |
 export function promote(state: GameState, employeeId: number): Result {
   const employee = state.employees.find((e) => e.id === employeeId)
   if (!employee) return fail('Employee not found')
+  if (state.peopleManagement) return fail('Company policy reviews promotions automatically; use People to change the policy')
+  if (employee.career) return promoteCareer(state, employee)
   const blocker = promotionBlocker(state, employee)
   if (blocker) return fail(blocker)
   employee.level += 1
@@ -81,6 +86,7 @@ export function promote(state: GameState, employeeId: number): Result {
 
 /** The office's Lead, if it has one: a builder at the top level. */
 export function leadOf(state: GameState, office: Office): Employee | undefined {
+  if (state.peopleManagement) return undefined // There is no single all-professions floor lead.
   return staffOf(state, office).find((e) => isBuilder(e) && e.level >= LEAD_LEVEL)
 }
 
@@ -114,7 +120,7 @@ export function becomePm(state: GameState, employeeId: number): Result {
   const blocker = pmBlocker(state, employee)
   if (blocker) return fail(blocker)
   employee.role = 'pm'
-  employee.level = 1
+  employee.level = employee.career ? Math.min(3, employee.career.grade) : 1
   employee.levelDay = state.day
   employee.readySince = null
   employee.salary = salaryOf(employee, state.day)
@@ -125,18 +131,20 @@ export function becomePm(state: GameState, employeeId: number): Result {
 
 /** Output multiplier for a whole office: a Lead speeds it up; a big team without one gets in its own way. */
 export function teamSpeed(state: GameState, office: Office): number {
+  if (state.peopleManagement) return 1 + toolEffects(state).speed
   const lead = leadOf(state, office) ? LEAD_SPEED : buildersIn(state, office) > LEAD_FREE_TEAM ? NO_LEAD_SPEED : 1
   return lead * (1 + toolEffects(state).speed)
 }
 
 /** True when an office is big enough to need a Lead and has none. */
 export function needsLead(state: GameState, office: Office): boolean {
+  if (state.peopleManagement) return false // People shows coverage by profession instead.
   return buildersIn(state, office) > LEAD_FREE_TEAM && !leadOf(state, office)
 }
 
 /** How a person's career moves their morale: a Lead in their office helps; being passed over for too long hurts. */
 export function careerMorale(state: GameState, employee: Employee, office: Office): number {
-  let delta = leadOf(state, office) ? LEAD_MORALE : 0
+  let delta = (state.peopleManagement ? reviewerOf(state, employee) : leadOf(state, office)) ? LEAD_MORALE : 0
   if (employee.readySince !== null && state.day - employee.readySince > PROMOTION_PATIENCE_DAYS) delta -= OVERLOOKED_MORALE
   return delta
 }
@@ -146,6 +154,10 @@ export function careerMorale(state: GameState, employee: Employee, office: Offic
  * for many years now and then move on to something of their own.
  */
 export function careerDay(state: GameState): void {
+  if (state.peopleManagement) {
+    peopleDay(state)
+    return
+  }
   const leaving: Employee[] = []
   for (const employee of state.employees) {
     const ready = promotionBlocker(state, employee) === null

@@ -1,3 +1,4 @@
+import { initialisePeopleManagement } from './people-management'
 import { formatMoney } from '@/lib/tycoon/format'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
 import { CAFE_JOBS, EU_OFFICE_COST, GARAGE_DEPOSIT, GARAGE_READY_MONEY, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, SIDE_PRODUCT_LIMIT, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
@@ -225,6 +226,7 @@ export function moveOut(state: GameState, keepIds: number[] = []): Result {
     if (keepIds.includes(product.id)) product.role = 'side'
     else sunsetProduct(state, product.id, { planned: true })
   }
+  initialisePeopleManagement(state, true)
   adjustMorale(state, OFFICE_UPGRADE_MORALE)
   return OK
 }

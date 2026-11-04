@@ -1,3 +1,4 @@
+import { careerPay, initialCareer } from './career-profile'
 import { FIRST_NAMES, LAST_NAMES } from '@/lib/tycoon/data/names'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
 import {
@@ -76,7 +77,7 @@ export function payShare(employee: Pick<Employee, 'founder'>): number {
 
 /** What this person is paid on `day`. */
 export function salaryOf(employee: Employee, day: number): number {
-  return salaryFor(employee.skills, employee.trait, employee.level, day, payShare(employee), employee.analysis ?? 0, employee.region ?? 'us')
+  return salaryFor(employee.skills, employee.trait, employee.level, day, payShare(employee) * careerPay(employee) / LEVELS[employee.level].salary, employee.analysis ?? 0, employee.region ?? 'us')
 }
 
 /** An analyst's skill counts for this many skill points of a builder's when they are paid. */
@@ -190,6 +191,7 @@ export function hire(state: GameState, candidateId: number, officeId?: number): 
   candidate.officeId = office.id
   candidate.hiredDay = state.day
   candidate.levelDay = state.day
+  if (state.peopleManagement) candidate.career ??= initialCareer(candidate)
   state.employees.push(candidate)
   state.candidates.splice(index, 1)
   return OK

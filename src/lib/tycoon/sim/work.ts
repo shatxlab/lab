@@ -1,3 +1,4 @@
+import { professionWorkMultiplier } from './people-management'
 import { OVERSHOOT_CAP, POINTS_PER_SKILL, REMOTE_SPEED, SKILL_GAIN, WORK_VARIANCE } from './balance'
 import { contractDay } from './contracts'
 import { knowledgeSpeed, learn, type Subject } from './knowledge'
@@ -17,7 +18,7 @@ function remoteSpeed(state: GameState, employee: Employee): number {
 /** Points an employee could add in one day, before the overshoot cap. */
 export function dailyContribution(employee: Employee, state: GameState, subject?: Subject | null): Skills {
   const out = emptySkills()
-  const speed = statMultiplier(state, 'workSpeed') * teamSpeed(state, officeOf(state, employee)) * knowledgeSpeed(employee, subject) * remoteSpeed(state, employee)
+  const speed = statMultiplier(state, 'workSpeed') * teamSpeed(state, officeOf(state, employee)) * knowledgeSpeed(employee, subject) * remoteSpeed(state, employee) * professionWorkMultiplier(state, employee)
   for (const d of DISCIPLINES) {
     const variance = 1 + WORK_VARIANCE * (2 * rand(state) - 1)
     out[d] =
@@ -29,7 +30,7 @@ export function dailyContribution(employee: Employee, state: GameState, subject?
 /** Points an employee adds per day on average, ignoring the day-to-day variance and the overshoot cap. */
 export function expectedContribution(employee: Employee, state: GameState, subject?: Subject | null): Skills {
   const out = emptySkills()
-  const speed = statMultiplier(state, 'workSpeed') * teamSpeed(state, officeOf(state, employee)) * knowledgeSpeed(employee, subject) * remoteSpeed(state, employee)
+  const speed = statMultiplier(state, 'workSpeed') * teamSpeed(state, officeOf(state, employee)) * knowledgeSpeed(employee, subject) * remoteSpeed(state, employee) * professionWorkMultiplier(state, employee)
   for (const d of DISCIPLINES) {
     out[d] = employee.skills[d] * POINTS_PER_SKILL * speed * statMultiplier(state, DISCIPLINE_SPEED[d]) * employeeSpeed(employee, d)
   }

@@ -1,3 +1,4 @@
+import { PeopleManagementPanel } from './PeopleManagementPanel'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import {
@@ -171,6 +172,7 @@ export function TeamDialog() {
 
   return (
     <Modal title={many ? 'Team & offices' : 'Team & office'} onClose={() => store.closeDialog()}>
+      <PeopleManagementPanel />
       <section className="section">
         <div className="section-head">
           <h3>{many ? 'Offices' : cafe ? 'Café' : garage ? 'Garage' : 'Office'}</h3>
@@ -322,10 +324,10 @@ export function TeamDialog() {
             actionsBelow={many}
             action={
               <>
-                {promotionBlocker(state, employee) === null && (
+                {!state.peopleManagement && promotionBlocker(state, employee) === null && (
                   <button
                     className="primary"
-                    title={`Raise to ${formatMoney(salaryFor(employee.skills, employee.trait, employee.level + 1, state.day, payShare(employee), employee.analysis ?? 0))}/mo`}
+                    title={employee.career ? "Advance their specialist grade; salary follows that grade" : `Raise to ${formatMoney(salaryFor(employee.skills, employee.trait, employee.level + 1, state.day, payShare(employee), employee.analysis ?? 0))}/mo`}
                     onClick={() => report(store.promoteEmployee(employee.id))}
                   >
                     Promote

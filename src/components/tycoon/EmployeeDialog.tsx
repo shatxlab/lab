@@ -1,3 +1,5 @@
+import { ManagedCareer } from './PeopleManagementPanel'
+import { careerGradeName } from '@/lib/tycoon/sim/career-profile'
 import { useState } from 'react'
 import { getTrait } from '@/lib/tycoon/data/traits'
 import { ANALYST_MAX_LEVEL, LEVELS, MORALE_UNHAPPY, PROMOTION_PATIENCE_DAYS, SURVEY_COST, TRAINING_DAYS } from '@/lib/tycoon/sim/balance'
@@ -70,10 +72,10 @@ export function EmployeeDialog({ id }: { id: number }) {
         <div className="section-head">
           <h3>Career</h3>
           <span className="muted">
-            {LEVELS[person.level].name} for {formatAge(state.day - person.levelDay)}
+            {careerGradeName(person)} for {formatAge(state.day - (person.career?.gradeDay ?? person.levelDay))}
           </span>
         </div>
-        {next ? (
+        {person.career ? <ManagedCareer employee={person} /> : next ? (
           promotion === null ? (
             <div className="upgrade">
               <span className={waiting > PROMOTION_PATIENCE_DAYS ? 'bad' : ''}>
@@ -101,7 +103,7 @@ export function EmployeeDialog({ id }: { id: number }) {
         )}
         {person.role === 'analyst' && pmBlocker(state, person) === null && (
           <div className="upgrade">
-            <span>Ready to take over the direction of their office's products as a product manager (back at Mid level).</span>
+            <span>Ready to take over the direction of their office's products as a product manager {person.career ? "(specialist grade retained)" : "(back at Mid level)"}.</span>
             <button className="primary" onClick={() => setMessage(store.becomePm(person.id).ok ? '' : 'Could not make them a product manager.')}>
               Make product manager
             </button>

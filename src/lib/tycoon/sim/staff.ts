@@ -1,8 +1,8 @@
+import { careerSpeed } from './career-profile'
 import { toolEffects } from './tools'
 import { getTrait, TRAITS, type Trait } from '@/lib/tycoon/data/traits'
 import {
   CANDIDATE_MORALE_MAX,
-  LEVELS,
   CANDIDATE_MORALE_MIN,
   MORALE_BASE,
   MORALE_CRUNCH_DAYS,
@@ -63,7 +63,7 @@ export function startingMorale(state: GameState): number {
 export function employeeSpeed(employee: Employee, discipline: Discipline): number {
   if (employee.training) return 0
   const trait = traitOf(employee)
-  return (trait.allSpeed ?? 1) * (trait.speed?.[discipline] ?? 1) * LEVELS[employee.level].speed * moraleSpeed(employee.morale)
+  return (trait.allSpeed ?? 1) * (trait.speed?.[discipline] ?? 1) * careerSpeed(employee) * moraleSpeed(employee.morale)
 }
 
 /** Multiplier on how fast this person's skills grow: their own trait and any mentors beside them. */
@@ -109,10 +109,10 @@ export function moraleDay(state: GameState): void {
     if (officeOf(state, employee).project) next -= traitOf(employee).moraleDrain ?? 0
     employee.morale = clampMorale(next)
 
-    if (before >= MORALE_UNHAPPY && employee.morale < MORALE_UNHAPPY) {
+    if (!state.peopleManagement && before >= MORALE_UNHAPPY && employee.morale < MORALE_UNHAPPY) {
       state.events.push({ type: 'notice', text: `${employee.name} is unhappy. A team outing or a good release would help.` })
     }
-    if (!employee.founder && employee.morale < MORALE_QUIT && rand(state) < QUIT_CHANCE_PER_DAY) leaving.push(employee)
+    if (!state.peopleManagement && !employee.founder && employee.morale < MORALE_QUIT && rand(state) < QUIT_CHANCE_PER_DAY) leaving.push(employee)
   }
 
   for (const employee of leaving) {

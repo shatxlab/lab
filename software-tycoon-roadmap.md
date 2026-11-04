@@ -4,11 +4,19 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-03; Stage 2 implemented locally, uncommitted).** Independent floor operations replace
-post-hit global turns. Read **"Stage 2 built and checked"** below before changing the engine. Saves are version 8;
-old office saves migrate their paid work onto physical-floor capacity. The café/garage stays unchanged. Functionality
-and browser gates pass; **balance is provisional** (9/12 bot seeds IPO, 2 bankrupt, 1 still running at 12 years).
-No commits, pushes or deployments. Stage 3 management and Stage 4 presentation/control cleanup are not implemented.
+**Current handover (2026-11-04; Stage 3 checkpoint).** The requested Stage 2 + café checkpoint
+is pushed to `origin/main` as **`f0a9463`** (also includes the previously unpushed `a4ad89e`); nothing was deployed.
+Read **"Stage 3 built and checked"** and **"Stage 2 built and checked"** before changing the engine. Saves are now
+version **9**: profession-specific appointments, independent IC grades/management skill, automatic company
+reviews and warned retention conversations. Company-level controls sit above the roster, not behind 120 approvals.
+The café/garage remains founder-led. Stage 3 is included in this checkpoint on `main`. Next implementation step is **Stage 4:
+ecosystem initiatives, milestone gates and research audit**, then Stage 5 workspace/navigation. **Balance remains
+provisional**: four deliberately chosen comparison seeds include two IPOs and the same two struggling early studios.
+
+**Stage 2 checkpoint (2026-11-03; pushed 2026-11-04 as `f0a9463`).** Independent floor operations replace post-hit
+global turns. Version 8 migration preserves paid projects/progress on physical floors; café art keeps compact arms,
+no founder cups, and founders/stools exactly 2 sprite pixels closer to the table. Stage 2 bot sample: 9/12 IPOs,
+2 bankruptcies, 1 still running at 12 years. Historical "uncommitted" notes below describe their original checkpoint.
 
 **Handover (2026-11-03; Stage 0 implemented locally, uncommitted).** The player completed the release-turn version
 through IPO, sale, retirement and a fourth founding. Their latest decisions supersede the old clock-stopping loop.
@@ -79,7 +87,8 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
-**Current priority (2026-11-03): follow "Operating a company: implementation plan" below.** The player has supplied
+**Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
+Stage 3 is implemented and checked (see current handover); Stage 4 is next. The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -379,6 +388,85 @@ multi-floor pace before calling economy tuning complete. Do not roll back to the
   response windows and possible departures reuse knowledge-transfer/morale systems without double departure rolls.
 - **Gate:** a 120-person company can complete reviews with no employee-list scrolling; appointments, budget changes and
   retention problems still give the player meaningful choices. Founders/CEO/CTO and save-roundtrip tests remain valid.
+
+### Stage 3 built and checked (2026-11-04; checkpoint on main)
+
+**Entry points.** `sim/career-profile.ts` owns IC grades/management metadata and their validation. The simulation is
+in `sim/people-management.ts`; `PeopleManagementPanel` is at the top of Team, before offices and the ordinary roster.
+`EmployeeDialog` explains the same model without a managed-company Promote button. Store commands are
+`appointProfessionLead`, `setReviewPolicy`, `respondCareerConcern`; individual promotion commands cannot bypass policy.
+Café/garage hires retain their previous promotion system until moving out. A carried founder can still advance their
+retained IC grade manually in the next café; old-company appointments/conversations do not carry over.
+
+**Separate dimensions, not extra legacy levels.** `Employee.career` records Junior/Mid/Senior/Staff/Principal grade,
+grade date, management skill, specialist/leadership ambition, compensation floor and an optional appointment. The old
+`level` stays within 0–3 for existing PM tables; it no longer implies a lead in a managed company. Staff/Principal
+increase individual output (including analyst insight and assigned research) without requiring a managerial vacancy.
+The existing PM role/course/office-direction effects remain; changing analyst -> PM keeps the new specialist grade.
+Management skill affects coaching and own-profession work, never a random chance to miss an earned promotion.
+
+**Coverage and real posts.** Engineering, design, QA, and product/analysis (analysts + PMs together) have separate
+coverage. A local lead takes precedence over a company lead; each person has at most one reviewer and never reviews
+themself. Uncovered staff still receive the guaranteed company-policy review, without a profession coach. Company
+leads can cover both buildings; moving a local lead does not silently move their appointment. Departure removes them
+from coverage immediately. New posts need at least three people in the profession/scope; a local post also needs a
+staffed same-profession team on another floor. Creating local coverage must not empty an existing company post.
+Candidates are Senior-or-higher specialists with independent management skill, not simply the best builder on a floor.
+New appointments have a guarded leadership premium; specialists need no appointment to progress.
+
+**Reviews and treasury.** Every 30 days after activation, one aggregate review covers everyone, including analysts/PMs.
+Ready candidates are processed deterministically (oldest earned review, then ID); no per-person promotion popup or
+approval. One report/notice gives reviewed/promoted/deferred counts, payroll before/after, lack of coaching and reasons.
+Keep at most 12 reports. Default policy: automatic promotions, two months' operating reserves, no additional payroll cap.
+A discretionary raise needs sustainable daily income or the selected operating reserve; an optional company payroll
+ceiling also applies. Guard/report payroll includes wage research/modifiers consistently with actual charged payroll.
+The ceiling does not cut existing pay or freeze normal market repricing. Hold/reserve/cap changes
+are company decisions. Budget exceptions are explained once in the company surface, not 120 manual approvals.
+The 120-person acceptance fixture reviews and promotes everyone without rendering/scrolling an employee list.
+
+**Retention, without doubled quit rolls.** A ready promotion held for 60 days, an unavailable leadership path held for
+180 days, or morale below 20 can open a named conversation. The warning is aggregated; the exception list gives a
+90-day response window. Discuss once for another 90 days, resolve the policy/budget/working conditions, appoint to a
+genuine opening, or agree a specialist path for a leadership concern. Resolved concerns clear; founders never leave.
+An unresolved deadline uses `depart` and the existing researched knowledge handover exactly once. Managed companies
+skip both old random morale quits and old random long-tenure departures. These timings/management bonuses are first
+implementation values, not a completed balance retune.
+
+**Persistence.** Explicit v8 -> v9 migration activates management for operating offices; v3–v7 saves first receive the
+existing operations migration. Active projects, products, paid progress, research, knowledge, identity, pay and dates
+are retained. Old numeric Leads become experienced Senior ICs with their old compensation floor: oldest lead by
+level date/ID gets company scope, others get deterministic physical-floor scopes, with duplicate/unsupported scopes
+flagged for a player decision rather than silently losing pay or people. V8 loads must **not** rerun the old founder
+marking migration (it could halve an arbitrary employee's wages); this has a regression test. V9 validates career
+bounds, policy, bounded reports, complete managed staff metadata, appointment references and duplicate active posts.
+Next ventures retain founder identity/IC experience/skills, not old-company appointments, conversations or policy.
+
+**Checks.** Latest Tycoon suite: **74 files / 1,263 tests passed**, including 27 new management/120-person UI tests.
+A cleanup-only follow-up passed 56 targeted tests. Typecheck and production build pass with raised Node heap. Whole
+repository run: **189 files passed / 1 failed; 2,639 tests passed / 1 failed**: the same unrelated
+`tests/hr/run.test.ts` -> `step > keeps foes, shots and gems under their caps` hits its existing 5,000ms timeout.
+Four subsequently added management regressions also pass in the final Tycoon run; do not describe the wider repo as
+green. On a 2GB runner, run full tests/typecheck/build sequentially; parallel heavy checks can be killed by memory pressure.
+
+Real production-preview browsers at **1280, 390 and 320px** pass: 120-person aggregate review, payroll-cap rejection,
+company lead appointment after releasing the cap, reachable Close, no page/policy overflow, no JS errors. Existing
+parallel-operations acceptance passes at all three widths; café desktop/phone acceptance still passes (compact poses,
+2px seating, hit targets, live screens/crowd). Synthetic generator and browser scripts are `stage3-fixtures.ts` and
+`stage3-browser.mjs`, using the same external Playwright/library setup as Stage 2. Images are under
+`/tmp/tycoon-stage3-shots`; the 390px compact summary is `people-390.png`. The current production preview
+is on port 4322; pass `BASE_URL=http://127.0.0.1:4322/tycoon/` (the Stage 3 script defaults to dev port 4323).
+
+**Bot comparison, not a new win-rate claim.** The bot no longer approves individual post-hit promotions. Its explicit
+optimistic policy appoints eligible profession leads monthly and readily agrees specialist alternatives for blocked
+leadership ambitions; neither is a simulation-side automatic choice. Twelve-year checks deliberately included the
+known difficult seeds, rather than a random four-seed sample:
+- Seed 1: IPO day 3,420 (**9.5 years**), $18.31M cash.
+- Seed 2: bankrupt day 1,717 (**4.8 years**), Headquarters, ~$928k lifetime revenue.
+- Seed 8: bankrupt day 1,444 (**4.0 years**), First floor, ~$988k lifetime revenue.
+- Seed 10: IPO day 4,219 (**11.7 years**), $21.97M cash (Stage 2 was still running at year 12).
+Late retained releases remain ~31 days apart in the IPO runs. These results do not resolve the two known early-studio
+affordability failures, prove an unattended baseline, or replace the Stage 7 12-seed/human usability gate. Continue with
+Stage 4 without adding a hidden subsidy, global pause, automatic initiative picker or free helper capacity.
 
 **4. Ecosystem initiatives, milestone gates and research audit** — original feedback 10 and 13.
 - Convert post-hit grow/promote/update/localise/companions/retire and relevant licensing/contract capabilities into the

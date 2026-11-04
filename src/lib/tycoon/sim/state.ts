@@ -1,3 +1,5 @@
+import { initialisePeopleManagement, isPeopleManagement } from './people-management'
+import { isCareerProfile, professionOf } from './career-profile'
 import { initialiseOperations } from './operations'
 import { isFloorAssignment } from './operating-contract'
 import { getRandomEvent } from '@/lib/tycoon/data/events'
@@ -24,9 +26,10 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } 
  * Version 5 made the two people who start the studio founders: they never leave and draw half pay.
  * Version 6 put a café before the garage, a journey stage of its own, so every later stage moved up one.
  * Version 8 replaces the global hit turn with explicit floor reservations and staffed office research.
- * Version 3 to 7 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
+ * Version 9 separates specialist grades, profession appointments and automatic company reviews.
+ * Version 3 to 8 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
  */
-export const STATE_VERSION = 8
+export const STATE_VERSION = 9
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
@@ -139,6 +142,7 @@ function validEmployee(v: unknown): boolean {
     typeof v.name === 'string' &&
     (v.appearanceSeed === undefined || (Number.isSafeInteger(v.appearanceSeed) && (v.appearanceSeed as number) >= 0)) &&
     ALL_ROLES.some((r) => r === v.role) &&
+    (v.career === undefined || isCareerProfile(v.career)) &&
     (v.analysis === undefined || isNum(v.analysis)) &&
     (v.region === undefined || knownRegion(v.region)) &&
     (v.teamId === undefined || isNum(v.teamId)) &&
@@ -341,6 +345,7 @@ function validState(v: unknown): v is GameState {
   return (
     isObj(v) &&
     v.version === STATE_VERSION &&
+    (v.peopleManagement === undefined || isPeopleManagement(v.peopleManagement)) &&
     (v.businessDecisions === undefined || validBusinessDecisions(v.businessDecisions)) &&
     isNum(v.rng) &&
     isNum(v.day) &&
@@ -508,12 +513,26 @@ export function deserialize(json: string): GameState | null {
     const raw: unknown = JSON.parse(json)
     const from = isObj(raw) && typeof raw.version === 'number' ? raw.version : 0
     const legacy = upgradeFromV6(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw))))
-    const parsed = dropRemovedContent(isObj(legacy) && legacy.version === 7 ? { ...legacy, version: STATE_VERSION } : legacy)
+    const parsed = dropRemovedContent(isObj(legacy) && (legacy.version === 7 || legacy.version === 8) ? { ...legacy, version: STATE_VERSION } : legacy)
     if (!validState(parsed)) return null
     const state: GameState = { ...parsed, dayWork: [], events: [] }
     if (from < 8) initialiseOperations(state)
+    if (from < 9) initialisePeopleManagement(state, true)
+    if (state.peopleManagement) {
+      if (state.peopleManagement.lastReviewDay > state.day || state.employees.some((e) => !e.career)) return null
+      const posts = new Set<string>()
+      for (const employee of state.employees) {
+        const appointment = employee.career?.appointment
+        if (!appointment) continue
+        if (appointment.scope !== 'company' && !state.offices.some((o) => o.id === appointment.scope)) return null
+        if (appointment.conflict) continue
+        const key = `${professionOf(employee)}:${appointment.scope}`
+        if (posts.has(key)) return null
+        posts.add(key)
+      }
+    }
     if (from === 3) rivalsArrive(state, true) // the market grew since version 3: the studios due by now move in
-    if (from >= 3 && from < STATE_VERSION) markFounders(state)
+    if (from >= 3 && from < 8) markFounders(state)
     return state
   } catch {
     return null

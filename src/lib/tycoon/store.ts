@@ -1,3 +1,5 @@
+import { appointProfessionLead, respondCareerConcern, setReviewPolicy, type ReviewPolicy } from './sim/people-management'
+import type { LeadScope } from './sim/career-profile'
 import { assignOperation, type OperationChoice } from './sim/operations'
 import { operating } from './sim/services'
 import { signal, type Signal } from './signals'
@@ -150,7 +152,11 @@ export interface Store {
   resolveEvent(index: number): Result
   /** Hires into the selected office, or the first with a free desk if it is full. */
   hire(candidateId: number): Result
-  /** Promotes someone a level, with the raise that comes with it. */
+  /** Explicit appointment, review policy, and exceptional retention conversations. */
+  appointProfessionLead(employeeId: number, scope: LeadScope | null): Result
+  setReviewPolicy(policy: ReviewPolicy): Result
+  respondCareerConcern(employeeId: number, response: 'discuss' | 'specialist'): Result
+  /** Individual promotions before company policy takes over. */
   promoteEmployee(employeeId: number): Result
   /** Sends an employee on a course in `discipline`; they do no project work until it ends. */
   train(employeeId: number, discipline: Discipline): Result
@@ -524,6 +530,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     hire(candidateId) {
       return cue(changed(logged(() => decisions.hire(state, candidateId, selectedOffice.value), () => hire(state, candidateId, selectedOffice.value))), 'hire')
     },
+
+    appointProfessionLead(employeeId, scope) { return changed(appointProfessionLead(state, employeeId, scope)) },
+    setReviewPolicy(policy) { return changed(setReviewPolicy(state, policy)) },
+    respondCareerConcern(employeeId, response) { return changed(respondCareerConcern(state, employeeId, response)) },
 
     promoteEmployee(employeeId) {
       const result = logged(() => decisions.promoteEmployee(state, employeeId), () => promote(state, employeeId))

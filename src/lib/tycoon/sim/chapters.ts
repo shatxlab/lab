@@ -47,6 +47,11 @@ export function seedMoney(state: GameState): number {
 /** A person for the next chapter's café: their skills, level, quirk and what they know stay; the studio around them does not. */
 function carried(person: Employee, officeId: number, id: number): Employee {
   const { teamId: _teamId, title: _title, ...rest } = structuredClone(person)
+  if (rest.career) {
+    delete rest.career.appointment
+    delete rest.career.blockedSince
+    delete rest.career.concern
+  }
   return { ...rest, appearanceSeed: person.appearanceSeed ?? person.id, id, officeId, training: null, readySince: null, morale: Math.max(person.morale, 75) }
 }
 

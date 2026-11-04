@@ -1,3 +1,5 @@
+import type { CareerProfile } from './career-profile'
+import type { PeopleManagement } from './people-management'
 import type { FloorAssignment } from './operating-contract'
 /** The two markets: where an office sits, where a rival is at home, and where a product's users live. */
 export type Region = 'us' | 'eu'
@@ -16,6 +18,8 @@ export type Role = BuilderRole | 'analyst' | 'pm'
 export const isBuilder = (employee: { role: Role }): boolean => employee.role !== 'analyst' && employee.role !== 'pm'
 
 export interface Employee {
+  /** Specialist experience and explicit profession appointment; introduced on moving out of the garage. */
+  career?: CareerProfile
   id: number
   name: string
   /** Stable visual identity, independent of world IDs reassigned between chapters. Older saves use id. */
@@ -32,7 +36,7 @@ export interface Employee {
   training: { discipline: Discipline; finishDay: number } | null
   /** Where they work; 0 for a candidate who hasn't been hired yet. */
   officeId: number
-  /** Index into LEVELS: Junior, Mid, Senior, Lead. */
+  /** Legacy LEVELS/PM-table index (0–3); career.grade owns managed specialist seniority. */
   level: number
   /** The day they reached their level (or were hired at it). */
   levelDay: number
@@ -511,6 +515,8 @@ export interface BusinessDecision {
 }
 
 export interface GameState {
+  /** Company review policy/reporting, reset for the next venture. Absent before the operating company. */
+  peopleManagement?: PeopleManagement
   /** Last 24 decisions in this company; absent in older saves. Measurements, not attribution. */
   businessDecisions?: BusinessDecision[]
   version: number

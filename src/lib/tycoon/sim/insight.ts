@@ -1,3 +1,5 @@
+import { careerSpeed } from './career-profile'
+import { professionWorkMultiplier } from './people-management'
 import { toolEffects } from './tools'
 import {
   ANALYSIS_GAIN,
@@ -5,7 +7,6 @@ import {
   FEEDBACK_MISSED_DAYS,
   FEEDBACK_SHRUGGED_DAYS,
   INSIGHT_PER_SKILL,
-  LEVELS,
   PM_INSIGHT_SHARE,
   SURVEY_COST,
 } from './balance'
@@ -25,14 +26,14 @@ export const isAnalyst = (employee: Pick<Employee, 'role'>): boolean => employee
 export function insightOf(employee: Employee): number {
   if (!isAnalyst(employee) || employee.training || employee.title === 'CEO') return 0
   const share = employee.role === 'pm' ? PM_INSIGHT_SHARE : 1
-  return (employee.analysis ?? 0) * INSIGHT_PER_SKILL * share * LEVELS[employee.level].speed * moraleSpeed(employee.morale)
+  return (employee.analysis ?? 0) * INSIGHT_PER_SKILL * share * careerSpeed(employee) * moraleSpeed(employee.morale)
 }
 
 /** Insight the whole studio gathers a day. */
 export function insightRate(state: GameState): number {
   // Deep in a piece of work, you gather no insight yourself.
   const busy = state.deepWork ? you(state) : undefined
-  return state.employees.reduce((sum, e) => sum + (e === busy ? 0 : insightOf(e)), 0) + toolEffects(state).insight
+  return state.employees.reduce((sum, e) => sum + (e === busy ? 0 : insightOf(e) * professionWorkMultiplier(state, e)), 0) + toolEffects(state).insight
 }
 
 /** True when the studio has anyone who studies users. */

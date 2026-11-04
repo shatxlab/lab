@@ -3,10 +3,18 @@ import { scaleRequirements } from './scale-readiness'
 import { operating } from './services'
 import type { GameState } from './types'
 
+/** Paid footprints bypass introductory chores, never the signature-product/market-fit gate. */
+export function skippedStageGoals(state: GameState, stage: number) {
+  const direct = state.founding && state.founding.ambition !== 'modest'
+  const skipped = direct ? ['cafe_jobs', 'to_garage', 'ship_3'] : []
+  return getStage(stage).goals.filter((g) => skipped.includes(g.id))
+}
+
 /** One current-state read model for simulation, operations, Journey, announcements and diagnostics. */
 export function stageProgress(state: GameState, stage = state.stage) {
   const replaced = operating(state) && stage >= 3 && stage <= 5 ? ['team_12', 'two_offices', 'three_offices'] : []
-  const goals = getStage(stage).goals.filter((g) => !replaced.includes(g.id)).map((g) => ({
+  const skipped = skippedStageGoals(state, stage).map((g) => g.id)
+  const goals = getStage(stage).goals.filter((g) => !replaced.includes(g.id) && !skipped.includes(g.id)).map((g) => ({
     id: g.id, label: g.label, met: g.check(state), progress: g.progress?.(state), remedy: '',
   }))
   return [...goals, ...scaleRequirements(state, stage)]

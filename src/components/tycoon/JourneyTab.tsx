@@ -1,4 +1,4 @@
-import { stageProgress } from '@/lib/tycoon/sim/stages'
+import { skippedStageGoals, stageProgress } from '@/lib/tycoon/sim/stages'
 import { STAGES } from '@/lib/tycoon/data/stages'
 import { useGame } from './context'
 
@@ -17,16 +17,21 @@ export function JourneyTab() {
       <ol className="stages">
         {STAGES.map((stage, index) => {
           const goals = stageProgress(state, index)
+          const skipped = skippedStageGoals(state, index)
+          const notApplicable = skipped.length > 0 && goals.length === 0
           const status = index < state.stage ? 'done' : index === state.stage ? 'current' : 'ahead'
           return (
-            <li key={stage.id} className={`stage ${status}`}>
+            <li key={stage.id} className={`stage ${notApplicable ? 'not-applicable' : status}`}>
               <div className="stage-head">
                 <strong>{stage.name}</strong>
-                <span className={status === 'done' ? 'good' : 'muted'}>
-                  {status === 'done' ? '✓' : status === 'current' ? 'You are here' : ''}
+                <span className={!notApplicable && status === 'done' ? 'good' : 'muted'}>
+                  {notApplicable ? 'Not applicable to this charter' : status === 'done' ? '✓' : status === 'current' ? 'You are here' : ''}
                 </span>
               </div>
-              {status !== 'ahead' && <p className="muted">{stage.blurb}</p>}
+              {status !== 'ahead' && !notApplicable && <p className="muted">{stage.blurb}</p>}
+              {skipped.length > 0 && <ul className="muted" aria-label="Charter exceptions">{skipped.map((goal) =>
+                <li key={goal.id}>{goal.label} · Not applicable to this charter</li>,
+              )}</ul>}
               {status === 'ahead' && stage.unlocks.length > 0 && <p className="muted">Opens: {stage.unlocks.join(', ')}</p>}
               {status === 'current' && goals.length > 0 && (
                 <ul className="goals">

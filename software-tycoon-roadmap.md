@@ -4,13 +4,14 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-04; Stage 6 prepared save/transaction boundary, local).** Stage 5 workspace/teams/navigation
-and the delegated prototype founder terms are committed/pushed as **`3c6c7a4`**; the standalone finance model and its
-39 tests are committed/pushed as **`f9e231d`**. Nothing was deployed. Live save version remains **11**.
-New work is **uncommitted**: a prepared v12 career-envelope codec and exclusive-lock settlement/adoption transactions,
-with 33 new tests. Read **"Stage 6 prepared persistence checkpoint"** below before continuing. These APIs are deliberately
-not wired to live v11 autosave/UI: the old chapter path still grants seed money, so enabling finance first would be unsafe.
-Automatic live settlement, paid founding, charter readiness and consulting have not shipped. The selected terms in
+**Current handover (2026-11-04; Stage 6 paid-founding adapter, local).** Stage 5 workspace/teams/navigation and
+founder terms are committed/pushed as **`3c6c7a4`**, the standalone finance model as **`f9e231d`**, and the prepared
+v12 codec/guarded settlement transactions as **`1ee1b32`**. Nothing was deployed. Live save version remains **11**.
+New work is **uncommitted**: real-world paid-founding quotes, company reset/hire/cost adapter and guarded successor
+commit, plus founding provenance, no-grant milestone handling and Journey exceptions. Read **"Stage 6 paid founding
+checkpoint"** below. These APIs are deliberately not wired to live v11 autosave/UI: the old chapter path still grants
+seed money, and charter/IPO gates plus consulting recovery remain missing. Automatic live settlement, the browser
+founding flow, charter readiness and consulting have not shipped. The selected terms in
 **"Stage 6 decision: prototype founder economics"** remain provisional, not measured final balance.
 Read the latest Stage 4 family acceptance and both Stage 5 progress sections, especially **"physical teams and
 navigation parity"**. Stage 4's broader numeric goals/item gates, affordability and unattended acceptance are **not
@@ -1118,7 +1119,55 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
 - **Gate:** multi-chapter test of IPO -> venture -> sale -> venture -> retirement, reload at each transition, finite
   affordable investments, no negative/double-spent fortune, stable sprites and one company-name field.
 
-### Stage 6 prepared persistence checkpoint (2026-11-04; uncommitted, not enabled)
+### Stage 6 paid founding checkpoint (2026-11-04; uncommitted, not enabled)
+
+- `paid-founding.ts` adds `foundingOffers`, `quoteFounding` and `foundPaidCompany` against the prepared v12 envelope.
+  Requires a settled predecessor (or durable ended-legacy decision), one valid company name and a new company identity.
+  No founder rename. Success keeps the returning friend; failure carries only the player. Appearance/skills/learned
+  methods and audience studies survive; appointments/training/projects/company research practices do not. Founder pay
+  is re-rated at the world date. Old corporate temporary wage/revenue/candidate deals do not subsidise the successor.
+- All three footprints use actual costs: $0 café setup, $1K garage, $41K first US floor. Studio requires actual selected
+  design/engineering/QA coverage within four desks; solo Modest needs an ordinary paid developer. Venture offers desks,
+  not free staff. Exactly one normal four-offer US candidate pool per deterministic source; changing focus/amount/name
+  or opening repeated previews cannot reroll it or mutate source cash/RNG/IDs. No automatic relocation of foreign founders.
+- Uses normal project-budget calculation for the selected Small/Medium focus allowance, real signing fees, current
+  founder/selected-staff salary policy, rent and standing costs. Custom minimum/recommended amounts use the documented
+  three/six-month formula; unaffordable choices return explicit blockers. Preview separates company cash, private reserve,
+  build-reserved runway, headcount/vacant desks and unselected offers. No projected product/client income, prepaid project,
+  free research/grades/products or speculative subsidy. Company investment is not recorded as business revenue.
+- `createCompanyState` extracts the existing empty defaults so paid starts do not generate/discard first-run staff,
+  rival worlds or extra candidate pools. The unchanged `createInitialState` uses that same initializer. World day/market,
+  rivals and earlier valuations/holdings are retained; nemesis ratios become ordinary rival businesses as in existing chapters.
+- `foundStoredCompany` snapshots the quote before the exclusive-lock wait, rechecks full source bytes and recomputes
+  every quote component before publishing **private debit + actual successor + charter in one write**. Quota failure
+  leaves the ended source intact; concurrent/stale confirmations cannot create two successors or double-debit.
+- The engine payload now validates optional paid-founding provenance (required by the v12 codec for personal investments,
+  forbidden for Standard origins). Conditions already true at founding, such as transferred cash/paid headcount/inherited
+  studies, are recorded separately as excluded milestones: **not earned and no payout**. Existing earned career milestone
+  IDs remain unchanged. Direct Garage/Office starts skip café chores and repeated introductory shipping; a real signature
+  hit remains required. Journey labels the exceptions **Not applicable to this charter**, not completed. A paid office
+  retains normal pre-hit product discovery and enters floor Operations only after a real hit; no bootstrap lockout.
+- **Verified:** 32 new tests (26 adapter, 3 persistence, 3 Journey render). Full repository **210 files / 2,916 tests pass**;
+  sole known unrelated HR failure remains `tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` —
+  `Test timed out in 5000ms.` All **1,536 Tycoon tests** pass; typecheck/build pass. Nine production-build browser cases
+  cover all presets at 1280x900, 390x844 and 320x568 with 28px controls; no page errors/horizontal overflow and Close remains
+  reachable. Fixed the new not-applicable heading's phone wrapping after inspecting the screenshot.
+- Reproducible synthetic tools: bundle `scripts/tycoon/stage6-founding-fixtures.ts` with esbuild (header command), then
+  run `stage6-founding-browser.mjs`. This server needs `PLAYWRIGHT_MODULE=/tmp/lab-browser-tools/node_modules/playwright/index.mjs`
+  and `LD_LIBRARY_PATH=/tmp/lab-browser-libs/root/usr/lib/x86_64-linux-gnu`. Fixtures write only `/tmp` and use no player journals.
+  The browser injects **synthetic v11 engine payloads for inspection**, not live v12 browser saves or an end-to-end founding UI.
+- Three-seed paid-start smoke (1/2/8, each preset, 90 unattended days): all nine remain active with no products/extra income;
+  headcounts 2 café / 4 garage / 2 office, and no discovery-stage bypass. These are accounting checks, **not final tuning**:
+  minimal two-founder Venture defaults have 195–223 quoted months before extra hiring, showing that default investment
+  is an ambition choice, not a promise of a full office or a proven pacing target. Costs will change with selected staff/events.
+  Default legacy bot unchanged: seed 1 IPO day **3381**, **$297.05M** closing cash; seed 2 bankruptcy **1717**; seed 8 bankruptcy
+  **1444**. No observed-information founding policy or full Stage 4/7 acceptance is claimed.
+- **Next:** charter fulfilment/current IPO readiness and consulting/world-time recovery, then enable the complete v12
+  browser flow only after autosave/reset/import/replacement all use the same lock/token discipline. Do not activate only
+  the financial half alongside legacy `seedMoney`/`RESTART_MONEY` grants. Live UI, multi-tab integration and played/reloaded
+  full-career acceptance are still open. New work is uncommitted/unpushed and nothing was deployed. No new player run yet.
+
+### Stage 6 prepared persistence checkpoint (2026-11-04; committed as `1ee1b32`, not enabled)
 
 - `career-save.ts` prepares an explicit **v12 career envelope** containing the validated v11 engine payload,
   versioned finance ledger and current company charter. This envelope is intentionally rejected by live v11

@@ -4,12 +4,14 @@ import {
   type CareerSave,
 } from '@/lib/tycoon/career-save'
 import {
-  adoptStoredCareer, browserCareerLock, CAREER_SAVE_LOCK, settleStoredCareer,
+  adoptStoredCareer, browserCareerLock, CAREER_SAVE_LOCK, foundStoredCompany, settleStoredCareer,
   type ExclusiveSaveLock,
 } from '@/lib/tycoon/career-transactions'
 import { SAVE_KEY, BACKUP_KEY, type KeyValueStorage } from '@/lib/tycoon/save'
 import { financeSummary, type FinanceResult } from '@/lib/tycoon/sim/founder-finance'
 import { createInitialState, serialize } from '@/lib/tycoon/sim/state'
+import { quoteFounding, type FoundingSelection } from '@/lib/tycoon/paid-founding'
+import { paidFoundingSource } from './paid-founding-fixtures'
 
 function unwrap<T>(r: FinanceResult<T>): T {
   if (!r.ok) throw new Error(r.reason)
@@ -234,6 +236,59 @@ describe('prepared guarded career persistence (not wired to v11 autosave)', () =
     const pending = adoptStoredCareer(storage, lock, original, selected)
     selected.careerId = 'mutated'
     expect(unwrap(await pending).save.finance.careerId).toBe(identity.careerId)
+  })
+
+  it('publishes the paid successor and private debit together; quota failure leaves the ended save recoverable', async () => {
+    const source = paidFoundingSource()
+    const { storage, token, lock } = setup(source)
+    const choice: FoundingSelection = { companyId: 'successor', companyName: 'Copper', ambition: 'venture', focus: 'web_app', candidateIds: [] }
+    const quote = unwrap(quoteFounding(source, choice))
+    const original = JSON.stringify(source)
+    storage.failWrite = true
+    expect((await foundStoredCompany(storage, lock, token, quote)).ok).toBe(false)
+    expect(storage.getItem(SAVE_KEY)).toBe(token)
+    expect(balance(token)).toBe(5_000_000)
+    expect(storage.writes).toBe(0)
+    expect(JSON.stringify(source)).toBe(original)
+    storage.failWrite = false
+    const founded = unwrap(await foundStoredCompany(storage, lock, token, quote))
+    expect(storage.writes).toBe(1)
+    expect(founded.save.game.gameOver).toBe(false)
+    expect(founded.save.game.money).toBe(quote.companyCash)
+    expect(balance(founded.token)).toBe(4_000_000)
+    expect(founded.save.charter.companyId).toBe('successor')
+    expect((await foundStoredCompany(storage, lock, token, quote)).ok).toBe(false)
+    expect((await foundStoredCompany(storage, lock, founded.token, quote)).ok).toBe(false)
+    expect(storage.getItem(SAVE_KEY)).toBe(founded.token)
+    expect(storage.writes).toBe(1)
+  })
+
+  it('publishes only one successor across concurrent founding confirmations', async () => {
+    const source = paidFoundingSource()
+    const { storage, token, lock } = setup(source)
+    const choice: FoundingSelection = { companyId: 'successor', companyName: 'Copper', ambition: 'modest', focus: 'web_app', candidateIds: [] }
+    const quote = unwrap(quoteFounding(source, choice))
+    const results = await Promise.all([foundStoredCompany(storage, lock, token, quote), foundStoredCompany(storage, lock, token, quote)])
+    expect(results.filter((r) => r.ok)).toHaveLength(1)
+    expect(storage.writes).toBe(1)
+    expect(balance(storage.getItem(SAVE_KEY)!)).toBe(4_985_000)
+  })
+
+  it('rejects altered founding costs without a write and snapshots quotes before waiting', async () => {
+    const source = paidFoundingSource()
+    const { storage, token, lock } = setup(source)
+    const choice: FoundingSelection = { companyId: 'successor', companyName: 'Copper', ambition: 'modest', focus: 'web_app', candidateIds: [] }
+    const quote = unwrap(quoteFounding(source, choice))
+    const invalid = structuredClone(quote)
+    invalid.companyCash += 10000
+    expect((await foundStoredCompany(storage, lock, token, invalid)).ok).toBe(false)
+    expect(storage.writes).toBe(0)
+    const pending = foundStoredCompany(storage, lock, token, quote)
+    quote.selection.companyName = 'Mutated after confirmation'
+    quote.costs.setup = 99999
+    const result = unwrap(await pending)
+    expect(result.save.game.studioName).toBe('Copper')
+    expect(storage.writes).toBe(1)
   })
 
   it('exposes a real browser lock only where supported, using an exclusive shared lock name', async () => {

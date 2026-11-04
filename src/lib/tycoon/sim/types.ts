@@ -517,6 +517,13 @@ export interface BusinessDecision {
 }
 
 export interface GameState {
+  /** Paid next-company provenance. Absent in initial/legacy companies; enabled only through v12 founding. */
+  founding?: {
+    ambition: import('./founder-finance').VentureAmbition
+    focus: string
+    /** Conditions already true at founding, not earned milestones and never paid out for this start. */
+    excludedMilestones: string[]
+  }
   /** Company review policy/reporting, reset for the next venture. Absent before the operating company. */
   peopleManagement?: PeopleManagement
   /** Last 24 decisions in this company; absent in older saves. Measurements, not attribution. */

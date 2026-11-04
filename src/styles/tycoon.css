@@ -1680,6 +1680,11 @@
   gap: 8px;
 }
 
+.tycoon-root .stage.not-applicable .stage-head {
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+
 .tycoon-root .goals {
   display: grid;
   gap: 4px;

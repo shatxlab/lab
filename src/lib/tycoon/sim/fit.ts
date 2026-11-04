@@ -1,3 +1,4 @@
+import { initialiseOperations } from './operations'
 import { audienceFor } from '@/lib/tycoon/data/audiences'
 import { FEATURES, getFeature } from '@/lib/tycoon/data/features'
 import {
@@ -158,6 +159,7 @@ export function takeOff(state: GameState, product: Product): void {
       founder.levelDay = state.day
     }
   }
+  if (state.founding && state.offices.every((o) => o.kind === 'office') && state.offices.some((o) => !o.assignment)) initialiseOperations(state)
   state.reputation = Math.min(REPUTATION_MAX, state.reputation + HIT_REPUTATION)
   state.events.push({ type: 'breakout', productId: product.id })
 }

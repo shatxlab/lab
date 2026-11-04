@@ -4,13 +4,13 @@ import type { GameState } from './types'
 
 /** Ids of every milestone the state already satisfies; used to credit an older save without paying out. */
 export function achievedMilestones(state: GameState): string[] {
-  return MILESTONES.filter((m) => m.check(state)).map((m) => m.id)
+  return MILESTONES.filter((m) => !state.founding?.excludedMilestones.includes(m.id) && m.check(state)).map((m) => m.id)
 }
 
 /** Awards every milestone newly reached: cash and reputation, and a toast for each. */
 export function checkMilestones(state: GameState): void {
   for (const milestone of MILESTONES) {
-    if (state.milestones.includes(milestone.id) || !milestone.check(state)) continue
+    if (state.milestones.includes(milestone.id) || state.founding?.excludedMilestones.includes(milestone.id) || !milestone.check(state)) continue
     state.milestones.push(milestone.id)
     state.money += milestone.reward.money ?? 0
     state.reputation = Math.min(REPUTATION_MAX, state.reputation + (milestone.reward.reputation ?? 0))

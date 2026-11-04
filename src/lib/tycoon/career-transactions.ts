@@ -2,6 +2,7 @@ import {
   adoptCareerSave, deserializeCareerSave, serializeCareerSave, settleCareerSave,
   type CareerIdentity, type CareerSave,
 } from './career-save'
+import { foundPaidCompany, type FoundingQuote } from './paid-founding'
 import { SAVE_KEY, type KeyValueStorage } from './save'
 import type { FinanceResult } from './sim/founder-finance'
 
@@ -64,5 +65,14 @@ export function settleStoredCareer(storage: KeyValueStorage, lock: ExclusiveSave
   return commit(storage, lock, expected, (text) => {
     const current = deserializeCareerSave(text)
     return current.ok ? settleCareerSave(current.value, legacyDecision) : current
+  })
+}
+
+/** Revalidates the source, actual world quote and cash before publishing debit + successor together. */
+export function foundStoredCompany(storage: KeyValueStorage, lock: ExclusiveSaveLock | null, expected: string, quote: FoundingQuote): Promise<FinanceResult<CommittedCareer>> {
+  const selected = structuredClone(quote)
+  return commit(storage, lock, expected, (text) => {
+    const current = deserializeCareerSave(text)
+    return current.ok ? foundPaidCompany(current.value, selected) : current
   })
 }

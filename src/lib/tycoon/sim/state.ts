@@ -34,8 +34,9 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } 
  */
 export const STATE_VERSION = 11
 
-export function createInitialState(seed: number): GameState {
-  const state: GameState = {
+/** Empty company-local defaults; callers must add real staff, offices and world before validating/saving. */
+export function createCompanyState(seed: number): GameState {
+  return {
     version: STATE_VERSION,
     rng: seed >>> 0,
     day: 0,
@@ -80,6 +81,10 @@ export function createInitialState(seed: number): GameState {
     dayWork: [],
     events: [],
   }
+}
+
+export function createInitialState(seed: number): GameState {
+  const state = createCompanyState(seed)
   // You and a friend start at a café table: you study users, your friend builds.
   const cafe = { id: state.nextId++, kind: 'cafe' as const, theme: 0, region: 'us' as const, project: null }
   state.offices.push(cafe)
@@ -357,6 +362,10 @@ function validState(v: unknown): v is GameState {
   return (
     isObj(v) &&
     v.version === STATE_VERSION &&
+    (v.founding === undefined || (isObj(v.founding) && ['modest', 'studio', 'venture'].includes(String(v.founding.ambition)) &&
+      knownType(v.founding.focus) && Array.isArray(v.founding.excludedMilestones) &&
+      new Set(v.founding.excludedMilestones).size === v.founding.excludedMilestones.length &&
+      v.founding.excludedMilestones.every((id) => typeof id === 'string' && !!getMilestone(id)))) &&
     (v.peopleManagement === undefined || isPeopleManagement(v.peopleManagement)) &&
     (v.businessDecisions === undefined || validBusinessDecisions(v.businessDecisions)) &&
     isNum(v.rng) &&

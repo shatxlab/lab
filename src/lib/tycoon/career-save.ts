@@ -57,6 +57,9 @@ function validateEnvelope(raw: unknown): FinanceResult<CareerSave> {
   const companies = summary.value.companies
   const current = companies[companies.length - 1]
   const charter = raw.charter
+  if (current.source === 'personal'
+    ? !game.founding || game.founding.ambition !== current.ambition
+    : game.founding !== undefined) return fail('Paid founding provenance does not match the ledger')
   if (charter.companyId !== current.companyId || charter.ambition !== current.ambition ||
     (charter.fulfilledDay !== null && (!whole(charter.fulfilledDay) || charter.fulfilledDay > game.day))) return fail('Charter does not match the current company')
   const finance = raw.finance as FounderFinance

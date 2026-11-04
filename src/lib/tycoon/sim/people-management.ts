@@ -41,7 +41,7 @@ export interface PeopleManagement {
 
 /** Activation is company-local; old numeric levels retain their pay/experience, not implicit leadership forever. */
 export function initialisePeopleManagement(state: GameState, grandfather = false): void {
-  if (!state.offices.some((o) => o.assignment)) return
+  if (!state.offices.some((o) => o.assignment) && !(state.founding && state.offices.some((o) => o.kind === 'office'))) return
   state.peopleManagement ??= {
     policy: { automatic: true, reserveMonths: 2, payrollCap: null },
     lastReviewDay: state.day,

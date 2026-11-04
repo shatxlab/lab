@@ -138,7 +138,8 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     const europe = [...host.querySelectorAll<HTMLButtonElement>('.segmented button')].find((b) => b.textContent?.startsWith('Europe'))!
     act(() => europe.click())
     expect(host.textContent).toContain('these are from Europe')
-    expect(host.textContent).toContain('Works on')
+    expect(host.textContent).toContain('One delivery team per physical floor')
+    expect(host.textContent).not.toContain('Works on')
   })
 
   it('the products tab shows the team that looks after a product, and the next release can be queued', () => {

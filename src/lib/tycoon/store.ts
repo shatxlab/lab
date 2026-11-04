@@ -1,3 +1,4 @@
+import type { StudioLink } from '@/lib/tycoon/studio-navigation'
 import { appointProfessionLead, respondCareerConcern, setReviewPolicy, type ReviewPolicy } from './sim/people-management'
 import type { LeadScope } from './sim/career-profile'
 import { assignOperation, type OperationChoice } from './sim/operations'
@@ -15,7 +16,7 @@ import { acceptBuyout, declineBuyout, goPublic, ipoBlocker, retireStudio } from 
 import { fire, hire } from '@/lib/tycoon/sim/hiring'
 import { setLicensed } from '@/lib/tycoon/sim/licensing'
 import { promoteProduct, setAutoPromote } from '@/lib/tycoon/sim/lifecycle'
-import { assignTeam, getOffice, inGarage, moveOut, moveToGarage, openOffice, transfer } from '@/lib/tycoon/sim/offices'
+import { assignTeam, getOffice, moveOut, moveToGarage, openOffice, transfer } from '@/lib/tycoon/sim/offices'
 import { companyOnlyFounding, foundStudio, you } from '@/lib/tycoon/sim/founding'
 import { awaitingChoice, chooseCard, researchPlan } from '@/lib/tycoon/sim/cycle'
 import { setRoadmap } from '@/lib/tycoon/sim/roadmap'
@@ -39,9 +40,6 @@ export const MS_PER_DAY = 1500
 /** A long frame (e.g. a backgrounded tab) never fast-forwards more than this. */
 const MAX_FRAME_MS = 250
 const TOAST_MS = 6000
-
-/** What the scene shows: the buildings from the street, or one floor (or the garage) up close. */
-export type SceneView = 'building' | 'floor'
 
 export type Dialog =
   | null
@@ -73,7 +71,7 @@ export type Dialog =
       quality: number
     }
   /** Products, stats and milestones in one place. */
-  | { kind: 'studio'; tab?: 'company' | 'journey' | 'products' | 'industry' | 'stats' | 'milestones' }
+  | { kind: 'studio'; tab?: StudioLink }
   | { kind: 'team' }
   /** One person's details: skills, trait, morale, training. */
   | { kind: 'employee'; id: number }
@@ -102,10 +100,10 @@ export interface Store {
   readonly dialog: Signal<Dialog>
   /** Short-lived news (market shifts, event outcomes); they remove themselves. */
   readonly toasts: Signal<Toast[]>
-  /** The office on screen; commands without an office act on it. */
+  /** The selected physical floor; commands without an office act on it, without reassigning its staff. */
   readonly selectedOffice: Signal<number>
-  /** Out of the garage: the buildings from the street, or one floor up close. The garage is always up close. */
-  readonly view: Signal<SceneView>
+  /** Transient product context, independent of the selected physical delivery floor. */
+  readonly selectedProduct: Signal<number | null>
   /** Sound effects and the mute switch. */
   readonly sfx: SfxPlayer
   /** True while game days are actually passing. */
@@ -115,10 +113,9 @@ export interface Store {
   setSpeed(speed: Speed): void
   openDialog(dialog: Exclude<Dialog, null>): void
   closeDialog(): void
-  /** Shows another office. */
+  /** Selects the floor/context for commands without changing the scene layout. */
   selectOffice(officeId: number): void
-  /** Switches between the buildings and the selected floor up close. */
-  setView(view: SceneView): void
+  selectProduct(productId: number): void
   /** Starts a new product of `size` (Small if left out). Like the commands below, in the selected office unless told otherwise. */
   startProject(productTypeId: string, featureIds: readonly string[], size?: ProjectSize, officeId?: number, audienceId?: string): Result
   /** Ships an office's project; `campaign` buys launch marketing for a new product. */
@@ -215,7 +212,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
   if (dialog.value === null && !state.exit.ipoAcknowledged && ipoBlocker(state) === null) dialog.value = { kind: 'ipo' }
   const toasts = signal<Toast[]>([])
   const selectedOffice = signal(state.offices[0].id)
-  const view = signal<SceneView>(inGarage(state) ? 'floor' : 'building')
+  const selectedProduct = signal<number | null>(null)
   /** The office a command is for: the one named, or the one on screen. */
   const officeFor = (officeId?: number) => officeId ?? selectedOffice.value
   /** Dialogs that arrived on the same day as the one on screen; shown as each is closed. */
@@ -328,7 +325,7 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     dialog,
     toasts,
     selectedOffice,
-    view,
+    selectedProduct,
     sfx,
     running,
 
@@ -372,8 +369,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       if (getOffice(state, officeId)) selectedOffice.value = officeId
     },
 
-    setView(next) {
-      view.value = next === 'building' && inGarage(state) ? 'floor' : next
+    selectProduct(productId) {
+      if (state.products.some((product) => product.id === productId)) selectedProduct.value = productId
     },
 
     startProject(productTypeId, featureIds, size, officeId, audienceId) {
@@ -567,8 +564,6 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     moveOut(keepIds = []) {
       const result = cue(changed(logged(() => decisions.moveOut(state, keepIds), () => moveOut(state, keepIds))), 'upgrade')
-      // The first look at the new place is from the street.
-      if (result.ok) view.value = 'building'
       return result
     },
 

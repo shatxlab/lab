@@ -152,7 +152,7 @@ describe('Stage 0 presentation', () => {
     const host = render(<StudioDialog tab="industry" />, createStore(stage0Fixture('large-company'), 0))
     expect(host.querySelector('.modal-footer button')?.textContent).toBe('Close')
     expect(host.querySelector('.modal-body .actions')).toBeNull()
-    expect(host.querySelectorAll('[role="tab"]')).toHaveLength(6)
+    expect(Array.from(host.querySelectorAll('[role="tab"]'), (tab) => tab.textContent)).toEqual(['Company', 'Industry', 'Journey', 'Products'])
   })
 
   it('seats founders across one high table with two laptops and no founder cup anchors', () => {

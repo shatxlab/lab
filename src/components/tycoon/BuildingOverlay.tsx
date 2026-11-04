@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { buildingLayout, toScreen, TWO_BUILDINGS_MIN_WIDTH, WALL_BAND, type Box } from '@/lib/tycoon/render-support/building'
 import { REGION_OFFICE_LIMIT } from '@/lib/tycoon/sim/balance'
-import { buildingName, getOffice, inGarage, officeName, officesIn, openOfficeBlocker, regionOf, teamOf } from '@/lib/tycoon/sim/offices'
+import { buildingName, companyOverview, getOffice, officeName, officesIn, openOfficeBlocker, regionOf, teamOf } from '@/lib/tycoon/sim/offices'
 import { overallProgress } from '@/lib/tycoon/sim/scoring'
 import { floorCycle } from '@/lib/tycoon/sim/cycle'
 import { ownedProduct } from '@/lib/tycoon/sim/teams'
@@ -39,34 +39,20 @@ function floorStatus(state: GameState, office: Office): string {
 }
 
 /**
- * Over the buildings: a button on every floor (its name and what it is doing; tap to go in), a place to add the
+ * Over the buildings: a button on every floor (its name and what it is doing; tap to select its operating context), a place to add the
  * next floor, the European lot, and on a narrow screen a switch between the two buildings.
  */
 export function BuildingOverlay() {
   const store = useStore()
   const state = useGame()
-  const view = useSignal(store.view)
   const selected = useSignal(store.selectedOffice)
   const ref = useRef<HTMLDivElement>(null)
   const { width, height } = useSize(ref)
-  const garage = inGarage(state)
-
-  if (garage) return <div ref={ref} hidden />
-  if (view === 'floor') {
-    return (
-      <div ref={ref} className="floor-back">
-        <button onClick={() => store.setView('building')}>← Buildings</button>
-      </div>
-    )
-  }
+  if (!companyOverview(state)) return <div ref={ref} hidden />
 
   const selectedRegion: Region = regionOf(getOffice(state, selected) ?? state.offices[0])
   const narrow = width < TWO_BUILDINGS_MIN_WIDTH
   const layout = buildingLayout(state, width, height, narrow ? selectedRegion : undefined)
-  const showFloor = (office: Office) => {
-    store.selectOffice(office.id)
-    store.setView('floor')
-  }
 
   return (
     <div ref={ref} className="building-overlay">
@@ -120,8 +106,10 @@ export function BuildingOverlay() {
                   key={box.officeId}
                   className={`building-floor ${office.id === selected ? 'selected' : ''}`}
                   style={at(screen)}
-                  title={`Go into ${officeName(state, office)}`}
-                  onClick={() => showFloor(office)}
+                  title={`Select ${officeName(state, office)}`}
+                  aria-label={`Select ${officeName(state, office)}`}
+                  aria-pressed={office.id === selected}
+                  onClick={() => store.selectOffice(office.id)}
                 >
                   <span className="floor-plate" style={{ maxWidth: plate.w * 0.7 }}>
                     <strong>{officeName(state, office)}</strong> {floorStatus(state, office)}

@@ -18,7 +18,7 @@ import { ClientWork } from './NewProjectDialog'
 import { ProductOperations } from './ProductOperations'
 import { ScaleReadinessPanel } from './ScaleReadinessPanel'
 import { BusinessPanel } from './BusinessPanel'
-import { useGame, useOffice, useStore } from './context'
+import { useGame, useOffice, useSignal, useStore } from './context'
 
 function AssignmentEditor({ office, product }: { office: Office; product: Product }) {
   const state = useGame()
@@ -87,8 +87,8 @@ export function OperationsPanel() {
   const office = useOffice()
   const [abandon, setAbandon] = useState(false)
   const [contractError, setContractError] = useState('')
-  const [productId, setProductId] = useState(state.signatureId ?? state.products[0]?.id)
-  const product = state.products.find((p) => p.id === productId) ?? state.products[0]
+  const productId = useSignal(store.selectedProduct)
+  const product = state.products.find((p) => p.id === productId) ?? state.products.find((p) => p.id === state.signatureId) ?? state.products[0]
   const project = office.project
   const left = emptySkills()
   if (project) for (const d of DISCIPLINES) left[d] = Math.max(0, project.target[d] - project.progress[d])
@@ -120,7 +120,7 @@ export function OperationsPanel() {
     </section>}
     {!project && office.assignment?.kind === 'idle' && <p className="warn">This team is idle. Other teams and the business continue; payroll still applies.</p>}
     {office.assignment?.kind === 'standing' && <p>Assigned: <strong>{office.assignment.service}</strong>. Continues until you reassign this team.</p>}
-    {product && <><label>Product / ecosystem context <select value={product.id} onChange={(e) => setProductId(Number(e.target.value))}>{state.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+    {product && <><label>Product / ecosystem context <select value={product.id} onChange={(e) => store.selectProduct(Number(e.target.value))}>{state.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <AssignmentEditor key={`${office.id}:${product.id}`} office={office} product={product} />
       <ProductOperations key={product.id} product={product} />
       <details className="plan"><summary>Client & enterprise work · {officeName(state, office)}</summary>

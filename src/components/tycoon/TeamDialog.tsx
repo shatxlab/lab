@@ -14,7 +14,6 @@ import {
   NO_LEAD_SPEED,
   OFFICE_KINDS,
   OUTING_MORALE,
-  REMOTE_SPEED,
   SIDE_PRODUCT_LIMIT,
 } from '@/lib/tycoon/sim/balance'
 import { eraIndexAt } from '@/lib/tycoon/data/eras'
@@ -45,7 +44,6 @@ import {
   openOfficeBlocker,
   regionOf,
   staffOf,
-  teamOfficeId,
 } from '@/lib/tycoon/sim/offices'
 import { outingBlocker, outingCost } from '@/lib/tycoon/sim/staff'
 import { salePrice, sunsetOutcome } from '@/lib/tycoon/sim/sunset'
@@ -193,7 +191,7 @@ export function TeamDialog() {
               {needsLead(state, office) && <small className="warn">needs a Lead · {SLOWER}% slower without one</small>}
               {pmEffectText(state, office) && <small className="good" title="Their product manager steers what this office launches and grows">PM: {pmEffectText(state, office)}</small>}
               {ownedProduct(state, office) && <small className="muted">looks after {ownedProduct(state, office)!.name}</small>}
-              {office.id !== selected.id && <button onClick={() => store.selectOffice(office.id)}>Show</button>}
+              {office.id !== selected.id && <button onClick={() => { store.selectOffice(office.id); store.closeDialog() }}>Select team</button>}
             </div>
           ))}
         {cafe ? (
@@ -291,8 +289,8 @@ export function TeamDialog() {
         {state.employees.length === 0 && <p className="muted">Nobody works here. Hire someone to start a project.</p>}
         {many && (
           <p className="muted">
-            Everyone has a desk in one office (the second list: they can move to another office in the same region). <em>Works on</em> lets
-            someone help another office's project from their own desk, {Math.round((1 - REMOTE_SPEED) * 100)}% slower, even across the Atlantic.
+            One delivery team per physical floor. Transfers move a person and their capacity together, require a free place
+            on the destination floor and stay within their region. They leave their old team's work; no remote duplicate capacity.
           </p>
         )}
         {!many && needsLead(state, state.offices[0]) && (
@@ -338,26 +336,9 @@ export function TeamDialog() {
                     Make product manager
                   </button>
                 )}
-                {many && !state.offices.some((o) => o.assignment) && isBuilder(employee) && (
-                  <select
-                    aria-label={`Team for ${employee.name}`}
-                    title="Whose project they work on (a little slower away from their own office)"
-                    value={teamOfficeId(state, employee)}
-                    onChange={(event) => {
-                      const id = Number((event.target as HTMLSelectElement).value)
-                      report(store.assignTeam(employee.id, id === employee.officeId ? null : id))
-                    }}
-                  >
-                    {state.offices.map((office) => (
-                      <option key={office.id} value={office.id}>
-                        Works on {officeName(state, office)}
-                      </option>
-                    ))}
-                  </select>
-                )}
                 {many && (
                   <select
-                    aria-label={`Office for ${employee.name}`}
+                    aria-label={`Delivery team for ${employee.name}`}
                     value={employee.officeId}
                     onChange={(event) => report(store.transfer(employee.id, Number((event.target as HTMLSelectElement).value)))}
                   >
@@ -366,7 +347,7 @@ export function TeamDialog() {
                       const abroad = home !== undefined && regionOf(office) !== regionOf(home)
                       return (
                         <option key={office.id} value={office.id} disabled={office.id !== employee.officeId && (abroad || freeDesks(state, office) <= 0)}>
-                          Desk in {officeName(state, office)}
+                          Team: {officeName(state, office)}
                           {abroad ? ' (other region)' : ''}
                         </option>
                       )

@@ -56,7 +56,7 @@ export function CompanyTab() {
         <div>
           <small className="muted">Servers</small>
           <strong className={loadTone}>{Math.round(load * 100)}% full</strong>
-          <small className="muted">holds {formatCount(capacityOf(hit))}{load >= 0.92 ? ' · outages likely: pick a server card in your next plan' : ''}</small>
+          <small className="muted">holds {formatCount(capacityOf(hit))}{load >= 0.92 ? operating(state) ? ' · outages likely: assign a server initiative in Operations' : ' · outages likely: plan server capacity' : ''}</small>
         </div>
         <div>
           <FitMeter fit={hit.fit ?? 0} rangeKey={releaseKey(hit)} taken />

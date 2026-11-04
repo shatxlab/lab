@@ -75,8 +75,9 @@ it('offers growth and commercial decisions inline and keeps the post-hit catalog
   expect(state.offices[0].project!.grows).toBe('medium')
   expect(store.speed.value).toBe(0)
   expect(document.querySelector('[aria-label="Product commercial controls"]')?.textContent).toContain('Paid promotion')
-  expect(document.querySelector('.products')?.textContent).toContain('Back to operations')
+  expect(document.querySelector('.products')?.textContent).toContain('Operate Wren')
   expect(document.querySelector('.products .product-actions')).toBeNull()
+  expect(document.querySelectorAll('.products .product-navigation button')).toHaveLength(2)
   expect(document.querySelector('.modal')).toBeNull()
 })
 

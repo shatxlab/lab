@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DAYS_PER_MONTH } from '@/lib/tycoon/sim/balance'
-import { historyWithNow } from '@/lib/tycoon/sim/history'
+import { companyHistoryWithNow } from '@/lib/tycoon/sim/history'
 import { netPerDay } from '@/lib/tycoon/sim/economy'
 import { useGame } from './context'
 import { monthLabel } from '@/lib/tycoon/chartMath'
@@ -21,7 +21,7 @@ export function StatsTab() {
   const [range, setRange] = useState<Range>(0)
   const [asTable, setAsTable] = useState(false)
 
-  const all = historyWithNow(state)
+  const all = companyHistoryWithNow(state)
   const latest = all[all.length - 1].day
   const points = range === 0 ? all : all.filter((p) => p.day >= latest - range * DAYS_PER_MONTH)
   const days = points.map((p) => p.day)
@@ -33,6 +33,7 @@ export function StatsTab() {
 
   return (
     <div className="stats">
+      <p className="muted">This company only. Earlier ventures are recorded under Journey → Company chapters.</p>
       <div className="tiles">
         <div className="stat">
           <span className="label">Money</span>
@@ -40,7 +41,7 @@ export function StatsTab() {
           <span className={`sub ${net < 0 ? 'bad' : 'good'}`}>{formatDelta(net)} / day</span>
         </div>
         <div className="stat">
-          <span className="label">Lifetime revenue</span>
+          <span className="label">Company revenue to date</span>
           <span className="value">{formatMoney(state.lifetimeRevenue)}</span>
         </div>
         <div className="stat">

@@ -119,7 +119,10 @@ function ProductRow({ product }: { product: Product }) {
     <small>{PROJECT_SIZES[product.size].name} {type.name} · {productPhase(state, product)} · {formatCount(product.users)} users · {formatMoney(productRevenue(product))}/day</small>
     <small>{bugs} open bugs · {stale ? 'needs an update' : 'fresh'} · {updates} updates · lifetime {formatMoney(product.totalRevenue)}</small>
     <p>Manage this product through Company operations: select its product context for initiatives, shared care and commercial decisions.</p>
-    <button onClick={() => store.closeDialog()}>Back to operations</button>
+    <div className="product-navigation">
+      <button onClick={() => { store.selectProduct(product.id); store.closeDialog() }}>Operate {product.name}</button>
+      <button aria-label={`Releases for ${product.name}`} onClick={() => store.openDialog({ kind: 'releases', productId: product.id })}>Releases…</button>
+    </div>
   </div>
 
   return (
@@ -331,7 +334,7 @@ export function ProductsTab() {
   if (products.length === 0) return <p className="muted">Nothing shipped yet.</p>
   return (
     <div className="products">
-      {!inGarage(state) && (
+      {!operating(state) && !inGarage(state) && (
         <p className="muted">
           Portfolio {products.length}/{PORTFOLIO_LIMIT}
           {newProductBlocker(state) && ` · ${newProductBlocker(state)}`}

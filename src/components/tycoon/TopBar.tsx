@@ -1,7 +1,7 @@
 import { getStage } from '@/lib/tycoon/data/stages'
 import { ipoBlocker } from '@/lib/tycoon/sim/exit'
 import { netPerDay } from '@/lib/tycoon/sim/economy'
-import { deskCount } from '@/lib/tycoon/sim/offices'
+import { companyOverview, deskCount } from '@/lib/tycoon/sim/offices'
 import { researchDaysLeft } from '@/lib/tycoon/sim/research'
 import { SPEEDS, type Speed } from '@/lib/tycoon/store'
 import { formatDateShort, formatDelta, formatMoney } from '@/lib/tycoon/format'
@@ -16,7 +16,7 @@ export function TopBar() {
   const net = netPerDay(state)
 
   return (
-    <header className="topbar">
+    <header className={`topbar${companyOverview(state) ? ' company-topbar' : ''}`}>
       <div className="topbar-row topbar-stats">
         <div className="stat">
           <span className="label">Money</span>

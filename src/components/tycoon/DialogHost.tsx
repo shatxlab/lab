@@ -59,7 +59,7 @@ export function DialogHost() {
     case 'research':
       return <ResearchDialog />
     case 'studio':
-      return <StudioDialog tab={dialog.tab} />
+      return <StudioDialog key={dialog.tab ?? 'default'} tab={dialog.tab} />
     case 'absorb':
       return <AbsorbDialog rivalId={dialog.rivalId} />
     case 'ipo':

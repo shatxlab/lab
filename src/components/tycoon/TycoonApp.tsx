@@ -5,7 +5,7 @@ import { browserStorage, setAutosave } from '@/lib/tycoon/browser'
 import { createSfx } from '@/lib/tycoon/audio'
 import { applyDevParams, devClock, hasDevParams } from '@/lib/tycoon/dev'
 import { createAutosave, loadGame, migrateLegacySave } from '@/lib/tycoon/save'
-import { getOffice, inGarage, regionOf } from '@/lib/tycoon/sim/offices'
+import { companyOverview, getOffice, regionOf } from '@/lib/tycoon/sim/offices'
 import { createInitialState } from '@/lib/tycoon/sim/state'
 import { overallProgress } from '@/lib/tycoon/sim/scoring'
 import { routineAt } from '@/lib/tycoon/render-support/routines'
@@ -152,7 +152,7 @@ export default function TycoonApp() {
         const speed = store.running() ? store.speed.value : 0
         if (speed > 0) routineMs += ticker.deltaMS
         // One of the two is on screen: the buildings from the street, or the floor (or garage) up close.
-        const street = store.view.value === 'building' && !inGarage(store.state)
+        const street = companyOverview(store.state)
         building.view.visible = street
         scene.view.visible = !street
         scene.popups.visible = !street
@@ -160,7 +160,11 @@ export default function TycoonApp() {
         else scene.update(ticker.deltaMS, speed)
       })
 
+      // Expose actual first-frame readiness, not merely an attached (still empty) canvas.
+      app.ticker.addOnce(() => { if (!destroyed) host.dataset.renderReady = 'true' }, undefined, -100)
+
       dispose = () => {
+        delete host.dataset.renderReady
         observer.disconnect()
         void app.destroy(true, { children: true })
       }

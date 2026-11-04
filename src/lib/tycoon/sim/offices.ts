@@ -69,6 +69,8 @@ export function staffOf(state: GameState, office: Office): Employee[] {
 
 /** The office whose project this person works on: the one they sit in, unless they were put on another team. */
 export function teamOfficeId(state: GameState, employee: Employee): number {
+  // v8 migrated old memberships to physical floors. Never let a stray legacy field split a managed team again.
+  if (state.offices.some((office) => office.assignment)) return employee.officeId
   return employee.teamId !== undefined && getOffice(state, employee.teamId) ? employee.teamId : employee.officeId
 }
 
@@ -286,10 +288,15 @@ export function transfer(state: GameState, employeeId: number, officeId: number)
   if (employee.officeId === officeId) return fail('Already there')
   if (freeDesks(state, office) <= 0) return fail('No free desk there')
   if (regionOf(office) !== (getOffice(state, employee.officeId) ? regionOf(getOffice(state, employee.officeId)!) : 'us')) {
-    return fail('They live in the other region: put them on that office’s team instead')
+    return fail('They live in the other region: hire local staff for that delivery team')
   }
   employee.officeId = officeId
   // A move is a fresh start: they join the team of the office they moved to.
   delete employee.teamId
   return OK
+}
+
+/** Two rented floors, including one in each region, share a stable company overview. */
+export function companyOverview(state: GameState): boolean {
+  return state.offices.filter((office) => office.kind === 'office').length >= 2
 }

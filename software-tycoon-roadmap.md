@@ -4,7 +4,20 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-04; Stage 3 checkpoint).** The requested Stage 2 + café checkpoint
+**Current handover (2026-11-04; Stage 5 teams/navigation, local).** The requested Stage 4 family/scope checkpoint
+is committed/pushed on `main` as **`9ad1d21`**; nothing was deployed. Save version remains **11**. New work after that
+checkpoint is **uncommitted**: stable company workspace, physical-team UI/boundary checks, Company/Industry/Journey
+navigation with preserved ecosystem/history/discovery, current-company metrics and phone/keyboard follow-through.
+Read the latest Stage 4 family acceptance and both Stage 5 progress sections, especially **"physical teams and
+navigation parity"**. Stage 4's broader numeric goals/item gates, affordability and unattended acceptance are **not
+complete**. The player has now delegated prototype founder economics; read **"Stage 6 decision: prototype founder economics"**.
+Those rules are selected/documented, not implemented or validated. Next is the versioned finance/charter ledger, then the remaining
+Stage 4/7 economic and full-career acceptance gates. Historical valuations must not silently become personal cash.
+The player requested the remaining plan step by step and will try a new run **after** implementation/acceptance, not
+between slices. Do not restore release turns, choice timers or automatic assignments. Prototype terms are explicit
+assumptions, not final tuned numbers or reconstructed historical proceeds.
+
+**Stage 3 checkpoint (2026-11-04; historical).** The requested Stage 2 + café checkpoint
 is pushed to `origin/main` as **`f0a9463`** (also includes the previously unpushed `a4ad89e`); nothing was deployed.
 Read **"Stage 3 built and checked"** and **"Stage 2 built and checked"** before changing the engine. Saves are now
 version **9**: profession-specific appointments, independent IC grades/management skill, automatic company
@@ -88,7 +101,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the local family/scope acceptance slice below). The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation implementation is now local (read both Stage 5 progress sections). Stage 6 prototype founder terms are now selected/documented below (player delegated); implement the finance/charter ledger and founding/interlude model before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -902,10 +915,10 @@ Stage 6 larger next-venture ambitions/founder economics and Stage 7 unattended/h
 claimed complete merely because the research split now works. Existing early bankruptcies, the default seed-10 rivalry
 horizon and plentiful late cash are not fixed by a persistence/UI slice. Do not commit until asked.
 
-### Stage 4 progress: product-family scope and neglect/recovery acceptance (local, after 45747db)
+### Stage 4 progress: product-family scope and neglect/recovery acceptance (checkpoint 9ad1d21 on main)
 
-**Checkpoint:** `45747db`, `feat(tycoon): preserve founder knowledge across company ventures`, was committed/pushed
-on the explicit “commit and continue” request. Subsequent work below is local and not committed.
+**Committed and pushed as `9ad1d21`**, `feat(tycoon): unlock companion initiatives through paid product scope`,
+on the explicit “commit and continue” request, after the knowledge checkpoint `45747db`. New work afterward stays local.
 
 **Family matrix exposed a real opportunity gate.** At 20× each type's base audience, 9 of 12 product families were
 still rejected by the inherited universal **300,000-user** companion-initiative gate. Cloud's base audience is 400;
@@ -957,8 +970,8 @@ family-wide numeric goals/item thresholds and plentiful late cash are **not reso
 `/tmp/stage4-family-bot-{1,2,8,10}.log`; aggregate `-bots.exit` is 0.
 
 Scripts: `stage4-family-fixtures.ts`, `stage4-family-browser.mjs`; tests:
-`operating-family-acceptance.test.ts`, `companion-scope-ui.test.tsx`. No player journal used. Do not commit this follow-up
-unless requested.
+`operating-family-acceptance.test.ts`, `companion-scope-ui.test.tsx`. No player journal used. This family slice is
+included in `9ad1d21`; do not commit subsequent work unless requested.
 
 **5. Finish the stable workspace and navigation** — original feedback 2–5 and 8.
 - Desktop prototype: building left, operations right, stable scene dimensions. Mobile: compact building/team overview
@@ -975,18 +988,266 @@ unless requested.
 - **Gate:** phone-sized width, large fonts and long names never move the Close control sideways, hide operations, crush
   the canvas or require interior jumps. Confirm with real browser geometry, not only jsdom render tests.
 
+### Stage 5 progress: stable company workspace (local, after 9ad1d21)
+
+**Bounded prototype, not Stage 5 completion.** Two rented office floors total now trigger the company overview,
+including one US plus one European floor. Café/garage stay compact; a single rented floor uses its existing interior
+rather than the multi-floor overview. Desktop
+uses building-left / operations-right columns from 960px; phones keep a compact overview above a separately scrolling
+operating workspace. A height-limited, independently scrolling company toolbar also protects operations on short
+phones with enlarged controls. The scene host stays the same DOM element when a second floor opens: expansion and floor/team
+selection do not remount the Pixi canvas. The operations column scrolls independently of the building.
+
+Floor buttons now have explicit selected state and only select operating context. The obsolete `SceneView` signal /
+`setView` API, floor-back navigation and `OfficeTabs` component are retired. Management's **Show** action is replaced
+by **Select team**, which returns to that team's operations, not an interior. Individual inspection remains in People.
+Space on a focused native control or editable field is no longer swallowed by the global pause hotkey; deliberate
+background Space remains available and held-key repeats do not repeatedly toggle speed. No automatic pause/resume,
+team reassignment, free capacity, saved simulation field, save-version change, cost or bot-policy change is introduced.
+
+**Verification:** all **87 Tycoon files / 1,415 tests pass**, including six new workspace/keyboard regressions.
+Full repository: **202 files / 2,795 tests pass**, sole failure still
+`tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — **`Test timed out in 5000ms.`**
+Unrelated HR/timeout unchanged. Final typecheck and production build pass. Logs:
+`/tmp/stage5-workspace-full-final.log`, `-types-final.log`, `-build-final.log` (full run 359 seconds).
+
+**Browser:** **18 workspace cases pass**: café, one floor, US+Europe and ten-floor/120-person synthetic companies
+at **1280/390/320 × 900**, plus **28px control-font** cases at desktop/320px and short **320×568**. Long product/person
+names, context-only selection, native Space activation, stable scene/canvas identity, page/workspace/dialog overflow,
+reachable Close and retained manual pause are checked. The short-phone enlarged-font gate initially failed because
+the toolbar consumed the operating area; the company-only height limit/toolbar scroll fixes it. Both scene and
+operations retain explicit minimum geometry checks. Desktop and short-phone screenshots visually inspected.
+The renderer exposes first-frame readiness: tests wait for actual atlas/render startup, not just an attached blank
+canvas, and allow WebGL repaint after resize. No CSP bypass/relaxation used for font stress. Log:
+`/tmp/stage5-workspace-browser-verified.log`; images `/tmp/tycoon-stage5-workspace-shots`.
+All **12 Stage 4 family browser regressions** also pass against the new workspace (Medium Cloud/Data/XR and Small
+Cloud control × 1280/390/320px), including real pending initiative assignment/autosave, preserved other-floor care
+and manual pause. Log `/tmp/stage5-family-browser.log`; aggregate `-browser.exit` is 0.
+Scripts: `stage5-workspace-fixtures.ts`, `stage5-workspace-browser.mjs`; tests `company-workspace-ui.test.tsx`.
+
+**Economy evidence unchanged:** no balance coefficients or default policies changed, so this UI-only slice does not
+claim a new bot comparison or an improvement over `9ad1d21`'s four-seed baseline. Stage 4's outstanding economics remain open.
+
+**Still open:** migrate desk/remote assignments before removing those controls/penalties; prototype Studio's
+Company/Industry/Journey grouping; remove post-hit Products / generic Start project only after Operations feature
+parity, plus the remaining navigation/keyboard/touch audit. This slice does not delete those existing entry points
+prematurely, settle Stage 4's economic acceptance,
+or invent Stage 6 founder economics. No player journals used. New workspace work remains uncommitted.
+
+### Stage 5 progress: physical teams and navigation parity (local, after 9ad1d21)
+
+The assignment/navigation items left open in the prototype above are implemented for the operating-company path.
+This does **not** declare Stage 4 economics, Stage 6, Stage 7 or human UX acceptance complete. No commit/push/deploy.
+Save version remains **11**; no simulation coefficient, paid-work reset, free staff/slot or default bot policy change.
+
+**One physical delivery team per floor.** People has a single capacity/region-checked staffing-transfer selector,
+not separate desk and remote-project selectors. The existing v7→v8 migration already removes old remote memberships
+without moving physical homes/regions or deleting people. New boundary tests check people/appearance, cash, RNG and
+paid project identity/absolute progress through that migration. Current managed teams now also ignore stray legacy
+`teamId` metadata, so it cannot reintroduce duplicate/remote capacity or a remote penalty. Full/cross-region transfers
+still reject atomically. Old pre-Operations helper APIs remain for legacy simulation compatibility, not as player
+controls; do not restore their UI or allow them to bypass operating reservations.
+
+**Studio grouping and parity.** Operating companies have Company, Industry and Journey. Pre-Operations discovery
+keeps Products. Company owns progressively disclosed metrics/history and products/ecosystem; Journey owns current
+stage goals, company chapters and progressively disclosed milestones. Historical company valuations are explicitly
+not founder cash. Closed disclosures do not mount charts/tables. Tabs have linked panels, a single keyboard tab stop,
+and arrows/Home/End navigation. `stats`, `milestones` and post-hit `products` links resolve to the right parent and
+open the requested disclosure; replacing an already-open Studio link also updates its content.
+
+Every live ecosystem entry retains release history and an **Operate [product]** link. This chooses a validated,
+transient product context and returns to Operations without changing the selected floor, paid assignments, cash,
+RNG or pause. Retiring that selected side product safely falls back to the flagship. Managed catalogues no longer
+claim a fixed portfolio limit. Commercial/build/care decisions remain in Operations; pre-hit discovery and actual
+client-work entry points are preserved. No generic post-hit Start project entry is introduced.
+
+**Honest company metrics.** Charts filter to the current chapter, prefer the new company's sample on a shared
+founding day, and include today's actual cash rather than a stale same-day sample. Raw career history is retained;
+legacy saves with unknown company tenure get a safe current-only view, not fabricated historical attribution.
+Revenue is labelled company-to-date, distinct from historical chapter valuations.
+
+**Phone and keyboard follow-through.** Space on a native summary belongs to its disclosure, not the game-speed
+hotkey. The height-limited toolbar now protects café/garage as well as operating companies. A shared independently
+scrolling control area also prevents a long pre-hit client job/product build from clipping its controls below the
+viewport. Existing café/garage/one-floor interiors remain; expansion still preserves the exact scene/canvas host.
+
+**Tests:** all **90 Tycoon files / 1,432 tests pass**, including **17 additions** since the workspace prototype.
+Full repository: **205 files / 2,812 tests pass**, sole failure still
+`tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — **`Test timed out in 5000ms.`**
+Unrelated HR/timeout unchanged. Final typecheck and production build pass. Logs:
+`/tmp/stage5-navigation-full-final.log`, `-types-final.log`, `-build-final.log` (full run 359 seconds).
+Tests: `studio-navigation.test.tsx`, `physical-team-boundary.test.ts`, `company-history.test.ts`, plus native summary
+coverage in `company-workspace-ui.test.tsx`. Old smoke assertions were updated only for the deliberately retired
+six-tab/Works-on/Back-to-operations presentation; read-only catalogues still have no mutating product-action controls.
+
+**Final browser acceptance:** **64 cases pass against the final build**: **20 Studio/navigation**, **32 workspace**,
+and **12 Stage 4 family regressions**. Coverage includes café, garage, one floor, US+Europe and 120 staff at
+1280/390/320px; long rival/product/person/chapter names; Industry scrolling, company charts/table view and chapter /
+milestone disclosures; native keyboard tab/summary/button navigation; reachable Close; preserved manual pause and
+scene identity. Short 320×568 cases use 28px controls and include an actual assigned café client job and a normally
+paid garage product build (no completed-target/progress injection). Scroll-to-action geometry checks ensure their
+controls/bars remain reachable while the interior stays visible. Default layouts and the normal assignment/autosave /
+other-floor-care family path pass as well. Synthetic garage fixture counters/cash isolate layout; they are not an
+earnings/survival proof. Enlarged-control short-phone screenshot visually inspected.
+Logs: `/tmp/stage5-navigation-browser-final.log`, `-workspace-final.log`, `-family-final.log`; all three `.exit` files
+are 0. Scripts: `stage5-navigation-browser.mjs`, expanded `stage5-workspace-browser.mjs` /
+`stage5-workspace-fixtures.ts`; screenshots `/tmp/tycoon-stage5-navigation-shots` and
+`/tmp/tycoon-stage5-workspace-shots`. No CSP bypass or player journal. No new bot comparison claimed for this
+UI/read-model/boundary slice; normal operating allocations/costs and the default policy are unchanged.
+
+**Next implementation:** the player has since delegated and selected the explicit Stage 6 prototype rules below.
+Implement the versioned ledger and founding/interlude model; do not treat documented rules as shipped code. Do not
+guess reconstructable past proceeds or silently credit IPO market cap as cash. Its multi-chapter/reload gate and Stage 7's realistic-policy/12-seed, unattended and broader
+family-affordability checks remain outstanding. The player wants to try a new run **after** the remaining plan is
+implemented and checked, not between these slices. Keep new work uncommitted unless requested.
+
 **6. Career fortune and next-venture setup** — original feedback 11–12.
 - Add personal wealth/career standing independently of company cash and legacy valuations. Each exit yields an explicit,
   explained liquid/non-liquid outcome; do not count IPO market cap as cash or credit an exit twice after reload.
 - Offer investment + ambition presets with an affordable range and previews of starting team/footprint, commitments,
   scope/readiness goals and runway. Modest studio remains possible; ambitious starts skip obsolete café busywork rather
   than simply gifting enough cash to trivialise the same progression.
-- Choose exact exit ownership/liquidity assumptions and preset amounts during this stage; no invented final percentages
-  in this plan. Avoid a tax/dilution simulator unless it creates useful choices.
+- Exact prototype ownership/liquidity assumptions and preset amounts are now selected in **"Stage 6 decision"** below,
+  following explicit player delegation. They are not final balance; avoid a tax/dilution simulator.
 - Carry identity, skills, world time and relationships deliberately. Migrate existing `legacy` into labelled historical
   records; do not claim old valuations are exact reconstructable founder proceeds. Preserve bankrupt/ousted branches.
 - **Gate:** multi-chapter test of IPO -> venture -> sale -> venture -> retirement, reload at each transition, finite
   affordable investments, no negative/double-spent fortune, stable sprites and one company-name field.
+
+### Stage 6 decision: prototype founder economics (selected, not implemented)
+
+**Authority/status.** The player explicitly chose **"Choose and document prototype founder economics"** after the
+Stage 5 acceptance report. The following are selected prototype rules, **not measured/final balance** and not a
+reconstruction of old ownership. This resolves the financial-design decision; implementation may proceed without
+asking the player to choose percentages again. No runtime/schema changes accompany this design record. Current
+saves remain v11; plan v12 for the first integrated finance/charter schema. Stage 6 and Stage 4/7 acceptance stay open.
+
+#### Ownership and three separate accounts
+
+- **New companies:** your stake is **50% with the returning cofounder, 100% when founding alone**. Freeze this at
+  founding; a person's later departure, office transfer or dismissal does not change ownership. This is a deliberately
+  simple founder model, not a cap-table simulator. Existing investor events sell temporary revenue participation,
+  not equity: they must not silently dilute this stake. No new tax, equity-financing, interest or automatic dividends.
+- **Company cash** pays normal rent, salaries, deposits, projects and research. **Personal liquid cash** can fund a new
+  company. **Illiquid holdings** record retained stakes at their exit valuation, not spendable money or live market
+  quotes. Do not label the sum as current net worth; show valuation date and distinguish unpriced holdings.
+- **First run unchanged:** the existing $2,500 café savings are the initial company investment, with $0 additional
+  private cash. No new reserve, employee, knowledge, project, bonus or day-to-day economic coefficient for chapter 1.
+- Money transfers are finite, nonnegative **whole dollars**, rounded down; validate safe-integer amounts. Company
+  operating balances may retain their existing precision. Starting investment is not earned revenue/profit, and cannot
+  be credited back to the private account while the company runs. No overdraft, equity-backed borrowing or implicit top-up.
+
+#### Exit settlement (one immutable settlement per career/company identity)
+
+Let `s` be the frozen ownership fraction and `V` the actual recorded ending valuation. Previous private cash and
+previous holdings survive every ending; only the current company's claim is settled. Previewing never books money.
+
+| Ending | New liquid personal proceeds | Retained claim |
+| --- | --- | --- |
+| Sale | `floor(s × max(0, ending.worth))` | None; the current company stake is sold. |
+| IPO | `floor(10% × floor(s × V))` | Remaining founder stake, booked at `floor(s × V) − liquid`; 90% of your pre-IPO stake is retained. |
+| Retirement/handover | `floor(s × max(0, closing company cash))` | `max(0, floor(s × V) − liquid)` at handover valuation; not automatically liquidated. |
+| Bankruptcy | $0 | Current company equity written off; no confiscation of earlier private wealth. |
+| Ousting | $0 | Current stake retained as **unpriced/disputed**, excluded from spendable cash and priced totals; no invented buyout. |
+
+**Important source semantics:** `acceptBuyout()` already adds the offer to company cash and writes that combined
+closing pot to `ending.worth`. Use that pot **once**; do not add `ending.price` or company cash again. Negative
+closing pots give no distribution. IPO valuation already includes corporate cash: no separate cash distribution at
+IPO. The 10% secondary sale is **10% of your stake**, not 10 percentage points of the whole company; it does not inject
+money into the company. Retirement distributes only existing positive cash, never its earnings multiple.
+
+Examples at a 50% stake: a $100M IPO produces **$5M liquid + $45M illiquid**; a sale with $18M offer plus $2M pre-sale
+cash produces **$10M liquid**, not $19M or $20M; handing over a $20M company with $2M cash produces **$1M liquid +
+$9M illiquid**. Later bankruptcy leaves these earlier private assets intact. No automatic appreciation, sale or
+recurring payouts from frozen holdings in this prototype; any future liquidity feature needs explicit terms/tests.
+
+Book settlement at the ending boundary, not on every Game Over render or every new-company preview. Persist its
+model version, company identity, source facts, ownership, cash credit and holding entry. One ledger key per settlement;
+reload/retry must return the recorded result, not credit again. Company reports may retain their closing figures as
+history, but that ended company cannot continue spending them. A start-over **new game** remains an explicitly separate
+career/reset action; starting a new venture is not that action.
+
+#### Paid founding: footprint, investment and real runway
+
+Presets choose a starting footprint/ambition, not gifted products or a licence to buy achievements. Defaults below
+are **target total investments**, entirely debited from private liquid cash. Setup/hiring is then paid **from that same
+company investment**, not charged a second time privately. No automatic transfer is made by opening setup.
+
+| Preset | Nominal default | Paid starting footprint / staffing | Additional ambition/readiness |
+| --- | --- | --- | --- |
+| Modest | $15,000 | Café; returning founders, or solo founder plus an ordinary paid developer. | Medium-or-larger flagship, one effective rented delivery floor, 90 consecutive profitable days. |
+| Studio | $150,000 | Garage; ordinary local hires to cover design/engineering/QA, at most its four desks. | Large-or-larger flagship, two output-capable floors, shared reliability coverage, 90 consecutive profitable days. |
+| Venture | $1,000,000 | One US rented floor; founders plus selected offers from the normal four-person local candidate pool, within 12 desks. | Flagship-sized product, three output-capable floors including Europe, shared reliability coverage, 180 consecutive profitable days and the existing 90-day rival lead. |
+
+All three require a live flagship with **fit ≥50, freshness ≥60%, bug density <10** at readiness check. This reuses
+current health thresholds, not a new hidden-fit bonus. Existing stage/IPO requirements still apply; none are waived by
+cash. These charter conditions are additional IPO readiness, while sale/retirement remain available if an ambition is
+not met. Record ambition fulfilment separately (sticky, no cash prize); IPO also requires current live readiness.
+Chapter 1/legacy companies use **Standard** ambition (existing rules only), so this does not quietly harden their IPO.
+
+- Setup uses normal prices: $1,000 garage deposit; a rented-floor start pays the garage-equivalent $1,000 plus the
+  existing $40,000 move-out cost. Later floors/Europe retain their normal prices/gates. No deposit/rent holiday.
+  Pay real signing fees and current-world salaries for actual local candidates; no extra candidate rerolls or invented
+  elite team. A missing/expensive hire is shown explicitly. The Venture preset promises desks, **not eight free people**.
+- Preview uses the selected product-family focus to quote an initial **Small** build allowance (Modest/Studio) or
+  **Medium** allowance (Venture), via the normal budget calculation. This is reserved cash, not a prepaid/started project
+  or permission to bypass research. Practices remain inactive until explicitly paid to re-establish.
+- `minimum = setup + signing fees + build allowance + 3 × monthly recurring burn`.
+  `default = max(nominal default, setup + fees + allowance + 6 × monthly recurring burn)`.
+  Round quotes up to whole dollars. Recurring burn uses actual selected staff, founder pay, region/day, rent and
+  unavoidable standing costs, with **zero speculative product/client revenue**. Runway preview clearly excludes the
+  reserved build allowance and notes unexpected events/pricing/salaries can change it; this is not a survival guarantee.
+- Allowed custom investment: **minimum through available private liquid cash**. A preset with minimum above cash is
+  disabled, not subsidised. If its default is too high but its minimum is affordable, offer a lower custom amount with
+  the exact shorter runway. Preview actual headcount, vacant desks, setup cost, remaining company cash and private
+  reserve. A larger transfer does not waive charter goals or turn into recorded business income.
+- Direct garage/office starts explicitly skip obsolete introductory jobs/repeated garage shipping, not product-market
+  fit. Journey labels those steps **not applicable to this charter**, not completed/earned. No skipped-step milestone
+  payouts, research completion, products, customers, staff grades or free regional capacity. All later progress starts
+  from actual new-company work. Product focus is a planning choice, not an automatically selected project.
+- Career standing is descriptive: completed companies, fulfilled ambitions, failed companies and career peaks/tenure,
+  separate from current-company progress. No hidden percentage buffs or extra seed money from prestige.
+
+#### No-cash recovery is work, not another inheritance
+
+If a founder cannot afford a modest start, offer **explicit paid consulting between companies**, never automatic cash
+or negative wealth. One ordinary contract lasts **30 world days** and credits **50% of the founder's full-market
+monthly salary** at its start (normal current-day skills/grade/trait/region calculation, without founder-pay discount;
+the other half represents personal living costs). Quote the exact integer payout first; user confirms each contract.
+All salary inputs/modifiers are evaluated at contract start: do not carry an old company's investor/revenue modifiers
+into personal pay. The next contract uses its new world date. Save and resume partial contracts; credit once only on
+completion. These are elapsed game days, not a hidden real-time delay or an automatic choice timer.
+
+World time, rivals, era and market must advance through a dedicated between-companies path; `advanceDay()` currently
+returns immediately for `gameOver` and is **not** sufficient. The old company remains ended, with no continued wages,
+product revenue, research, milestone rewards or staff work. No free personal training/skill gain during this interlude.
+This preserves a bankrupt/ousted founder's recovery path without resetting the world or quietly generating a subsidy.
+
+#### Existing saves and implementation/acceptance contract
+
+- Preserve company money, active paid work/progress, people/appearance, knowledge, research practices, RNG and world day
+  on migration. Existing `legacy[]` entries become explicitly **historical company valuations, proceeds unknown**;
+  never add their sum or retroactively cash them out. Current legacy corporate cash is not retrocharged as a new loan.
+- Old active companies adopt a labelled **50% assumed stake prospectively** (historical ownership was not recorded),
+  Standard ambition and $0 reconstructed private reserve. This is an explicit prototype assumption, not an inferred
+  historical cap table; no credit merely for loading. New companies thereafter use actual solo/cofounder founding terms.
+- For a v11 company **already ended**, preserve that ending and offer an explicit **Apply prototype settlement** with
+  the 50% assumption and exact preview, once, for **that current ending only**. Alternatively leave it as an unpriced
+  historical outcome and use consulting. Never settle earlier legacy chapters. Mark the chosen adoption durably before
+  further founding/consulting; reload cannot offer another credit. Do not require abandoning an existing ended save.
+- Identity/appearance/skills carry on all branches; successful branches may bring the friend, failed branches remain
+  solo under existing relationship rules. Next-company setup asks **one company name**, not a renamed founder.
+- Implement a versioned finance/charter ledger first, then atomic settlement and paid founding, then consulting/world
+  interlude/UI. Quote generation must not consume live RNG or mutate ended state; confirmation revalidates the quote,
+  current cash and costs, including persisted career/company identity so a stale tab cannot overwrite its successor.
+  Failed validation/storage must leave the ended save recoverable, with no lost/double transfer.
+- Required tests: all five exits; odd-dollar rounding and invalid inputs; zero/negative closing pots; sale double-count
+  prevention; frozen ownership after departures; retained prior wealth through failure; repeated settlement and reload;
+  aborted/failed-save founding; unaffordable/custom/runway quotes; paid physical local hires; old active/ended save
+  adoption; consulting resume/credit/world advancement; and IPO → venture → sale → venture → retirement with reloads.
+- Acceptance still needs real optional observed-information bot decisions, diverse affordable venture starts and the
+  full Stage 4/7 12-seed/unattended/neglect/recovery matrix. Defaults/charter targets above are hypotheses until that
+  evidence exists. Do not call the whole plan complete or ask the player to start their new run yet.
 
 **7. Balance, usability and acceptance** — before calling the iteration complete.
 - Update the bot for allocations, leadership, milestones and founding choices; remove dependencies on hidden true-fit

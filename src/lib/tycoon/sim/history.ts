@@ -23,3 +23,16 @@ export function historyWithNow(state: GameState): HistoryPoint[] {
   const last = state.history[state.history.length - 1]
   return last && last.day >= state.day ? state.history : [...state.history, sampleNow(state)]
 }
+
+/** Company charts never silently combine previous ventures with today's company totals. Raw career history is retained. */
+export function companyHistoryWithNow(state: GameState): HistoryPoint[] {
+  const byDay = new Map<number, HistoryPoint>()
+  const start = state.chapterStartDay ?? 0
+  const knownStart = (state.chapter ?? 1) === 1 || state.chapterStartDay !== undefined
+  if (knownStart) for (const point of state.history) {
+    if (point.day >= start && point.day <= state.day) byDay.set(point.day, point)
+  }
+  // Last sample wins on a founding day shared by two ventures; today's actual cash wins over a stale monthly sample.
+  byDay.set(state.day, sampleNow(state))
+  return [...byDay.values()].sort((a, b) => a.day - b.day)
+}

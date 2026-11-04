@@ -2036,3 +2036,67 @@
 .research-carryover { min-width: 0; overflow-wrap: anywhere; }
 .research-carryover ul { padding-left: 1.2rem; }
 .research-carryover li { margin-block: .5rem; }
+
+/* Shared toolbar protection also keeps pre-hit actions usable with enlarged controls on short phones. */
+.tycoon-root .topbar {
+  flex: 0 0 auto;
+  max-height: 35dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.tycoon-root .company-workspace,
+.tycoon-root .workspace-scene { display: contents; }
+/* Keep even a long pre-hit build/job panel scrollable instead of clipping its controls below the viewport. */
+.tycoon-root .workspace-operations {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.tycoon-root .workspace-operations > .hit-panel { overflow: visible; }
+.tycoon-root .company-overview {
+  display: grid;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-rows: clamp(220px, 26dvh, 280px) minmax(0, 1fr);
+}
+.tycoon-root .company-overview .workspace-scene {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.tycoon-root .company-overview .scene-host {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+}
+.tycoon-root .company-overview .workspace-operations {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.tycoon-root .company-overview .hit-panel { overflow: visible; }
+.tycoon-root .company-overview .operations-panel { padding: 8px 12px; }
+@media (min-width: 960px) {
+  .tycoon-root .company-overview {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .tycoon-root .company-overview .workspace-operations { border-left: 1px solid var(--line); }
+}
+
+.tycoon-root .studio-section { margin-top: 16px; min-width: 0; }
+.tycoon-root .studio-section > summary { min-height: 44px; padding: 8px 0; cursor: pointer; font-weight: 700; }
+.tycoon-root .studio-section li { overflow-wrap: anywhere; }
+.tycoon-root .studio-section .tiles .value { overflow-wrap: anywhere; }
+
+.tycoon-root .product-navigation { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

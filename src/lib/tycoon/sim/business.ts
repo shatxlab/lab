@@ -1,3 +1,4 @@
+import { operatingGrowth } from './services'
 import { DAYS_PER_MONTH, OUTAGE_LOAD } from './balance'
 import { companionEffects } from './companions'
 import { cashRunwayDays, dailyIncome, monthlySalaries } from './economy'
@@ -26,7 +27,7 @@ export function businessOverview(state: GameState) {
   }
   const companions = companionEffects(state)
   const products = state.products.filter((product) => product.hit).map((product) => {
-    const growth = worldGrowth(product, product.id === state.signatureId ? companions.reach : 0)
+    const growth = worldGrowth(product, operatingGrowth(state, product) + (product.id === state.signatureId ? companions.reach : 0))
     const limits: string[] = []
     if (growth.capacityBlocked) limits.push('Servers are full: demand-pull growth is blocked.')
     else if (loadOf(product) >= OUTAGE_LOAD) limits.push('Server load is high: an outage can lose users.')

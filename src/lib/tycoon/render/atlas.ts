@@ -77,7 +77,7 @@ export interface Atlas {
    * Without a pose they stand, legs and all; a pose sits them at a desk or draws them mid-action, and `blink` with their eyes shut; either is drawn on a
    * frame padded on both sides (see `POSE_PAD`).
    */
-  character(id: number, pose?: Pose, blink?: boolean): Texture
+  character(id: number, pose?: Pose, blink?: boolean, highTable?: boolean): Texture
   /** What is on a desk: a laptop, or a PC with its monitor and keyboard. */
   workstation(kind: WorkstationKind): Texture
   /** The dog with its tail cut off, so the tail can be drawn (and wiggled) on its own. */
@@ -142,14 +142,14 @@ export async function loadAtlas(): Promise<Atlas> {
   }
 
   const people = new Map<string, Texture>()
-  const person = (id: number, pose?: Pose, blink = false): Texture => {
+  const person = (id: number, pose?: Pose, blink = false, highTable = false): Texture => {
     const { character, hair, shirt } = appearanceFor(id)
     const base = frame(`char${character}` as FrameName)
     const eyes = blink ? blinkPatch(character) : undefined
-    const patches = [...(pose ? posePatches(character, pose) : []), ...(eyes ? [eyes] : [])]
+    const patches = [...(pose ? posePatches(character, pose, highTable) : []), ...(eyes ? [eyes] : [])]
     if (!pixels || (hair === 0 && shirt === 0 && patches.length === 0)) return base
 
-    const key = `${character}/${hair}/${shirt}/${pose ?? ''}/${eyes ? 'shut' : ''}`
+    const key = `${character}/${hair}/${shirt}/${pose ?? ''}/${eyes ? 'shut' : ''}/${highTable ? 'high' : ''}`
     let texture = people.get(key)
     if (!texture) {
       const [x0, y0, width, height] = CHARACTER_FRAMES[character]

@@ -1,7 +1,10 @@
+import { initialiseOperations } from './operations'
+import { isFloorAssignment } from './operating-contract'
 import { getRandomEvent } from '@/lib/tycoon/data/events'
 import { getMilestone } from '@/lib/tycoon/data/milestones'
 import { getResearch } from '@/lib/tycoon/data/research'
 import { isKnownTrait } from '@/lib/tycoon/data/traits'
+import { ALL_ITEMS } from '@/lib/tycoon/data/workstreams'
 import { FEATURES } from '@/lib/tycoon/data/features'
 import { PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import { STAGES } from '@/lib/tycoon/data/stages'
@@ -20,9 +23,10 @@ import { DISCIPLINES, PROJECT_SIZE_IDS, REGIONS, STATS, TIERS, type GameState } 
  * fixing to a developer and tester pair, hid an update's new bugs for a while and added selling products.
  * Version 5 made the two people who start the studio founders: they never leave and draw half pay.
  * Version 6 put a café before the garage, a journey stage of its own, so every later stage moved up one.
- * Version 3 to 6 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
+ * Version 8 replaces the global hit turn with explicit floor reservations and staffed office research.
+ * Version 3 to 7 saves are upgraded on load (see `upgradeFromV3`, `upgradeFromV4`, `upgradeFromV5`, `upgradeFromV6`); older ones can't be carried over.
  */
-export const STATE_VERSION = 7
+export const STATE_VERSION = 8
 
 export function createInitialState(seed: number): GameState {
   const state: GameState = {
@@ -115,7 +119,7 @@ function validResearch(v: unknown): boolean {
     isObj(v) &&
     Array.isArray(v.done) &&
     v.done.every((id) => typeof id === 'string') &&
-    (v.active === null || (isObj(v.active) && typeof v.active.id === 'string' && isNum(v.active.finishDay) && (v.active.target === undefined || typeof v.active.target === 'string')))
+    (v.active === null || (isObj(v.active) && typeof v.active.id === 'string' && isNum(v.active.finishDay) && (v.active.remainingWork === undefined || (isNum(v.active.remainingWork) && v.active.remainingWork >= 0)) && (v.active.target === undefined || typeof v.active.target === 'string')))
   )
 }
 
@@ -304,6 +308,15 @@ function validRetired(v: unknown): boolean {
 
 function validOffice(v: unknown, products: unknown[]): boolean {
   if (!isObj(v) || !isNum(v.id) || !Object.keys(OFFICE_KINDS).includes(v.kind as string) || !Number.isInteger(v.theme) || (v.region !== undefined && !knownRegion(v.region))) return false
+  if (v.assignment !== undefined) {
+    if (!isFloorAssignment(v.assignment) || v.kind !== 'office') return false
+    const a = v.assignment
+    if (a.kind !== 'idle' && !products.some((p) => isObj(p) && p.id === a.productId)) return false
+    if (a.kind === 'standing' && v.project !== null) return false
+    if (a.kind === 'initiative' && (!isObj(v.project) || v.project.id !== a.projectId || v.project.parentId !== a.productId)) return false
+    if (a.kind === 'initiative' && a.proposal.kind === 'item' && !ALL_ITEMS.some((item) => item.id === a.proposal.id)) return false
+    if (a.kind === 'initiative' && a.proposal.kind === 'feature' && !knownFeature(a.proposal.id)) return false
+  }
   const project = v.project
   if (project === null) return true
   if (!validProject(project) || !isObj(project)) return false
@@ -446,7 +459,7 @@ function upgradeFromV6(raw: unknown): unknown {
     const { direction, ...rest } = office
     return typeof direction === 'string' && stream[direction] ? { ...rest, workstream: stream[direction] } : rest
   }
-  return { ...raw, version: STATE_VERSION, offices: Array.isArray(raw.offices) ? raw.offices.map(floor) : raw.offices }
+  return { ...raw, version: 7, offices: Array.isArray(raw.offices) ? raw.offices.map(floor) : raw.offices }
 }
 
 /** The people hired on day 0 in a save from before founders existed become the founders. */
@@ -494,9 +507,11 @@ export function deserialize(json: string): GameState | null {
   try {
     const raw: unknown = JSON.parse(json)
     const from = isObj(raw) && typeof raw.version === 'number' ? raw.version : 0
-    const parsed = dropRemovedContent(upgradeFromV6(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw)))))
+    const legacy = upgradeFromV6(upgradeFromV5(upgradeFromV4(upgradeFromV3(raw))))
+    const parsed = dropRemovedContent(isObj(legacy) && legacy.version === 7 ? { ...legacy, version: STATE_VERSION } : legacy)
     if (!validState(parsed)) return null
     const state: GameState = { ...parsed, dayWork: [], events: [] }
+    if (from < 8) initialiseOperations(state)
     if (from === 3) rivalsArrive(state, true) // the market grew since version 3: the studios due by now move in
     if (from >= 3 && from < STATE_VERSION) markFounders(state)
     return state

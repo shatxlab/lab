@@ -40,6 +40,7 @@ const price = (amount: number, floor: number) => Math.max(floor, Math.round(amou
 
 /** Why `office` can't take on work on this product right now (an update or a fix), or null when it can. */
 export function productWorkBlocker(state: GameState, office: Office, product: Product, byTeam = false): string | null {
+  if (!byTeam && office.assignment && office.assignment.kind !== 'idle') return 'Reassign the floor in Operations first'
   if (office.project) return 'A project is in progress'
   if (teamOf(state, office).length === 0) return 'Hire someone first'
   return productInWork(state, product.id, byTeam) ? 'Another team is working on it' : null

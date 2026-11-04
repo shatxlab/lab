@@ -1,12 +1,17 @@
 import { WORKSTATIONS } from './workstations'
 
-/** Desk top width in sprite pixels; the pixi-free copy of furniture.ts's DESK_WIDTH, guarded by a test. */
-export const CAFE_DESK_WIDTH = 17
+/** The same pedestal-table/stool silhouette as the guest tables, widened only for two laptops. */
+export const FOUNDER_TABLE = { left: 23, width: 30, feet: 36, top: 21 } as const
 
-/** A 4x3 cup spans rows bottom-3..bottom-1: one clear row under the laptop and one above the desk's front edge. */
-/** Centre x and bottom row of a café desk's cup: in the clear strip below the laptop, centred under it. */
-export function deskCupAnchor(deskX: number, py: number, right: boolean): [x: number, bottom: number] {
-  const laptop = WORKSTATIONS.laptop
-  const left = right ? CAFE_DESK_WIDTH - laptop.gap - laptop.width : laptop.gap
-  return [deskX + left + Math.floor(laptop.width / 2), py + 29]
+/** Laptop bottoms rest on the tabletop. No founder cups: the clear centre is intentional. */
+export function founderCafeStation(px: number, py: number, right: boolean) {
+  const tableX = px + FOUNDER_TABLE.left
+  const top = py + FOUNDER_TABLE.top
+  return {
+    // Bring the whole seated figure and its stool 2px inward; do not lengthen the arms.
+    seatX: px + (right ? 57.5 : 18.5),
+    feet: py + FOUNDER_TABLE.feet,
+    laptopX: right ? tableX + FOUNDER_TABLE.width - WORKSTATIONS.laptop.width : tableX,
+    laptopY: top - WORKSTATIONS.laptop.height + 1,
+  }
 }

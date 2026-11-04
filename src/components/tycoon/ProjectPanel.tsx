@@ -74,6 +74,7 @@ export function ProjectPanel() {
   const project = office.project
 
   // The hit's team works from the company's plan: the panel for that is `HitPanel`.
+  if (office.assignment) return null
   if (cycleProduct(state) && office.productId === state.signatureId && (!project || project.byTeam)) return null
 
   if (!project) {

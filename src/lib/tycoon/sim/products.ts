@@ -1,3 +1,4 @@
+import { operatingGrowth } from './services'
 import { companionEffects } from './companions'
 import { retention } from './fit'
 import { growWorld, loadDay, payFactor, worldOf } from './scale'
@@ -264,7 +265,7 @@ export function productsDay(state: GameState): void {
     if (loyal > 0) product.loyalUsers = loyal
 
     loadDay(state, product)
-    growWorld(product, product.id === state.signatureId ? companionEffects(state).reach : 0)
+    growWorld(product, operatingGrowth(state, product) + (product.id === state.signatureId ? companionEffects(state).reach : 0))
     const before = bugDensity(product)
     surfaceBugs(product)
     product.bugs += bugsFoundPerDay(product)

@@ -9,6 +9,7 @@ import { useGame, useStore } from './context'
 export function ProductTeam({ product }: { product: Product }) {
   const store = useStore()
   const state = useGame()
+  if (state.offices.some((o) => o.assignment)) return <p className="muted">Assign delivery teams from Company operations. <button onClick={() => store.openDialog({ kind: 'releases', productId: product.id })}>Releases…</button></p>
   if (inGarage(state)) return null
   const owner = ownerOf(state, product.id)
 

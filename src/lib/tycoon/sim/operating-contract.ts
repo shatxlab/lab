@@ -1,8 +1,8 @@
 import type { Proposal, SimEvent } from './types'
 
-/** Stage 2 persistence boundary. Not yet attached to Office or executed by the version-7 engine.
+/** Version-8 floor reservation, executed by operations/work/teams.
  * Keep exactly one value per floor: no queue, implicit helpers or simultaneous standing/build work.
- * Activation requires a semantic save migration together with replacement of the global cycle.
+ * Legacy v7 work is migrated at the persistence boundary.
  */
 export type FloorAssignment =
   | { kind: 'idle' }
@@ -44,7 +44,7 @@ export function standingService(service: StandingService['service'], provided: n
     risk: demand > provided ? 'Demand exceeds provided service; more coverage is needed.' : null }
 }
 
-/** Future operations routing policy, deliberately not wired into the legacy modal clock yet. */
+/** Routine operations are informational; explicit choices/endings remain blocking. */
 export function operationEventMode(event: SimEvent): 'blocking' | 'informational' {
   switch (event.type) {
     case 'randomEvent':

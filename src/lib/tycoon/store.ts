@@ -1,3 +1,5 @@
+import { assignOperation, type OperationChoice } from './sim/operations'
+import { operating } from './sim/services'
 import { signal, type Signal } from './signals'
 import { silentSfx, type SfxPlayer } from '@/lib/tycoon/audio'
 import { becomePm, promote } from '@/lib/tycoon/sim/careers'
@@ -172,6 +174,7 @@ export interface Store {
   setWorkstream(officeId: number, workstream: Workstream): Result
   setRoadmap(productId: number, itemIds: readonly string[]): Result
   /** Plays a card of the company's plan. */
+  assignOperation(officeId: number, choice: OperationChoice, confirmed?: boolean): Result
   chooseCard(index: number): Result
   /** Sends the analysts back to the numbers: days pass, and the plan comes back clearer. */
   researchPlan(): Result
@@ -228,7 +231,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
     if (result.ok) sfx.play(sound)
     return result
   }
-  const running = () => speed.value > 0 && dialog.value === null && !state.gameOver && !awaitingChoice(state)
+  const dialogBlocks = () => dialog.value !== null && (!operating(state) || ['event', 'offer', 'game-over', 'ipo', 'breakout', 'ready', 'founding', 'move-out'].includes(dialog.value.kind))
+  const running = () => speed.value > 0 && !(operating(state) && (state.pendingEvent || state.exit.pending)) && !dialogBlocks() && !state.gameOver && !awaitingChoice(state)
 
   /** Describes a command from the state the player saw, runs it, and writes it to the run's log if it worked. */
   const logged = <R extends Result>(describe: () => Decision, run: () => R): R => {
@@ -302,6 +306,11 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       for (const event of ready) dialogs.push({ kind: 'ready', officeId: event.officeId })
       if (ready.length > 0) sfx.play('ready')
     }
+    // An explicit decision preempts routine inspection without discarding the inspected panel.
+    if (operating(state) && dialogs.some((d) => ['event', 'offer', 'game-over', 'ipo'].includes(d.kind)) && dialog.value && !dialogBlocks()) {
+      queue.unshift(dialog.value)
+      dialog.value = null
+    }
     show(dialogs)
     return dialogs.length > 0
   }
@@ -326,7 +335,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
         advanceDay(state)
         advanced = true
         // A dialog or a plan waiting for the player stops the clock in the same frame.
-        if (handleEvents(drainEvents(state)) || !running()) {
+        handleEvents(drainEvents(state))
+        if (!running()) {
           carryMs = 0
           break
         }
@@ -572,6 +582,10 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
 
     setWorkstream(officeId, workstream) {
       return cue(changed(logged(() => decisions.setWorkstream(state, officeId, workstream), () => setWorkstream(state, officeId, workstream))), 'click')
+    },
+
+    assignOperation(officeId, choice, confirmed = false) {
+      return changed(assignOperation(state, officeId, choice, confirmed))
     },
 
     chooseCard(index) {

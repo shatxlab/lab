@@ -1,3 +1,4 @@
+import { operating, serviceOutput } from './services'
 import { AUDIENCES, getAudience } from '@/lib/tycoon/data/audiences'
 import { eraIndexAt, eraPhrase, ERAS } from '@/lib/tycoon/data/eras'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
@@ -24,6 +25,7 @@ export function researchBlocker(state: GameState, node: ResearchNode): string | 
   const missing = node.requires.find((id) => !isResearched(state, id))
   if (missing) return `Needs ${getResearch(missing)?.name ?? missing}`
   if (node.repeatable === 'audience' && studyTargets(state).length === 0) return 'Every audience is studied'
+  if (operating(state) && !state.offices.some((o) => o.assignment?.kind === 'standing' && o.assignment.service === 'research' && serviceOutput(state, o, 'research') > 0)) return 'Assign a floor with analysts to research first'
   if (state.money < node.cost) return 'Not enough money'
   return null
 }
@@ -36,7 +38,7 @@ export function startResearch(state: GameState, id: string, target?: string): Re
   if (blocker) return fail(blocker)
   if (node.repeatable === 'audience' && (target === undefined || !studyTargets(state).includes(target))) return fail('Pick an audience to study')
   state.money -= node.cost
-  state.research.active = { id, finishDay: state.day + node.days, ...(node.repeatable ? { target } : {}) }
+  state.research.active = { id, finishDay: state.day + node.days, ...(operating(state) ? { remainingWork: node.days } : {}), ...(node.repeatable ? { target } : {}) }
   return OK
 }
 
@@ -53,7 +55,13 @@ export function completionText(node: ResearchNode): string {
 /** Finishes the active research once its day arrives. */
 export function researchDay(state: GameState): void {
   const active = state.research.active
-  if (!active || state.day < active.finishDay) return
+  if (!active) return
+  if (operating(state)) {
+    const output = state.offices.reduce((sum, o) => sum + (o.assignment?.kind === 'standing' && o.assignment.service === 'research' ? serviceOutput(state, o, 'research') : 0), 0)
+    active.remainingWork = Math.max(0, (active.remainingWork ?? Math.max(0, active.finishDay - state.day + 1)) - output)
+    active.finishDay = state.day + (output > 0 ? Math.ceil(active.remainingWork / output) : Math.ceil(active.remainingWork))
+    if (active.remainingWork > 0) return
+  } else if (state.day < active.finishDay) return
   state.research.active = null
   const node = getResearch(active.id)
   if (!node) return
@@ -69,5 +77,5 @@ export function researchDay(state: GameState): void {
 /** Days left on the active research, for display. */
 export function researchDaysLeft(state: GameState): number | null {
   const active = state.research.active
-  return active ? Math.max(0, active.finishDay - state.day) : null
+  return active ? operating(state) && !state.offices.some((o) => o.assignment?.kind === 'standing' && o.assignment.service === 'research' && serviceOutput(state, o, 'research') > 0) ? Infinity : Math.max(0, active.finishDay - state.day) : null
 }

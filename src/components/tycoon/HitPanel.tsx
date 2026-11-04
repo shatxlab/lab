@@ -1,3 +1,5 @@
+import { operating } from '@/lib/tycoon/sim/services'
+import { OperationsPanel } from './OperationsPanel'
 import { getDeepWork } from '@/lib/tycoon/data/deepwork'
 import { formatCount, formatMoney } from '@/lib/tycoon/format'
 import { getProductType } from '@/lib/tycoon/data/productTypes'
@@ -97,6 +99,7 @@ function PlanCards({ hit, plan }: { hit: Product; plan: Plan }) {
 export function HitPanel() {
   const state = useGame()
   const hit = cycleProduct(state)
+  if (operating(state)) return <OperationsPanel />
   if (!hit) return null
   const lead = state.offices.find((o) => o.project?.byTeam && o.project.parentId === hit.id)
   const project = lead?.project

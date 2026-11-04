@@ -1,3 +1,5 @@
+import { assignOperation, operationChoices } from '../../src/lib/tycoon/sim/operations.ts'
+import { serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
 // A scripted playthrough of the whole one-product game: the café, the garage hunt, the move out with the hit, then
 // the workstreams, Europe, companions, tools, Absorb and the IPO. Prints a timeline so pacing can be judged.
 //
@@ -171,7 +173,7 @@ function planRoadmap(h: Product): void {
 const STREAMS: Workstream[] = ['features', 'scale', 'growth', 'monetisation', 'quality', 'europe', 'tools', 'companions']
 
 function act2(h: Product): void {
-  planRoadmap(h)
+  if (!state.offices.some((o) => o.assignment)) planRoadmap(h)
   const floors = state.offices.filter((o) => o.kind === 'office')
   const available = (w: Workstream) => nextItem(state, h, w) !== undefined
   const wanted: Workstream[] = []
@@ -196,7 +198,7 @@ function act2(h: Product): void {
       stream = 'europe'
       europeTaken = true
     } else stream = wanted[Math.min(next++, wanted.length - 1)]
-    if (floor.workstream !== stream) setWorkstream(state, floor.id, stream)
+    if (!floor.assignment && floor.workstream !== stream) setWorkstream(state, floor.id, stream)
     floor.productId ??= h.id
     hireTo(floor, 12)
   })
@@ -211,6 +213,31 @@ function act2(h: Product): void {
   if (target) {
     const desks = absorbDesks(state, target)
     if (acquire(state, target.id, []).ok) say(`absorbs ${target.name} (${desks} desks free)`)
+  }
+}
+
+/** Explicit operations policy: research uses the analyst floor, one team covers reliability, others build. */
+function parallel(h: Product): void {
+  const researchNode = RESEARCH.filter((n) => !n.repeatable && !state.research.done.includes(n.id) && state.money > n.cost + monthlyBurn(state) * 3)
+    .find((n) => n.requires.every((id) => state.research.done.includes(id)))
+  for (const [i, floor] of state.offices.entries()) {
+    const a = floor.assignment
+    if (!a || floor.project) continue
+    if (i === 0 && (state.research.active || researchNode) && serviceOutput(state, floor, 'research') > 0) {
+      if (a.kind !== 'standing' || a.service !== 'research') assignOperation(state, floor.id, { kind: 'standing', productId: h.id, service: 'research' }, true)
+      research()
+      if (state.research.active) continue
+    }
+    if (i === 1 && h.bugs > 5 && serviceOutput(state, floor, 'reliability') > 0) {
+      if (a.kind !== 'standing' || a.service !== 'reliability') assignOperation(state, floor.id, { kind: 'standing', productId: h.id, service: 'reliability' }, true)
+      continue
+    }
+    const options = operationChoices(state, h, floor)
+    const card = options.find((c) => c.kind === 'item' && ALL_ITEMS.find((item) => item.id === c.id)?.workstream === 'scale' && loadOf(h) > 0.6)
+      ?? options.find((c) => c.kind === 'compliance' || c.kind === 'localise')
+      ?? options.find((c) => c.kind === 'feature')
+      ?? options.find((c) => c.kind === 'item') ?? options[0]
+    if (card && card.kind !== 'deep' && card.kind !== 'strike') assignOperation(state, floor.id, { kind: 'initiative', productId: h.id, proposal: { kind: card.kind, id: card.id } }, true)
   }
 }
 
@@ -297,7 +324,7 @@ function botStep(): void {
     const floor = state.offices.find((o) => (o.region ?? 'us') === 'us' && freeDesks(state, o) > 0)
     if (reader && floor && state.money > hireCost(reader) + 3 * monthlyBurn(state)) hire(state, reader.id, floor.id)
   }
-  if (h) plan(h)
+  if (h) { if (state.offices.some((o) => o.assignment)) parallel(h); else plan(h) }
   if (h && ipoBlocker(state) === null) {
     say(`goes public: ${formatMoney(state.money)} cash`)
     goPublic(state)

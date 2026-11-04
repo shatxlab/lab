@@ -1,3 +1,4 @@
+import { standingDay } from './operations'
 import { CANDIDATE_REFRESH_DAYS, DAYS_PER_MONTH } from './balance'
 import { companionsDay } from './companions'
 import { fitDay } from './fit'
@@ -42,6 +43,7 @@ export function advanceDay(state: GameState): void {
   fixesDay(state)
   workDay(state)
   teamDay(state)
+  standingDay(state)
   rivalsDay(state)
   nemesisDay(state)
   deepWorkDay(state)

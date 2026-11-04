@@ -35,7 +35,7 @@ export function assignProduct(state: GameState, officeId: number, productId: num
     return OK
   }
   if (!state.products.some((p) => p.id === productId)) return fail('Unknown product')
-  for (const other of state.offices) if (other.productId === productId) delete other.productId
+  for (const other of state.offices) if (!office.assignment && other.productId === productId) delete other.productId
   office.productId = productId
   office.workstream ??= DEFAULT_WORKSTREAM
   return OK
@@ -194,18 +194,20 @@ export function teamDay(state: GameState): void {
       delete office.idleSince
       if (project.byTeam && project.kind === 'update' && isReady(project)) {
         const name = project.name
-        const owner = ownedProduct(state, office)
+        const owner = state.products.find((p) => p.id === project.parentId)
         if (shipProject(state, undefined, office.id).ok) {
+          if (office.assignment) office.assignment = { kind: 'idle' }
           const note = owner?.releases?.at(-1)
           const text = owner && note ? describeRelease(owner, note) : `a release of ${name}`
           // The hit's releases get a card of their own; a side product's are news.
-          if (owner && owner.id === state.signatureId) state.events.push({ type: 'released', productId: owner.id })
+          if (!office.assignment && owner && owner.id === state.signatureId) state.events.push({ type: 'released', productId: owner.id })
           else state.events.push({ type: 'notice', text: `${officeName(state, office)} shipped ${text}.` })
           logEntry(state, 'team.release', `${officeName(state, office)} shipped ${text}`, { office: officeName(state, office) })
         }
       }
       continue
     }
+    if (office.assignment) continue
     office.idleSince ??= state.day
     const product = ownedProduct(state, office)
     if (!product || office.kind !== 'office' || teamOf(state, office).length === 0 || productInWork(state, product.id, true)) continue

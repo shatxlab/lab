@@ -1,3 +1,4 @@
+import { operating } from './services'
 import { businessSnapshot, recordBusinessDecision } from './business-history'
 import { audienceFor } from '@/lib/tycoon/data/audiences'
 import { getDeepWork } from '@/lib/tycoon/data/deepwork'
@@ -102,7 +103,7 @@ interface Candidate extends Proposal {
 }
 
 /** Everything the floor could propose, weighted by what the product's own numbers say it needs. */
-function candidates(state: GameState, product: Product): Candidate[] {
+export function candidates(state: GameState, product: Product): Candidate[] {
   const out: Candidate[] = []
   const type = getProductType(product.productTypeId)
   const likes = audienceFor(product.productTypeId, product.audienceId).likes
@@ -223,10 +224,11 @@ export function cycleProduct(state: GameState): Product | undefined {
 }
 
 /** True when the clock has to wait for the player. */
-export const awaitingChoice = (state: GameState): boolean => state.plan !== undefined && state.plan.researchUntil === undefined
+export const awaitingChoice = (state: GameState): boolean => !operating(state) && state.plan !== undefined && state.plan.researchUntil === undefined
 
 /** Puts the next plan on the table once the company is free, and deals new cards when the analysts come back. */
 export function planDay(state: GameState): void {
+  if (operating(state)) { delete state.plan; return }
   const product = cycleProduct(state)
   if (!product) {
     delete state.plan
@@ -257,7 +259,7 @@ function releaseTarget(state: GameState, lead: Office, product: Product, proposa
 }
 
 /** What a card really adds to the product, whoever builds it: its work and, if the plan is vague, the rework. */
-function releaseScope(product: Product, proposal: Proposal, clarity: number): Skills {
+export function releaseScope(product: Product, proposal: Proposal, clarity: number): Skills {
   const features = proposal.kind === 'feature' ? [proposal.id] : proposal.kind === 'compliance' ? [COMPLIANCE_FEATURE] : []
   const scope = projectTarget(product.productTypeId, features, 'update', product.size)
   const item = proposal.kind === 'item' ? getWorkItem(proposal.id) : undefined
@@ -332,7 +334,7 @@ export interface CardText {
   blocker: string | null
 }
 
-function releaseEffect(state: GameState, office: Office | undefined, product: Product, card: Proposal, clarity: number): string {
+export function releaseEffect(state: GameState, office: Office | undefined, product: Product, card: Proposal, clarity: number): string {
   const features = card.kind === 'feature' ? [card.id] : []
   const parts: string[] = []
   switch (card.kind) {
@@ -483,6 +485,8 @@ export function researchPlan(state: GameState): Result {
 
 /** What a floor is doing in the cycle, in a few words: for the tabs and the street. */
 export function floorCycle(state: GameState, office: Office): string {
+  if (office.assignment?.kind === 'standing') return office.assignment.service
+  if (office.assignment?.kind === 'idle' && !office.project) return 'idle — awaiting assignment'
   const project = office.project
   if (project) {
     if (project.kind === 'contract') return 'client work'

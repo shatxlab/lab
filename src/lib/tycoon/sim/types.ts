@@ -1,3 +1,4 @@
+import type { FloorAssignment } from './operating-contract'
 /** The two markets: where an office sits, where a rival is at home, and where a product's users live. */
 export type Region = 'us' | 'eu'
 export const REGIONS: readonly Region[] = ['us', 'eu']
@@ -387,7 +388,7 @@ export interface ResearchState {
   done: string[]
   /** What is being researched now; one thing at a time. */
   /** `target` is what a repeatable study is about (an audience id). */
-  active: { id: string; finishDay: number; target?: string } | null
+  active: { id: string; finishDay: number; remainingWork?: number; target?: string } | null
 }
 
 /** A random event waiting for the player's choice. `data` is whatever the event picked at roll time. */
@@ -431,6 +432,8 @@ export interface Office {
   /** Where it is: the café, the garage and the first office are in the US. Absent in older saves, which are all US. */
   region?: Region
   project: Project | null
+  /** Explicit post-hit capacity reservation (v8). */
+  assignment?: FloorAssignment
   /** The product this floor's team looks after, releasing it as its `workstream` says (`sim/teams.ts`). */
   productId?: number
   workstream?: Workstream

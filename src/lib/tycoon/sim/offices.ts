@@ -89,12 +89,12 @@ export function fixingIds(state: GameState): Set<number> {
 /** The people on this office's team who work on its project: those not away on a bug-fixing job. */
 export function workersOf(state: GameState, office: Office): Employee[] {
   const away = fixingIds(state)
-  return teamOf(state, office).filter((e) => !away.has(e.id))
+  return teamOf(state, office).filter((e) => !away.has(e.id) && !(e.founder && (e.role === 'analyst' || e.role === 'pm') && state.deepWork && office.assignment))
 }
 
 /** The other floors on this floor's product with nothing of their own to do: they lend a hand on its team release. */
 export function helpersOf(state: GameState, office: Office): Office[] {
-  if (office.productId === undefined) return []
+  if (office.assignment || office.productId === undefined) return []
   return state.offices.filter((o) => o !== office && o.kind === 'office' && o.productId === office.productId && !o.project)
 }
 
@@ -106,6 +106,7 @@ export function hitFloors(state: GameState): Office[] {
 
 /** Puts someone on the team of another office's project (or back on their own office's with `null`). They keep their desk. */
 export function assignTeam(state: GameState, employeeId: number, officeId: number | null): Result {
+  if (state.offices.some((o) => o.assignment)) return fail('Teams now follow physical floors; transfer the employee instead')
   const employee = state.employees.find((e) => e.id === employeeId)
   if (!employee) return fail('Employee not found')
   if (!isBuilder(employee)) return fail('They do not work on projects')
@@ -211,6 +212,11 @@ export function moveOut(state: GameState, keepIds: number[] = []): Result {
   const garage = state.offices.find((o) => o.kind === 'garage')!
   state.money -= MOVE_OUT_COST
   garage.kind = 'office'
+  garage.assignment = { kind: 'idle' }
+  delete state.plan
+  state.fixes = []
+  state.onCall = null
+  for (const person of state.employees) delete person.teamId
   if (state.signatureId !== null) {
     garage.productId = state.signatureId
     garage.workstream ??= 'features'
@@ -249,7 +255,7 @@ export function openOffice(state: GameState, region?: Region): Result {
   if (blocker) return fail(blocker)
   const where = region ?? openableRegions(state)[0]
   state.money -= newOfficeCost(state, where)
-  const office: Office = { id: state.nextId++, kind: 'office', theme: state.offices.length, region: where, project: null }
+  const office: Office = { id: state.nextId++, kind: 'office', theme: state.offices.length, region: where, project: null, ...(state.signatureId !== null ? { assignment: { kind: 'idle' as const } } : {}) }
   // A new floor works on the hit, taking whatever is next on its roadmap (a floor in Europe is focused on Europe's work).
   if (state.signatureId !== null) {
     office.productId = state.signatureId

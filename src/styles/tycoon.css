@@ -2006,3 +2006,13 @@
 .tycoon-root .initiative-contract { padding: 8px; font-size: .85rem; overflow-wrap: anywhere; }
 .tycoon-root .initiative-contract summary { cursor: pointer; }
 .tycoon-root .initiative-contract p { margin: 8px 0; }
+
+/* Parallel operations: a single scroll surface even at narrow phone widths. */
+.tycoon .operations-panel, .operations-panel { min-width: 0; }
+.operations-teams { display: flex; flex-wrap: wrap; gap: .4rem; }
+.operations-teams button { display: flex; flex-direction: column; flex: 1 1 9rem; min-width: 0; overflow-wrap: anywhere; }
+.operations-teams button[aria-pressed="true"] { outline: 2px solid var(--accent, #97c98d); }
+.operations-panel label, .operations-editor { display: flex; flex-direction: column; gap: .5rem; }
+.operations-panel select { width: 100%; min-width: 0; max-width: 100%; }
+.operations-panel p, .operations-panel small { overflow-wrap: anywhere; }
+.operation-service, .operation-confirm { display: flex; flex-direction: column; gap: .35rem; padding: .6rem; border: 1px solid #45514b; border-radius: .4rem; }

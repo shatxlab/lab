@@ -173,6 +173,7 @@ export function contractsDay(state: GameState): void {
 
 /** Why `office` can't take this job now, or null when it can. */
 export function contractBlocker(state: GameState, office: Office): string | null {
+  if (office.assignment && office.assignment.kind !== 'idle') return 'Reassign this floor in Operations first'
   if (office.project) return 'A project is in progress'
   return teamOf(state, office).length === 0 ? 'Hire someone first' : null
 }

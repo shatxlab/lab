@@ -113,7 +113,7 @@ function hitFields(state: GameState, hit: Product): Data {
     hitPressure: `stale ${pressure.stale.toFixed(2)}, bugs ${pressure.bugs.toFixed(2)}, rivals ${pressure.rivals.toFixed(2)}, missing ${pressure.missing.toFixed(2)}, companions ${pressure.companions.toFixed(2)}`,
     hitBuilt: hit.built ?? [],
     hitRoadmap: hit.roadmap ?? [],
-    floors: state.offices.map((o) => `${officeName(state, o)}: ${o.workstream ?? '-'}${o.project ? ` (${o.project.itemId ?? o.project.kind})` : ''}`),
+    floors: state.offices.map((o) => `${officeName(state, o)}: ${o.assignment ? o.assignment.kind === 'standing' ? o.assignment.service : o.assignment.kind : o.workstream ?? '-'}${o.project ? ` (${o.project.itemId ?? o.project.kind})` : ''}`),
     hosting: Math.round(hostingCost(state)),
     toolUpkeep: toolUpkeep(state),
     profitDays: state.profitDays ?? 0,

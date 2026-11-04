@@ -7,7 +7,7 @@ import { FoundingDialog } from '@/components/tycoon/FoundingDialog'
 import { IpoDialog } from '@/components/tycoon/IpoDialog'
 import { StudioDialog } from '@/components/tycoon/StudioDialog'
 import { TopBar } from '@/components/tycoon/TopBar'
-import { CAFE_DESK_WIDTH, deskCupAnchor } from '@/lib/tycoon/render-support/cafe-desk'
+import { FOUNDER_TABLE, founderCafeStation } from '@/lib/tycoon/render-support/cafe-desk'
 import { WORKSTATIONS } from '@/lib/tycoon/render-support/workstations'
 import { appearanceFor, employeeLook } from '@/lib/tycoon/render-support/characters'
 import { IPO_PROFIT_DAYS } from '@/lib/tycoon/sim/balance'
@@ -155,16 +155,20 @@ describe('Stage 0 presentation', () => {
     expect(host.querySelectorAll('[role="tab"]')).toHaveLength(6)
   })
 
-  it('puts each café desk cup below the centre of its own laptop, inside the desk', () => {
-    for (const right of [false, true]) {
-      const [x, bottom] = deskCupAnchor(0, 0, right)
-      const laptop = WORKSTATIONS.laptop
-      const laptopLeft = right ? CAFE_DESK_WIDTH - laptop.gap - laptop.width : laptop.gap
-      expect(x - 2).toBeGreaterThanOrEqual(laptopLeft)
-      expect(x + 2).toBeLessThanOrEqual(laptopLeft + laptop.width)
-      expect(bottom - 3).toBeGreaterThan(laptop.top + laptop.height)
-      expect(bottom).toBeLessThan(11 + 19)
+  it('seats founders across one high table with two laptops and no founder cup anchors', () => {
+    const left = founderCafeStation(0, 0, false)
+    const right = founderCafeStation(0, 0, true)
+    expect(left.seatX).toBe(16.5 + 2)
+    expect(right.seatX).toBe(59.5 - 2)
+    expect(left.seatX).toBeLessThan(FOUNDER_TABLE.left)
+    expect(right.seatX).toBeGreaterThan(FOUNDER_TABLE.left + FOUNDER_TABLE.width)
+    expect(FOUNDER_TABLE.feet - FOUNDER_TABLE.top).toBe(15)
+    for (const station of [left, right]) {
+      expect(station).not.toHaveProperty('cupX')
+      expect(station).not.toHaveProperty('cupBottom')
+      expect(station.laptopY + WORKSTATIONS.laptop.height - 1).toBe(FOUNDER_TABLE.top)
     }
+    expect(left.laptopX + WORKSTATIONS.laptop.width).toBeLessThan(right.laptopX)
   })
 })
 

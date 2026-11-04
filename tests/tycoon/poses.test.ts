@@ -1,3 +1,5 @@
+import { founderCafeStation } from '@/lib/tycoon/render-support/cafe-desk'
+import { WORKSTATIONS } from '@/lib/tycoon/render-support/workstations'
 import { readFileSync } from 'node:fs'
 import { PNG } from 'pngjs'
 import { describe, expect, it } from 'vitest'
@@ -65,6 +67,44 @@ describe('posePatches', () => {
     // The pack outlines its people all round; an arm with a gap in its outline looks torn at this size.
     const frame = poseFrame(standing(character), posePatches(character, pose), shirtColors(character, 0))
     expect(openEdgesPosed(frame, character, pose)).toEqual([])
+  })
+
+  it('bends the typing arms for a high café table without changing heads, legs or office poses', () => {
+    for (let character = 0; character < CHARACTER_COUNT; character++) {
+      for (const pose of ['typeA', 'typeB'] as const) {
+        const regular = posePatches(character, pose)
+        const high = posePatches(character, pose, true)
+        expect(high.slice(0, -1)).toEqual(regular.slice(0, -1))
+        expect(high.at(-1)!.y).toBe(regular.at(-1)!.y)
+        expect(high.at(-1)!.rows.length).toBeLessThan(regular.at(-1)!.rows.length)
+        expect(Math.max(...high.at(-1)!.rows.map((row) => row.length))).toBe(8)
+        const frame = poseFrame(standing(character), high, shirtColors(character, 0))
+        expect(openEdgesPosed(frame, character, pose)).toEqual([])
+      }
+      expect(posePatches(character, 'sit', true)).toEqual(posePatches(character, 'sit'))
+    }
+  })
+
+  it('puts the pictured founders’ compact hands on the keys by moving their seats, in either facing', () => {
+    for (const character of [2, 3]) {
+      const [, , width, height] = CHARACTER_FRAMES[character]!
+      for (const right of [false, true]) {
+        const station = founderCafeStation(0, 0, right)
+        const bodyX = Math.round(station.seatX - width / 2)
+        const bodyY = 5 + 22 - (height - 1)
+        const keys = WORKSTATIONS.laptop.keys.map(([x, y]) => [station.laptopX + (right ? WORKSTATIONS.laptop.width - 1 - x : x), station.laptopY + y])
+        for (const pose of ['typeA', 'typeB'] as const) {
+          const arms = posePatches(character, pose, true).at(-1)!
+          const skin = character === 0 ? 'e' : 'j'
+          const hands = arms.rows.flatMap((row, y) => [...row].flatMap((mark, x) => mark === skin ? [[bodyX + (right ? width - 1 - (arms.x + x) : arms.x + x), bodyY + arms.y + y]] : []))
+          expect(hands.some(([x, y]) => keys.some(([kx, ky]) => x === kx && y === ky))).toBe(true)
+          for (const [x] of hands) {
+            expect(x).toBeGreaterThanOrEqual(station.laptopX)
+            expect(x).toBeLessThan(station.laptopX + WORKSTATIONS.laptop.width)
+          }
+        }
+      }
+    }
   })
 
   it('changes the picture for every pose, and the two typing frames differ', () => {

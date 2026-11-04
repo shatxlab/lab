@@ -75,7 +75,7 @@ export function launchCompanion(state: GameState, companionId: string): Product 
 }
 
 /** True while some floor works on the hit's Companions stream: the people the companions cost the hit. */
-export const looksAfterCompanions = (state: GameState): boolean => state.offices.some((o) => o.kind === 'office' && o.workstream === 'companions' && o.productId === state.signatureId)
+export const looksAfterCompanions = (state: GameState): boolean => state.offices.some((o) => o.kind === 'office' && (o.assignment ? o.assignment.kind === 'standing' && o.assignment.service === 'reliability' && o.assignment.productId === state.signatureId : o.workstream === 'companions' && o.productId === state.signatureId))
 
 /** Once a month the companions follow the hit: their reach is a slice of its users while they are looked after. */
 export function companionsDay(state: GameState): void {

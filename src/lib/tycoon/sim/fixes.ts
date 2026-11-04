@@ -35,6 +35,7 @@ function onCallIds(state: GameState): number[] {
 
 /** Why this person can't be sent to fix bugs now, or null when they can. `onCall` lets the on-call pair through. */
 function personBlocker(state: GameState, employee: Employee | undefined, role: 'developer' | 'tester', onCall: boolean): string | null {
+  if (state.offices.some((o) => o.assignment)) return 'Assign a whole floor to reliability in Operations'
   if (!employee || employee.role !== role) return role === 'developer' ? 'Pick a developer' : 'Pick a tester'
   if (employee.training) return `${employee.name} is in training`
   if (fixingIds(state).has(employee.id)) return `${employee.name} is already fixing bugs`

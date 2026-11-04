@@ -4,6 +4,12 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
+**Current handover (2026-11-03; Stage 2 implemented locally, uncommitted).** Independent floor operations replace
+post-hit global turns. Read **"Stage 2 built and checked"** below before changing the engine. Saves are version 8;
+old office saves migrate their paid work onto physical-floor capacity. The café/garage stays unchanged. Functionality
+and browser gates pass; **balance is provisional** (9/12 bot seeds IPO, 2 bankrupt, 1 still running at 12 years).
+No commits, pushes or deployments. Stage 3 management and Stage 4 presentation/control cleanup are not implemented.
+
 **Handover (2026-11-03; Stage 0 implemented locally, uncommitted).** The player completed the release-turn version
 through IPO, sale, retirement and a fourth founding. Their latest decisions supersede the old clock-stopping loop.
 Read **"Operating a company: implementation plan"** and **"Stage 0 built and checked"** first. Founder continuity,
@@ -111,7 +117,7 @@ when the PM chose unasked. Look at:
   goals changed; fine for a test, not worth migrating further.
 - Researches about running many products (licensing, the portfolio) were not reworked; they still exist.
 
-## Operating a company: implementation plan (2026-11-03; not implemented)
+## Operating a company: implementation plan (2026-11-03; Stages 0–2 built locally)
 
 ### Scope and authority
 
@@ -256,6 +262,110 @@ remain Stage 2 work, not features secretly enabled here. Do not claim live paral
   the generic dialog rule. Important event choices can remain explicitly blocking; no silent speed-up of those events.
 - **Gate:** with two teams, choosing/waiting on team A never halts team B or charges/credits A's staff to both streams.
   Do not ship a halfway state that merely removes `awaitingChoice` while every floor still joins one release.
+
+### Café correction: move the seats, do not stretch the arms (2026-11-03)
+
+Player explicitly rejected extended hands/sleeves. Undid the width-specific arm extensions, restoring the compact
+high-table typing patches. Moved both founders **and their stools exactly 2 sprite pixels toward the table** via the
+shared `founderCafeStation` seat anchor (left 16.5 → 18.5; right 59.5 → 57.5). Table/laptops, body proportions and
+absent founder cups are unchanged. Hit targets/popups use the same seating anchor. Regression tests pin the 2px
+movement and compact 8px arm patches, and check keyboard contact for the two pictured founder sprites in either
+facing. The preceding “every character contacts the keys” claim applied to the rejected stretched-arm proposal,
+not a justification to stretch other sprites again. No commits, pushes or deployment.
+
+### Café follow-up: no founder cups, hands on the keys (2026-11-03)
+
+Player requested removal rather than further cup positioning. Removed founder cup drawing, colours, dimensions and
+anchors entirely; guest/order/counter cups and café crowd are unchanged. The café-only typing arms now use each
+character's actual width to reach over the laptop keyboard, in both mirrored seatings. Shoulders stay attached and
+all five sprites retain closed outlines. A coordinate regression checks both typing frames against real laptop key
+pixels for every character and facing, rather than merely asserting that the arms are raised. Idle/think/break poses
+and non-café typing are unchanged. Desktop/mobile browser checks, click targets, typecheck and build passed; targeted
+pose/presentation tests passed. No simulation changes, commits, pushes or deployment in this follow-up.
+
+### Café high-table visual prototype (2026-11-03; supersedes the joined founder desk)
+
+Player rejected the combined low slab and wide cups. The new local prototype uses **stool → pedestal table → stool**,
+with the founders still facing each other. Founder and guest furniture now share `drawCafeTable`/`drawCafeStool`;
+the founder top is 30px wide instead of a guest table's 18px to fit two 11px laptops with clear space between their backs.
+It has the guest table's thin wooden top, single central pedestal and foot, not the old 22px-deep office-desk slab.
+The stools replace office chairs and meet the seated hips. Café-only bent high-table typing arms preserve shoulders,
+heads, appearance and seated legs; office/garage poses stay unchanged and atlas cache keys distinguish the variant.
+Cups now have **3px lids and 2px tapered bodies** instead of 4px rectangles. Their last body row is one pixel above
+the tabletop edge, with both cups in the clear space between laptop backs, not painted on the vertical trim.
+All positions come from `render-support/cafe-desk.ts`; hit targets/popups retain the corresponding founder anchors.
+
+Checks: **72 Tycoon files / 1,235 tests passed**, including closed-outline checks for high typing on all five character
+sprites and explicit tabletop/laptop/cup geometry. Typecheck and production build passed. Browser checked desktop and
+390px phone, both founder click targets, active client-work typing/screens/crowd and no page errors/horizontal overflow.
+Harness: `scripts/tycoon/cafe-high-browser.mjs` (optional synthetic active-contract `WORKING_SAVE`). This is a local
+visual proposal awaiting player review; no commits/pushes/deployment, no simulation or Stage 2 changes in this art task.
+
+### Stage 2 built and checked (2026-11-03)
+
+**Functional slice, not a completed balance pass.** `operations.ts` owns explicit assignment commands, previews,
+confirmation, reservations and the migration; `services.ts` owns shared standing read models. `Office.assignment`
+is now live. The real move-out/new-floor paths create idle assignments; idle floors never choose work. Finite
+initiatives ship into idle and notify without a release-card modal. The operations panel selects a floor and product,
+shows its ETA/blockers, scope, upfront/upkeep/payroll costs and standing coverage, and confirms replacement inline.
+
+- **Capacity and day order:** active fixes → per-floor work → finite team releases/snapshots → standing service →
+  rivals/founder work → users/fit/companions → income/costs → staffed research and later staff work. Operations do
+  not borrow helpers or inflate targets by floor count. The existing 30-day build floor is applied to **only the
+  assigned team's rate** (up to 60 days for large items). Real `scope` remains separate for bug calculations. Founder
+  deep work can coexist; only the player founder is excluded, not their developer friend. Remote team reassignment
+  is blocked in operations; physical same-region transfers/hiring/acquisition still work.
+- **Reliability pilot:** output is min(engineering, QA)/20 bugs/day; demand is existing discovery + pending-bug
+  surfacing + open backlog/60. Output removes open bugs, never invents capacity or users. Existing bug/fit/retention
+  pressure supplies deterioration; warnings are informational, not a new random punishment. Payroll and rent already
+  pay for service staff; no extra salary charge. Flagship reliability also supplies the existing companion reach-care
+  hook. Companion freshness still needs an explicit finite release; the fuller ecosystem design is later work.
+- **Growth pilot:** analyst/PM skill/50 plus design output/20 versus 1 + users/500K specialist-days/day. Shared
+  coverage adds **at most +25%** to healthy organic demand-pull, not a multiplier per floor or a guaranteed user gain.
+  Unstaffed healthy products retain baseline organic demand. Numbers are tuning proposals, not player-approved balance.
+- **Research:** analysts/PMs contribute skill/50 specialist days/day to one paid technology/audience project. It needs
+  a standing research assignment and a separately selected project; engineers are not required. `remainingWork`
+  persists; taking analysts away stalls, reassigning resumes, and costs are charged once. The pre-office timer is kept
+  only for the café/garage. Both Research and operations explain stalled work rather than displaying an infinite ETA.
+  Insight remains a separate audience-reading resource, not a second technology-research timer.
+- **Conflicts/effects:** reserve features/compliance, unique built items, localisation and polishing per product;
+  companion launches reserve company-wide slots. Different initiatives can ship on the same product in a single day.
+  Versions/notes are assigned at completion to the releasing floor. Feature IDs and built-item effects deduplicate;
+  operating releases retain previous built-item fit modifiers instead of erasing them on a parallel completion.
+  Failed reassignment commands preserve the old project/reservation/cash. Confirmed replacement discards unfinished
+  progress without refund; standing replacement stops coverage immediately. Every accepted finite operation records
+  its own exact-project business snapshot and journal entry; monthly floor telemetry names assignments, not old streams.
+- **Clock:** routine inspection, research, planning disclosures and results do not pause an operating company. Manual
+  pause still works. Event/offer decisions, IPO/founding/move-out and manual carried-project shipping remain explicit
+  blocking boundaries; pending decisions cannot silently run behind an informational panel. The café/garage retains
+  its old clock behaviour. Old cycle helpers remain for pre-operating/legacy tests, not the live post-hit control path.
+- **v7 → v8 migration:** preserve founders, salaries, identity, regions, products/companions, project IDs/features,
+  payments, actual progress, scope/quality and research already paid. Remove global plans and remote team overrides;
+  recompute remaining build work against physical-floor capacity while retaining absolute progress. End legacy fixing
+  pairs/on-call: bugs already fixed stay fixed; their staff return to their floor. Other floors become explicitly idle,
+  not automatic reliability. New/contract projects already running remain visible as carried manual/client work in the
+  same `Office.project` reservation. Existing manual product-tab updates/localisation also reserve their floor and keep
+  their manual shipping path; broader post-hit product-control consolidation is still Stage 4, not secretly removed.
+  Assignment shape/content/product/project references and research work numbers are validated on load.
+
+**Verification:** final Tycoon run **72 files / 1,234 tests passed**, including simulation and mounted-UI gates:
+waiting/confirming on A never stops B, no employee contributes to two streams in a day, no helper/ETA inflation,
+completion-to-idle, safe cancellation, duplicate reservations, completion versions/attribution, additive fit,
+analyst-only research/stall/resume, deep-work coexistence and v7 migration/v8 round-trip/malformed data.
+Typecheck and production build passed. Full repository run (before the final additive-fit regression) was
+**187 files passed / 1 failed; 2,613 tests passed / 1 failed**: the already-recorded unrelated
+`tests/hr/run.test.ts` → `keeps foes, shots and gems under their caps` timed out at 5,000 ms. No HR files/config changed.
+Production Chromium acceptance passed at **1280, 390 and 320px**: selecting teams, initiative preview, inline
+reassignment/cancel/confirm, business inspection, no page errors, assignment modals or horizontal overflow. Reproduce
+with `scripts/tycoon/stage2-{fixtures.ts,browser.mjs}` and the Stage 0 external Playwright/library setup.
+
+**Bot / balance handoff:** the bot now makes explicit assignments rather than old queues/workstream auto-starts. Seeds
+1–12, 12-year limit: **9 IPOs (9.2–11.1 years), 2 bankruptcies (seed 2 at 4.7 years; seed 8 at 4.0), seed 10 still running
+in Europe at 12 years**. Most late-game retained releases are ~31 days apart company-wide in these runs. The bot is
+optimistic, reads true fit and chooses all assignments automatically; this does not validate human decision cadence.
+Seed 2's low-revenue mobile flagship/hiring/capital decisions need investigation, not a hidden subsidy or a claim that
+all seeds passed. Validate one-floor affordability, standing research opportunity cost, reliability demand/headroom and
+multi-floor pace before calling economy tuning complete. Do not roll back to the global paused release turn.
 
 **3. Professional management and careers** — original feedback 1.
 - Separate IC seniority, leadership appointment/coverage, and management skill. Preserve existing pay/experience on load;

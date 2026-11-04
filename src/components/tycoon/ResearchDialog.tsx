@@ -25,7 +25,7 @@ function ResearchRow({ node }: { node: ResearchNode }) {
       <div className="research-head">
         <strong>{node.name}</strong>
         <span className="muted">
-          {formatMoney(node.cost)} · {node.days} days
+          {formatMoney(node.cost)} · {node.days} {state.offices.some((o) => o.assignment) ? 'specialist days' : 'days'}
         </span>
       </div>
       <p className="muted">{node.description}</p>
@@ -66,6 +66,8 @@ export function ResearchDialog() {
   const active = state.research.active
   const activeNode = RESEARCH.find((n) => n.id === active?.id)
   const left = researchDaysLeft(state)
+  const staffed = state.offices.some((o) => o.assignment)
+  const progress = active?.remainingWork !== undefined ? 1 - active.remainingWork / (activeNode?.days ?? 1) : left !== null && Number.isFinite(left) ? 1 - left / (activeNode?.days ?? 1) : 0
 
   return (
     <Modal title="Research" onClose={() => store.closeDialog()}>
@@ -73,14 +75,14 @@ export function ResearchDialog() {
         <div className="research-active">
           <div className="research-head">
             <strong>Researching: {activeNode.name}{active?.target ? ` · ${getAudience(active.target).name}` : ''}</strong>
-            <span className="muted">{left} days left</span>
+            <span className="muted">{Number.isFinite(left) ? `${left} days left` : 'Stalled — assign analysts to research'}</span>
           </div>
           <div className="track">
-            <div className="fill" style={cssVars({ width: `${((activeNode.days - left) / activeNode.days) * 100}%`, '--c': 'var(--accent)' })} />
+            <div className="fill" style={cssVars({ width: `${Math.max(0, Math.min(1, progress)) * 100}%`, '--c': 'var(--accent)' })} />
           </div>
         </div>
       ) : (
-        <p className="muted">Nothing is being researched. Research runs in the background while you work on projects.</p>
+        <p className="muted">{staffed ? 'Nothing is being researched. Assign a floor with analysts to research, then pay for a project. Reassignment pauses progress, not the company.' : 'Nothing is being researched. Research runs in the background while you work on projects.'}</p>
       )}
 
       <div className="research-branches">

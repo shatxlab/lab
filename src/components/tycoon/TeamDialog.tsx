@@ -336,7 +336,7 @@ export function TeamDialog() {
                     Make product manager
                   </button>
                 )}
-                {many && isBuilder(employee) && (
+                {many && !state.offices.some((o) => o.assignment) && isBuilder(employee) && (
                   <select
                     aria-label={`Team for ${employee.name}`}
                     title="Whose project they work on (a little slower away from their own office)"

@@ -1,8 +1,9 @@
+import { operating } from './services'
 import { completeBusinessDecision } from './business-history'
 import { formatMoney } from '@/lib/tycoon/format'
 import { audienceFor, audiencesOf } from '@/lib/tycoon/data/audiences'
 import { getFeature } from '@/lib/tycoon/data/features'
-import { getWorkItem, type WorkItem } from '@/lib/tycoon/data/workstreams'
+import { itemEffects, getWorkItem, type WorkItem } from '@/lib/tycoon/data/workstreams'
 import { getProductType, PRODUCT_TYPES } from '@/lib/tycoon/data/productTypes'
 import {
   BUDGET_PER_POINT,
@@ -129,6 +130,7 @@ export function startProject(
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
+  if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
   if (office.project) return fail('A project is already in progress')
   if (teamOf(state, office).length === 0) return fail('Hire someone first')
   const type = PRODUCT_TYPES.find((t) => t.id === productTypeId)
@@ -193,6 +195,7 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
+  if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
   const blocker = grow ? growBlocker(state, office, product) : updateBlocker(state, office, product, byTeam)
@@ -227,6 +230,8 @@ export function startUpdate(state: GameState, productId: number, featureIds: rea
     bugRisk: 1,
     contract: null,
   }
+  if (office.assignment) office.assignment = { kind: 'initiative', productId: product.id, projectId: office.project.id,
+    proposal: { kind: featureIds.length ? 'feature' : 'polish', id: featureIds[0] ?? 'polish' }, startedDay: state.day }
   return OK
 }
 
@@ -255,6 +260,7 @@ export function startPivot(state: GameState, productId: number, audienceId: stri
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
+  if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
   const blocker = pivotBlocker(state, office, product, audienceId)
@@ -304,6 +310,7 @@ export function startLocalisation(state: GameState, productId: number, officeId?
   if (state.gameOver) return fail('Game over')
   const office = resolveOffice(state, officeId)
   if (!office) return fail('Unknown office')
+  if (office.assignment?.kind === 'standing') return fail('Reassign the floor in Operations first')
   const product = state.products.find((p) => p.id === productId)
   if (!product) return fail('Unknown product')
   const blocker = localiseBlocker(state, office, product, byTeam)
@@ -332,6 +339,8 @@ export function startLocalisation(state: GameState, productId: number, officeId?
     bugRisk: 1,
     contract: null,
   }
+  if (office.assignment) office.assignment = { kind: 'initiative', productId: product.id, projectId: office.project.id,
+    proposal: { kind: 'localise', id: 'localise' }, startedDay: state.day }
   return OK
 }
 
@@ -345,13 +354,14 @@ export function shipProject(state: GameState, campaign?: Tier, officeId?: number
   if (!office || !project) return fail('No project to ship')
   if (project.kind !== 'new' && project.kind !== 'update') return fail('Client work has nothing to ship')
   const result = project.kind === 'update' ? shipUpdate(state, office, project) : shipNewProduct(state, office, project, campaign)
+  if (result.ok && office.assignment?.kind === 'initiative' && office.assignment.projectId === project.id) office.assignment = { kind: 'idle' }
   if (result.ok && project.kind === 'update' && project.parentId !== null) completeBusinessDecision(state, project.parentId, project.id)
   return result
 }
 
 /** The fit a product has once this update ships at `quality`: all its features, for its audience (a new one if it pivots), at its best quality yet. */
 export function updateFit(state: GameState, product: Product, project: Project, quality: number): number {
-  return projectFit(state, project, Math.max(product.quality, quality), [...product.featureIds, ...project.featureIds])
+  return Math.max(0, Math.min(100, projectFit(state, project, Math.max(product.quality, quality), [...new Set([...product.featureIds, ...project.featureIds])]) + (operating(state) ? itemEffects(product).fit : 0)))
 }
 
 /**
@@ -425,7 +435,7 @@ export function estimateUpdateFit(state: GameState, productId: number, featureId
     contract: null,
   }
   const quality = Math.max(product.quality, projectQuality(state, plan))
-  return Math.min(100, releaseFit(state, plan.productTypeId, plan.audienceId, [...product.featureIds, ...featureIds], quality).fit * pmFitFactor(state, office))
+  return Math.min(100, releaseFit(state, plan.productTypeId, plan.audienceId, [...product.featureIds, ...featureIds], quality).fit * pmFitFactor(state, office) + (operating(state) ? itemEffects(product).fit : 0))
 }
 
 /** How much further a release reaches for how clear its plan was. */
@@ -504,6 +514,7 @@ function shipNewProduct(state: GameState, office: Office, project: Project, camp
 
 /** A roadmap item ships: it counts as built, and what it does at once (reach, fit, bugs, quality) is done; the rest is read from `itemEffects`. */
 function buildItem(state: GameState, product: Product, item: WorkItem): void {
+  if ((product.built ?? []).includes(item.id)) return
   const { effect } = item
   product.roadmap = (product.roadmap ?? []).filter((id) => id !== item.id)
   if (product.roadmap.length === 0) delete product.roadmap
@@ -560,7 +571,7 @@ function shipUpdate(state: GameState, office: Office, project: Project): Result 
   }
   product.pendingBugs += bugs
   product.updates.push({ day: state.day })
-  product.featureIds.push(...project.featureIds)
+  product.featureIds = [...new Set([...product.featureIds, ...project.featureIds])]
   product.quality = Math.max(product.quality, quality)
   reputationFromRelease(state, project, quality, UPDATE_REPUTATION_SHARE)
   moraleFromRelease(state, quality, UPDATE_REPUTATION_SHARE)

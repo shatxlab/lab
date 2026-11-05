@@ -5,6 +5,7 @@ import {
 } from '@/lib/tycoon/career-save'
 import {
   adoptStoredCareer, browserCareerLock, CAREER_SAVE_LOCK, foundStoredCompany, settleStoredCareer,
+  startStoredConsulting, advanceStoredConsulting, advanceStoredActiveCareer,
   type ExclusiveSaveLock,
 } from '@/lib/tycoon/career-transactions'
 import { SAVE_KEY, BACKUP_KEY, type KeyValueStorage } from '@/lib/tycoon/save'
@@ -12,6 +13,8 @@ import { financeSummary, type FinanceResult } from '@/lib/tycoon/sim/founder-fin
 import { createInitialState, serialize } from '@/lib/tycoon/sim/state'
 import { quoteFounding, type FoundingSelection } from '@/lib/tycoon/paid-founding'
 import { paidFoundingSource } from './paid-founding-fixtures'
+import { quoteConsulting } from '@/lib/tycoon/consulting'
+import { BANKRUPT_AFTER_DEBT_DAYS } from '@/lib/tycoon/sim/balance'
 
 function unwrap<T>(r: FinanceResult<T>): T {
   if (!r.ok) throw new Error(r.reason)
@@ -288,6 +291,75 @@ describe('prepared guarded career persistence (not wired to v11 autosave)', () =
     quote.costs.setup = 99999
     const result = unwrap(await pending)
     expect(result.save.game.studioName).toBe('Copper')
+    expect(storage.writes).toBe(1)
+  })
+
+  it('saves partial consulting progress and completion credit atomically, including recovery from quota failure', async () => {
+    const source = paidFoundingSource()
+    const { storage, token, lock } = setup(source)
+    const quote = unwrap(quoteConsulting(source, 'contract'))
+    const started = unwrap(await startStoredConsulting(storage, lock, token, quote))
+    expect(balance(started.token)).toBe(5_000_000)
+    const partial = unwrap(await advanceStoredConsulting(storage, lock, started.token, 15))
+    expect(partial.save.game.day).toBe(source.game.day + 15)
+    expect(balance(partial.token)).toBe(5_000_000)
+    expect((await advanceStoredConsulting(storage, lock, started.token, 30)).ok).toBe(false)
+    storage.failWrite = true
+    expect((await advanceStoredConsulting(storage, lock, partial.token, 15)).ok).toBe(false)
+    expect(storage.getItem(SAVE_KEY)).toBe(partial.token)
+    expect(balance(storage.getItem(SAVE_KEY)!)).toBe(5_000_000)
+    storage.failWrite = false
+    const completed = unwrap(await advanceStoredConsulting(storage, lock, partial.token, 15))
+    expect(completed.save.game.day).toBe(quote.completeDay)
+    expect(balance(completed.token)).toBe(5_000_000 + quote.payout)
+    expect(storage.writes).toBe(3) // start, partial, complete; failed write cannot lose a day or credit.
+    expect((await advanceStoredConsulting(storage, lock, completed.token, 30)).ok).toBe(false)
+    expect(storage.writes).toBe(3)
+  })
+
+  it('rejects concurrent consulting starts/completions from stale snapshots without double credit', async () => {
+    const source = paidFoundingSource()
+    const { storage, token, lock } = setup(source)
+    const quote = unwrap(quoteConsulting(source, 'contract'))
+    const starts = await Promise.all([startStoredConsulting(storage, lock, token, quote), startStoredConsulting(storage, lock, token, quote)])
+    expect(starts.filter((r) => r.ok)).toHaveLength(1)
+    const started = storage.getItem(SAVE_KEY)!
+    const ends = await Promise.all([advanceStoredConsulting(storage, lock, started, 30), advanceStoredConsulting(storage, lock, started, 30)])
+    expect(ends.filter((r) => r.ok)).toHaveLength(1)
+    expect(storage.writes).toBe(2)
+    expect(balance(storage.getItem(SAVE_KEY)!)).toBe(5_000_000 + quote.payout)
+  })
+
+  it('rejects altered consulting pay and snapshots the selected contract before awaiting storage', async () => {
+    const source = paidFoundingSource()
+    const { storage, token, lock } = setup(source)
+    const quote = unwrap(quoteConsulting(source, 'contract'))
+    const invalid = structuredClone(quote)
+    invalid.payout++
+    expect((await startStoredConsulting(storage, lock, token, invalid)).ok).toBe(false)
+    expect(storage.writes).toBe(0)
+    const pending = startStoredConsulting(storage, lock, token, quote)
+    quote.payout = 999999
+    const started = unwrap(await pending)
+    expect(unwrap(financeSummary(started.save.finance)).consulting?.payout).not.toBe(999999)
+    expect(storage.writes).toBe(1)
+  })
+
+  it('persists automatic bankruptcy, world day and settlement together, or leaves the active source intact', async () => {
+    const active = unwrap(createCareerSave(createInitialState(5), identity))
+    active.game.money = -100
+    active.game.debtDays = BANKRUPT_AFTER_DEBT_DAYS - 1
+    const { storage, token, lock } = setup(active)
+    storage.failWrite = true
+    expect((await advanceStoredActiveCareer(storage, lock, token)).ok).toBe(false)
+    expect(storage.getItem(SAVE_KEY)).toBe(token)
+    storage.failWrite = false
+    const ended = unwrap(await advanceStoredActiveCareer(storage, lock, token))
+    expect(ended.save.game.day).toBe(1)
+    expect(ended.save.game.ending?.kind).toBe('bankrupt')
+    expect(unwrap(financeSummary(ended.save.finance)).companies[0].closed).toBe(true)
+    expect(storage.writes).toBe(1)
+    expect((await advanceStoredActiveCareer(storage, lock, ended.token)).ok).toBe(false)
     expect(storage.writes).toBe(1)
   })
 

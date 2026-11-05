@@ -2,6 +2,8 @@ import {
   adoptCareerSave, deserializeCareerSave, serializeCareerSave, settleCareerSave,
   type CareerIdentity, type CareerSave,
 } from './career-save'
+import { advanceActiveCareer } from './career-progress'
+import { advanceConsulting, startConsulting, type ConsultingQuote } from './consulting'
 import { foundPaidCompany, type FoundingQuote } from './paid-founding'
 import { SAVE_KEY, type KeyValueStorage } from './save'
 import type { FinanceResult } from './sim/founder-finance'
@@ -74,5 +76,30 @@ export function foundStoredCompany(storage: KeyValueStorage, lock: ExclusiveSave
   return commit(storage, lock, expected, (text) => {
     const current = deserializeCareerSave(text)
     return current.ok ? foundPaidCompany(current.value, selected) : current
+  })
+}
+
+/** No payment at start; source check and contract publication share the same guarded write. */
+export function startStoredConsulting(storage: KeyValueStorage, lock: ExclusiveSaveLock | null, expected: string, quote: ConsultingQuote): Promise<FinanceResult<CommittedCareer>> {
+  const selected = structuredClone(quote)
+  return commit(storage, lock, expected, (text) => {
+    const current = deserializeCareerSave(text)
+    return current.ok ? startConsulting(current.value, selected) : current
+  })
+}
+
+/** Partial world progress and any once-only completion credit are committed together. */
+export function advanceStoredConsulting(storage: KeyValueStorage, lock: ExclusiveSaveLock | null, expected: string, days = 1): Promise<FinanceResult<CommittedCareer>> {
+  return commit(storage, lock, expected, (text) => {
+    const current = deserializeCareerSave(text)
+    return current.ok ? advanceConsulting(current.value, days) : current
+  })
+}
+
+/** Prepared clock boundary: company day, sticky recognition and any automatic exit settlement are one save. */
+export function advanceStoredActiveCareer(storage: KeyValueStorage, lock: ExclusiveSaveLock | null, expected: string, days = 1): Promise<FinanceResult<CommittedCareer>> {
+  return commit(storage, lock, expected, (text) => {
+    const current = deserializeCareerSave(text)
+    return current.ok ? advanceActiveCareer(current.value, days) : current
   })
 }

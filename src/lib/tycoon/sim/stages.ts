@@ -1,3 +1,4 @@
+import { charterRequirements } from './charter'
 import { getStage, STAGES } from '@/lib/tycoon/data/stages'
 import { scaleRequirements } from './scale-readiness'
 import { operating } from './services'
@@ -17,7 +18,7 @@ export function stageProgress(state: GameState, stage = state.stage) {
   const goals = getStage(stage).goals.filter((g) => !replaced.includes(g.id) && !skipped.includes(g.id)).map((g) => ({
     id: g.id, label: g.label, met: g.check(state), progress: g.progress?.(state), remedy: '',
   }))
-  return [...goals, ...scaleRequirements(state, stage)]
+  return [...goals, ...scaleRequirements(state, stage), ...(stage === STAGES.length - 1 ? charterRequirements(state) : [])]
 }
 
 /** True when the studio has done everything its current stage asks; the last stage never ends. */

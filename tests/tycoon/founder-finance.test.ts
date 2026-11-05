@@ -19,7 +19,7 @@ const settled = () => unwrap(settleFounderExit(initial(), 'company-1', facts('ip
 
 describe('standalone founder finance ledger (not yet a game/save adapter)', () => {
   it('keeps first-company economics unchanged and creates no private reserve', () => {
-    expect(unwrap(financeSummary(initial()))).toEqual({ liquid: 0, holdings: [], companies: [{
+    expect(unwrap(financeSummary(initial()))).toEqual({ liquid: 0, consulting: null, fulfilledAmbitions: [], holdings: [], companies: [{
       companyId: 'company-1', shareBps: 5000, ambition: 'standard', source: 'initial',
       investment: CAFE_START_MONEY, closed: false,
     }] })

@@ -4,20 +4,20 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-04; Stage 6 paid-founding adapter, local).** Stage 5 workspace/teams/navigation and
-founder terms are committed/pushed as **`3c6c7a4`**, the standalone finance model as **`f9e231d`**, and the prepared
-v12 codec/guarded settlement transactions as **`1ee1b32`**. Nothing was deployed. Live save version remains **11**.
-New work is **uncommitted**: real-world paid-founding quotes, company reset/hire/cost adapter and guarded successor
-commit, plus founding provenance, no-grant milestone handling and Journey exceptions. Read **"Stage 6 paid founding
-checkpoint"** below. These APIs are deliberately not wired to live v11 autosave/UI: the old chapter path still grants
-seed money, and charter/IPO gates plus consulting recovery remain missing. Automatic live settlement, the browser
-founding flow, charter readiness and consulting have not shipped. The selected terms in
-**"Stage 6 decision: prototype founder economics"** remain provisional, not measured final balance.
+**Current handover (2026-11-04; Stage 6 charter/consulting adapter, local).** Stage 5 workspace/teams/navigation and
+founder terms are committed/pushed as **`3c6c7a4`**, standalone finance as **`f9e231d`**, prepared v12 codec/guarded
+settlement as **`1ee1b32`**, and real paid founding as **`d8e0694`**. Nothing was deployed. Live save version remains **11**.
+New work is **uncommitted**: live charter/IPO readiness, durable no-reward ambition recognition, an atomic active-career
+clock, explicit quoted consulting with resumable world-only progress/once-only pay, and guarded consulting transactions.
+Read **"Stage 6 charter and consulting checkpoint"** below. The prepared career APIs are deliberately not wired to
+live v11 autosave/UI: the old chapter path still grants seed money. The full browser founding/adoption/consulting flow,
+automatic live settlement and all-writer locking remain open. The selected terms in **"Stage 6 decision: prototype
+founder economics"** remain provisional, not measured final balance.
 Read the latest Stage 4 family acceptance and both Stage 5 progress sections, especially **"physical teams and
 navigation parity"**. Stage 4's broader numeric goals/item gates, affordability and unattended acceptance are **not
-complete**. Next is the integrated v12 identity/finance/charter schema and atomic persistence boundary, then paid
-founding/interlude/UI and the remaining Stage 4/7 economic/full-career acceptance gates. Historical valuations
-must not silently become personal cash.
+complete**. Next is the complete guarded v12 browser rollout: all autosave/reset/import/replacement writers, explicit
+legacy decision, paid founding/consulting UI, and real multi-tab/reloaded full-career acceptance. Then finish remaining
+Stage 4/7 economic gates. Historical valuations must not silently become personal cash.
 The player requested the remaining plan step by step and will try a new run **after** implementation/acceptance, not
 between slices. Do not restore release turns, choice timers or automatic assignments. Prototype terms are explicit
 assumptions, not final tuned numbers or reconstructed historical proceeds.
@@ -106,7 +106,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation is committed/pushed as `3c6c7a4` (read both Stage 5 progress sections). Stage 6 prototype founder terms are selected/documented below (player delegated), and the standalone finance ledger is implemented/tested (read "Stage 6 model checkpoint"); integrate v12 saves/charter, atomic settlement and paid founding/interlude before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation is committed/pushed as `3c6c7a4` (read both Stage 5 progress sections). Stage 6 prototype founder terms are selected/documented below (player delegated). Finance, the prepared v12 codec/guarded settlement and paid founding are committed; charter/consulting adapters are now implemented locally (read their latest checkpoint). Integrate every save writer and the full v12 browser founding/adoption/interlude UI before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -1119,7 +1119,7 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
 - **Gate:** multi-chapter test of IPO -> venture -> sale -> venture -> retirement, reload at each transition, finite
   affordable investments, no negative/double-spent fortune, stable sprites and one company-name field.
 
-### Stage 6 paid founding checkpoint (2026-11-04; uncommitted, not enabled)
+### Stage 6 paid founding checkpoint (2026-11-04; committed/pushed as `d8e0694`, not enabled)
 
 - `paid-founding.ts` adds `foundingOffers`, `quoteFounding` and `foundPaidCompany` against the prepared v12 envelope.
   Requires a settled predecessor (or durable ended-legacy decision), one valid company name and a new company identity.
@@ -1165,7 +1165,60 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
 - **Next:** charter fulfilment/current IPO readiness and consulting/world-time recovery, then enable the complete v12
   browser flow only after autosave/reset/import/replacement all use the same lock/token discipline. Do not activate only
   the financial half alongside legacy `seedMoney`/`RESTART_MONEY` grants. Live UI, multi-tab integration and played/reloaded
-  full-career acceptance are still open. New work is uncommitted/unpushed and nothing was deployed. No new player run yet.
+  full-career acceptance are still open. This checkpoint was subsequently committed/pushed as `d8e0694`; the newer
+  charter/consulting slice below remains uncommitted. Nothing was deployed. No new player run yet.
+
+### Stage 6 charter and consulting checkpoint (2026-11-04; uncommitted, not enabled)
+
+- Paid-company IPO readiness now adds the delegated charter requirements to the existing Global/revenue/users/year-of-profit
+  gates: Modest Medium+/one effective delivery floor/90 profitable days; Studio Large+/two capable floors/shared care/90 days;
+  Venture Flagship/three capable floors including Europe/shared care/180 days/existing rival-win evidence. All require a live hit,
+  fit ≥50, freshness ≥60% and bug density <10. Standard/initial/legacy rules stay unchanged; voluntary sale/retirement stay open.
+  `operatingCapacity` shares the existing physical-floor calculation rather than inventing free labour or nominal headcount.
+  Journey and IPO consume the same current requirements. Cash cannot buy fulfilment or waive the normal IPO conditions.
+- `refreshCareerCharter` records sticky recognition with no cash/reputation/stat reward. An immutable `charter-fulfilled`
+  ledger record preserves **fulfilled ambitions across later companies**, not just the replaceable current charter field.
+  Codec/replay reject mismatched/duplicate recognition. Losing health/capacity does not erase recognition, but IPO always
+  rechecks current conditions. `advanceActiveCareer` recognizes at daily boundaries and books automatic endings together
+  with company/world progress; it cannot operate an ended company. These clock APIs are prepared, not the live controller.
+- `consulting.ts` adds explicit `quoteConsulting`/`startConsulting`/`advanceConsulting`. Each contract lasts exactly **30 game
+  days**, credits **floor(50% of full-market monthly salary)** only at completion, and freezes skills/analysis/trait/level/region/
+  specialist grade/pay floor at its start date. No founder discount, corporate appointment premium or old company deals.
+  Next contract requires another explicit selection and uses the new date. No hidden real-time delay, auto-contract or grant.
+- Dedicated interlude projection advances world day/RNG/IDs/rival businesses/products/era arrivals/monthly market, without
+  calling the normal company tick. The old company's closing facts, cash, payroll, people/skills/training, projects, research,
+  products, revenue, profit streak, milestone state and history stay frozen. Former nemesis ratios detach into normal market
+  businesses once; no rivalry win/reward is manufactured. Extra requested days stop at the selected contract's completion.
+- Partial progress saves/reloads; `consulting-start`/`consulting-complete` replay validates frozen salary inputs, exact dates,
+  unique contract IDs and once-only credit. The codec cross-checks the current ended founder's basis and immutable closing
+  record even after later contract records. Legacy adoption/decline must already be durable; retries find the original decision,
+  not the last consulting record. Pending contracts block funding both in the paid quote adapter and ledger replay.
+- `startStoredConsulting`/`advanceStoredConsulting` and `advanceStoredActiveCareer` use the same exclusive Web Lock/exact
+  source-token transaction helper. Contract start, partial world progress and completion credit publish only on successful
+  whole-envelope writes. Tests cover concurrent/stale starts/completions, mutated quotes, quota failure/retry and automatic
+  bankruptcy settlement. Consulting time no longer inflates a predecessor's company tenure in `legacy[]`; that uses its ending day.
+- **Verified:** **1,577 Tycoon tests / 97 files pass**. Full repository final rerun: **2,957 pass / 1 fail** (213 files);
+  sole failure is the unchanged `tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` —
+  `Test timed out in 5000ms.` Typecheck/build pass. An earlier run concurrent with Chromium also hit 5-second timeouts in
+  two unchanged Tycoon tests; both the independent Tycoon suite and final full-suite rerun pass those tests. Keep heavyweight
+  browser/full-suite checks sequential on this small server. No unrelated timeout/config changes were made.
+- **18 production-build browser cases pass:** all three charters, healthy/blocked state, desktop 1280x900, phone 390x844 and
+  320x568 with 28px controls. Journey displays the shared requirements, Menu's IPO enabled state matches live readiness,
+  long charter text wraps, Close stays reachable, and no horizontal overflow/page errors. Synthetic ready fixtures are
+  constructed acceptance states, **not earned playthroughs**. Bundle `scripts/tycoon/stage6-career-fixtures.ts` (header command),
+  run it, then `stage6-career-browser.mjs` with the same Playwright module/library environment as the paid-founding script.
+  Browser injection still uses synthetic v11 engine payloads, **not an enabled v12 or consulting browser flow**.
+- Three real adapter-level synthetic bankruptcy recoveries (seed 1/2/8, start day 500, no personal cash) select/reload each
+  contract and then actually pay the cheapest available Modest quote: **13/11/16 contracts = 390/330/480 world days**;
+  earned **$14,925/$13,575/$16,200**, paid minima **$14,500/$13,100/$13,900**, private reserves **$425/$475/$2,300**.
+  No skill gains or inheritance; founder identity carries and an ordinary developer is paid. This demonstrates a recovery
+  path, **not tuned recovery length, post-founding product success or full-career acceptance**. Default bot seeds unchanged:
+  seed 1 IPO day **3381**, **$297.05M** cash; seed 2 bankruptcy day **1717**; seed 8 bankruptcy day **1444**.
+- **Next:** integrate the complete guarded v12 browser flow, including all save writers and command/clock adoption, then
+  legacy decision, personal-finance/paid-founding/consulting UI and real reload/multi-tab/end-to-end careers. Keep v11 live
+  until all are ready; do not mix new personal debits with old free `seedMoney`/`RESTART_MONEY` continuations. Remaining
+  Stage 4/7 observed-information policies and diverse 12-seed/unattended/neglect/recovery acceptance remain open.
+  This new slice is uncommitted/unpushed, nothing was deployed, and the player should not start their acceptance run yet.
 
 ### Stage 6 prepared persistence checkpoint (2026-11-04; committed as `1ee1b32`, not enabled)
 

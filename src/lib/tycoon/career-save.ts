@@ -1,3 +1,6 @@
+import { recognizeCharter } from './charter-recognition'
+import { consultingPayBasis, sameConsultingPayBasis } from './sim/consulting-pay'
+import { you } from './sim/founding'
 import { deserialize, STATE_VERSION } from './sim/state'
 import {
   createFounderFinance, declineLegacySettlement, financeSummary, settleFounderExit,
@@ -62,6 +65,8 @@ function validateEnvelope(raw: unknown): FinanceResult<CareerSave> {
     : game.founding !== undefined) return fail('Paid founding provenance does not match the ledger')
   if (charter.companyId !== current.companyId || charter.ambition !== current.ambition ||
     (charter.fulfilledDay !== null && (!whole(charter.fulfilledDay) || charter.fulfilledDay > game.day))) return fail('Charter does not match the current company')
+  const recognized = summary.value.fulfilledAmbitions.find((a) => a.companyId === current.companyId)
+  if ((recognized?.day ?? null) !== charter.fulfilledDay) return fail('Current charter recognition does not match its immutable career record')
   const finance = raw.finance as FounderFinance
   const last = finance.records[finance.records.length - 1]
   if (last.day > game.day) return fail('Finance records are ahead of world time')
@@ -69,10 +74,12 @@ function validateEnvelope(raw: unknown): FinanceResult<CareerSave> {
   if (game.ending) {
     const ending = game.ending
     if (!whole(ending.day) || ending.day > game.day || !Number.isSafeInteger(ending.worth)) return fail('Invalid ending facts')
+    if (charter.fulfilledDay !== null && (charter.fulfilledDay as number) > ending.day) return fail('Charter recognition cannot be earned after a company ends')
     const facts = currentExitFacts(game)!
     if (current.closed) {
-      if (last.kind !== 'settlement' && last.kind !== 'legacy-close') return fail('Closed company has no recorded ending')
-      const booked = last.facts
+      const closing = finance.records.find((r) => r.companyId === current.companyId && (r.kind === 'settlement' || r.kind === 'legacy-close'))
+      if (!closing || (closing.kind !== 'settlement' && closing.kind !== 'legacy-close')) return fail('Closed company has no recorded ending')
+      const booked = closing.facts
       if (booked.kind !== facts.kind || booked.day !== facts.day || booked.worth !== facts.worth || booked.closingCash !== facts.closingCash) return fail('Current ending conflicts with its immutable settlement')
     } else {
       // Open ended companies are recoverable pending settlement. Validate the facts without crediting them.
@@ -80,6 +87,12 @@ function validateEnvelope(raw: unknown): FinanceResult<CareerSave> {
       if (!preview.ok) return preview
     }
   } else if (current.closed || current.source === 'legacy-ended') return fail('An active company cannot have a closed or already-ended charter')
+  const consulting = summary.value.consulting
+  if (consulting && (!game.gameOver || !current.closed || consulting.companyId !== current.companyId || game.day < consulting.startDay || game.day >= consulting.completeDay)) return fail('Consulting progress does not match the ended company or world date')
+  const contracts = finance.records.filter((r) => r.companyId === current.companyId && r.kind === 'consulting-start')
+  const founder = you(game)
+  if (contracts.length && (!founder || contracts.some((r) => r.kind === 'consulting-start' && !sameConsultingPayBasis(r.contract.basis, consultingPayBasis(founder))))) return fail('Consulting inputs do not match the frozen founder')
+  if (game.ending && !consulting && game.day !== (last.kind === 'consulting-complete' ? last.day : game.ending.day)) return fail('World time cannot advance between companies without explicit work')
   const companyStart = finance.records.find((r) => r.companyId === current.companyId && (r.kind === 'origin' || r.kind === 'investment'))
   if (!companyStart || (charter.fulfilledDay !== null && (charter.fulfilledDay as number) < companyStart.day)) return fail('Charter recognition predates this company')
   const origin = finance.records[0]
@@ -113,17 +126,19 @@ export function serializeCareerSave(save: CareerSave): FinanceResult<string> {
 export function settleCareerSave(save: CareerSave, legacyDecision?: 'apply' | 'decline'): FinanceResult<CareerSave> {
   const checked = validateCareerSave(save)
   if (!checked.ok) return checked
-  const value = checked.value
+  const recognition = recognizeCharter(checked.value)
+  if (!recognition.ok) return recognition
+  const value = recognition.value
   const facts = currentExitFacts(value.game)
   if (!facts) return fail('Only an ended company can be settled')
   const summary = financeSummary(value.finance)
   if (!summary.ok) return summary
   const current = summary.value.companies[summary.value.companies.length - 1]
-  const last = value.finance.records[value.finance.records.length - 1]
+  const closing = value.finance.records.find((r) => r.companyId === current.companyId && (r.kind === 'settlement' || r.kind === 'legacy-close'))
   if (current.source === 'legacy-ended') {
     if (!legacyDecision) return fail('Choose whether to apply the prototype 50% legacy settlement')
     if (current.closed) {
-      if ((legacyDecision === 'apply' && last.kind === 'settlement') || (legacyDecision === 'decline' && last.kind === 'legacy-close')) return { ok: true, value }
+      if ((legacyDecision === 'apply' && closing?.kind === 'settlement') || (legacyDecision === 'decline' && closing?.kind === 'legacy-close')) return { ok: true, value }
       return fail('Legacy adoption conflicts with the recorded decision')
     }
   } else if (legacyDecision) return fail('Only an already-ended legacy company requires an adoption decision')

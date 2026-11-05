@@ -1,3 +1,4 @@
+import { charterBlocker } from './charter'
 import { STAGES } from '@/lib/tycoon/data/stages'
 import { DAYS_PER_MONTH, EXIT_BASE_MULTIPLE, EXIT_FIRST_OFFER_DAYS, EXIT_GAP_DAYS, EXIT_MAX_RAISES, EXIT_MIN_INCOME, EXIT_RAISE_PER_DECLINE, EXIT_WINDOW_DAYS, IPO_MULTIPLE } from './balance'
 import { trailingIncome } from './economy'
@@ -88,7 +89,7 @@ export function ipoBlocker(state: GameState): string | null {
   if (state.gameOver) return 'The run is over'
   if (state.stage < IPO_STAGE) return 'The company is not global yet'
   const open = STAGES[IPO_STAGE].goals.find((g) => !g.check(state))
-  return open ? open.label : null
+  return open ? open.label : charterBlocker(state)
 }
 
 /** What the market values the company at when it goes public: the cash, and years of what it earns at a higher multiple than a buyer pays. */

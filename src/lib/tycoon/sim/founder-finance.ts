@@ -1,3 +1,4 @@
+import { consultingPay, type ConsultingPayBasis } from './consulting-pay'
 import { CAFE_START_MONEY } from './balance'
 import type { Ending } from './types'
 
@@ -35,11 +36,24 @@ export interface Distribution {
   liquid: number
   holding: Holding | null
 }
+export const CONSULTING_DAYS = 30
+export interface ConsultingContract {
+  contractId: string
+  companyId: string
+  startDay: number
+  completeDay: number
+  basis: ConsultingPayBasis
+  marketSalary: number
+  payout: number
+}
 export type FinanceRecord =
   | { kind: 'origin'; companyId: string; day: number; source: FinanceOrigin }
   | { kind: 'settlement'; companyId: string; day: number; facts: ExitFacts; distribution: Distribution; legacyOptIn: boolean }
   | { kind: 'legacy-close'; companyId: string; day: number; facts: ExitFacts }
   | { kind: 'investment'; companyId: string; day: number; founders: 1 | 2; ambition: VentureAmbition; amount: number; costs: FundingCosts }
+  | { kind: 'consulting-start'; companyId: string; day: number; contract: ConsultingContract }
+  | { kind: 'consulting-complete'; companyId: string; day: number; contractId: string }
+  | { kind: 'charter-fulfilled'; companyId: string; day: number; ambition: VentureAmbition }
 
 export interface FounderFinance {
   version: typeof FINANCE_VERSION
@@ -56,6 +70,8 @@ export interface CompanyFinance {
 }
 export interface FinanceSummary {
   liquid: number
+  consulting: ConsultingContract | null
+  fulfilledAmbitions: { companyId: string; ambition: VentureAmbition; day: number }[]
   companies: CompanyFinance[]
   holdings: (Holding & { companyId: string })[]
 }
@@ -128,8 +144,11 @@ export function financeSummary(raw: unknown): FinanceResult<FinanceSummary> {
   if (!obj(raw) || raw.version !== FINANCE_VERSION || !id(raw.careerId) || !Array.isArray(raw.records) || !raw.records.length) return fail('Invalid finance ledger')
   const companies = new Map<string, CompanyFinance>()
   const holdings: FinanceSummary['holdings'] = []
+  const fulfilledAmbitions: FinanceSummary['fulfilledAmbitions'] = []
   let liquid = 0, day = 0
   let current: CompanyFinance | undefined
+  let consulting: ConsultingContract | null = null
+  const contracts = new Set<string>()
   for (let index = 0; index < raw.records.length; index++) {
     const r = raw.records[index]
     if (!obj(r) || !id(r.companyId) || !whole(r.day) || r.day < day) return fail('Invalid finance record identity or chronology')
@@ -140,7 +159,7 @@ export function financeSummary(raw: unknown): FinanceResult<FinanceSummary> {
         investment: r.source === 'initial' ? CAFE_START_MONEY : null, closed: false }
       companies.set(current.companyId, current)
     } else if (r.kind === 'investment') {
-      if (!current?.closed || companies.has(r.companyId) || (r.founders !== 1 && r.founders !== 2) || !venture(r.ambition) || !whole(r.amount) || r.amount === 0 || !obj(r.costs)) return fail('Invalid company investment')
+      if (!current?.closed || consulting || companies.has(r.companyId) || (r.founders !== 1 && r.founders !== 2) || !venture(r.ambition) || !whole(r.amount) || r.amount === 0 || !obj(r.costs)) return fail('Invalid company investment')
       const quote = quoteFunding(r.ambition, r.costs as unknown as FundingCosts)
       if (!quote.ok || r.amount < quote.value.minimum || r.amount > liquid) return fail('Investment is unaffordable or below the quoted minimum')
       liquid -= r.amount
@@ -160,9 +179,28 @@ export function financeSummary(raw: unknown): FinanceResult<FinanceSummary> {
         if (quote.value.holding) holdings.push({ ...quote.value.holding, companyId: current.companyId })
       }
       current.closed = true
+    } else if (r.kind === 'charter-fulfilled') {
+      if (!current || current.closed || current.companyId !== r.companyId || !venture(r.ambition) || r.ambition !== current.ambition ||
+        fulfilledAmbitions.some((a) => a.companyId === r.companyId)) return fail('Invalid or duplicate charter recognition')
+      fulfilledAmbitions.push({ companyId: r.companyId, ambition: r.ambition, day })
+    } else if (r.kind === 'consulting-start') {
+      const c = r.contract
+      if (!current?.closed || current.companyId !== r.companyId || consulting || !obj(c) || !id(c.contractId) ||
+        contracts.has(c.contractId) || c.companyId !== r.companyId || c.startDay !== day || !whole(c.completeDay) ||
+        c.completeDay !== day + CONSULTING_DAYS) return fail('Invalid consulting contract identity, timing or company')
+      const pay = consultingPay(c.basis as ConsultingPayBasis, day)
+      if (!pay || c.marketSalary !== pay.marketSalary || c.payout !== pay.payout) return fail('Consulting payout does not match the frozen market inputs')
+      consulting = structuredClone(c) as unknown as ConsultingContract
+      contracts.add(consulting.contractId)
+    } else if (r.kind === 'consulting-complete') {
+      if (!consulting || current?.companyId !== r.companyId || consulting.companyId !== r.companyId ||
+        r.contractId !== consulting.contractId || day !== consulting.completeDay) return fail('Invalid or duplicate consulting completion')
+      liquid += consulting.payout
+      if (!whole(liquid)) return fail('Personal cash exceeds the supported money range')
+      consulting = null
     } else return fail('Unknown finance record')
   }
-  return { ok: true, value: { liquid, companies: [...companies.values()], holdings } }
+  return { ok: true, value: { liquid, consulting, fulfilledAmbitions, companies: [...companies.values()], holdings } }
 }
 
 export function isFounderFinance(v: unknown): v is FounderFinance {
@@ -209,4 +247,33 @@ export function declineLegacySettlement(ledger: FounderFinance, companyId: strin
 /** Financial permission only. World adapter must recheck the actual costs/staff/save identity before committing. */
 export function investInCompany(ledger: FounderFinance, companyId: string, day: number, founders: 1 | 2, ambition: VentureAmbition, amount: number, costs: FundingCosts): FinanceResult<FounderFinance> {
   return append(ledger, { kind: 'investment', companyId, day, founders, ambition, amount, costs })
+}
+
+/** Explicit start permission only; time and frozen-company checks are the career adapter's responsibility. */
+export function beginConsulting(ledger: FounderFinance, companyId: string, contractId: string, day: number, basis: ConsultingPayBasis): FinanceResult<FounderFinance> {
+  const pay = consultingPay(basis, day)
+  if (!pay) return fail('Invalid consulting pay inputs')
+  const contract: ConsultingContract = { contractId, companyId, startDay: day, completeDay: day + CONSULTING_DAYS, basis, ...pay }
+  return append(ledger, { kind: 'consulting-start', companyId, day, contract })
+}
+
+/** Exact-day completion is immutable; replay/retry cannot credit a second time. */
+export function completeConsulting(ledger: FounderFinance, companyId: string, contractId: string, day: number): FinanceResult<FounderFinance> {
+  const checked = financeSummary(ledger)
+  if (!checked.ok) return checked
+  const previous = ledger.records.find((r) => r.kind === 'consulting-complete' && r.contractId === contractId)
+  if (previous?.kind === 'consulting-complete') return previous.companyId === companyId && previous.day === day
+    ? { ok: true, value: structuredClone(ledger) } : fail('Consulting completion conflicts with the recorded contract')
+  return append(ledger, { kind: 'consulting-complete', companyId, contractId, day })
+}
+
+/** Durable descriptive achievement only. The career adapter must check live requirements before booking. */
+export function fulfillCompanyCharter(ledger: FounderFinance, companyId: string, day: number): FinanceResult<FounderFinance> {
+  const checked = financeSummary(ledger)
+  if (!checked.ok) return checked
+  const company = checked.value.companies.find((c) => c.companyId === companyId)
+  if (!company || !venture(company.ambition)) return fail('Only a personally funded ambition can be fulfilled')
+  const previous = checked.value.fulfilledAmbitions.find((a) => a.companyId === companyId)
+  if (previous) return previous.day === day ? { ok: true, value: structuredClone(ledger) } : fail('Charter recognition is immutable')
+  return append(ledger, { kind: 'charter-fulfilled', companyId, day, ambition: company.ambition })
 }

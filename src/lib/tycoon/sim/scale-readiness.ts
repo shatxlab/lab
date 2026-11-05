@@ -17,6 +17,26 @@ export interface ScaleRequirement {
 
 const count = (n: number) => Math.floor(n).toLocaleString('en-US')
 
+/** Shared physical-capacity read model for scale steps and paid-company charters. */
+export function operatingCapacity(state: GameState) {
+  const offices = state.offices.filter((o) => o.kind === 'office')
+  const capable = offices.filter((o) => {
+    if (o.assignment?.kind === 'standing') return serviceOutput(state, o, o.assignment.service) > 0
+    const rate = teamRate(state, o)
+    return DISCIPLINES.some((d) => rate[d] > 0) || serviceOutput(state, o, 'research') > 0
+  })
+  const hit = state.products.find((p) => p.id === state.signatureId)
+  if (!hit) return { capable, delivery: [], fastest: Infinity, cadence: 0 }
+  const target = projectTarget(hit.productTypeId, [], 'update', hit.size)
+  for (const d of DISCIPLINES) target[d] *= 1 + SPEC_REWORK
+  const cadence = FRESH_DAYS * PROJECT_SIZES[hit.size].life
+  const delivery = offices.filter((o) => o.assignment && o.assignment.kind !== 'standing' &&
+    (!o.project || (o.project.kind === 'update' && o.project.parentId === hit.id)))
+    .map((office) => ({ office, days: Math.max(RELEASE_MIN_DAYS, estimateDaysAt(target, teamRate(state, office, { typeId: hit.productTypeId, productId: hit.id }))) }))
+  return { capable, delivery: delivery.filter((d) => d.days <= cadence).map((d) => d.office),
+    fastest: delivery.length ? Math.min(...delivery.map((d) => d.days)) : Infinity, cadence }
+}
+
 /** Live operating gates, not titles, headcounts or an extra source of labour.
  * Stages already earned are never revoked; IPO's historical requirements are unchanged.
  * Capacity targets match the current chapter's existing user milestones, not future scale.
@@ -27,21 +47,8 @@ export function scaleRequirements(state: GameState, stage = state.stage): ScaleR
   if (!operating(state) || stage < 3 || stage > 5) return []
   const hit = state.products.find((p) => p.id === state.signatureId)
   if (!hit) return [{ id: 'operating_hit', label: 'Operate a live flagship ecosystem', met: false, progress: 'No live signature product', remedy: 'A retired signature cannot supply live operating readiness. Company retirement remains available.' }]
-  const offices = state.offices.filter((o) => o.kind === 'office')
-  // A floor cannot be counted as a delivery team while it supplies a standing service,
-  // builds another product or performs client work. One floor must cover the whole scope.
-  const target = projectTarget(hit.productTypeId, [], 'update', hit.size)
-  for (const d of DISCIPLINES) target[d] *= 1 + SPEC_REWORK
-  const cadence = FRESH_DAYS * PROJECT_SIZES[hit.size].life
-  const delivery = offices.filter((o) => o.assignment && o.assignment.kind !== 'standing' &&
-    (!o.project || (o.project.kind === 'update' && o.project.parentId === hit.id)))
-    .map((o) => estimateDaysAt(target, teamRate(state, o, { typeId: hit.productTypeId, productId: hit.id })))
-  const fastest = delivery.length ? Math.max(RELEASE_MIN_DAYS, Math.min(...delivery)) : Infinity
-  const capable = offices.filter((o) => {
-    if (o.assignment?.kind === 'standing') return serviceOutput(state, o, o.assignment.service) > 0
-    const rate = teamRate(state, o)
-    return DISCIPLINES.some((d) => rate[d] > 0) || serviceOutput(state, o, 'research') > 0
-  })
+  // One complete physical floor must cover delivery scope; no borrowed or double-counted labour.
+  const { fastest, cadence, capable } = operatingCapacity(state)
   const productive = capable.length
   const floors = stage - 2
   const capacityTarget = stage === 4 ? 1_000_000 : 3_000_000

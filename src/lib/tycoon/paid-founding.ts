@@ -74,6 +74,7 @@ function companyShell(save: CareerSave): FinanceResult<GameState> {
   const summary = financeSummary(source.finance)
   if (!summary.ok) return summary
   const current = summary.value.companies[summary.value.companies.length - 1]
+  if (summary.value.consulting) return fail('Finish the active consulting contract before founding a company')
   const kind = chapterKind(state)
   const me = you(state)
   if (!state.gameOver || !state.ending || !kind || !me || !current.closed) return fail('Settle the ended company before planning its successor')
@@ -114,7 +115,7 @@ function companyShell(save: CareerSave): FinanceResult<GameState> {
   next.freshChapter = false
   next.legacy = [...structuredClone(state.legacy ?? []), {
     studio: state.studioName ?? 'Your studio', ending: state.ending.kind, worth: state.ending.worth,
-    years: Math.round(((state.day - (state.chapterStartDay ?? 0)) / 360) * 10) / 10,
+    years: Math.round(((state.ending!.day - (state.chapterStartDay ?? 0)) / 360) * 10) / 10,
   }]
   // Exactly one normal local pool, shared by all presets/focus/amount previews of this source.
   refreshCandidates(next)

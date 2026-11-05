@@ -4,19 +4,20 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-04; Stage 6 charter/consulting adapter, local).** Stage 5 workspace/teams/navigation and
-founder terms are committed/pushed as **`3c6c7a4`**, standalone finance as **`f9e231d`**, prepared v12 codec/guarded
-settlement as **`1ee1b32`**, and real paid founding as **`d8e0694`**. Nothing was deployed. Live save version remains **11**.
-New work is **uncommitted**: live charter/IPO readiness, durable no-reward ambition recognition, an atomic active-career
-clock, explicit quoted consulting with resumable world-only progress/once-only pay, and guarded consulting transactions.
-Read **"Stage 6 charter and consulting checkpoint"** below. The prepared career APIs are deliberately not wired to
-live v11 autosave/UI: the old chapter path still grants seed money. The full browser founding/adoption/consulting flow,
-automatic live settlement and all-writer locking remain open. The selected terms in **"Stage 6 decision: prototype
-founder economics"** remain provisional, not measured final balance.
+**Current handover (2026-11-04; Stage 6 prepared all-writer boundary, local).** Stage 5 workspace/teams/navigation and
+founder terms are committed/pushed as **`3c6c7a4`**, standalone finance as **`f9e231d`**, prepared v12 codec/settlement
+as **`1ee1b32`**, real paid founding as **`d8e0694`**, and charter readiness/consulting recovery as **`34d0ded`**.
+Nothing was deployed. Live save version remains **11**. New work is **uncommitted**: prepared guarded autosave,
+initialization/reset/import/standalone-carry writers, one token-owning persistence session, cancellation/replacement
+barriers, async throttled autosave and real Chromium multi-tab Web Locks tests. Read **"Stage 6 all-writer persistence
+checkpoint"** below. These prepared APIs are deliberately not wired to the live v11 island/controller: its old chapter
+path still grants seed money and its existing writers remain unchanged. The complete browser adoption/founding/
+consulting flow and live writer/command/clock cutover remain open. Prototype founder terms remain provisional,
+not measured final balance.
 Read the latest Stage 4 family acceptance and both Stage 5 progress sections, especially **"physical teams and
 navigation parity"**. Stage 4's broader numeric goals/item gates, affordability and unattended acceptance are **not
-complete**. Next is the complete guarded v12 browser rollout: all autosave/reset/import/replacement writers, explicit
-legacy decision, paid founding/consulting UI, and real multi-tab/reloaded full-career acceptance. Then finish remaining
+complete**. Next is the complete guarded v12 browser rollout: bootstrap/load/export and live controller/writer adoption,
+explicit legacy decision, paid founding/consulting UI, and reloaded full-career acceptance. Then finish remaining
 Stage 4/7 economic gates. Historical valuations must not silently become personal cash.
 The player requested the remaining plan step by step and will try a new run **after** implementation/acceptance, not
 between slices. Do not restore release turns, choice timers or automatic assignments. Prototype terms are explicit
@@ -106,7 +107,7 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 ## Next steps (start here)
 
 **Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation is committed/pushed as `3c6c7a4` (read both Stage 5 progress sections). Stage 6 prototype founder terms are selected/documented below (player delegated). Finance, the prepared v12 codec/guarded settlement and paid founding are committed; charter/consulting adapters are now implemented locally (read their latest checkpoint). Integrate every save writer and the full v12 browser founding/adoption/interlude UI before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
+Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation is committed/pushed as `3c6c7a4` (read both Stage 5 progress sections). Stage 6 prototype founder terms are selected/documented below (player delegated). Finance, the prepared v12 codec/guarded settlement, paid founding and charter/consulting adapters are committed. The prepared all-writer persistence session/async autosave is now implemented locally (read its latest checkpoint). Cut over the live bootstrap/controller/writers and complete the v12 browser founding/adoption/interlude UI before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
 the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
 again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
 
@@ -1166,9 +1167,9 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
   browser flow only after autosave/reset/import/replacement all use the same lock/token discipline. Do not activate only
   the financial half alongside legacy `seedMoney`/`RESTART_MONEY` grants. Live UI, multi-tab integration and played/reloaded
   full-career acceptance are still open. This checkpoint was subsequently committed/pushed as `d8e0694`; the newer
-  charter/consulting slice below remains uncommitted. Nothing was deployed. No new player run yet.
+  charter/consulting slice below was later committed as `34d0ded`. Nothing was deployed. No new player run yet.
 
-### Stage 6 charter and consulting checkpoint (2026-11-04; uncommitted, not enabled)
+### Stage 6 charter and consulting checkpoint (2026-11-04; committed/pushed as `34d0ded`, not enabled)
 
 - Paid-company IPO readiness now adds the delegated charter requirements to the existing Global/revenue/users/year-of-profit
   gates: Modest Medium+/one effective delivery floor/90 profitable days; Studio Large+/two capable floors/shared care/90 days;
@@ -1218,7 +1219,58 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
   legacy decision, personal-finance/paid-founding/consulting UI and real reload/multi-tab/end-to-end careers. Keep v11 live
   until all are ready; do not mix new personal debits with old free `seedMoney`/`RESTART_MONEY` continuations. Remaining
   Stage 4/7 observed-information policies and diverse 12-seed/unattended/neglect/recovery acceptance remain open.
-  This new slice is uncommitted/unpushed, nothing was deployed, and the player should not start their acceptance run yet.
+  This checkpoint was subsequently committed/pushed as `34d0ded`; the later persistence-owner slice remains local.
+  Nothing was deployed, and the player should not start their acceptance run yet.
+
+### Stage 6 all-writer persistence checkpoint (2026-11-04; uncommitted, not enabled)
+
+- The `34d0ded` charter/consulting checkpoint was committed and pushed on the player's **commit then continue** request.
+  This subsequent slice prepares the remaining v12 writer/controller boundary; it does **not** activate a half-financial
+  live build. Existing `save.ts`, `browser.ts`, `TycoonApp` and `Store` remain unchanged and live saves remain **v11**.
+- All prepared primary-save paths now share one locked publication helper, including absent-key initialization, reset,
+  import, standalone carry-over and autosave, alongside the existing settlement/founding/consulting/clock transactions.
+  Checks occur **inside the exclusive Web Lock**, against exact source bytes; `null` means the key must still be absent.
+  Reset publishes a genuinely new career identity in one write, never delete-then-create. No empty-key resurrection gap.
+  Quota/read/validation failure cannot publish an in-memory-only replacement or lose the previous primary file.
+- `saveStoredCareer` accepts ordinary company progress only: the booked finance/current charter must match the current
+  source. It rejects rewinds, different chapters/provenance/legacy history and stale-company drafts. Live recognition
+  and native ending settlement are appended at this persistence boundary, not supplied as arbitrary autosave credits.
+  An unchanged reloaded native pending ending settles once; an ended legacy company remains undecided. Closed companies
+  cannot keep changing through autosave. Ordinary save cannot substitute for paid founding, consulting or explicit import.
+- File import validates full v12 envelopes without repairing corrupt finance as legacy. Legacy v11 imports use a fresh
+  identity and explicit prospective ownership; no cash is reconstructed or silently settled. Standalone carry-over checks
+  both the absent primary and exact old key while locked, and **retains the standalone file as backup** instead of making
+  cleanup part of the financial commit. Old-key/mute cleanup can be addressed separately during the live bootstrap cutover.
+- `createCareerPersistence` owns only the last **successfully persisted token** and serializes same-tab operations. It
+  routes ordinary saves, adoption/carry-over, settlement, founding, consulting, clocks, reset and import through that owner.
+  Quote/state/identity inputs are snapshotted before queue waits. Foreign-source conflict suspends the owner until an actual
+  reload; it never adopts another tab's newer token just to overwrite it. Storage errors retain the token for explicit retry.
+- Import/reset are queue barriers: earlier pending writes are canceled even if already waiting for the browser lock.
+  Stop/disposal and per-autosave abort signals also recheck cancellation **after lock acquisition**. A write already published
+  before a barrier still advances the owner's token, so the replacement compares against the real source, not stale bytes.
+- `createCareerAutosave` is async/throttled, with one pending write and coalesced newer changes during lock waits. Failed
+  changes stay dirty for explicit flush/retry; no autonomous quota-error timer loop or unlocked fallback. Required live
+  acknowledgement publishes the returned finance/charter **without replacing newer company progress**. If acknowledgement
+  itself fails after a durable write, the result explicitly says the file was saved and requires reload rather than replaying
+  an obsolete ledger. Stop cancels timers, unsubscribes and aborts lock-waiting autosave work. `pagehide` flush is async/best-effort,
+  **not a durability guarantee**; financial UI actions must await their own successful transaction before publishing/reloading.
+- **Verified:** **31 new tests**, all **1,608 Tycoon tests / 99 files pass** in the full run. Repository **2,988 pass / 1 fail**
+  (215 files); sole unchanged failure: `tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` —
+  `Test timed out in 5000ms.` Typecheck/build pass; no timeout/config changes. No balance changes or new bot policy in this slice.
+- **Six real Chromium scenarios pass** in an isolated same-origin synthetic profile: simultaneous absent-key initialization,
+  stale second-tab save, reset canceling a lock-waiting autosave, stop/disposal cancellation, synthetic quota error with actual
+  storage/token preservation and retry, and missing-lock rejection. This tests real `navigator.locks`/`localStorage`, not mocks.
+  Bundle `scripts/tycoon/stage6-persistence-harness.ts` using its header command, then run `stage6-persistence-browser.mjs`
+  with the existing Playwright module/library environment. It uses the homepage (no Tycoon island), injects only a test bundle
+  into a bypass-CSP context, and never enables v12 in the live application. These are persistence tests, **not live UI E2E**.
+- **Next:** implement the complete live bootstrap/load/export/controller integration and finance/adoption/founding/consulting UI,
+  cutting over **every** current v11 writer together. Do not let old `createAutosave`, `startNextChapter`, reset, import or standalone
+  migration race the new owner. Handle invalid/blocked/unsupported saves visibly without automatically starting over. Preserve
+  transient notifications/blocking choices at the command/clock boundary; the prepared codec normalizes transient event arrays,
+  so its snapshot alone must not replace the controller's event handling. Freeze ended-company commands and acknowledge
+  durable financial outcomes without overwriting newer live drafts. Then real UI reload/multi-tab/full-career acceptance,
+  observed-information founding policies and the remaining Stage 4/7 economic/unattended/neglect/recovery matrix.
+  New work remains uncommitted/unpushed. Nothing deployed; no new player acceptance run yet.
 
 ### Stage 6 prepared persistence checkpoint (2026-11-04; committed as `1ee1b32`, not enabled)
 

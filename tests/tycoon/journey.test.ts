@@ -54,9 +54,10 @@ describe('the garage and offices', () => {
     state.money = MOVE_OUT_COST
     expect(moveOutBlocker(state)).toBe('The studio is not ready yet')
     state.stage = 2
-    expect(moveOutBlocker(state)).toBe('Have a breakout hit first')
+    expect(moveOutBlocker(state)).toBe('Have a live breakout hit first')
     state.signatureId = 1
-    expect(moveOut(state).ok).toBe(true)
+    state.products = [makeProduct({ id: 1, hit: true })]
+    expect(moveOut(state, state.signatureId!).ok).toBe(true)
     expect(state.money).toBe(0)
     expect(state.offices[0].kind).toBe('office')
     expect(deskCount(state)).toBe(OFFICE_KINDS.office.desks)

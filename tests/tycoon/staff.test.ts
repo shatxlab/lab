@@ -34,7 +34,7 @@ import {
 import { advanceDay, drainEvents } from '@/lib/tycoon/sim/tick'
 import { DISCIPLINES, type Employee } from '@/lib/tycoon/sim/types'
 import { dailyContribution, teamRate, workDay } from '@/lib/tycoon/sim/work'
-import { makeEmployee, makeState, richState } from './helpers'
+import { makeEmployee, makeProduct, makeState, richState } from './helpers'
 
 const withTrait = (id: number, trait: string, morale = 75, skills = { design: 50, engineering: 50, qa: 50 }): Employee => ({
   ...makeEmployee(id, skills, 2000),
@@ -268,7 +268,8 @@ describe('releases, outings and upgrades', () => {
     state.money = 100_000
     state.stage = 2
     state.signatureId = 1
-    expect(moveOut(state).ok).toBe(true)
+    state.products = [makeProduct({ id: 1, hit: true })]
+    expect(moveOut(state, state.signatureId!).ok).toBe(true)
     expect(state.employees[0].morale).toBe(75 + OFFICE_UPGRADE_MORALE)
   })
 })

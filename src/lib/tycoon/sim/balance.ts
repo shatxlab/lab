@@ -417,7 +417,7 @@ export const HISTORY_LIMIT = 240
 
 // Product–market fit, and the hits it makes (see sim/fit.ts).
 /** A product whose fit reaches this, in a market that is neither cold nor too crowded, takes off. */
-export const FIT_TAKEOFF = 75
+export const FIT_TAKEOFF = 90
 /** Fit with nothing the audience loves, as a share of what loving all of it would give. */
 export const FIT_BASE = 0.1
 /** Each feature the audience shrugs at takes this much off the share of what they love that a product gives them. */

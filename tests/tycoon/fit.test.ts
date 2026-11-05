@@ -59,6 +59,14 @@ function release(state: GameState): void {
 }
 
 describe('product–market fit', () => {
+  it('requires exceptional fit: the observed 85/88 launches no longer become automatic hits', () => {
+    const state = garage()
+    for (const fit of [75, 85, 88, 89.99]) {
+      expect(takeoffBlocker(state, makeProduct({ fit }))).toBe(NOT_FIT_YET)
+    }
+    expect(takeoffBlocker(state, makeProduct({ fit: 95 }))).toBeNull()
+  })
+
   it('grows with each feature the audience loves, by how much and what it is worth to them', () => {
     const state = garage()
     const share = (features: string[]) => lovedShare(state, 'web_app', 'web_business', features)
@@ -216,7 +224,7 @@ describe('taking off', () => {
 
   it('can come from an update that adds what the audience loves', () => {
     const state = garage()
-    const product = launch(state, ['payments', 'accounts'])
+    const product = launch(state, ['payments', 'accounts', 'cloud_sync'])
     expect(product.hit).toBe(false)
     const fit = product.fit!
     const reach = product.reach

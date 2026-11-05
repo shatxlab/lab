@@ -209,7 +209,8 @@ describe('team commands', () => {
     store.state.money = 1_000_000
     store.state.stage = 4
     store.state.signatureId = 1
-    expect(store.moveOut().ok).toBe(true)
+    store.state.products = [makeProduct({ id: 1, hit: true })]
+    expect(store.moveOut(1).ok).toBe(true)
     expect(deskCount(store.state)).toBe(12)
     expect(store.openOffice().ok).toBe(true)
     store.state.offices[1].region = 'us' // people only move within a region

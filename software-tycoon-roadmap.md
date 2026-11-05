@@ -98,6 +98,45 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
+**Office confirmation warning (2026-11-05, local):** the red “Sure? Leave the garage” confirmation now has
+an adjacent red, screen-reader-linked warning naming the selected product: only it moves; all others will
+not move and will be sold or retired, irreversibly. The warning appears on the first click, before any
+spending/disposal, and clears with the existing confirmation reset. No simulation or balance changes.
+
+**Garage hits and office product choice (2026-11-05, local):** player run log v11 (day 1119) shipped
+Quarry/Bramble/Estuary at fit 95/85/88; all became hits under the old 75 threshold. The first hit was sold,
+but `signatureId` remained and `moveOutBlocker` checked only that ID, so moving with zero products was legal.
+- Raised `FIT_TAKEOFF` from 75 to 90 (one deterministic fit knob, not a random launch failure). Existing hits
+  remain hits; this is prospective, not a retroactive downgrade or restoration of retired products.
+- Teams now requires an explicit live-hit selection, even with only one hit. Any live hit can be selected,
+  including a later hit after the first was sold. Simulation/store validate the selection again before any
+  mutations or spending, set the selected product as signature and assign the office to it. Missing/stale IDs,
+  non-hits, and an empty live portfolio cannot move. The journal records selected ID/name and disposed products.
+- **Player clarification:** only the selected main product comes to the office. Removed the keep/sell/retire
+  checkboxes, but automatically sell every other product when it qualifies for a sale, otherwise retire it,
+  using the existing planned-sunset rules (sale proceeds, rival transfer and history; no disposal morale or
+  reputation penalty). The UI explains the irreversible consequence and previews each product's sale price
+  or retirement before confirmation. All disposal blockers are checked before spending or mutations: an
+  update to another product must finish first; an update to the selected product may continue. This replaces
+  the initial local keep-all-side-products interpretation and the older optional keep list.
+- `playthrough.ts` now supplies an explicit choice. Its default immediate-ready shipping policy has NOT been
+  silently changed. New opt-in `BOT_POLISH=1` waits for visible garage quality 90 and permits polish-only updates.
+  With `BOT_POLICY=observed`, seeds 1–12, 15-year cap: the unchanged shipping policy at threshold 90 produced
+  9 garage stalls and 3 bankruptcies (its all-loved launches top out around fit 88). With explicit polishing:
+  9 IPOs at 7.9–10.4 years, 3 early bankruptcies (seeds 2, 5, 9). Same polishing policy with only the threshold
+  reverted to 75: 10 IPOs, bankruptcies on seeds 2/5. This is evidence of attainability and a real polish requirement,
+  not human approval of hunt pacing. Watch whether the higher threshold makes the hunt too exacting in play.
+- After automatic disposal, reran the same 12 observed/polish seeds: 8 IPOs (8.5–11.0 years), the same 3 early
+  bankruptcies and an additional headquarters bankruptcy on seed 4 at day 1239. Portfolio disposal changes
+  income and future RNG through buyer selection; do not claim identical post-office balance. Human pacing
+  verification remains open.
+- Verification: `NODE_ENV=test npm test`: 219 files / 3055 tests passed; typecheck (4GB heap) and production build
+  passed. The shell defaults to `NODE_ENV=production`, which disables React `act`; override it for tests.
+  Real Chromium production-preview check at 1280×900 and 390×844: empty choice disables Move, later-hit choice
+  enables it, disposal preview/no keep checkboxes, confirmation leaves only the chosen product available.
+  Regression tests cover missing/stale/non-hit selection, sold-first-hit recovery, empty portfolio, planned
+  sales/retirements and proceeds, rival transfers, update blockers with no partial mutation, and complete UI confirmation. Already-empty office saves are not repaired by this fix.
+
 **Café/garage palm comparison (2026-11-05, local):** the café shortcut had flattened the raised far/right
 hand in typeA. Restored its lifted palm silhouette to match the garage exactly (all skin pixels in both frames,
 translated up 2px to account for the lower café seat). Added the upper outline for the lifted fingertips;

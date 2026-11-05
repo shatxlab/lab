@@ -165,7 +165,7 @@ export interface Store {
   /** Leaves the café for a garage. */
   moveToGarage(): Result
   /** Leaves the garage for a real office. */
-  moveOut(keepIds?: number[]): Result
+  moveOut(productId?: number): Result
   /** Opens another office (in `region`, by default the first it could be in) and shows it. */
   openOffice(region?: Region): Result
   /** Moves someone to another office's team. */
@@ -563,8 +563,8 @@ export function createStore(state: GameState, initialSpeed: Speed = 1, options: 
       return cue(changed(logged(() => decisions.moveToGarage(state), () => moveToGarage(state))), 'upgrade')
     },
 
-    moveOut(keepIds = []) {
-      const result = cue(changed(logged(() => decisions.moveOut(state, keepIds), () => moveOut(state, keepIds))), 'upgrade')
+    moveOut(productId) {
+      const result = cue(changed(logged(() => decisions.moveOut(state, productId), () => moveOut(state, productId))), 'upgrade')
       return result
     },
 

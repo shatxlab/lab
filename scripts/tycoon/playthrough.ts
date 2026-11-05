@@ -18,6 +18,7 @@ import { productService, serviceOutput } from '../../src/lib/tycoon/sim/services
 // SAVE_DIR=<dir> also writes the game as it enters each stage (stage-N.json), to load into the real UI.
 // Default is an optimistic lower-bound benchmark. BOT_POLICY=observed buys surveys, uses loved/feedback tags
 // and the exact approximate FitMeter range available to players; no hidden true-fit or taste ranking decisions.
+// BOT_POLISH=1 waits for visible quality 90 before shipping garage products (and permits polish-only updates).
 // BOT_EXIT=sold accepts the first genuine engine-generated offer; no fabricated exits or earnings.
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -44,7 +45,7 @@ import { hire, hireCost, ROLE_DISCIPLINE } from '../../src/lib/tycoon/sim/hiring
 import { newProductBlocker, updateBlocker, localiseBlocker } from '../../src/lib/tycoon/sim/lifecycle.ts'
 import { freeDesks, moveOut, moveOutBlocker, moveToGarage, moveToGarageBlocker, newOfficeCost, openOffice, openOfficeBlocker, officesIn, staffOf } from '../../src/lib/tycoon/sim/offices.ts'
 import { nextItem, setRoadmap } from '../../src/lib/tycoon/sim/roadmap.ts'
-import { shipProject, startProject, startUpdate, unlockedProductTypes } from '../../src/lib/tycoon/sim/project.ts'
+import { projectQuality, shipProject, startProject, startUpdate, unlockedProductTypes } from '../../src/lib/tycoon/sim/project.ts'
 import { absorbDesks, acquire, acquisitionBlocker, acquisitionPrice, rivalProductsOf } from '../../src/lib/tycoon/sim/rivals.ts'
 import { capacityOf, loadOf } from '../../src/lib/tycoon/sim/scale.ts'
 import { createInitialState } from '../../src/lib/tycoon/sim/state.ts'
@@ -54,7 +55,7 @@ import { setWorkstream } from '../../src/lib/tycoon/sim/teams.ts'
 import { nemesisRival, strikeBack, strikeBackBlocker, strikeBackCost } from '../../src/lib/tycoon/sim/nemesis.ts'
 import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
 import { surveyAudience, isSurveyed, feedbackFor } from '../../src/lib/tycoon/sim/insight.ts'
-import { LOVED_AT } from '../../src/lib/tycoon/sim/scoring.ts'
+import { isReady, LOVED_AT } from '../../src/lib/tycoon/sim/scoring.ts'
 import { featureLock } from '../../src/lib/tycoon/sim/unlocks.ts'
 import { estimateDays, teamRate, estimateDaysAt, subjectOf } from '../../src/lib/tycoon/sim/work.ts'
 import { isBuilder, type BuilderRole, type GameState, type Office, type Product, type Workstream } from '../../src/lib/tycoon/sim/types.ts'
@@ -175,7 +176,7 @@ function huntStep(office: Office): void {
       .sort((a, b) => observed ? b.value - a.value : (audience.likes[b.id] ?? 1) * b.value - (audience.likes[a.id] ?? 1) * a.value)
       .slice(0, 2)
       .map((f) => f.id)
-    if (more.length && startUpdate(state, target.id, more, office.id).ok) return
+    if ((more.length || (process.env.BOT_POLISH === '1' && target.quality < 90)) && startUpdate(state, target.id, more, office.id).ok) return
   }
   if (newProductBlocker(state) === null && state.money > 2 * monthlyBurn(state)) {
     const launch = bestLaunch()
@@ -335,6 +336,7 @@ function botStep(): void {
   for (const event of drainEvents(state)) {
     if (event.type === 'projectReady') {
       const office = state.offices.find((o) => o.id === event.officeId)
+      if (process.env.BOT_POLISH === '1' && office?.kind === 'garage' && office.project && office.project.kind !== 'contract') continue
       if (office?.project?.kind === 'new' || office?.project?.kind === 'contract' || (office?.project?.kind === 'update' && !office.project.byTeam)) shipProject(state, undefined, office.id)
     }
     if (event.type === 'breakout') say(`HIT: ${state.products.find((p) => p.id === event.productId)?.name}`)
@@ -351,6 +353,12 @@ function botStep(): void {
         else if (observed) declineBuyout(state)
         else state.exit.pending = null // Historical optimistic benchmark only.
       }
+    }
+  }
+  if (process.env.BOT_POLISH === '1') {
+    for (const office of state.offices) {
+      const project = office.project
+      if (office.kind === 'garage' && project && (project.kind === 'new' || project.kind === 'update') && !project.byTeam && isReady(project) && projectQuality(state, project) >= 90) shipProject(state, undefined, office.id)
     }
   }
   if (state.gameOver || acceptanceStop) return
@@ -372,8 +380,8 @@ function botStep(): void {
     hireTo(garage, state.signatureId === null ? 3 : 4)
     huntStep(garage)
     if (moveOutBlocker(state) === null && state.money > 40_000 + 4 * monthlyBurn(state)) {
-      const keep = state.products.filter((p) => p.id !== state.signatureId).sort((a, b) => b.users - a.users).slice(0, 2).map((p) => p.id)
-      if (moveOut(state, keep).ok) say(`moves out of the garage with ${keep.length} side products`)
+      const chosen = state.products.filter((p) => p.hit).sort((a, b) => b.users - a.users)[0]
+      if (moveOut(state, chosen?.id).ok) say(`moves out of the garage with ${chosen.name}`)
     }
     return
   }

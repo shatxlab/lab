@@ -82,7 +82,7 @@ describe('selling the studio', () => {
     state.money = 1_000_000
     exitDay(state)
     expect(state.exit.pending).not.toBeNull()
-    expect(moveOut(state).ok).toBe(true)
+    expect(moveOut(state, state.signatureId!).ok).toBe(true)
     expect(state.exit.pending).not.toBeNull()
     expect(openOffice(state, 'us').ok).toBe(true)
     expect(state.exit.pending).toBeNull()

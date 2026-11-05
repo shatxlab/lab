@@ -1,7 +1,7 @@
 import { initialisePeopleManagement } from './people-management'
 import { formatMoney } from '@/lib/tycoon/format'
 import { REGION_NAME } from '@/lib/tycoon/data/regions'
-import { CAFE_JOBS, EU_OFFICE_COST, GARAGE_DEPOSIT, GARAGE_READY_MONEY, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, SIDE_PRODUCT_LIMIT, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
+import { CAFE_JOBS, EU_OFFICE_COST, GARAGE_DEPOSIT, GARAGE_READY_MONEY, MAX_OFFICES, MOVE_OUT_COST, NEW_OFFICE_COST, OFFICE_KINDS, OFFICE_UPGRADE_MORALE, REGION_OFFICE_LIMIT, type OfficeSpec } from './balance'
 import { changeOfGuard } from './founding'
 import { adjustMorale } from './morale'
 import { sunsetBlocker, sunsetProduct } from './sunset'
@@ -182,7 +182,7 @@ export function moveOutBlocker(state: GameState): string | null {
   if (inCafe(state)) return 'Move into the garage first'
   if (!state.offices.some((o) => o.kind === 'garage')) return 'Already in an office'
   if (state.stage < MOVE_OUT_STAGE) return 'The studio is not ready yet'
-  if (state.signatureId === null) return 'Have a breakout hit first'
+  if (!state.products.some((p) => p.hit)) return 'Have a live breakout hit first'
   return state.money < MOVE_OUT_COST ? 'Not enough money' : null
 }
 
@@ -191,27 +191,26 @@ export function inGarage(state: GameState): boolean {
   return state.offices.some((o) => o.kind !== 'office')
 }
 
-/** The garage products besides the hit: the ones that can come along as side products, or be sold. */
-export function garageProducts(state: GameState): Product[] {
-  return state.products.filter((p) => p.id !== state.signatureId)
+/** The move requires an explicit live hit, never a stale signature ID or an implicit first hit. */
+export function moveOutProductBlocker(state: GameState, productId?: number): string | null {
+  if (productId === undefined) return 'Choose the product to move into the office with'
+  const product = state.products.find((p) => p.id === productId)
+  if (!product) return 'Choose a live product'
+  if (!product.hit) return 'Choose a breakout hit'
+  const busy = state.products.find((p) => p.id !== productId && sunsetBlocker(state, p))
+  return busy ? `Finish the update to ${busy.name} before moving: other products will be sold or retired` : null
 }
 
-/** Why these products can't be the ones kept at the move out, or null when they can. */
-export function keepBlocker(state: GameState, keepIds: number[]): string | null {
-  const keep = new Set(keepIds)
-  if (keep.size > SIDE_PRODUCT_LIMIT) return `Keep at most ${SIDE_PRODUCT_LIMIT} products beside the hit`
-  const others = garageProducts(state)
-  if (others.some((p) => keep.has(p.id) === false && sunsetBlocker(state, p))) return 'A product being updated can not be sold: keep it or wait for the update'
-  return [...keep].every((id) => others.some((p) => p.id === id)) ? null : 'Keep products of the garage only'
-}
-
-/**
- * Leaves the garage for a real office: the same team and project, with room for twelve. The hit stays; the
- * products in `keepIds` (up to `SIDE_PRODUCT_LIMIT`) come along as side products; every other one is sold.
- */
-export function moveOut(state: GameState, keepIds: number[] = []): Result {
-  const blocker = moveOutBlocker(state) ?? keepBlocker(state, keepIds)
+/** Leaves the garage with only the chosen hit, selling or retiring every other product as a planned exit. */
+export function moveOut(state: GameState, productId?: number): Result {
+  const blocker = moveOutBlocker(state) ?? moveOutProductBlocker(state, productId)
   if (blocker) return fail(blocker)
+  state.signatureId = productId!
+  // All disposal blockers were checked above, before spending or modifying any products.
+  for (const product of [...state.products]) {
+    if (product.id === productId) delete product.role
+    else sunsetProduct(state, product.id, { planned: true })
+  }
   const garage = state.offices.find((o) => o.kind === 'garage')!
   state.money -= MOVE_OUT_COST
   garage.kind = 'office'
@@ -223,10 +222,6 @@ export function moveOut(state: GameState, keepIds: number[] = []): Result {
   if (state.signatureId !== null) {
     garage.productId = state.signatureId
     garage.workstream ??= 'features'
-  }
-  for (const product of garageProducts(state)) {
-    if (keepIds.includes(product.id)) product.role = 'side'
-    else sunsetProduct(state, product.id, { planned: true })
   }
   initialisePeopleManagement(state, true)
   adjustMorale(state, OFFICE_UPGRADE_MORALE)

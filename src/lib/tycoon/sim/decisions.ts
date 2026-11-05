@@ -181,9 +181,9 @@ export const decisions = {
     return ['office.toGarage', 'Left the café for a garage', { money: Math.round(state.money), jobs: state.contractsDone }]
   },
 
-  moveOut(state: GameState, keepIds: number[]): Decision {
-    const kept = state.products.filter((p) => keepIds.includes(p.id)).map((p) => p.name)
-    return ['office.moveOut', 'Left the garage for an office', { kept: kept.join(', ') || 'none' }]
+  moveOut(state: GameState, productId?: number): Decision {
+    const product = state.products.find((p) => p.id === productId)
+    return ['office.moveOut', 'Left the garage for an office', { productId: productId ?? -1, product: product?.name ?? '', disposed: state.products.filter((p) => p.id !== productId).map((p) => p.name).join(', ') || 'none' }]
   },
 
   openOffice(state: GameState, region?: Region): Decision {

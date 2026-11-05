@@ -867,6 +867,11 @@
   gap: 8px;
 }
 
+.tycoon-root .office-move-warning {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .tycoon-root .person {
   display: grid;
   grid-template-columns: minmax(130px, 1fr) auto auto;

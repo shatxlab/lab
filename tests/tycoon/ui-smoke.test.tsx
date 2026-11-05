@@ -250,14 +250,41 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     expect(host.textContent).toContain('70 → 74')
   })
 
-  it('the move out of the garage lists the other products to keep or sell', () => {
+  it('the move out requires a live hit choice and has no keep/sell checkboxes', () => {
     const store = richStore()
     store.state.offices = [store.state.offices[0]]
     store.state.offices[0].kind = 'garage'
     store.state.stage = 2
     store.state.signatureId = 501
     const host = mount(store, <TeamDialog />)
-    expect(host.textContent).toContain('Your hit comes with you')
-    expect(host.textContent).toContain('Titan')
+    expect(host.textContent).toContain('Choose the product to move into the office with')
+    expect(host.querySelector('input[type=checkbox]')).toBeNull()
+    const select = host.querySelector('select[aria-label="Product to move into the office with"]') as HTMLSelectElement
+    expect(select.value).toBe('')
+    const moveButton = [...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Move ·'))!
+    expect(moveButton.disabled).toBe(true)
+    expect(select.textContent).toContain('Anchor')
+    act(() => {
+      select.value = '501'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(moveButton.disabled).toBe(false)
+    expect(host.textContent).toContain('All other products are automatically sold')
+    expect(host.querySelector('[aria-label="Products leaving the portfolio"]')?.textContent).toContain('Titan')
+    expect(host.querySelector('#office-move-warning')).toBeNull()
+    act(() => moveButton.click())
+    const warning = host.querySelector('#office-move-warning')!
+    expect(warning.classList.contains('bad')).toBe(true)
+    expect(warning.getAttribute('role')).toBe('alert')
+    expect(warning.textContent).toContain('Only Anchor moves with you.')
+    expect(warning.textContent).toContain('All other products will not move to the office: they will be sold or retired.')
+    expect(moveButton.getAttribute('aria-describedby')).toBe(warning.id)
+    expect(store.state.offices[0].kind).toBe('garage')
+    expect(store.state.products).toHaveLength(2)
+    act(() => moveButton.click())
+    expect(store.state.offices[0].kind).toBe('office')
+    expect(store.state.signatureId).toBe(501)
+    expect(store.state.products.map((p) => p.id)).toEqual([501])
+    expect(store.state.retired).toHaveLength(1)
   })
 })

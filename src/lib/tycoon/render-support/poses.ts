@@ -337,7 +337,7 @@ export const STEP_CYCLE: readonly Step[] = ['stepA', 'stepB', 'stepD', 'stepC']
 const snack = (patch: Patch): Patch => ({ ...patch, rows: patch.rows.map((row) => row.replaceAll('g', 'l').replaceAll('f', 'h')) })
 
 /** The patches that draw `character` in `pose`, in order. */
-export function posePatches(character: number, pose: Pose, cafeTyping = false): readonly Patch[] {
+export function posePatches(character: number, pose: Pose): readonly Patch[] {
   const torso = TORSOS[character]!
   if (pose === 'carry') return carry(character)
   // On their feet in the pack's own legs, so only what the arms do (and the legs, striding) is drawn over the sprite.
@@ -349,24 +349,6 @@ export function posePatches(character: number, pose: Pose, cafeTyping = false): 
   if (isWalk(pose)) return [WALK[character]![pose], ...carry(character)]
   const seated = SEATED[character]!
   if (pose === 'sit') return seated
-  if (cafeTyping && (pose === 'typeA' || pose === 'typeB')) {
-    const base = POSES[character]![pose]
-    const skin = CARRY[character]![2]
-    const reach = character === 1 ? 8 : 6
-    // Keep the shoulder anchored; bend the forearm upward to compensate for the lower café seat.
-    // Preserve each look's horizontal reach rather than stretching the whole arm.
-    const rows = pose === 'typeA'
-      ? ['...Da' + '.'.repeat(reach - 5) + 'aa',
-        'aSSaD' + 'a'.repeat(reach - 5) + skin + skin + 'a',
-        '.aSS' + 'a'.repeat(reach - 4) + skin + skin + 'a',
-        '..' + 'a'.repeat(reach - 2) + skin + skin + 'a',
-        '.'.repeat(reach) + 'aa']
-      : ['...Da' + '.'.repeat(reach - 5) + 'aaa',
-        'aSSaD' + 'a'.repeat(reach - 5) + skin + skin + 'aa',
-        '.aSS' + 'a'.repeat(reach - 4) + skin + skin + 'aa',
-        '..' + 'a'.repeat(reach + 1)]
-    return [...seated, torso.near, torso.far, { ...base, rows }]
-  }
   return [...seated, ...MOVES[pose].map((side) => torso[side]), POSES[character]![pose]]
 }
 

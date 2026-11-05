@@ -69,7 +69,7 @@ describe('posePatches', () => {
     expect(openEdgesPosed(frame, character, pose)).toEqual([])
   })
 
-  it('puts the founders’ bent typing hands on the keys despite the 2px seat drop, in either facing', () => {
+  it('puts the founders’ standard typing hands on the keys with both seats and table lowered 2px, in either facing', () => {
     for (let character = 0; character < CHARACTER_COUNT; character++) {
       const [, , width, height] = CHARACTER_FRAMES[character]!
       for (const right of [false, true]) {
@@ -78,7 +78,7 @@ describe('posePatches', () => {
         const bodyY = station.seatY + 22 - (height - 1)
         const keys = WORKSTATIONS.laptop.keys.map(([x, y]) => [station.laptopX + (right ? WORKSTATIONS.laptop.width - 1 - x : x), station.laptopY + y])
         for (const pose of ['typeA', 'typeB'] as const) {
-          const arms = posePatches(character, pose, true).at(-1)!
+          const arms = posePatches(character, pose).at(-1)!
           const skin = character === 0 ? 'e' : 'j'
           const hands = arms.rows.flatMap((row, y) => [...row].flatMap((mark, x) => mark === skin ? [[bodyX + (right ? width - 1 - (arms.x + x) : arms.x + x), bodyY + arms.y + y]] : []))
           expect(hands.some(([x, y]) => keys.some(([kx, ky]) => x === kx && y === ky))).toBe(true)
@@ -87,23 +87,6 @@ describe('posePatches', () => {
             expect(x).toBeLessThan(station.laptopX + WORKSTATIONS.laptop.width)
           }
         }
-      }
-    }
-  })
-
-  it('keeps café typing outlines closed and shoulders anchored for every look', () => {
-    for (let character = 0; character < CHARACTER_COUNT; character++) {
-      for (const pose of POSE_NAMES.filter((pose) => pose !== 'typeA' && pose !== 'typeB')) {
-        expect(posePatches(character, pose, true)).toEqual(posePatches(character, pose))
-      }
-      for (const pose of ['typeA', 'typeB'] as const) {
-        const regular = posePatches(character, pose)
-        const cafe = posePatches(character, pose, true)
-        expect(cafe.slice(0, -1)).toEqual(regular.slice(0, -1))
-        expect(cafe.at(-1)!.x).toBe(regular.at(-1)!.x)
-        expect(cafe.at(-1)!.y).toBe(regular.at(-1)!.y)
-        const frame = poseFrame(standing(character), cafe, shirtColors(character, 0))
-        expect(openEdgesPosed(frame, character, pose)).toEqual([])
       }
     }
   })

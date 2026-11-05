@@ -354,10 +354,10 @@ export function posePatches(character: number, pose: Pose, cafeTyping = false): 
     const skin = CARRY[character]![2]
     const reach = character === 1 ? 8 : 6
     // Keep the shoulder anchored; bend the forearm upward to compensate for the lower café seat.
-    // Preserve each look's horizontal reach rather than stretching the whole arm.
+    // Preserve the garage palm pixels and alternating hand lift, translated up 2px for the lower seat.
     const rows = pose === 'typeA'
-      ? ['...Da' + '.'.repeat(reach - 5) + 'aa',
-        'aSSaD' + 'a'.repeat(reach - 5) + skin + skin + 'a',
+      ? ['...Da' + '.'.repeat(reach - 5) + 'a' + skin + skin + 'a',
+        'aSSaD' + 'a'.repeat(reach - 5) + 'aa' + skin + 'a',
         '.aSS' + 'a'.repeat(reach - 4) + skin + skin + 'a',
         '..' + 'a'.repeat(reach - 2) + skin + skin + 'a',
         '.'.repeat(reach) + 'aa']
@@ -365,7 +365,9 @@ export function posePatches(character: number, pose: Pose, cafeTyping = false): 
         'aSSaD' + 'a'.repeat(reach - 5) + skin + skin + 'aa',
         '.aSS' + 'a'.repeat(reach - 4) + skin + skin + 'aa',
         '..' + 'a'.repeat(reach + 1)]
-    return [...seated, torso.near, torso.far, { ...base, rows }]
+    const raisedHandOutline: Patch[] = pose === 'typeA'
+      ? [{ x: base.x + reach + 1, y: base.y - 1, rows: ['aa'] }] : []
+    return [...seated, torso.near, torso.far, ...raisedHandOutline, { ...base, rows }]
   }
   return [...seated, ...MOVES[pose].map((side) => torso[side]), POSES[character]![pose]]
 }

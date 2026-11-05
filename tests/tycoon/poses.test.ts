@@ -99,11 +99,17 @@ describe('posePatches', () => {
       for (const pose of ['typeA', 'typeB'] as const) {
         const regular = posePatches(character, pose)
         const cafe = posePatches(character, pose, true)
-        expect(cafe.slice(0, -1)).toEqual(regular.slice(0, -1))
+        expect(cafe.slice(0, pose === 'typeA' ? -2 : -1)).toEqual(regular.slice(0, -1))
         expect(cafe.at(-1)!.x).toBe(regular.at(-1)!.x)
         expect(cafe.at(-1)!.y).toBe(regular.at(-1)!.y)
         // Shorten downward reach by exactly two pixels; do not lift the shoulder or move the sitter.
         expect(cafe.at(-1)!.rows.length).toBe(regular.at(-1)!.rows.length - 2)
+        const skin = character === 0 ? 'e' : 'j'
+        const palms = (patch: (typeof regular)[number]) => patch.rows.flatMap((row, y) =>
+          [...row].flatMap((mark, x) => mark === skin ? [`${x},${y}`] : []))
+        const garageHandsRaised = { ...regular.at(-1)!, rows: regular.at(-1)!.rows.slice(2) }
+        // Same palm pixels and alternating lift as the garage, translated up 2px for the café seat.
+        expect(palms(cafe.at(-1)!)).toEqual(palms(garageHandsRaised))
         const frame = poseFrame(standing(character), cafe, shirtColors(character, 0))
         expect(openEdgesPosed(frame, character, pose)).toEqual([])
       }

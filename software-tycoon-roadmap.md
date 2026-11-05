@@ -98,6 +98,12 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
+**Café/garage palm comparison (2026-11-05, local):** the café shortcut had flattened the raised far/right
+hand in typeA. Restored its lifted palm silhouette to match the garage exactly (all skin pixels in both frames,
+translated up 2px to account for the lower café seat). Added the upper outline for the lifted fingertips;
+shoulders, shortened sleeves, table/laptops and seating are unchanged. Tests compare palm pixels against the
+actual garage arms for every character and retain closed-outline/contact checks.
+
 **Café arm/table correction (2026-11-05, local):** player rejected the lowered table. Restored the table
 and laptops 2px upward, kept the approved lower characters/stools, and shortened café typing arms vertically
 by 2px with shoulders/horizontal reach anchored. Palms contact the keyboard in both frames/facings across

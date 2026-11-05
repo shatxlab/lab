@@ -64,7 +64,8 @@ const colorNumber = (hex: string): number => Number.parseInt(hex.slice(1), 16)
 /** Where a workstation's occupant sits in an arrangement: horizontal centre, and the top of a 23-row person's head. */
 function seat(arrangement: Arrangement, index: number, cafe = false): { x: number; y: number } {
   const [px, py] = partitionAt(arrangement, index >> 1)
-  return { x: cafe ? founderCafeStation(px, py, (index & 1) === 1).seatX : px + seatX((index & 1) === 1), y: py + 5 }
+  const station = founderCafeStation(px, py, (index & 1) === 1)
+  return { x: cafe ? station.seatX : px + seatX((index & 1) === 1), y: cafe ? station.seatY : py + 5 }
 }
 
 /** The sprites face right; whoever sits on the right of a partition has their computer to the left. */
@@ -1311,7 +1312,7 @@ export class OfficeScene {
       const cafeStation = founderCafeStation(px, py, right)
       const chair = atlas.frame(CHAIRS[i % CHAIRS.length])
       const tuck = vacancy && chairTucked(vacancy) ? (right ? -CHAIR_TUCK : CHAIR_TUCK) : 0
-      if (cafe) drawCafeStool(this.chairs.addChild(new Graphics()), Math.round(cafeStation.seatX), cafeStation.feet)
+      if (cafe) drawCafeStool(this.chairs.addChild(new Graphics()), Math.round(cafeStation.seatX), cafeStation.stoolFeet)
       else this.chairs.addChild(placed(chair, px + chairX(right, chair.width) + tuck, py + CHAIR_TOP, right))
 
       const deskX = cafe ? cafeStation.laptopX : px + (right ? 40 : 19)
@@ -1385,7 +1386,7 @@ export class OfficeScene {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
       const look = employeeLook(state.employees.find((e) => e.id === id)!)
-      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(look, pose, blink), this.arrangement, desk, this.shown?.kind === 'cafe')
+      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(look, pose, blink, this.shown?.kind === 'cafe'), this.arrangement, desk, this.shown?.kind === 'cafe')
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }

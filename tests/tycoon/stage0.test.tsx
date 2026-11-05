@@ -164,6 +164,9 @@ describe('Stage 0 presentation', () => {
     expect(right.seatX).toBeGreaterThan(FOUNDER_TABLE.left + FOUNDER_TABLE.width)
     expect(FOUNDER_TABLE.feet - FOUNDER_TABLE.top).toBe(12)
     for (const station of [left, right]) {
+      expect(station.seatY).toBe(7)
+      expect(station.stoolFeet).toBe(FOUNDER_TABLE.feet + 2)
+      expect(station.feet).toBe(FOUNDER_TABLE.feet)
       expect(station).not.toHaveProperty('cupX')
       expect(station).not.toHaveProperty('cupBottom')
       expect(station.laptopY).toBe(WORKSTATIONS.laptop.top)

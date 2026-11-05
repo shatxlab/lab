@@ -98,6 +98,13 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
+**Café seat follow-up (2026-11-05, local):** at the player's request, moved founders and their stools
+down another 2 art pixels together, leaving the table, laptops, standard typing poses and guest furniture unchanged.
+Founder station geometry now exposes separate character/stool heights so the table cannot move with them.
+Follow-up: café-only typing forearms now bend up to the keyboard while shoulders, horizontal reach and the
+lowered seating stay fixed. Both typing frames/all looks/both facings check actual hand-to-key contact and
+closed outlines; non-typing poses and office art remain unchanged.
+
 **Café typing alignment (2026-11-05, local):** lowered the founders' tabletop/laptops by 3 art pixels to the
 office laptop keyboard height, lowered their stool seats by 1 pixel, and removed the special high-table arm
 patches/atlas variant. Table width, laptop horizontal placement and founder positions are unchanged; guest

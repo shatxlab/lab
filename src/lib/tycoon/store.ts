@@ -79,6 +79,7 @@ export type Dialog =
   /** Absorbing a rival studio: choose which of its products to keep. */
   | { kind: 'absorb'; rivalId: number }
   | { kind: 'menu' }
+  | { kind: 'career' }
   | { kind: 'game-over' }
   /** A bigger company wants to buy the studio. */
   | { kind: 'offer' }

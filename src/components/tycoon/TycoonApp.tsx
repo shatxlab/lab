@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Store } from '@/lib/tycoon/store'
 import { App } from './App'
-import { browserStorage, setAutosave } from '@/lib/tycoon/browser'
+import { browserStorage } from '@/lib/tycoon/browser'
+import { bootCareer, type CareerBoot } from '@/lib/tycoon/career-bootstrap'
+import { createCareerController, type CareerController } from '@/lib/tycoon/career-controller'
+import { browserCareerLock, type ExclusiveSaveLock } from '@/lib/tycoon/career-transactions'
+import type { KeyValueStorage } from '@/lib/tycoon/save'
+import { CareerRecovery } from './CareerRecovery'
 import { createSfx } from '@/lib/tycoon/audio'
 import { applyDevParams, devClock, hasDevParams } from '@/lib/tycoon/dev'
-import { createAutosave, loadGame, migrateLegacySave } from '@/lib/tycoon/save'
 import { companyOverview, getOffice, regionOf } from '@/lib/tycoon/sim/offices'
 import { createInitialState } from '@/lib/tycoon/sim/state'
 import { overallProgress } from '@/lib/tycoon/sim/scoring'
@@ -19,48 +23,37 @@ import { createStore } from '@/lib/tycoon/store'
  */
 export default function TycoonApp() {
   const [store, setStore] = useState<Store | null>(null)
+  const [career, setCareer] = useState<CareerController | undefined>()
+  const [recovery, setRecovery] = useState<{ failure: Extract<CareerBoot, { ok: false }>; storage: KeyValueStorage | null; lock: ExclusiveSaveLock | null } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // One-time legacy save carry-over, before anything reads the save keys.
-    const storage = import.meta.env.DEV && hasDevParams() ? null : browserStorage()
-    if (storage) migrateLegacySave(storage)
-
-    // Dev shortcut URLs get a throwaway game and never touch the real save.
     const sandbox = import.meta.env.DEV && hasDevParams()
-    const saved = sandbox ? null : (storage ? loadGame(storage) : null)
-    const state = saved ?? createInitialState(Date.now())
-    if (sandbox) applyDevParams(state)
-
-    // Sound is synthesized in the browser; it can only start after the player's first click or key press.
-    const sfx = createSfx({ storage: browserStorage(), create: () => new AudioContext() })
+    const storage = sandbox ? null : browserStorage(), lock = sandbox ? null : browserCareerLock()
+    const abort = new AbortController()
+    let active: CareerController | undefined
+    const sfx = createSfx({ storage, create: () => new AudioContext() })
     const unlock = () => sfx.unlock()
     const gestures = ['pointerdown', 'keydown'] as const
     for (const gesture of gestures) window.addEventListener(gesture, unlock, { once: true })
-
-    // A resumed game starts paused (speed 0) so nothing happens before the player is ready.
-    const next = createStore(state, 0, { sfx })
-    // A new run starts by naming you and the studio; a dev sandbox skips straight to the game.
-    if ((!saved && !sandbox) || state.freshChapter) next.openDialog({ kind: 'founding' })
-    setStore(next)
-
-    if (storage) {
-      const autosave = createAutosave(next, storage)
-      setAutosave(autosave)
-      const flush = () => autosave.flush()
-      window.addEventListener('pagehide', flush)
-      const onVisibility = () => {
-        if (document.visibilityState === 'hidden') autosave.flush()
-      }
-      document.addEventListener('visibilitychange', onVisibility)
-      return () => {
-        window.removeEventListener('pagehide', flush)
-        document.removeEventListener('visibilitychange', onVisibility)
-        for (const gesture of gestures) window.removeEventListener(gesture, unlock)
-        autosave.stop()
-      }
-    }
+    const flush = () => { if (active) void active.flush() }
+    const visibility = () => { if (document.visibilityState === 'hidden') flush() }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', visibility)
+    if (sandbox) {
+      const state = createInitialState(Date.now()); applyDevParams(state)
+      setStore(createStore(state, 0, { sfx })) // No storage writer, including sandbox menu actions.
+    } else void (async () => {
+      const boot = await bootCareer(storage, lock, { signal: abort.signal })
+      if (abort.signal.aborted) { if (boot.ok) boot.owner.stop(); return }
+      if (!boot.ok) { setRecovery({ failure: boot, storage, lock }); return }
+      active = createCareerController(boot.owner, { sfx, onReplace: () => location.reload() })
+      setCareer(active); setStore(active.store)
+    })()
     return () => {
+      abort.abort(); active?.stop()
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', visibility)
       for (const gesture of gestures) window.removeEventListener(gesture, unlock)
     }
   }, [])
@@ -179,7 +172,7 @@ export default function TycoonApp() {
   return (
     // The game keeps its own dark palette regardless of the lab theme; see styles/tycoon.css.
     <div ref={rootRef} className="tycoon-root">
-      {store && <App store={store} />}
+      {recovery ? <CareerRecovery {...recovery} /> : store ? <App store={store} career={career} /> : <p role="status">Loading saved career…</p>}
     </div>
   )
 }

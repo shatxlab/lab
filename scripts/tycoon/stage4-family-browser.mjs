@@ -29,7 +29,7 @@ try {
       await page.screenshot({ path: `${shots}/${family}-${width}.png` })
       await ops.getByRole('button', { name: 'Assign initiative', exact: true }).click()
       await page.waitForTimeout(2300) // Normal autosave throttle, not a simulation/day shortcut.
-      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lab:tycoon:save')))
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lab:tycoon:save')).game)
       assert.equal(saved.products[0].users, 8000)
       assert.equal(saved.offices[0].assignment.kind, 'initiative')
       assert.equal(saved.offices[0].project.itemId, `companion:${companion}`)

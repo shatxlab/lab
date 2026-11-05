@@ -1,3 +1,4 @@
+import { CareerFeedback } from './CareerFeedback'
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 
@@ -24,7 +25,7 @@ export function Modal({ title, children, footer, onClose }: ModalProps) {
     <div className="backdrop" onClick={(event) => event.target === event.currentTarget && onClose?.()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
         <h2>{title}</h2>
-        <div className="modal-body">{children}</div>
+        <div className="modal-body"><CareerFeedback inModal />{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>

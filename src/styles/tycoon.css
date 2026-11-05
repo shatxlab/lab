@@ -2105,3 +2105,26 @@
 .tycoon-root .studio-section .tiles .value { overflow-wrap: anywhere; }
 
 .tycoon-root .product-navigation { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+/* Prepared career dialogs: exact cash/quotes remain readable at phone widths and enlarged text. */
+.tycoon-root .career-figures { display: grid; gap: .65rem; margin: 1rem 0; }
+.tycoon-root .career-figures > div { min-width: 0; }
+.tycoon-root .career-figures dt { color: var(--muted, #a7a6bd); }
+.tycoon-root .career-figures dd { margin: .15rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.tycoon-root .career-section { border-top: 1px solid #41405b; padding-top: 1rem; margin-top: 1rem; min-width: 0; }
+.tycoon-root .career-form { display: grid; gap: .8rem; min-width: 0; }
+.tycoon-root .career-form > label { display: grid; gap: .3rem; min-width: 0; }
+.tycoon-root .career-form input:not([type='checkbox']), .tycoon-root .career-form select { width: 100%; min-width: 0; box-sizing: border-box; }
+.tycoon-root .career-form fieldset { min-width: 0; border: 1px solid #41405b; }
+.tycoon-root .career-form legend { max-width: 100%; white-space: normal; }
+.tycoon-root .career-hire { display: flex; align-items: start; gap: .5rem; margin: .6rem 0; overflow-wrap: anywhere; }
+.tycoon-root .career-hire input { flex: 0 0 auto; width: auto; margin-top: .3rem; }
+.tycoon-root .career-feedback { padding: .6rem; border: 1px solid #8f7e55; background: #242137; overflow-wrap: anywhere; }
+.tycoon-root .career-feedback button { margin-right: .5rem; }
+.tycoon-root .career-section .actions { position: static; margin: .5rem 0; padding: 0; box-shadow: none; }
+.tycoon-root .career-section button, .tycoon-root .career-feedback button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.tycoon-root .career-recovery { padding: 1.25rem; overflow: auto; max-width: 42rem; overflow-wrap: anywhere; }
+.tycoon-root .career-recovery button { display: block; max-width: 100%; margin: .75rem 0; white-space: normal; }
+.tycoon-root .career-recovery label { display: grid; gap: .5rem; }
+.tycoon-root .career-recovery input { min-width: 0; max-width: 100%; }
+.tycoon-root .career-history { overflow-wrap: anywhere; min-width: 0; }

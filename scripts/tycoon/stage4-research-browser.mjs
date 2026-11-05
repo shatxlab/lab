@@ -44,7 +44,7 @@ try {
       assert.match(await preview.innerText(), /Content permission stays; the design-speed practice must be re-established/)
       if (scenario === 'retired' || scenario === 'bankrupt') {
         assert.match(await preview.innerText(), /Unfinished research/)
-        const proceed = page.getByRole('button', { name: scenario === 'retired' ? 'Start something new' : 'Start again, alone', exact: true })
+        const proceed = page.getByRole('button', { name: 'Apply prototype settlement', exact: true })
         await proceed.scrollIntoViewIfNeeded()
         await proceed.screenshot({ path: `${shots}/${scenario}-decision-${width}.png` })
         assert.ok(await proceed.isVisible())
@@ -60,9 +60,24 @@ try {
       }
       if (scenario === 'retired' || scenario === 'bankrupt') {
         if (await dismiss.isVisible()) await dismiss.click()
-        await page.getByRole('button', { name: scenario === 'retired' ? 'Start something new' : 'Start again, alone', exact: true }).click()
-        await page.getByRole('dialog', { name: 'A new studio', exact: true }).waitFor()
-        await page.getByRole('button', { name: 'Open the laptops', exact: true }).click()
+        await page.getByRole('button', { name: 'Apply prototype settlement', exact: true }).click()
+        const fund = page.getByRole('button', { name: 'Confirm investment and found company', exact: true })
+        const prepare = async () => {
+          await page.getByLabel('Company name', { exact: true }).fill('Paid Research Successor')
+          // Bankruptcy carries the founder alone: an ordinary developer must really be selected and paid.
+          if (scenario === 'bankrupt') await page.locator('.career-hire').filter({ hasText: / · developer · / }).first().getByRole('checkbox').check()
+          await page.getByRole('button', { name: 'Use minimum', exact: true }).click()
+        }
+        await prepare()
+        for (let contract = 0; contract < 40 && await fund.isDisabled(); contract++) {
+          await page.getByRole('button', { name: 'Accept 30-day consulting contract', exact: true }).click()
+          await page.getByRole('button', { name: 'Finish contract (30 days)', exact: true }).click()
+          await prepare() // Successful world progression invalidates the previous local hiring/funding preview.
+        }
+        assert.equal(await fund.isEnabled(), true, 'explicit consulting must eventually finance a minimum real start')
+        const navigation = page.waitForEvent('framenavigated', (f) => f === page.mainFrame())
+        await fund.click(); await navigation
+        await page.locator('.scene-host[data-render-ready="true"] canvas').waitFor()
         await page.getByRole('button', { name: /^Research(?: ·|$)/ }).click()
         const row = page.locator('.research-node').filter({ has: page.getByText('CI engineering practice', { exact: true }) })
         assert.match(await row.innerText(), /Blueprint known — inactive in this company/)
@@ -70,10 +85,14 @@ try {
         await page.locator('.scene-host canvas').waitFor()
         await page.getByRole('button', { name: /^Research(?: ·|$)/ }).click()
         assert.match(await row.innerText(), /Blueprint known — inactive in this company/)
-        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('lab:tycoon:save')))
+        const career = await page.evaluate(() => JSON.parse(localStorage.getItem('lab:tycoon:save'))), saved = career.game
+        assert.equal(career.version, 12)
         assert.equal(saved.gameOver, false)
         assert.equal(saved.chapter, 2)
-        assert.equal(saved.money, scenario === 'retired' ? JSON.parse(readFileSync('/tmp/tycoon-stage4-research-next.json', 'utf8')).money : 5000)
+        const investments = career.finance.records.filter((r) => r.kind === 'investment')
+        assert.equal(investments.length, 1)
+        assert.ok(saved.money > 0 && saved.money <= investments[0].amount)
+        assert.equal(saved.founding.ambition, 'modest')
         assert.equal(saved.research.known.length, 33)
         assert.equal(saved.surveyed.length, 2)
         assert.equal(saved.research.active, null)

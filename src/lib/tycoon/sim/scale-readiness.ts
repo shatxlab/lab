@@ -1,4 +1,5 @@
 import { FRESH_DAYS, PROJECT_SIZES, RELEASE_MIN_DAYS, SPEC_REWORK } from './balance'
+import { companyTrafficGoal } from './company-scale'
 import { fitOf } from './fit'
 import { projectTarget } from './project'
 import { bugDensity, interest } from './products'
@@ -51,7 +52,7 @@ export function scaleRequirements(state: GameState, stage = state.stage): ScaleR
   const { fastest, cadence, capable } = operatingCapacity(state)
   const productive = capable.length
   const floors = stage - 2
-  const capacityTarget = stage === 4 ? 1_000_000 : 3_000_000
+  const capacityTarget = companyTrafficGoal(state, stage === 4 ? 1_000_000 : 3_000_000)
   const capacity = capacityOf(hit)
   const fit = fitOf(state, hit)
   const freshness = interest(hit, state.day)

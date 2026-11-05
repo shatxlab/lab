@@ -1,3 +1,4 @@
+import { useCareer } from './career-context'
 import { useState } from 'react'
 import { formatMoney } from '@/lib/tycoon/format'
 import { ipoBlocker, ipoValuation } from '@/lib/tycoon/sim/exit'
@@ -8,14 +9,15 @@ import { Modal } from './Modal'
 /** Eligibility is an achievement, not an expiring buyer's offer. The player chooses when to end this chapter. */
 export function IpoDialog() {
   const store = useStore()
+  const career = useCareer()
   const state = useGame()
   const [confirm, setConfirm] = useState(false)
   const [message, setMessage] = useState('')
   const blocker = ipoBlocker(state)
   const value = formatMoney(ipoValuation(state))
-  const proceed = () => {
+  const proceed = async () => {
     if (!confirm) return setConfirm(true)
-    const result = store.goPublic()
+    const result = career ? await career.end('ipo') : store.goPublic()
     if (!result.ok) setMessage(result.reason)
   }
 
@@ -23,7 +25,7 @@ export function IpoDialog() {
     <Modal title="Ready to ring the bell" onClose={() => store.closeDialog()} footer={
       <div className="actions">
         <button onClick={() => store.closeDialog()}>Keep running the company</button>
-        <button className="primary" disabled={blocker !== null} onClick={proceed}>
+        <button className="primary" disabled={blocker !== null || career?.busy.value} onClick={proceed}>
           {confirm ? 'Confirm IPO and end this chapter' : 'Take the company public…'}
         </button>
       </div>

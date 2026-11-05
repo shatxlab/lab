@@ -1,3 +1,5 @@
+import { useCareer } from './career-context'
+import { CareerDialog } from './CareerDialog'
 import { IpoDialog } from './IpoDialog'
 import { AbsorbDialog } from './AbsorbDialog'
 import { ReleaseCardDialog } from './ReleaseCardDialog'
@@ -16,6 +18,7 @@ import { TeamDialog } from './TeamDialog'
 
 export function DialogHost() {
   const dialog = useSignal(useStore().dialog)
+  const career = useCareer()
   switch (dialog?.kind) {
     case 'new-project':
       return <NewProjectDialog updateOf={dialog.updateOf} officeId={dialog.officeId} grow={dialog.grow} />
@@ -56,6 +59,8 @@ export function DialogHost() {
       return <EmployeeDialog id={dialog.id} />
     case 'menu':
       return <MenuDialog />
+    case 'career':
+      return career ? <CareerDialog /> : null
     case 'research':
       return <ResearchDialog />
     case 'studio':

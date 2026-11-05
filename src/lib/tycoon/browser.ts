@@ -3,15 +3,13 @@
 //   - `installOffer` signal, `watchInstallOffer()` and `installApp()` — the beforeinstallprompt /
 //     appinstalled listeners and Menu Install button are replaced by the lab's PWA handling.
 //   - No service-worker registration or manifest logic lives here.
-// Kept: storage access, autosave registration, new-game reset, save export/import (UI stage wires these).
+// Live career mutations are owned by career-controller/persistence, not by global browser helpers.
+// These helpers only expose storage/downloads; preview reset/import/free-chapter fallbacks explicitly refuse writes.
 
-import { clearSave, importSave, migrateLegacySave, saveGame, type Autosave, type KeyValueStorage } from '@/lib/tycoon/save'
-import { nextChapter } from '@/lib/tycoon/sim/chapters'
+import type { KeyValueStorage } from '@/lib/tycoon/save'
 import { exportJournal } from '@/lib/tycoon/sim/journal'
-import { deserialize, serialize } from '@/lib/tycoon/sim/state'
+import { serialize } from '@/lib/tycoon/sim/state'
 import { fail, type GameState, type Result } from '@/lib/tycoon/sim/types'
-
-let autosave: Autosave | null = null
 
 /** `localStorage`, or null where the browser blocks it. */
 export function browserStorage(): KeyValueStorage | null {
@@ -22,31 +20,14 @@ export function browserStorage(): KeyValueStorage | null {
   }
 }
 
-/** One-time carry-over from the standalone app's save keys; call from the island bootstrap. */
-export function migrateLegacyTycoonSave(storage: KeyValueStorage | null): void {
-  if (storage) migrateLegacySave(storage)
+/** Non-persistent previews never get permission to replace the real career. Live menus use the controller. */
+export function startNewGame(): Result {
+  return fail('This preview cannot reset real storage. Open the normal game to start a separate career.')
 }
 
-/** Registers the running autosave so actions that replace the save can silence it first. */
-export function setAutosave(next: Autosave): void {
-  autosave = next
-}
-
-/** Deletes the save and restarts. The autosave is stopped first, or it would rewrite the old game. */
-export function startNewGame(): void {
-  autosave?.stop()
-  const storage = browserStorage()
-  if (storage) clearSave(storage)
-  location.reload()
-}
-
-/** Saves the next chapter of the career (see `sim/chapters.ts`) over the ended run and reloads into it. */
-export function startNextChapter(state: GameState): void {
-  const next = nextChapter(state)
-  const storage = browserStorage()
-  if (!next || !storage) return
-  autosave?.stop()
-  if (saveGame(next, storage)) location.reload()
+/** The old free-seed-money chapter path is deliberately unavailable to browser callers. */
+export function startNextChapter(_state: GameState): Result {
+  return fail('Free restarts have been retired. Use the funded career setup or explicit consulting.')
 }
 
 export function downloadSave(state: GameState): void {
@@ -70,14 +51,17 @@ export function downloadJournal(state: GameState): void {
   URL.revokeObjectURL(url)
 }
 
-/** Replaces the current save with an exported file and reloads into it. */
-export async function importSaveFile(file: File): Promise<Result> {
-  const storage = browserStorage()
-  if (!storage) return fail('This browser blocks local storage.')
-  const text = await file.text()
-  if (deserialize(text) === null) return importSave(text, storage)
-  autosave?.stop()
-  const result = importSave(text, storage)
-  if (result.ok) location.reload()
-  return result
+/** Live file import belongs to the guarded career owner, never this preview-only fallback. */
+export async function importSaveFile(_file: File): Promise<Result> {
+  return fail('Import is disabled in this non-persistent preview. Open the normal game to import a career backup.')
+}
+
+/** Downloads already-validated career bytes, never an engine-only reconstruction of private finance. */
+export function downloadSaveText(text: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `lab-tycoon-career-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
 }

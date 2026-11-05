@@ -4,24 +4,16 @@ Carried over from the standalone repo's ROADMAP.md, and the single source of
 TODOs for the game. The Calendar app is in `roadmap.md`. Nothing here is
 blocking: the game builds, its tests pass and it ships.
 
-**Current handover (2026-11-04; Stage 6 prepared all-writer boundary, local).** Stage 5 workspace/teams/navigation and
-founder terms are committed/pushed as **`3c6c7a4`**, standalone finance as **`f9e231d`**, prepared v12 codec/settlement
-as **`1ee1b32`**, real paid founding as **`d8e0694`**, and charter readiness/consulting recovery as **`34d0ded`**.
-Nothing was deployed. Live save version remains **11**. New work is **uncommitted**: prepared guarded autosave,
-initialization/reset/import/standalone-carry writers, one token-owning persistence session, cancellation/replacement
-barriers, async throttled autosave and real Chromium multi-tab Web Locks tests. Read **"Stage 6 all-writer persistence
-checkpoint"** below. These prepared APIs are deliberately not wired to the live v11 island/controller: its old chapter
-path still grants seed money and its existing writers remain unchanged. The complete browser adoption/founding/
-consulting flow and live writer/command/clock cutover remain open. Prototype founder terms remain provisional,
-not measured final balance.
-Read the latest Stage 4 family acceptance and both Stage 5 progress sections, especially **"physical teams and
-navigation parity"**. Stage 4's broader numeric goals/item gates, affordability and unattended acceptance are **not
-complete**. Next is the complete guarded v12 browser rollout: bootstrap/load/export and live controller/writer adoption,
-explicit legacy decision, paid founding/consulting UI, and reloaded full-career acceptance. Then finish remaining
-Stage 4/7 economic gates. Historical valuations must not silently become personal cash.
-The player requested the remaining plan step by step and will try a new run **after** implementation/acceptance, not
-between slices. Do not restore release turns, choice timers or automatic assignments. Prototype terms are explicit
-assumptions, not final tuned numbers or reconstructed historical proceeds.
+**Current handover (2026-11-05; live v12 cutover and integrated acceptance).** The remaining operating-company
+iteration is implemented and verified on `main`; **player live testing is the next gate**, not another prepared slice.
+`TycoonApp` now boots the guarded v12 career/controller and all live save/import/reset/founding/ending writers together.
+Unknown, blocked or unsupported files stop on visible recovery, never a silent new game. Standard/legacy companies retain
+their rules; old valuations are never reconstructed as cash. Paid companies use the documented prospective professional-
+customer scale correction below, exposed by Journey and setup. Founder terms remain explicit prototype terms, not final tuning.
+Read **"Live v12 cutover and final integrated acceptance"** below for exact tests, played careers, the 12-seed matrix,
+known host-only HR timeout, reproduction commands and player checklist. Prior prepared checkpoints are historical and are
+superseded by that section. No separate/manual production deployment was performed; the existing push-to-main Pages
+workflow owns publication. Do not restore release turns, choice timers, automatic assignments or free chapter grants.
 
 **Stage 3 checkpoint (2026-11-04; historical).** The requested Stage 2 + café checkpoint
 is pushed to `origin/main` as **`f0a9463`** (also includes the previously unpushed `a4ad89e`); nothing was deployed.
@@ -106,10 +98,13 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
-**Current priority (2026-11-04): follow "Operating a company: implementation plan" below.** Stage 2 is pushed;
-Stage 3 is implemented and checked (see current handover); Stage 4 is in progress (ecosystem, operating-action and company-readiness checkpoints, the capacity/research-audit and v11 carry-over checkpoint `45747db`, plus the family/scope acceptance checkpoint `9ad1d21`). Stage 5 workspace/team/navigation is committed/pushed as `3c6c7a4` (read both Stage 5 progress sections). Stage 6 prototype founder terms are selected/documented below (player delegated). Finance, the prepared v12 codec/guarded settlement, paid founding and charter/consulting adapters are committed. The prepared all-writer persistence session/async autosave is now implemented locally (read its latest checkpoint). Cut over the live bootstrap/controller/writers and complete the v12 browser founding/adoption/interlude UI before final economic acceptance. Stage 4 economic acceptance and Stages 6–7 stay open. The player has supplied
-the requested run and feedback. Items 0 and 1 below are historical handoff notes, not outstanding requests to play
-again. Do not restore the global release turn, task queues, or automatic choice timers from those notes.
+**Current priority (2026-11-05): player live verification of the completed operating-company iteration.** Stages 4–7's
+remaining integration/technical acceptance gates are now checked: real v12 bootstrap/all-writer cutover, recovery/CSP,
+reload/multi-tab/failure handling, played multi-company careers, prospective family progression, observed-information
+policy/12 seeds, paid footprint affordability, unattended clock and neglect/recovery. The full details and limitations
+are in **"Live v12 cutover and final integrated acceptance"**. Human UX/balance approval is deliberately not claimed.
+Implementation history below preserves the earlier staged decisions; items 0–2 are historical context, not a request
+for another implementation checkpoint or the old PM timer/global release loop.
 
 **0. The release cycle replaced the roadmap queue (2026-10-27, pushed as b030d4e).** Read "The release cycle" section first; it has
 the design, what was built, the numbers and what is left. The roadmap dialog, the focus dropdowns and the Roadmap button are
@@ -1222,7 +1217,7 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
   This checkpoint was subsequently committed/pushed as `34d0ded`; the later persistence-owner slice remains local.
   Nothing was deployed, and the player should not start their acceptance run yet.
 
-### Stage 6 all-writer persistence checkpoint (2026-11-04; uncommitted, not enabled)
+### Stage 6 all-writer persistence checkpoint (2026-11-04; committed/pushed as `bef6789`, not enabled)
 
 - The `34d0ded` charter/consulting checkpoint was committed and pushed on the player's **commit then continue** request.
   This subsequent slice prepares the remaining v12 writer/controller boundary; it does **not** activate a half-financial
@@ -1270,7 +1265,198 @@ implemented and checked, not between these slices. Keep new work uncommitted unl
   so its snapshot alone must not replace the controller's event handling. Freeze ended-company commands and acknowledge
   durable financial outcomes without overwriting newer live drafts. Then real UI reload/multi-tab/full-career acceptance,
   observed-information founding policies and the remaining Stage 4/7 economic/unattended/neglect/recovery matrix.
-  New work remains uncommitted/unpushed. Nothing deployed; no new player acceptance run yet.
+  This checkpoint was subsequently committed/pushed as `bef6789`; the later controller/UI slice remains local.
+  Nothing deployed; no new player acceptance run yet.
+
+### Live v12 cutover and final integrated acceptance (2026-11-05)
+
+**Complete together, not a partially enabled controller.** The prior prepared controller/screens now run in the actual
+`TycoonApp` island. `bootCareer` reads absent/v11/v12/standalone sources, adopts/writes under the common Web Lock and
+exact-source-byte guard, and starts paused. It retains a standalone original, never back-credits historical companies,
+and never silently resets malformed/future/blocked saves. Native pending endings settle once on load; already-ended
+legacy companies still require Apply/Leave unpriced. Web Locks are required, with no unlocked fallback.
+
+Recovery has no Store/autosave behind it. It offers an exact original-byte download, retry loading, supported import,
+and an explicitly confirmed separate-career reset where a readable source and lock permit replacement. A blocked read
+cannot show a reset over an unknown primary. A canceled bootstrap cannot publish after a lock wait. Financial actions,
+first naming, successor/import/reset writes commit before publication; all replacement paths reload/recreate the scene
+with obsolete Store references disabled. Ordinary pagehide flushing remains asynchronous best effort, not a financial
+commit guarantee. Legacy browser import/reset/free-chapter helpers refuse real-storage writes, and legacy save/clear
+helpers cannot overwrite/delete v12. Developer shortcut sessions are nonpersistent, including Menu, sound and pagehide.
+Native recorded payouts are displayed separately from old unknown valuation history, never labelled unknown or credited
+again on rendering. Long real UUIDs wrap in holdings/settlement/ambition lists.
+
+**Acceptance-discovered progression blocker fixed, prospectively.** A genuinely played paid professional Venture
+reached a healthy Flagship, Europe, rivalry victory and billions in revenue but still could not IPO after 12 company
+years: its Creative Suite had ~1.1M creators versus the universal 10M-user goal. This was not a missing charter or a
+reason to add cash/grant achievements. New **paid** companies now use fixed public base-price equivalence to the original
+Web App for traffic goals, server readiness targets and initiative traffic minima:
+`ceil(original target × min(1, $0.30 / actual signature type's base monthly price))`.
+It is based on an **actually shipped** signature/product, never the planning focus, wealth, current income, temporary
+deals or monetisation upgrades. Consumer targets do not rise. Examples: Cloud's IPO traffic target is **41,667 customers**,
+Creative Suite's **750,000 creators**. A price/category choice alone grants no hit, delivery, floors, servers, revenue or
+milestone reward. Type/era/research requirements, real upfront work/payroll, shared care and product-scope requirements
+remain. **$1B lifetime revenue, a full profitable year and every current charter gate still apply.** Standard/legacy
+companies retain their exact original counts and item minima; no grandfathered IPO is revoked. Journey/setup explain
+the prospective rule, and preview/admission/IPO use the same calculation. This explicitly supersedes the earlier
+universal paid-company traffic assumption while preserving the non-traffic IPO conditions and prototype founder terms.
+
+**Played economic acceptance, not only high-cash fixtures.** `stage7-acceptance.ts` runs the real simulation, actual
+market offerings, hiring, salaries, builds, research, assignments and exits; every artifact is bot-generated under `/tmp`.
+The default optimistic benchmark is retained. `BOT_POLICY=observed` buys actual surveys, ranks public loved/value tags,
+uses delayed feedback and the same approximate FitMeter range visible to players, and rejects real offers through the
+normal decline command. It does not rank hidden true fit/taste weights. A paid floor now has a genuine pre-hit discovery
+policy; sale policy explicitly waits through the buyer grace period while paying wages/fixing bugs, not fabricating offers.
+
+Final **12 observed-policy seeds**, 12-company-year horizon (elapsed game days, not removed release pauses):
+
+| Seed | Outcome | Company days |
+| --- | --- | --- |
+| 1 | IPO | 3296 |
+| 2 | Bankrupt | 574 |
+| 3 | IPO | 3260 |
+| 4 | IPO | 3685 |
+| 5 | Bankrupt | 553 |
+| 6 | IPO | 3540 |
+| 7 | IPO | 3823 |
+| 8 | IPO | 3827 |
+| 9 | Bankrupt | 1245 |
+| 10 | IPO | 3699 |
+| 11 | IPO | 3801 |
+| 12 | IPO | 4028 |
+
+These **9 IPOs / 3 failures are not a human win-rate estimate**. Early product/contract/runway mistakes remain costly;
+no grant or coefficient change hides failures. Five optimistic comparisons include unchanged seeds **1 IPO 3381**,
+**2 bankrupt 1717**, **8 bankrupt 1444**. Cash remains plentiful late; terms are intentionally provisional, not a claim
+that every career duration or valuation is finally tuned.
+
+- Using **earned** first-IPO proceeds, observed paid Modest/Studio/Venture starts invest **$15k/$150k/$1M**, debit the
+  wallet exactly, pay setup/signing/current-world staff and create no product. Genuine sales occur after **257/226/235
+  company days**, respectively. The first sale policy stays small intentionally; these are not IPO or survival promises.
+- The paid professional Venture also genuinely earns **all** IPO/Flagship/care/Europe/rival requirements in **2820 company
+  days** (world day **6116**), after the family-scale correction. Production UI confirms the actual IPO/once-only
+  settlement and charter record at phone width. It is not a synthetic ready-IPO fixture.
+- Unattended **actual Store clock** advances **72 days**, then stops for a required event; the test does not silently
+  answer it or pretend the UI keeps simulating for a year. A separate explicit neglect policy answers mandatory events
+  but cancels initiatives, idles floors and disables reviews for **360 days**: signature fit **97.35 → 0**, users
+  **251,501 → 45,533**, daily net **+$1,043 → −$727**, two departures. Reallocation/operation restores the business over
+  **720 further days**, reaching seven floors and **$34.69M** cash without a reset, subsidy or gifted release. The same
+  source with intentional operation has three floors and **$1.59M** at the first 360-day comparison boundary.
+- Actual bankrupt seeds **2/8**, starting with $0 private cash, each require **11 explicit contracts / 330 world days**
+  to afford a minimum Modest restart with a **selected, paid ordinary developer**. Starting corporate cash is
+  **$14,400/$13,200**, private reserve **$700/$650**. Every 7+23-day contract round-trips v12, freezes company/skills,
+  credits only once at completion, and carries no free returning friend. This is real recovery length, not a gift.
+- Raw monthly per-team rates, remaining work/ETA/bottlenecks, staffing, salary/cost/review/departure records, companion
+  effects, stage timestamps, assignment counts and observed decision deltas are retained. Seed 1 records **110 monthly
+  samples**, **89 initiatives / 19 standing allocations / 30 appointments / 17 conversations**. Its 124 sampled active
+  project/floor required-work shares average **95.8%**. This is an expected-rate proxy **before variance/overshoot**, not
+  measured causal productivity; journal frequencies exclude unjournalled core hiring/project clicks, and system notices
+  are not passed off as human decisions. Company days and world/career dates are separate in the report.
+
+**Actual-island acceptance (production build and original CSP; no bypass or injected controller).**
+`stage7-browser.mjs` passes **20 checks**: first naming/reload; real export and paid successor/scene remount at desktop,
+phone and enlarged 320×568; partial consulting/reload/once-only payout with frozen company; explicit legacy Apply/Leave
+unpriced without historical credit; quota failure preserving source/draft and retry; stale-tab rejection; native IPO;
+corrupt/future/no-lock/blocked-read recovery; original-byte downloads; confirmed recovery reset; Menu import/reset; and
+standalone carry preserving the original. Browser calls actual Web Locks/localStorage, not an in-memory harness.
+
+`stage7-career-browser.mjs` additionally passes an **earned** full career through the real UI:
+**IPO day 3296 → paid Venture → genuine sale day 3531 → paid Venture → retirement day 3621**, with reloads between
+steps, same founder identity, immutable ledger prefixes, two real investments and no free grants. The bot advances
+exported active companies using real simulation costs/work/events; supported backups return through the actual Menu
+import, never a running Store patch. Every ending/funding write is performed by the production UI. A second real played
+professional Venture passes IPO at **day 6116**, including once-only charter/settlement and phone reload.
+The actual developer island also passes storage isolation for boot/Menu/import/reset/audio/pagehide.
+
+**Regression and tests.** All **32 workspace**, **20 Studio/navigation**, **12 product-family**, **12 research/carry-over**,
+**9 paid-start Journey**, Stage 0 long Industry/120-person/café/floor/Europe/IPO/reload checks and the café founder click/
+pose check pass. Workspace's first 21 cases and last 11 were run in separate invocations after the outer runner's
+240-second timeout; every case passed. Research successor checks now use actual settlement/consulting/paid hiring,
+not the removed free restart, and paid fixtures use the complete v12 envelope (engine-only paid imports correctly refuse
+finance reconstruction). Phone/enlarged screenshots were inspected; no page/modal overflow or uncaught JS/CSP errors.
+
+Final full repository **3,050 tests / 219 files pass** with
+`NODE_ENV=test NODE_OPTIONS=--max-old-space-size=1280 npm test -- --maxWorkers=1 --testTimeout=30000`, including
+**1,669 Tycoon tests / 103 files**. Typecheck and production build pass. The default 5-second run still fails only the
+pre-existing unrelated `tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` timeout on this host;
+the isolated assertion passes in **6.7 seconds** with the 30-second diagnostic budget. **No HR source/test/timeout or
+shared test configuration was changed**. The existing Pages workflow's normal checks remain enabled.
+
+Reproduction: bundle `playthrough.ts` to `/tmp/tycoon-stage7-bot.mjs`, `stage7-acceptance.ts`, `stage7-fixtures.ts` and
+`stage7-career-adapter.ts` with esbuild's node/ESM target and `--alias:@=./src`. Run the fixtures/economic acceptance,
+then `stage7-browser.mjs` and `stage7-career-browser.mjs` against a production preview. `ACCEPTANCE_RESUME=1` reuses only
+completed bot runs matching the exact bundled-bot SHA, policy, input snapshot and flags. Browser module/shared-library
+settings are the same as earlier checkpoints. `stage7-sandbox-browser.mjs` uses a separately started development server.
+Reports/raw metrics: `/tmp/tycoon-stage7-economic`; production screenshots: `/tmp/tycoon-stage7-shots` and
+`/tmp/tycoon-stage7-played-career`. Final logs: `/tmp/lab-stage7-full-test-final.log`, `/tmp/lab-stage7-build-final.log`,
+`/tmp/tycoon-stage7-economic-final.log`, `/tmp/tycoon-stage7-browser-final.log`, `/tmp/tycoon-stage7-played-career-final.log`.
+
+**Player verification next, not another implementation slice.** Specifically observe: (1) independent team assignments,
+care versus delivery, actionable bottlenecks/leadership and salary/departure workload; (2) company cash versus wallet/
+illiquid holdings, explicit legacy assumptions and real successor costs; (3) whether paid ambitions/family goals and
+30-day consulting recovery are understandable, meaningful and appropriately paced, including a phone reload. Export a
+run log after trying it. Technical/bot acceptance is complete; this is explicitly not a claim of human UX/balance approval.
+
+### Stage 6 controller and career screens checkpoint (2026-11-04; historical prepared slice, superseded above)
+
+- The player requested **commit and continue**; the all-writer checkpoint is now pushed as **`bef6789`**. This slice
+  adds `createCareerController` and optional `CareerContext`/`App` support. The real `TycoonApp` remains unchanged:
+  no controller is installed there, live saves stay v11, and there is **no claim of live v12 activation**. Do not merely
+  pass this controller while leaving old island autosave/reset/import/chapter writers attached.
+- The controller preserves the existing Store's clock/command logging, transient events, dialogs and blocking choices.
+  Autosave acknowledges only finance/charter metadata, never replaces newer live work/events. A Store facade blocks
+  corporate commands/ticks while a financial action is busy, after storage conflict/error, after an ending, after disposal,
+  and through references to a replaced Store. Synchronous `retire`/`goPublic`/`acceptBuyout` cannot bypass durable endings.
+- Manual IPO/sale/retirement run against a paused clone, commit the entire ending/settlement first, then publish the
+  ended company/private proceeds. Failed storage leaves the visible company unended and the private balance unchanged;
+  explicit retry cannot double-credit. Existing core tick/Store event processing still handles automatic endings, whose
+  proceeds remain unavailable until the guarded persistence boundary succeeds. No transient event arrays are replaced
+  by codec-normalized snapshots. Construction requires a validated v12 token and a writable persistence owner; actual
+  primary-source agreement is still checked inside the lock at every write.
+- The same controller exposes guarded legacy decision, paid founding, consulting start/progress, import/reset and full
+  v12 export. Quotes/identities are captured before async waits. Successful company replacement publishes a new paused
+  Store with obsolete references disabled; the future island must reload/dispose/recreate its renderer via `onReplace`,
+  not keep a Pixi scene bound to an old company. Reset uses fresh career IDs, $0 private reserve and a persistent first-
+  naming flag, not a financial successor. Dispose cancels lock-waiting work. No engine-only private-finance reconstruction.
+- `CareerDialog` replaces the free-grant Game Over branch **only when a career controller is supplied**. It separates
+  spendable personal cash from corporate/closing cash, frozen stake, non-spendable holdings and historical valuations
+  with unknown proceeds. It displays actual recorded closed companies/fulfilled ambitions and company tenure measured
+  to the ending day, not consulting/world time. No prestige bonus. Legacy endings show the 50% prototype assumption,
+  exact current-ending credit/non-liquid holding, and explicit Apply/Leave unpriced actions before setup or consulting.
+- Founding asks **one company name**, ambition/physical footprint, planning focus, actual local hires and an optional
+  whole-dollar investment. Preview displays exact available cash, minimum/recommended amount, setup/signing, actual
+  quoted per-person payroll/monthly burn, build allowance, company cash, remaining personal reserve, desks and build-
+  reserved runway. It shows charter obligations; invalid staffing/amount or unaffordability disables confirmation.
+  A real paid confirmation carries identity/skills and creates no free projects/products/staff/earned milestones.
+- Consulting quotes its exact start-day full-market salary and half-salary payout for **30 game days**. User explicitly
+  accepts each contract, works 1/7/remaining days and may reload partial progress. No automatic next contract, hidden
+  real-time delay, company operation or skill gain. Founding is unavailable while work is pending. Desktop/phone tests
+  confirm unpaid partial progress, reload and once-only completion credit through actual controller transactions.
+- Prepared Menu/IPO/offer hooks use durable actions when a controller exists. Ended screens retain **Export backup**
+  (validated v12 game+finance+charter) and run-log downloads; separate-new-career reset requires explicit confirmation.
+  Save errors/retry/reload controls render **inside blocking dialogs**, not behind their backdrop. Financial controls
+  disable while busy; failed save never silently closes a quote or reloads an uncommitted successor.
+- **Verified:** **20 new tests** (13 controller, 7 React), all **1,628 Tycoon tests / 101 files pass** in the full run.
+  Repository **3,008 pass / 1 fail** (217 files); sole unchanged HR cap test failure is
+  `tests/hr/run.test.ts > step > keeps foes, shots and gems under their caps` — `Test timed out in 5000ms.`
+  Typecheck/build pass. No unrelated timeout/config changes, no balance or bot-policy change.
+- **11 prepared-controller UI browser scenarios pass**: paid founding, explicit legacy decision and bankrupt consulting
+  at 1280x900, 390x844 and 320x568 with 28px controls, plus quota failure/retry and stale second-tab confirmation.
+  Real Web Locks/localStorage; paid investment after confirmation; no successor on failure; partial contract remount/
+  resume; no free skills; actual downloadable v12 backup. Long controls/quotes wrap and page/modal widths stay bounded.
+  Also reran **nine production-build v11 paid-start Journey browser cases**, all passing, to check the default island.
+- Reproduce the prepared UI by bundling `scripts/tycoon/stage6-controller-harness.tsx` with its header command (including
+  JSX automatic and the BASE_URL define), then `stage6-controller-browser.mjs` with the established Playwright module/
+  shared-library environment. The harness mounts the real optional App/context/controller in an isolated homepage host,
+  with synthetic fixtures and bypass-CSP script injection. **It is not the production island/bootstrap or a completed
+  live v12/CSP/end-to-end acceptance test**. Screenshots/exported synthetic backup are under `/tmp/tycoon-stage6-controller-shots`.
+- **Next, final cutover:** async guarded bootstrap for absent/v11/v12/standalone saves; visible invalid/blocked/unsupported
+  recovery without automatic reset; live lifetime/disposal/autosave/pagehide handling; remove all legacy real-storage
+  writer calls/free `startNextChapter` grants from live routes; install the controller into App; export/import/reset and
+  renderer replacement must all use the same owner. Keep dev sandboxes off real storage, including their menu actions.
+  Then real-island/CSP/reload/partial-consulting/failure/multi-tab/full-career acceptance, observed-information policies
+  and remaining Stage 4/7 economics/unattended/neglect/recovery matrix. Do not call the roadmap finished or request a
+  new player acceptance run. New code stays uncommitted/unpushed; nothing deployed.
 
 ### Stage 6 prepared persistence checkpoint (2026-11-04; committed as `1ee1b32`, not enabled)
 
@@ -1391,8 +1577,10 @@ company investment**, not charged a second time privately. No automatic transfer
 | Venture | $1,000,000 | One US rented floor; founders plus selected offers from the normal four-person local candidate pool, within 12 desks. | Flagship-sized product, three output-capable floors including Europe, shared reliability coverage, 180 consecutive profitable days and the existing 90-day rival lead. |
 
 All three require a live flagship with **fit ≥50, freshness ≥60%, bug density <10** at readiness check. This reuses
-current health thresholds, not a new hidden-fit bonus. Existing stage/IPO requirements still apply; none are waived by
-cash. These charter conditions are additional IPO readiness, while sale/retirement remain available if an ambition is
+current health thresholds, not a new hidden-fit bonus. Existing non-traffic stage/IPO requirements still apply; none are waived by
+cash. As documented in the final 2026-11-05 acceptance correction, new paid companies use fixed base-price-equivalent
+professional traffic goals/item minima; Standard/legacy thresholds remain exact. These charter conditions are additional
+IPO readiness, while sale/retirement remain available if an ambition is
 not met. Record ambition fulfilment separately (sticky, no cash prize); IPO also requires current live readiness.
 Chapter 1/legacy companies use **Standard** ambition (existing rules only), so this does not quietly harden their IPO.
 

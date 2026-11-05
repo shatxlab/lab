@@ -10,6 +10,7 @@ export interface CareerAutosaveSource {
   snapshot(): CareerSave
   /** Publish finance/charter acknowledgement without replacing newer live company progress. */
   acknowledge(committed: CommittedCareer): void
+  onFailure?(reason: string): void
 }
 
 /**
@@ -41,7 +42,7 @@ export function createCareerAutosave(owner: CareerPersistence, source: CareerAut
             stop()
             return { ok: false, reason: 'The career was saved, but its live view could not update; reload before continuing' } as const
           }
-        } else dirty = true
+        } else { dirty = true; source.onFailure?.(result.reason) }
       }
       return result
     }).finally(() => {

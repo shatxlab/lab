@@ -1,3 +1,4 @@
+import { useCareer } from './career-context'
 import { useState } from 'react'
 import { BARISTA } from '@/lib/tycoon/data/events'
 import { companyOnlyFounding, foundingBlocker, NAME_MAX, rollPersonName, rollStudioName, studioNameOf, you } from '@/lib/tycoon/sim/founding'
@@ -7,6 +8,7 @@ import { Modal } from './Modal'
 /** The start of a run: who you are and what the studio is called, each made up by the dice if you like. */
 export function FoundingDialog() {
   const store = useStore()
+  const career = useCareer()
   const state = useGame()
   const [yourName, setYourName] = useState(() => you(state)?.name ?? rollPersonName())
   const [studioName, setStudioName] = useState(() => studioNameOf(state))
@@ -15,8 +17,8 @@ export function FoundingDialog() {
   const companyOnly = companyOnlyFounding(state)
   const blocker = foundingBlocker(state, yourName, studioName)
 
-  const start = () => {
-    const result = store.found(yourName, studioName)
+  const start = async () => {
+    const result = career ? await career.name(yourName, studioName) : store.found(yourName, studioName)
     if (result.ok) store.closeDialog()
     else setMessage(result.reason)
   }
@@ -47,7 +49,7 @@ export function FoundingDialog() {
         {!companyOnly && <label className="founding-field">
           <span>Your name</span>
           <span className="founding-input">
-            <input value={yourName} maxLength={NAME_MAX} autoComplete="off" onInput={(event) => setYourName(event.currentTarget.value)} />
+            <input aria-label="Your name" value={yourName} maxLength={NAME_MAX} autoComplete="off" onInput={(event) => setYourName(event.currentTarget.value)} />
             <button type="button" aria-label="Make up a name for you" title="Make one up" onClick={() => setYourName(rollPersonName())}>
               🎲
             </button>
@@ -56,7 +58,7 @@ export function FoundingDialog() {
         <label className="founding-field">
           <span>The studio</span>
           <span className="founding-input">
-            <input value={studioName} maxLength={NAME_MAX} autoComplete="off" onInput={(event) => setStudioName(event.currentTarget.value)} />
+            <input aria-label="The studio" value={studioName} maxLength={NAME_MAX} autoComplete="off" onInput={(event) => setStudioName(event.currentTarget.value)} />
             <button
               type="button"
               aria-label="Make up a name for the studio"
@@ -73,7 +75,7 @@ export function FoundingDialog() {
         </p>}
         {(message || blocker) && <p className="bad">{message || blocker}</p>}
         <div className="actions">
-          <button type="submit" className="primary" disabled={blocker !== null}>
+          <button type="submit" className="primary" disabled={blocker !== null || career?.busy.value}>
             Open the laptops
           </button>
         </div>

@@ -12,7 +12,9 @@ async function stressFont(page) {
 }
 for (const kind of ['europe', 'large-company']) cases.push({ width: 320, height: 568, kind, largeFont: true })
 for (const kind of ['cafe', 'cafe-contract', 'garage', 'garage-build', 'one-floor']) cases.push({ width: 320, height: 568, kind, largeFont: true })
-const activeCases = process.env.SHORT_ONLY === '1' ? cases.filter((c) => c.height === 568) : cases
+const selectedCases = process.env.SHORT_ONLY === '1' ? cases.filter((c) => c.height === 568) : cases
+// Resume a long software-rendered geometry matrix after an external runner timeout; no assertion is skipped within a case.
+const activeCases = selectedCases.slice(Number(process.env.CASE_START ?? 0))
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
 try {
   for (const { width, kind, largeFont, height = 900 } of activeCases) {

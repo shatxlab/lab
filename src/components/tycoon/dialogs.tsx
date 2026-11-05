@@ -1,3 +1,5 @@
+import { useCareer } from './career-context'
+import { CareerDialog } from './CareerDialog'
 import { stageProgress } from '@/lib/tycoon/sim/stages'
 import { operating } from '@/lib/tycoon/sim/services'
 import { useState } from 'react'
@@ -123,7 +125,9 @@ export function ResultDialog({ productId, reputationDelta, early, unlocked, upda
 
 /** How the run ended: bankrupt, sold from the garage, or retired. The same numbers for each, so runs can be compared. */
 export function GameOverDialog() {
+  const career = useCareer()
   const state = useGame()
+  if (career) return <CareerDialog />
   const ending = state.ending
   const sold = ending?.kind === 'sold'
   const retired = ending?.kind === 'retired'
@@ -224,6 +228,7 @@ export function GameOverDialog() {
 
 /** A bigger company wants the studio. Only the garage can be sold: moving out closes this for good. */
 export function OfferDialog() {
+  const career = useCareer()
   const store = useStore()
   const state = useGame()
   const offer = state.exit.pending
@@ -240,7 +245,7 @@ export function OfferDialog() {
       </p>
       <div className="actions">
         <button onClick={() => store.declineBuyout()}>Not yet</button>
-        <button className={confirm ? 'danger' : 'primary'} onClick={() => (confirm ? store.acceptBuyout() : setConfirm(true))}>
+        <button disabled={career?.busy.value} className={confirm ? 'danger' : 'primary'} onClick={() => (confirm ? career ? void career.end('sold') : store.acceptBuyout() : setConfirm(true))}>
           {confirm ? `Sure? This ends the run at ${formatMoney(offer.price)}` : `Sell for ${formatMoney(offer.price)}`}
         </button>
       </div>

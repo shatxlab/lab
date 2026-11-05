@@ -1,3 +1,4 @@
+import { companyGoalLabel } from './company-scale'
 import { charterRequirements } from './charter'
 import { getStage, STAGES } from '@/lib/tycoon/data/stages'
 import { scaleRequirements } from './scale-readiness'
@@ -16,7 +17,7 @@ export function stageProgress(state: GameState, stage = state.stage) {
   const replaced = operating(state) && stage >= 3 && stage <= 5 ? ['team_12', 'two_offices', 'three_offices'] : []
   const skipped = skippedStageGoals(state, stage).map((g) => g.id)
   const goals = getStage(stage).goals.filter((g) => !replaced.includes(g.id) && !skipped.includes(g.id)).map((g) => ({
-    id: g.id, label: g.label, met: g.check(state), progress: g.progress?.(state), remedy: '',
+    id: g.id, label: companyGoalLabel(state, g), met: g.check(state), progress: g.progress?.(state), remedy: '',
   }))
   return [...goals, ...scaleRequirements(state, stage), ...(stage === STAGES.length - 1 ? charterRequirements(state) : [])]
 }

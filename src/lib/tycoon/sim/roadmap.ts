@@ -1,3 +1,4 @@
+import { companyTrafficGoal } from './company-scale'
 import { getCompanion } from '@/lib/tycoon/data/companions'
 import { getFeature } from '@/lib/tycoon/data/features'
 import { COMPLIANCE_FEATURE } from '@/lib/tycoon/data/regions'
@@ -16,19 +17,20 @@ export const ROADMAP_LIMIT = 12
 /** Why this item is not on offer for the product yet, or null when it is. */
 export function itemBlocker(state: GameState, product: Product, item: WorkItem): string | null {
   if ((product.built ?? []).includes(item.id)) return 'Built already'
+  const minimum = companyTrafficGoal(state, item.minUsers, product.productTypeId)
   if (item.companionId) {
     if (product.id !== state.signatureId) return 'Launch companions from the flagship ecosystem'
     const companion = getCompanion(item.companionId)
     if (!companion) return 'Unknown companion'
     // Paid scope is a second route for low-volume professional products. Preserve every old traffic
     // unlock and legacy admission rule; size never waives suited type, research, care or actual build work.
-    if (product.users < item.minUsers && !(operating(state) && product.size !== 'small')) {
-      return operating(state) ? `Needs Medium product scope or ${formatCount(item.minUsers)} users` : `From ${formatCount(item.minUsers)} users`
+    if (product.users < minimum && !(operating(state) && product.size !== 'small')) {
+      return operating(state) ? `Needs Medium product scope or ${formatCount(minimum)} users` : `From ${formatCount(minimum)} users`
     }
     return companionBlocker(state, companion)
   }
   if (item.workstream === 'europe' && euShareOf(product) === 0) return 'Localise the product for Europe first'
-  if (product.users < item.minUsers) return `From ${formatCount(item.minUsers)} users`
+  if (product.users < minimum) return `From ${formatCount(minimum)} users`
   return null
 }
 

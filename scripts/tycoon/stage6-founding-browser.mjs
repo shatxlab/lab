@@ -1,4 +1,5 @@
-// Synthetic payloads only: run stage6-founding-fixtures.ts first. No v12 live browser rollout.
+// Synthetic paid-company Journey regression on the real v12 island. Generate stage6-founding-fixtures.ts first.
+// Paid companies require their complete career envelope; an engine-only export cannot reconstruct private finance.
 import assert from 'node:assert/strict'
 import { readFileSync, mkdirSync } from 'node:fs'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright')
@@ -9,7 +10,7 @@ try {
   for (const ambition of ['modest', 'studio', 'venture']) for (const [width, height, large] of [[1280, 900, false], [390, 844, false], [320, 568, true]]) {
     const page = await browser.newPage({ viewport: { width, height } }), errors = []
     page.on('pageerror', (e) => errors.push(e.message))
-    const save = JSON.parse(readFileSync(`/tmp/tycoon-stage6-founding-1-${ambition}.json`, 'utf8'))
+    const save = JSON.parse(readFileSync(`/tmp/tycoon-stage6-founding-1-${ambition}.career.json`, 'utf8'))
     await page.addInitScript((state) => { localStorage.setItem('lab:tycoon:save', JSON.stringify(state)); localStorage.setItem('lab:tycoon:muted', 'true') }, save)
     await page.goto(process.env.BASE_URL ?? 'http://127.0.0.1:4322/tycoon/')
     await page.locator('.scene-host[data-render-ready="true"] canvas').waitFor()

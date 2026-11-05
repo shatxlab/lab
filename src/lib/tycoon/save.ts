@@ -48,6 +48,8 @@ export interface KeyValueStorage {
 /** Returns false if the browser refused the write (quota, private mode). */
 export function saveGame(state: GameState, storage: KeyValueStorage): boolean {
   try {
+    const raw = storage.getItem(SAVE_KEY)
+    if (raw !== null) { try { if (JSON.parse(raw)?.version >= 12) return false } catch { /* legacy recovery only */ } }
     storage.setItem(SAVE_KEY, serialize(state))
     return true
   } catch {
@@ -77,6 +79,8 @@ export function loadGame(storage: KeyValueStorage): GameState | null {
 
 export function clearSave(storage: KeyValueStorage): void {
   try {
+    const raw = storage.getItem(SAVE_KEY)
+    if (raw !== null) { try { if (JSON.parse(raw)?.version >= 12) return } catch { /* legacy recovery only */ } }
     storage.removeItem(SAVE_KEY)
   } catch {
     // Ignore: nothing to clear if storage is unavailable.

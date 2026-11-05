@@ -1,5 +1,6 @@
 import { CAFE_JOBS, FIT_TAKEOFF, GARAGE_READY_MONEY, IPO_PROFIT_DAYS, IPO_REVENUE, IPO_USERS } from '@/lib/tycoon/sim/balance'
 import { getWorkItem } from '@/lib/tycoon/data/workstreams'
+import { companyTrafficGoal } from '@/lib/tycoon/sim/company-scale'
 import { trailingIncome } from '@/lib/tycoon/sim/economy'
 import type { GameState } from '@/lib/tycoon/sim/types'
 
@@ -69,7 +70,7 @@ export const STAGES: readonly Stage[] = [
     blurb: 'The hit pays for a real office. Now make it big.',
     unlocks: ['Flagship projects', 'Independent floor initiatives and standing responsibilities for the flagship ecosystem'],
     goals: [
-      { id: 'hit_200k', label: 'Grow your hit to 200,000 users', check: (s) => hitUsers(s) >= 200_000, progress: (s) => upTo(hitUsers(s), 200_000) },
+      { id: 'hit_200k', label: 'Grow your hit to 200,000 users', check: (s) => hitUsers(s) >= companyTrafficGoal(s, 200_000), progress: (s) => upTo(hitUsers(s), companyTrafficGoal(s, 200_000)) },
       { id: 'first_scale', label: 'Build servers for your hit: complete a Scale initiative', check: (s) => (s.products.find((p) => p.id === s.signatureId)?.built ?? []).some((id) => getWorkItem(id)?.workstream === 'scale') },
       { id: 'team_12', label: 'Fill an office: a team of 12', check: (s) => s.employees.length >= 12, progress: (s) => upTo(s.employees.length, 12) },
     ],
@@ -84,7 +85,7 @@ export const STAGES: readonly Stage[] = [
       'Internal-tool and companion-product initiatives in Company operations',
     ],
     goals: [
-      { id: 'hit_1m', label: 'Grow your hit to 1 million users', check: (s) => hitUsers(s) >= 1_000_000, progress: (s) => upTo(hitUsers(s), 1_000_000) },
+      { id: 'hit_1m', label: 'Grow your hit to 1 million users', check: (s) => hitUsers(s) >= companyTrafficGoal(s, 1_000_000), progress: (s) => upTo(hitUsers(s), companyTrafficGoal(s, 1_000_000)) },
       { id: 'two_offices', label: 'Run 2 full floors: 24 people', check: (s) => realOffices(s) >= 2 && s.employees.length >= 24, progress: (s) => `${realOffices(s)} floors, ${s.employees.length} / 24 people` },
       { id: 'income_30k', label: 'Earn $30,000 a day', check: (s) => trailingIncome(s) >= 30_000, progress: (s) => `$${upTo(trailingIncome(s), 30_000)}` },
     ],
@@ -97,7 +98,7 @@ export const STAGES: readonly Stage[] = [
     goals: [
       { id: 'eu_office', label: 'Open a building in Europe', check: (s) => s.offices.some((o) => o.region === 'eu'), progress: (s) => (s.offices.some((o) => o.region === 'eu') ? 'open' : 'not yet') },
       { id: 'eu_localised', label: 'Localise your hit for Europe', check: (s) => (s.products.find((p) => p.id === s.signatureId)?.euShare ?? 0) > 0 },
-      { id: 'hit_3m', label: 'Grow your hit to 3 million users', check: (s) => hitUsers(s) >= 3_000_000, progress: (s) => upTo(hitUsers(s), 3_000_000) },
+      { id: 'hit_3m', label: 'Grow your hit to 3 million users', check: (s) => hitUsers(s) >= companyTrafficGoal(s, 3_000_000), progress: (s) => upTo(hitUsers(s), companyTrafficGoal(s, 3_000_000)) },
       {
         id: 'nemesis',
         label: 'Overtake your rival: out-earn them by a fifth for 90 days',
@@ -114,7 +115,7 @@ export const STAGES: readonly Stage[] = [
     unlocks: ['Taking the company public: the last ending, and the biggest'],
     // Nothing comes after this stage, so these are goals to chase, not gates; together they open the IPO.
     goals: [
-      { id: 'hit_10m', label: 'Grow your hit to 10 million users', check: (s) => hitUsers(s) >= IPO_USERS, progress: (s) => upTo(hitUsers(s), IPO_USERS) },
+      { id: 'hit_10m', label: 'Grow your hit to 10 million users', check: (s) => hitUsers(s) >= companyTrafficGoal(s, IPO_USERS), progress: (s) => upTo(hitUsers(s), companyTrafficGoal(s, IPO_USERS)) },
       { id: 'billion', label: 'Earn $1 billion over the life of the company', check: (s) => s.lifetimeRevenue >= IPO_REVENUE, progress: (s) => `$${upTo(s.lifetimeRevenue, IPO_REVENUE)}` },
       { id: 'profit_year', label: 'Make a profit for a year', check: (s) => (s.profitDays ?? 0) >= IPO_PROFIT_DAYS, progress: (s) => upTo(s.profitDays ?? 0, IPO_PROFIT_DAYS) },
     ],

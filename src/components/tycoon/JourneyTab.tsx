@@ -14,6 +14,7 @@ export function JourneyTab() {
           Known for <strong>{signature.name}</strong> 🚀
         </p>
       )}
+      {state.founding && <p className="muted">New paid company: professional-product traffic goals use fixed base-price equivalence to Web App users. Current cash, monetisation upgrades and deals cannot lower them. Revenue, profitability, paid work and charter conditions still apply.</p>}
       <ol className="stages">
         {STAGES.map((stage, index) => {
           const goals = stageProgress(state, index)

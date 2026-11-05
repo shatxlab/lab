@@ -1,4 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
+import type { CareerController } from '@/lib/tycoon/career-controller'
+import { CareerContext } from './career-context'
+import { CareerFeedback } from './CareerFeedback'
 import type { Store } from '@/lib/tycoon/store'
 import { StoreContext, useGame } from './context'
 import { BuildingOverlay } from './BuildingOverlay'
@@ -12,7 +15,10 @@ import { TopBar } from './TopBar'
 import { companyOverview } from '@/lib/tycoon/sim/offices'
 import '@/styles/tycoon.css'
 
-export function App({ store }: { store: Store }) {
+const noSubscribe = () => () => {}
+export function App({ store: suppliedStore, career }: { store: Store; career?: CareerController }) {
+  useSyncExternalStore(career?.version.subscribe ?? noSubscribe, () => career?.version.value ?? 0, () => 0)
+  const store = career?.store ?? suppliedStore
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.code !== 'Space' || event.repeat || store.dialog.value !== null) return
@@ -27,13 +33,13 @@ export function App({ store }: { store: Store }) {
   }, [store])
 
   return (
-    <StoreContext.Provider value={store}>
+    <CareerContext.Provider value={career ?? null}><StoreContext.Provider value={store}>
       <div className="game">
-        <TopBar />
+        <CareerFeedback /><TopBar />
         <Workspace />
         <DialogHost />
       </div>
-    </StoreContext.Provider>
+    </StoreContext.Provider></CareerContext.Provider>
   )
 }
 

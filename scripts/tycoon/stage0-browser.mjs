@@ -92,7 +92,8 @@ try {
   await page.getByRole('dialog', { name: 'Ready to ring the bell' }).waitFor()
   await page.screenshot({ path: join(shots, 'ipo-phone.png') })
   await page.getByRole('button', { name: 'Keep running the company' }).click()
-  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')))
+  // Ordinary saves are coalesced/async. Wait for the real acknowledged save, not an unload-time lock race.
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('lab:tycoon:save'))?.game?.exit.ipoAcknowledged === true)
   await page.reload()
   await page.locator('.topbar').waitFor()
   assert.equal(await page.getByRole('dialog', { name: 'Ready to ring the bell' }).count(), 0)

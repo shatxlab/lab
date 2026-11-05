@@ -16,7 +16,9 @@ import { productService, serviceOutput } from '../../src/lib/tycoon/sim/services
 // DIAGNOSTICS=1 prints the outstanding stage goals and live operating constraints at the end.
 // FINAL_SAVE=<path> writes the final synthetic bot state for diagnosis/replay (never a player journal).
 // SAVE_DIR=<dir> also writes the game as it enters each stage (stage-N.json), to load into the real UI.
-// The bot is an optimistic player: it reads the true fit of a release (a real player reads it through an analyst's eye).
+// Default is an optimistic lower-bound benchmark. BOT_POLICY=observed buys surveys, uses loved/feedback tags
+// and the exact approximate FitMeter range available to players; no hidden true-fit or taste ranking decisions.
+// BOT_EXIT=sold accepts the first genuine engine-generated offer; no fabricated exits or earnings.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import process from 'node:process'
@@ -32,8 +34,8 @@ import { COMPANIONS } from '../../src/lib/tycoon/data/companions.ts'
 import { acceptContract, contractBlocker } from '../../src/lib/tycoon/sim/contracts.ts'
 import { dailyIncome, monthlyBurn } from '../../src/lib/tycoon/sim/economy.ts'
 import { describePendingEvent, resolveRandomEvent } from '../../src/lib/tycoon/sim/events.ts'
-import { ipoBlocker, goPublic } from '../../src/lib/tycoon/sim/exit.ts'
-import { NOT_FIT_YET, releaseFit, takeoffBlocker } from '../../src/lib/tycoon/sim/fit.ts'
+import { ipoBlocker, goPublic, acceptBuyout, declineBuyout } from '../../src/lib/tycoon/sim/exit.ts'
+import { NOT_FIT_YET, releaseFit, takeoffBlocker, fitRange, fitOf, releaseKey } from '../../src/lib/tycoon/sim/fit.ts'
 import { availableFixers, fixBlocker, startFix } from '../../src/lib/tycoon/sim/fixes.ts'
 import { RESEARCH } from '../../src/lib/tycoon/data/research.ts'
 import { researchBlocker, startResearch } from '../../src/lib/tycoon/sim/research.ts'
@@ -51,13 +53,18 @@ import { awaitingChoice, canResearch, chooseCard, researchPlan, researchPlanBloc
 import { setWorkstream } from '../../src/lib/tycoon/sim/teams.ts'
 import { nemesisRival, strikeBack, strikeBackBlocker, strikeBackCost } from '../../src/lib/tycoon/sim/nemesis.ts'
 import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
+import { surveyAudience, isSurveyed, feedbackFor } from '../../src/lib/tycoon/sim/insight.ts'
+import { LOVED_AT } from '../../src/lib/tycoon/sim/scoring.ts'
 import { featureLock } from '../../src/lib/tycoon/sim/unlocks.ts'
-import { estimateDays } from '../../src/lib/tycoon/sim/work.ts'
+import { estimateDays, teamRate, estimateDaysAt, subjectOf } from '../../src/lib/tycoon/sim/work.ts'
 import { isBuilder, type BuilderRole, type GameState, type Office, type Product, type Workstream } from '../../src/lib/tycoon/sim/types.ts'
 import { marketDemand } from '../../src/lib/tycoon/sim/market.ts'
 import { MARKET_COLD, TAKEOFF_MAX_CROWDING } from '../../src/lib/tycoon/sim/balance.ts'
 import { interest, marketCrowding, missingFeatures, targetUsers } from '../../src/lib/tycoon/sim/products.ts'
 import { stageProgress } from '../../src/lib/tycoon/sim/stages.ts'
+import { DISCIPLINES } from '../../src/lib/tycoon/sim/types.ts'
+import { companionEffects } from '../../src/lib/tycoon/sim/companions.ts'
+import { businessOverview } from '../../src/lib/tycoon/sim/business.ts'
 import { STAGES } from '../../src/lib/tycoon/data/stages.ts'
 
 const seed = Number(process.argv[2] ?? 1)
@@ -75,7 +82,12 @@ const say = (text: string) => {
   if (!quiet) console.log(line)
 }
 
-foundStudio(state, 'Bot', 'Botworks')
+if (!process.env.BOT_RESUME) foundStudio(state, 'Bot', 'Botworks')
+const observed = process.env.BOT_POLICY === 'observed'
+let acceptanceStop = false
+// This adapter exposes only the same approximate range shown by FitMeter, not its hidden true value.
+const observedFit = (p: Product) => { const r = fitRange(state, fitOf(state, p), releaseKey(p)); return (r.low + r.high) / 2 }
+const readFit = (p: Product) => observed ? observedFit(p) : (p.fit ?? 0)
 const hit = () => state.products.find((p) => p.id === state.signatureId)
 
 let lastPeopleDecision = -Infinity
@@ -119,7 +131,7 @@ function takeJob(office: Office): boolean {
   return doable ? acceptContract(state, doable.offer.id, office.id).ok : false
 }
 
-/** The best (type, audience, features) to launch next: the highest true fit among what the studio can build. */
+/** Optimistic benchmark uses true fit. Observed policy buys surveys and ranks public loved tags/value only. */
 function bestLaunch(): { type: string; audience: string; features: string[]; fit: number } | null {
   let best: { type: string; audience: string; features: string[]; fit: number } | null = null
   for (const type of unlockedProductTypes(state)) {
@@ -127,10 +139,12 @@ function bestLaunch(): { type: string; audience: string; features: string[]; fit
     if (marketCrowding(state, type.id) >= TAKEOFF_MAX_CROWDING * 0.7 || marketDemand(state, type.id) <= MARKET_COLD * 1.1 || state.products.some((p) => p.productTypeId === type.id)) continue
     const open = FEATURES.filter((f) => f.suits.includes(type.id) && featureLock(state, f) === null)
     for (const audience of audiencesOf(type.id)) {
-      const ranked = open.map((f) => ({ f, love: (audience.likes[f.id] ?? 1) - 1 })).filter((x) => x.love > 0).sort((a, b) => b.love * b.f.value - a.love * a.f.value)
+      if (observed) surveyAudience(state, audience.id)
+      const studied = isSurveyed(state, audience.id)
+      const ranked = open.map((f) => ({ f, love: observed ? (!studied || (audience.likes[f.id] ?? 1) >= LOVED_AT ? 1 : 0) : (audience.likes[f.id] ?? 1) - 1 })).filter((x) => x.love > 0).sort((a, b) => b.love * b.f.value - a.love * a.f.value)
       const features = ranked.slice(0, 5).map((x) => x.f.id)
       if (features.length === 0) continue
-      const fit = releaseFit(state, type.id, audience.id, features, 80).fit
+      const fit = observed ? ranked.slice(0, 5).reduce((sum, x) => sum + x.f.value, 0) : releaseFit(state, type.id, audience.id, features, 80).fit
       if (!best || fit > best.fit) best = { type: type.id, audience: audience.id, features, fit }
     }
   }
@@ -144,21 +158,21 @@ function huntStep(office: Office): void {
   const lowMoney = state.money < 4 * monthlyBurn(state) + 500
   if (lowMoney && takeJob(office)) return
   // Improve a product that has not taken off: add what its audience loves.
-  const weak = state.products.filter((p) => !p.hit && updateBlocker(state, office, p) === null).sort((a, b) => (a.fit ?? 0) - (b.fit ?? 0))
   const blocked = (p: Product) => {
     const why = takeoffBlocker(state, p)
     return why !== null && why !== NOT_FIT_YET && !why.includes('stale') && state.day - p.releaseDay > 60
   }
-  const stuck = state.products.find((p) => !p.hit && sunsetBlocker(state, p) === null && ((p.updates.length >= 2 && (p.fit ?? 0) < 60) || blocked(p)))
+  const stuck = state.products.find((p) => !p.hit && sunsetBlocker(state, p) === null && ((p.updates.length >= 2 && readFit(p) < 60) || blocked(p)))
   if (stuck && sunsetBlocker(state, stuck) === null) {
-    say(`kills ${stuck.name} (fit ${Math.round(stuck.fit ?? 0)})`)
+    say(`kills ${stuck.name} (reading ${Math.round(readFit(stuck))})`)
     sunsetProduct(state, stuck.id)
   }
-  const target = state.products.filter((p) => !p.hit && updateBlocker(state, office, p) === null).sort((a, b) => (b.fit ?? 0) - (a.fit ?? 0))[0]
-  if (target && (target.fit ?? 0) >= 40) {
+  const target = state.products.filter((p) => !p.hit && updateBlocker(state, office, p) === null).sort((a, b) => readFit(b) - readFit(a))[0]
+  if (target && readFit(target) >= 40) {
     const audience = audiencesOf(target.productTypeId).find((a) => a.id === (target.audienceId ?? audiencesOf(target.productTypeId)[0].id))!
-    const more = FEATURES.filter((f) => f.suits.includes(target.productTypeId) && featureLock(state, f) === null && !target.featureIds.includes(f.id) && (audience.likes[f.id] ?? 1) > 1)
-      .sort((a, b) => (audience.likes[b.id] ?? 1) * b.value - (audience.likes[a.id] ?? 1) * a.value)
+    const missed = observed ? feedbackFor(state, target).missed : []
+    const more = FEATURES.filter((f) => f.suits.includes(target.productTypeId) && featureLock(state, f) === null && !target.featureIds.includes(f.id) && (observed ? missed.includes(f.name) : (audience.likes[f.id] ?? 1) > 1))
+      .sort((a, b) => observed ? b.value - a.value : (audience.likes[b.id] ?? 1) * b.value - (audience.likes[a.id] ?? 1) * a.value)
       .slice(0, 2)
       .map((f) => f.id)
     if (more.length && startUpdate(state, target.id, more, office.id).ok) return
@@ -167,7 +181,7 @@ function huntStep(office: Office): void {
     const launch = bestLaunch()
     if (launch) {
       const r = startProject(state, launch.type, launch.features, 'small', office.id, launch.audience)
-      if (r.ok) say(`starts ${launch.type} for ${launch.audience} (fit ${Math.round(launch.fit)})`)
+      if (r.ok) say(`starts ${launch.type} for ${launch.audience} (${observed ? 'public value score' : 'fit'} ${Math.round(launch.fit)})`)
       return
     }
   }
@@ -241,7 +255,7 @@ function act2(h: Product): void {
     hireTo(floor, 12)
   })
   const reserve = 6 * monthlyBurn(state)
-  if (openOfficeBlocker(state) === null && state.money > newOfficeCost(state) + reserve && floors.every((f) => freeDesks(state, f) <= 3)) {
+  if (process.env.BOT_EXIT !== 'sold' && openOfficeBlocker(state) === null && state.money > newOfficeCost(state) + reserve && floors.every((f) => freeDesks(state, f) <= 3)) {
     const region = state.stage >= 5 && officesIn(state, 'eu').length === 0 ? 'eu' : officesIn(state, 'us').length < 5 ? 'us' : undefined
     const r = openOffice(state, region)
     if (r.ok) say(`opens a floor (${state.offices.length} offices)`)
@@ -331,9 +345,15 @@ function botStep(): void {
     }
     if (event.type === 'offer') {
       // Turn down every offer: the point of the run is the hit.
-      if (state.exit.pending) state.exit.pending = null
+      if (state.exit.pending) {
+        if (process.env.BOT_STOP_AT_OFFER === '1') acceptanceStop = true
+        else if (process.env.BOT_EXIT === 'sold') acceptBuyout(state)
+        else if (observed) declineBuyout(state)
+        else state.exit.pending = null // Historical optimistic benchmark only.
+      }
     }
   }
+  if (state.gameOver || acceptanceStop) return
   dispatchFixers()
   managePeople()
   if (!state.peopleManagement) for (const e of state.employees) if (careerBlocker(state, e) === null) promote(state, e.id)
@@ -358,6 +378,14 @@ function botStep(): void {
     return
   }
   const h = hit()
+  if (!h) { for (const floor of state.offices) { hireTo(floor, 4); huntStep(floor) }; return }
+  if (process.env.BOT_EXIT === 'sold') {
+    // An intentional sale policy leaves the signature's release date alone for the genuine buyer grace period.
+    // It keeps paying staff and fixing bugs, but cannot fabricate an offer or rush a fresh release forever.
+    for (const floor of state.offices) if (floor.assignment && !floor.project && serviceOutput(state, floor, 'reliability') > 0 &&
+      (floor.assignment.kind !== 'standing' || floor.assignment.service !== 'reliability')) assignOperation(state, floor.id, { kind: 'standing', productId: h.id, service: 'reliability' }, true)
+    return
+  }
   research()
   if (h) freeASlot(h)
   if (h) act2(h)
@@ -369,13 +397,32 @@ function botStep(): void {
   if (h) { if (state.offices.some((o) => o.assignment)) parallel(h); else plan(h) }
   if (h && ipoBlocker(state) === null) {
     say(`goes public: ${formatMoney(state.money)} cash`)
-    goPublic(state)
+    if (process.env.BOT_STOP_AT_IPO === '1') acceptanceStop = true
+    else goPublic(state)
   }
 }
 
+const measurements: unknown[] = []
+function measure() {
+  if (!process.env.METRICS_SAVE || state.day % 30 !== 0) return
+  measurements.push({ day: state.day, companyDays: state.day - (state.chapterStartDay ?? 0), business: businessOverview(state),
+    companions: companionEffects(state), staff: state.employees.length,
+    floors: state.offices.map((o) => {
+      const p = o.project, rate = teamRate(state, o, p ? subjectOf(p) : null)
+      const remaining = p ? Object.fromEntries(DISCIPLINES.map((d) => [d, Math.max(0, p.target[d] - p.progress[d])])) as typeof rate : null
+      const total = DISCIPLINES.reduce((n, d) => n + rate[d], 0)
+      const required = remaining ? DISCIPLINES.reduce((n, d) => n + Math.min(rate[d], remaining[d]), 0) : 0
+      return { id: o.id, assignment: o.assignment?.kind ?? 'legacy', project: p?.kind ?? null, rate,
+        estimatedRequiredWorkShare: p && total ? required / total : null,
+        remainingDays: remaining ? estimateDaysAt(remaining, rate) : null,
+        bottleneck: remaining ? [...DISCIPLINES].sort((a,b) => remaining[b] / Math.max(.0001, rate[b]) - remaining[a] / Math.max(.0001, rate[a]))[0] : null }
+    }) })
+}
 let nextReport = 0
 for (let i = 0; i < years * 360 && !state.gameOver; i++) {
   botStep()
+  measure()
+  if (acceptanceStop) break
   advanceDay(state)
   if (state.day >= nextReport) {
     nextReport = state.day + 180
@@ -393,6 +440,8 @@ if (process.env.DIAGNOSTICS === '1') {
     nemesis: nemesisRival(state)?.name, ratio: nemesisRival(state)?.ratio, leadDays: state.nemesis?.leadDays, beaten: state.nemesesBeaten }, null, 2))
 }
 if (process.env.FINAL_SAVE) writeFileSync(process.env.FINAL_SAVE, serialize(state))
+if (process.env.METRICS_SAVE) writeFileSync(process.env.METRICS_SAVE, JSON.stringify({ samples: measurements, decisions: state.businessDecisions,
+  journal: state.journal, reviews: state.peopleManagement?.reports ?? [], finalDay: state.day, companyDays: state.day - (state.chapterStartDay ?? 0) }))
 const notes = hit()?.releases ?? []
 if (notes.length > 1) console.log(`Last ${notes.length} releases: one every ${Math.round((notes.at(-1)!.day - notes[0].day) / (notes.length - 1))} days (1 day is 1.5 s at 1x)`)
 void DAYS_PER_MONTH

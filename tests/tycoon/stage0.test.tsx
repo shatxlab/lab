@@ -155,7 +155,7 @@ describe('Stage 0 presentation', () => {
     expect(Array.from(host.querySelectorAll('[role="tab"]'), (tab) => tab.textContent)).toEqual(['Company', 'Industry', 'Journey', 'Products'])
   })
 
-  it('seats founders across one lowered table with two laptops and no founder cup anchors', () => {
+  it('seats founders across one office-height table with two laptops and no founder cup anchors', () => {
     const left = founderCafeStation(0, 0, false)
     const right = founderCafeStation(0, 0, true)
     expect(left.seatX).toBe(16.5 + 2)
@@ -165,11 +165,11 @@ describe('Stage 0 presentation', () => {
     expect(FOUNDER_TABLE.feet - FOUNDER_TABLE.top).toBe(12)
     for (const station of [left, right]) {
       expect(station.seatY).toBe(7)
-      expect(station.stoolFeet).toBe(38)
+      expect(station.stoolFeet).toBe(FOUNDER_TABLE.feet + 2)
       expect(station.feet).toBe(FOUNDER_TABLE.feet)
       expect(station).not.toHaveProperty('cupX')
       expect(station).not.toHaveProperty('cupBottom')
-      expect(station.laptopY).toBe(WORKSTATIONS.laptop.top + 2)
+      expect(station.laptopY).toBe(WORKSTATIONS.laptop.top)
       expect(station.laptopY + WORKSTATIONS.laptop.height - 1).toBe(FOUNDER_TABLE.top)
     }
     expect(left.laptopX + WORKSTATIONS.laptop.width).toBeLessThan(right.laptopX)

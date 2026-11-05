@@ -1386,7 +1386,7 @@ export class OfficeScene {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
       const look = employeeLook(state.employees.find((e) => e.id === id)!)
-      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(look, pose, blink), this.arrangement, desk, this.shown?.kind === 'cafe')
+      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(look, pose, blink, this.shown?.kind === 'cafe'), this.arrangement, desk, this.shown?.kind === 'cafe')
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }

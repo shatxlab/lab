@@ -98,6 +98,11 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
+**Café arm/table correction (2026-11-05, local):** player rejected the lowered table. Restored the table
+and laptops 2px upward, kept the approved lower characters/stools, and shortened café typing arms vertically
+by 2px with shoulders/horizontal reach anchored. Palms contact the keyboard in both frames/facings across
+all looks; regression checks enforce the 2px shorter arm silhouette. Office/guest art is unchanged.
+
 **Café table follow-up (2026-11-05):** lowered the whole founder table and its laptops another 2 art pixels
 at the player's request; characters and stools retain their approved positions. This restores the original
 relative keyboard height, so standard office typing arms now align without the café-specific bend variant,

@@ -337,7 +337,7 @@ export const STEP_CYCLE: readonly Step[] = ['stepA', 'stepB', 'stepD', 'stepC']
 const snack = (patch: Patch): Patch => ({ ...patch, rows: patch.rows.map((row) => row.replaceAll('g', 'l').replaceAll('f', 'h')) })
 
 /** The patches that draw `character` in `pose`, in order. */
-export function posePatches(character: number, pose: Pose, highTable = false): readonly Patch[] {
+export function posePatches(character: number, pose: Pose): readonly Patch[] {
   const torso = TORSOS[character]!
   if (pose === 'carry') return carry(character)
   // On their feet in the pack's own legs, so only what the arms do (and the legs, striding) is drawn over the sprite.
@@ -349,15 +349,6 @@ export function posePatches(character: number, pose: Pose, highTable = false): r
   if (isWalk(pose)) return [WALK[character]![pose], ...carry(character)]
   const seated = SEATED[character]!
   if (pose === 'sit') return seated
-  if (highTable && (pose === 'typeA' || pose === 'typeB')) {
-    const base = POSES[character]![pose]
-    const skin = CARRY[character]![2]
-    // Compact bent forearms for the higher surface. Reach comes from seating, not stretched sleeves.
-    const arms: Patch = { x: base.x, y: base.y, rows: pose === 'typeA'
-      ? ['...aaaaa', `aSSaD${skin}${skin}a`, `.aSSa${skin}${skin}a`, '..aaaaaa']
-      : ['...aaaaa', `aSSaD${skin}${skin}a`, `.aSSaa${skin}a`, '..aaaaaa'] }
-    return [...seated, torso.near, torso.far, arms]
-  }
   return [...seated, ...MOVES[pose].map((side) => torso[side]), POSES[character]![pose]]
 }
 

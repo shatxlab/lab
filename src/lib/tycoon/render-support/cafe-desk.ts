@@ -1,7 +1,7 @@
 import { WORKSTATIONS } from './workstations'
 
-/** The same pedestal-table/stool silhouette as the guest tables, widened only for two laptops. */
-export const FOUNDER_TABLE = { left: 23, width: 30, feet: 36, top: 21 } as const
+/** The same pedestal-table/stool silhouette as the guest tables, widened for two laptops, at the office keyboard height. */
+export const FOUNDER_TABLE = { left: 23, width: 30, feet: 36, top: WORKSTATIONS.laptop.top + WORKSTATIONS.laptop.height - 1 } as const
 
 /** Laptop bottoms rest on the tabletop. No founder cups: the clear centre is intentional. */
 export function founderCafeStation(px: number, py: number, right: boolean) {

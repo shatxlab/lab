@@ -98,6 +98,14 @@ migration: `plan` is optional, and an old save's `office.spec` and `agents` are 
 
 ## Next steps (start here)
 
+**Café typing alignment (2026-11-05, local):** lowered the founders' tabletop/laptops by 3 art pixels to the
+office laptop keyboard height, lowered their stool seats by 1 pixel, and removed the special high-table arm
+patches/atlas variant. Table width, laptop horizontal placement and founder positions are unchanged; guest
+furniture is unchanged. Regression checks cover both standard typing frames, all five character looks and both
+facings, with hands on the keys. Desktop/390px phone browser checks passed with an active café contract.
+Typecheck passed with a 4GB Node heap; 337 focused tests passed. Full suite: 3048 passed, one unrelated HR
+cap test exceeded its 5s timeout; the HR file passed all 25 tests on rerun with a 15s timeout.
+
 **Current priority (2026-11-05): player live verification of the completed operating-company iteration.** Stages 4–7's
 remaining integration/technical acceptance gates are now checked: real v12 bootstrap/all-writer cutover, recovery/CSP,
 reload/multi-tab/failure handling, played multi-company careers, prospective family progression, observed-information

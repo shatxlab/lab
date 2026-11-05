@@ -279,10 +279,11 @@ function drawCup(g: Graphics, { x, bottom, alpha }: Cup): void {
 }
 
 /** Café furniture shared by guest and founder seating: thin tops, a single pedestal, no office-chair backs. */
-function drawCafeTable(g: Graphics, x: number, feet: number, width = 18): void {
-  g.rect(x, feet - 15, width, 2).fill(CAFE_TABLE_TOP).rect(x, feet - 13, width, 1).fill(CAFE_DESK_TRIM)
+function drawCafeTable(g: Graphics, x: number, feet: number, width = 18, height = 15): void {
+  const top = feet - height
+  g.rect(x, top, width, 2).fill(CAFE_TABLE_TOP).rect(x, top + 2, width, 1).fill(CAFE_DESK_TRIM)
   const middle = x + Math.floor(width / 2)
-  g.rect(middle - 1, feet - 12, 2, 11).rect(middle - 5, feet - 1, 10, 1).fill(NIGHT)
+  g.rect(middle - 1, top + 3, 2, height - 4).rect(middle - 5, feet - 1, 10, 1).fill(NIGHT)
 }
 function drawCafeStool(g: Graphics, x: number, feet: number, rise = 0): void {
   g.rect(x - 4, feet - 11 - rise, 9, 2).fill(WOOD).rect(x - 4, feet - 9 - rise, 9, 1).fill(RUST)
@@ -1310,12 +1311,12 @@ export class OfficeScene {
       const cafeStation = founderCafeStation(px, py, right)
       const chair = atlas.frame(CHAIRS[i % CHAIRS.length])
       const tuck = vacancy && chairTucked(vacancy) ? (right ? -CHAIR_TUCK : CHAIR_TUCK) : 0
-      if (cafe) drawCafeStool(this.chairs.addChild(new Graphics()), Math.round(cafeStation.seatX), cafeStation.feet, 1)
+      if (cafe) drawCafeStool(this.chairs.addChild(new Graphics()), Math.round(cafeStation.seatX), cafeStation.feet)
       else this.chairs.addChild(placed(chair, px + chairX(right, chair.width) + tuck, py + CHAIR_TOP, right))
 
       const deskX = cafe ? cafeStation.laptopX : px + (right ? 40 : 19)
       if (cafe) {
-        if (!right) drawCafeTable(this.desks.addChild(new Graphics()), px + FOUNDER_TABLE.left, cafeStation.feet, FOUNDER_TABLE.width)
+        if (!right) drawCafeTable(this.desks.addChild(new Graphics()), px + FOUNDER_TABLE.left, cafeStation.feet, FOUNDER_TABLE.width, FOUNDER_TABLE.feet - FOUNDER_TABLE.top)
       } else {
         this.desks.addChild(placed(atlas.frame(right ? 'deskRight' : 'deskLeft'), deskX, py + 11))
         if (this.shown?.kind !== 'office' || !partitionInFront(this.arrangement, i >> 1, desks)) {
@@ -1384,7 +1385,7 @@ export class OfficeScene {
       const desk = this.seats.deskFor(id)
       if (desk === undefined || this.sprites.has(id)) continue
       const look = employeeLook(state.employees.find((e) => e.id === id)!)
-      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(look, pose, blink, this.shown?.kind === 'cafe'), this.arrangement, desk, this.shown?.kind === 'cafe')
+      const sprite = new EmployeeSprite((pose, blink) => this.atlas.character(look, pose, blink), this.arrangement, desk, this.shown?.kind === 'cafe')
       this.sprites.set(id, sprite)
       this.people.addChild(sprite.container)
     }

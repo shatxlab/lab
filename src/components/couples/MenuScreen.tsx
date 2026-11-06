@@ -13,7 +13,8 @@ interface MenuScreenProps {
 
 function statsLine(lang: Lang, stats: CouplesStats): string | null {
   if (stats.games <= 0) return null;
-  const percent = stats.cards > 0 ? Math.round((stats.matches / stats.cards) * 100) : 0;
+  if (stats.cards === 0) return t(lang, "statsLineUnscored", { games: stats.games });
+  const percent = Math.round((stats.matches / stats.cards) * 100);
   return t(lang, "statsLine", { games: stats.games, cards: stats.cards, percent });
 }
 

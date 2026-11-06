@@ -22,6 +22,7 @@ type StringKey =
   | "cardNew"
   | "open"
   | "statsLine"
+  | "statsLineUnscored"
   // Setup
   | "setupTitle"
   | "names"
@@ -62,6 +63,9 @@ type StringKey =
   | "cancel"
   | "close"
   | "keyboardHint"
+  | "skipCard"
+  | "skipHint"
+  | "hiddenSkipHint"
   | "hideCard"
   | "hiddenCard"
   | "hiddenCount"
@@ -78,6 +82,8 @@ type StringKey =
   | "summaryMatched"
   | "summaryDiscuss"
   | "summaryCards"
+  | "summarySkipped"
+  | "summaryNoAnswers"
   | "summaryTopChoice"
   | "summaryPlayAgain"
   | "summarySettings"
@@ -98,6 +104,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     cardNew: "New game",
     open: "Play",
     statsLine: "Games played: {games} · Cards: {cards} · Matches: {percent}%",
+    statsLineUnscored: "Games played: {games} · No scored answers yet",
 
     // Setup
     setupTitle: "Set up the game",
@@ -127,7 +134,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     // Play
     turn: "Answering",
     passTitle: "Pass the phone",
-    passBody: "Now {name} answers every card. The other player should look away.",
+    passBody: "Now {name} answers the remaining cards. The other player should look away.",
     passButton: "I'm {name}, show it",
     question: "Question",
     chipNorm: "Normal",
@@ -140,7 +147,10 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     cancel: "Cancel",
     close: "Close",
     keyboardHint: "Keyboard: 1 and 2 — pick an answer",
-    hideCard: "Never show this card again",
+    skipCard: "Skip this time",
+    skipHint: "Either of you can skip. Neither answer is revealed or scored; the card can return in a future game.",
+    hiddenSkipHint: "Hidden for future games. You can still skip now to discard both answers without scoring.",
+    hideCard: "Hide forever",
     hiddenCard: "Hidden for good",
     hiddenCount: "Hidden cards: {count}",
     restoreHidden: "Bring them back",
@@ -155,7 +165,9 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     summaryMatchOkay: "There is plenty to argue about and discuss.",
     summaryMatchLow: "Looks like you complement each other perfectly.",
     summaryMatched: "Matches",
-    summaryCards: "Cards",
+    summaryCards: "Answered cards",
+    summarySkipped: "Skipped: {count} · Not included in results or scores",
+    summaryNoAnswers: "No cards answered together this time. Nothing to score — you can start again whenever you like.",
     summaryTopChoice: "Most often you picked",
     summaryPlayAgain: "Again with new questions",
     summarySettings: "Change settings",
@@ -175,6 +187,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     cardNew: "Новая игра",
     open: "Играть",
     statsLine: "Игр сыграно: {games} · Карточек: {cards} · Совпадений: {percent}%",
+    statsLineUnscored: "Игр сыграно: {games} · Ответов на счёт пока нет",
 
     // Setup
     setupTitle: "Настройте игру",
@@ -204,7 +217,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     // Play
     turn: "Отвечает",
     passTitle: "Передайте телефон",
-    passBody: "Теперь {name} отвечает на все карточки. Второй игрок пусть отвернётся.",
+    passBody: "Теперь {name} отвечает на оставшиеся карточки. Второй игрок пусть отвернётся.",
     passButton: "Я {name}, показать",
     question: "Вопрос",
     chipNorm: "Норм",
@@ -217,7 +230,10 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     cancel: "Отмена",
     close: "Закрыть",
     keyboardHint: "Клавиши: 1 и 2 — выбрать ответ",
-    hideCard: "Больше не показывать эту карточку",
+    skipCard: "Пропустить сейчас",
+    skipHint: "Любой из вас может пропустить. Оба ответа не раскрываются и не учитываются; карточка может вернуться в будущей игре.",
+    hiddenSkipHint: "Скрыта для будущих игр. Можно пропустить сейчас: оба ответа не раскроются и не повлияют на счёт.",
+    hideCard: "Скрыть навсегда",
     hiddenCard: "Скрыта насовсем",
     hiddenCount: "Скрытых карточек: {count}",
     restoreHidden: "Вернуть их",
@@ -232,7 +248,9 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     summaryMatchOkay: "Есть о чём поспорить и что обсудить.",
     summaryMatchLow: "Похоже, вы отлично дополняете друг друга.",
     summaryMatched: "Совпадений",
-    summaryCards: "Карточек",
+    summaryCards: "Карточек с ответом",
+    summarySkipped: "Пропущено: {count} · Не учитываются в итогах и счёте",
+    summaryNoAnswers: "В этот раз нет карточек с ответами обоих. Считать нечего — можно начать заново, когда захотите.",
     summaryTopChoice: "Чаще всего выбирали",
     summaryPlayAgain: "Ещё раз с новыми вопросами",
     summarySettings: "Изменить настройки",

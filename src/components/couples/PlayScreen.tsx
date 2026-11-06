@@ -15,6 +15,8 @@ interface PlayScreenProps {
   onPass(): void;
   onExit(): void;
   onToggleSound(): void;
+  /** Decline for this session only, without exposing or scoring either answer. */
+  onSkip(): void;
   /** Turn this card off for good. */
   onHide(): void;
   /** True once this card is already turned off. */
@@ -34,6 +36,7 @@ export function PlayScreen({
   onExit,
   onToggleSound,
   onHide,
+  onSkip,
   hidden,
 }: PlayScreenProps) {
   const TXT = stringsFor(settings.lang);
@@ -110,9 +113,18 @@ export function PlayScreen({
       <footer className="cp-play-footer">
         {phase === "handoff" ? null : <p className="cp-hint">{TXT.keyboardHint}</p>}
         {phase !== "handoff" && (
-          <button type="button" className="cp-hide" onClick={onHide} disabled={hidden} aria-pressed={hidden}>
-            {hidden ? TXT.hiddenCard : TXT.hideCard}
-          </button>
+          <>
+            <button type="button" className="cp-skip cp-secondary" onClick={(event) => {
+              event.currentTarget.blur();
+              onSkip();
+            }}>
+              {TXT.skipCard}
+            </button>
+            <p className="cp-skip-hint">{hidden ? TXT.hiddenSkipHint : TXT.skipHint}</p>
+            <button type="button" className="cp-hide" onClick={onHide} disabled={hidden} aria-pressed={hidden}>
+              {hidden ? TXT.hiddenCard : TXT.hideCard}
+            </button>
+          </>
         )}
       </footer>
     </div>

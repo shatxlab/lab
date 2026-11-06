@@ -63,6 +63,7 @@ describe("couples screens render", () => {
         onPass={() => undefined}
         onExit={() => undefined}
         onToggleSound={() => undefined}
+        onSkip={() => undefined}
         onHide={() => undefined}
         hidden={false}
       />,
@@ -88,7 +89,8 @@ describe("couples screens render", () => {
           onPass={() => undefined}
             onExit={() => undefined}
           onToggleSound={() => undefined}
-          onHide={() => undefined}
+          onSkip={() => undefined}
+        onHide={() => undefined}
           hidden={false}
         />,
       );
@@ -113,6 +115,7 @@ describe("couples screens render", () => {
         onPass={() => undefined}
         onExit={() => undefined}
         onToggleSound={() => undefined}
+        onSkip={() => undefined}
         onHide={() => undefined}
         hidden={false}
       />,

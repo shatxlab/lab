@@ -75,12 +75,22 @@ export interface CouplesQuestion {
 /** `voteA`/`voteB` answer the current card in match mode; `voteTogether` in together mode. */
 export type PlayPhase = "voteA" | "handoff" | "voteB" | "voteTogether";
 
-/** One finished card: the question plus each player's option index. */
-export interface RoundResult {
+/** A completed card. Declined cards never retain either partner's answer. */
+export type RoundResult = AnsweredRound | SkippedRound;
+
+export interface AnsweredRound {
+  skipped?: false;
   question: CouplesQuestion;
   /** `[a, b]` in match mode, `[joint]` when playing together. */
   picks: number[];
   match: boolean;
+}
+
+export interface SkippedRound {
+  question: CouplesQuestion;
+  skipped: true;
+  picks: [];
+  match: false;
 }
 
 /** Persisted setup. `theme: "all"` mixes every theme's deck. */

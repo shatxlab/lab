@@ -558,6 +558,8 @@ body:has(.cp-shell) {
   justify-content: center;
   min-height: 0;
   overflow-y: auto;
+  /* Safe alignment keeps the top reachable when long prompts need scrolling. */
+  justify-content: safe center;
   padding: clamp(1rem, 4vw, 2rem);
   text-align: center;
 }
@@ -689,6 +691,31 @@ body:has(.cp-shell) {
   display: flex;
   flex-direction: column;
   min-height: 3.2rem;
+  flex: 0 0 auto;
+  gap: 0.25rem;
+}
+
+.cp-skip {
+  align-self: center;
+  min-height: 44px;
+  margin-top: 0.35rem;
+}
+
+.cp-skip-hint {
+  color: var(--muted-fg);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  margin: 0 auto;
+  max-width: 32rem;
+  text-align: center;
+}
+
+.cp-skipped-count,
+.cp-empty-summary {
+  color: var(--muted-fg);
+  line-height: 1.45;
+  margin: 0;
+  text-align: center;
 }
 
 .cp-hint {
@@ -699,6 +726,7 @@ body:has(.cp-shell) {
 }
 
 .cp-hide {
+  min-height: 44px;
   align-self: center;
   background: none;
   border: 0;

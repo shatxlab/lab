@@ -1,4 +1,4 @@
-import { matchScore, percentText, stringsFor, verdictFor } from "@/lib/couples/i18n";
+import { matchScore, percentText, stringsFor, t, verdictFor } from "@/lib/couples/i18n";
 import { resolveOptions } from "@/lib/couples/questions";
 import type { CouplesSettings, RoundResult } from "@/lib/couples/types";
 
@@ -102,17 +102,22 @@ function TogetherSummary({ settings, results }: { settings: CouplesSettings; res
 
 export function SummaryScreen({ settings, results, onPlayAgain, onSettings, onMenu }: SummaryScreenProps) {
   const TXT = stringsFor(settings.lang);
+  const answered = results.filter((result) => !result.skipped);
+  const skipped = results.length - answered.length;
   return (
     <div className="cp-summary">
       <header className="cp-summary-hero">
         <p className="cp-eyebrow">{TXT.appName}</p>
-        <h1>{settings.mode === "match" ? TXT.summaryMatchTitle : TXT.summaryTogetherTitle}</h1>
+        <h1>{settings.mode === "match" && answered.length > 0 ? TXT.summaryMatchTitle : TXT.summaryTogetherTitle}</h1>
       </header>
 
-      {settings.mode === "match" ? (
-        <MatchSummary settings={settings} results={results} />
+      {skipped > 0 ? <p className="cp-skipped-count">{t(settings.lang, "summarySkipped", { count: skipped })}</p> : null}
+      {answered.length === 0 ? (
+        <p className="cp-empty-summary">{TXT.summaryNoAnswers}</p>
+      ) : settings.mode === "match" ? (
+        <MatchSummary settings={settings} results={answered} />
       ) : (
-        <TogetherSummary settings={settings} results={results} />
+        <TogetherSummary settings={settings} results={answered} />
       )}
 
       <div className="cp-summary-actions">

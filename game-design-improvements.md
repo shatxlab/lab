@@ -322,15 +322,25 @@ Do not apply a blanket damage buff before establishing the cause. Any approved b
 
 **Priority:** P1. **Scope:** medium. **Decision:** agreed.
 
-- [ ] Add Skip this time without adding the card to persistent hidden content.
-- [ ] Keep Hide forever as a distinct action.
-- [ ] Allow either partner to decline, including the second partner after the first has answered.
-- [ ] Do not expose the first partner's answer when the second declines.
-- [ ] Exclude declined cards from agreement scoring and show skipped counts separately.
-- [ ] Handle all-skipped sessions without an invalid or misleading agreement score.
-- [ ] Cover both together and match modes and EN/RU UI.
+- [x] Add Skip this time without adding the card to persistent hidden content.
+- [x] Keep Hide forever as a distinct action.
+- [x] Allow either partner to decline, including the second partner after the first has answered.
+- [x] Do not expose the first partner's answer when the second declines.
+- [x] Exclude declined cards from agreement scoring and show skipped counts separately.
+- [x] Handle all-skipped sessions without an invalid or misleading agreement score.
+- [x] Cover both together and match modes and EN/RU UI.
 
 **Acceptance:** no forced answer, no mismatch penalty for declining, and no permanent hiding caused by a temporary skip.
+
+### Implementation record
+
+- Implemented for all three games, both modes, EN/RU. **Skip this time** is a session-wide decline, separate from **Hide forever**. It advances without drawing a replacement and does not change persistent hidden IDs; normal seen-history ranking still applies in future deals.
+- Partner A's declined cards are omitted from partner B's pass. Partner B can decline after A answered: A's withheld answer is erased immediately without truncating later answers, and the skipped result contains no picks. Recaps omit declined prompts/answers and partner attribution, showing only an aggregate skipped count.
+- Agreement percentages, mismatch discussion, Together tallies, and lifetime agreement denominators exclude skipped cards. All-skipped sessions finish neutrally without a percentage, fraction, verdict, or disagreement prompt; replay/reload still leaves these cards available. A game with no lifetime scored answers no longer shows a fabricated menu percentage. Completing a session still increments games played; Together still does not add to lifetime agreement statistics.
+- Existing permanent hiding/replacement/restoration is retained. During partner B's pass, hiding remains a future preference; the separate Skip action stays enabled to decline the current card, with explanatory EN/RU copy. No persisted setup/stats/history schema changed, and answers remain session-only.
+- Both actions have 44px touch targets outside the scrolling question card. Long prompts remain reachable from the top, native keyboard activation works, and answer shortcuts are blocked behind the exit confirmation.
+- Added 28 tests (6 pure, 22 integration). Full verification: `NODE_ENV=test npm test` passed **227 files / 3,331 tests**; Couples regressions passed **11 files / 103 tests**; typecheck and production build passed. Development and production Chromium checks passed at **360×640 and 390×780** in EN/RU across all three games/both modes, both-partner decline flows, all-skipped A/B/Together, replay/reload, privacy/scoring/persisted stats, permanent hiding interactions, long-card scrolling, native Enter activation and visible touch targets. Representative screenshots were inspected; no physical-device playtest was performed.
+- Detailed game handoff: `couples-roadmap.md`. No English catalog expansion or other game changes. The user subsequently authorized committing and pushing this batch to `main`; deployment status must be checked separately from push success.
 
 ## 9. KingsRoad pacing — shaped investigation, not automatic shortening
 

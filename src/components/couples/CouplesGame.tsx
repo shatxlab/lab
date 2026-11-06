@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 
+import { isAnswer, matchResults, skippedRound, withPick, type Answer } from "@/lib/couples/session";
 import { stringsFor } from "@/lib/couples/i18n";
 import { dealSession, redealSession, type Session } from "@/lib/couples/deck";
 import {
@@ -45,13 +46,6 @@ function firstPhase(mode: Mode): PlayPhase {
   return mode === "match" ? "voteA" : "voteTogether";
 }
 
-/** Writes `choice` at `position`, so a repeated tap can never shift the answers after it. */
-function withPick(picks: readonly number[], position: number, choice: number): number[] {
-  const next = picks.slice(0, position);
-  next[position] = choice;
-  return next;
-}
-
 export default function CouplesGame() {
   const readyRef = useLangReady<HTMLDivElement>();
   // Prerendered in English, the site default: the pre-paint guard only hides the island for another stored
@@ -64,8 +58,8 @@ export default function CouplesGame() {
   const [phase, setPhase] = useState<PlayPhase>("voteA");
   // Match mode: each partner's option for every card, by card position. The first partner
   // fills picksA for all cards, then the second partner fills picksB for the same cards.
-  const [picksA, setPicksA] = useState<number[]>([]);
-  const [picksB, setPicksB] = useState<number[]>([]);
+  const [picksA, setPicksA] = useState<Answer[]>([]);
+  const [picksB, setPicksB] = useState<Answer[]>([]);
   const [results, setResults] = useState<RoundResult[]>([]);
   const [confirmExit, setConfirmExit] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -160,7 +154,7 @@ export default function CouplesGame() {
 
   // A card counts as seen once it is on screen, not when it was dealt, so leaving
   // a game early does not use up the cards that never came up.
-  const shownKey = screen === "play" && question ? cardKey(question) : null;
+  const shownKey = screen === "play" && phase !== "handoff" && question ? cardKey(question) : null;
   useEffect(() => {
     if (shownKey) setHistory((current) => markSeen(current, shownKey));
   }, [shownKey]);
@@ -168,7 +162,7 @@ export default function CouplesGame() {
   const finish = useCallback(
     (finalResults: RoundResult[] = results) => {
       const scored = settings.mode === "match";
-      const played = scored ? finalResults.length : 0;
+      const played = scored ? finalResults.filter((result) => !result.skipped).length : 0;
       const matched = scored ? finalResults.filter((result) => result.match).length : 0;
       setStats((current) => withSessionStats(current, played, matched));
       soundRef.current?.play("finish");
@@ -182,57 +176,57 @@ export default function CouplesGame() {
     setPhase("voteB");
   }, []);
 
+  // null is an explicit decline, never a third answer or an automatic mismatch.
   const vote = useCallback(
-    (choice: number) => {
-      if (!session || !question) return;
+    (choice: Answer) => {
+      if (!session || !question || confirmExit || phase === "handoff") return;
+      soundRef.current?.play("tap");
 
       if (phase === "voteA") {
-        soundRef.current?.play("tap");
-        setPicksA((current) => withPick(current, index, choice));
+        const nextA = withPick(picksA, index, choice);
+        setPicksA(nextA);
         if (index + 1 < session.cards.length) {
           setIndex(index + 1);
         } else {
-          // The first partner has answered every card: hand the phone over. The second one starts from the first card.
-          setIndex(0);
-          setPhase("handoff");
+          const first = session.cards.findIndex((_, position) => isAnswer(nextA[position]));
+          if (first < 0) {
+            const finalResults = matchResults(session.cards, nextA, []);
+            setResults(finalResults);
+            finish(finalResults);
+          } else {
+            // Declines are session-wide: the other partner is not asked these cards.
+            setIndex(first);
+            setPhase("handoff");
+          }
         }
         return;
       }
 
       if (phase === "voteB") {
-        soundRef.current?.play("tap");
+        // Erase the withheld answer immediately on decline, without truncating later answers.
+        const nextA = choice === null ? withPick(picksA, index, null) : picksA;
         const nextB = withPick(picksB, index, choice);
-        if (index + 1 < session.cards.length) {
-          setPicksB(nextB);
-          setIndex(index + 1);
-          return;
-        }
-        // Both partners have answered every card: the summary gets one row per card.
-        const finalResults: RoundResult[] = session.cards.map((card, position) => {
-          const a = picksA[position] ?? 0;
-          const b = nextB[position] ?? 0;
-          return { question: card, picks: [a, b], match: a === b };
-        });
+        setPicksA(nextA);
         setPicksB(nextB);
-        setResults(finalResults);
-        finish(finalResults);
+        const next = session.cards.findIndex((_, position) => position > index && isAnswer(nextA[position]));
+        if (next >= 0) {
+          setIndex(next);
+        } else {
+          const finalResults = matchResults(session.cards, nextA, nextB);
+          setResults(finalResults);
+          finish(finalResults);
+        }
         return;
       }
 
-      if (phase === "voteTogether") {
-        soundRef.current?.play("tap");
-        const nextResults: RoundResult[] = [...results, { question, picks: [choice], match: true }];
-        setResults(nextResults);
-        // Together mode has nothing to reveal: the choice was just made on
-        // screen, so advance immediately (or wrap up on the last card).
-        if (index + 1 >= session.cards.length) {
-          finish(nextResults);
-        } else {
-          setIndex(index + 1);
-        }
-      }
+      const nextResults: RoundResult[] = [...results, choice === null
+        ? skippedRound(question)
+        : { question, picks: [choice], match: true }];
+      setResults(nextResults);
+      if (index + 1 >= session.cards.length) finish(nextResults);
+      else setIndex(index + 1);
     },
-    [phase, question, session, index, picksA, picksB, results, finish],
+    [phase, question, session, index, picksA, picksB, results, finish, confirmExit],
   );
 
   const playAgain = useCallback(() => {
@@ -270,13 +264,16 @@ export default function CouplesGame() {
       return;
     }
     // The first partner had nothing left to answer after this card: hand over, or wrap up if nothing is left.
-    if (remaining.length > 0) {
-      setIndex(0);
+    const first = remaining.findIndex((_, position) => isAnswer(picksA[position]));
+    if (first >= 0) {
+      setIndex(first);
       setPhase("handoff");
       return;
     }
-    finish([]);
-  }, [question, session, phase, pool, index, results, finish]);
+    const finalResults = matchResults(remaining, picksA, []);
+    setResults(finalResults);
+    finish(finalResults);
+  }, [question, session, phase, pool, index, results, picksA, finish]);
 
   const pickGame = useCallback((game: GameId) => {
     setSettings((current) => ({ ...current, game }));
@@ -298,7 +295,7 @@ export default function CouplesGame() {
 
   // Keyboard: 1/2 pick an answer, Space/Enter passes the phone.
   useEffect(() => {
-    if (screen !== "play") return undefined;
+    if (screen !== "play" || confirmExit) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
@@ -314,7 +311,7 @@ export default function CouplesGame() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [screen, phase, vote, pass]);
+  }, [screen, phase, vote, pass, confirmExit]);
 
   const T = stringsFor(settings.lang);
   return (
@@ -347,6 +344,7 @@ export default function CouplesGame() {
           onPass={pass}
           onExit={requestExit}
           onToggleSound={() => updateSettings({ sound: !settings.sound })}
+          onSkip={() => vote(null)}
           onHide={hideCurrent}
           hidden={history.hidden.includes(cardKey(question))}
         />

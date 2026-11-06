@@ -250,41 +250,74 @@ describe('the tycoon screens render for a studio with everything in play', () =>
     expect(host.textContent).toContain('70 → 74')
   })
 
-  it('the move out requires a live hit choice and has no keep/sell checkboxes', () => {
+  function garageStore() {
     const store = richStore()
     store.state.offices = [store.state.offices[0]]
     store.state.offices[0].kind = 'garage'
     store.state.stage = 2
     store.state.signatureId = 501
+    return store
+  }
+
+  it('hides move details until Move is clicked, then lists every product with one hit choice', () => {
+    const store = garageStore()
+    store.state.products.push(
+      makeProduct({ id: 503, name: 'Second hit', hit: true }),
+      makeProduct({ id: 504, name: 'Small app' }),
+      makeProduct({ id: 505, name: 'Last app' }),
+    )
     const host = mount(store, <TeamDialog />)
-    expect(host.textContent).toContain('Choose the product to move into the office with')
-    expect(host.querySelector('input[type=checkbox]')).toBeNull()
-    const select = host.querySelector('select[aria-label="Product to move into the office with"]') as HTMLSelectElement
-    expect(select.value).toBe('')
-    const moveButton = [...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Move ·'))!
-    expect(moveButton.disabled).toBe(true)
-    expect(select.textContent).toContain('Anchor')
-    act(() => {
-      select.value = '501'
-      select.dispatchEvent(new Event('change', { bubbles: true }))
-    })
-    expect(moveButton.disabled).toBe(false)
-    expect(host.textContent).toContain('All other products are automatically sold')
-    expect(host.querySelector('[aria-label="Products leaving the portfolio"]')?.textContent).toContain('Titan')
+    expect(host.querySelector('input[type=radio]')).toBeNull()
     expect(host.querySelector('#office-move-warning')).toBeNull()
+    expect(host.textContent).not.toContain('Choose one hit')
+    const moveButton = [...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Move ·'))!
+    expect(moveButton.disabled).toBe(false)
     act(() => moveButton.click())
-    const warning = host.querySelector('#office-move-warning')!
-    expect(warning.classList.contains('bad')).toBe(true)
-    expect(warning.getAttribute('role')).toBe('alert')
-    expect(warning.textContent).toContain('Only Anchor moves with you.')
-    expect(warning.textContent).toContain('All other products will not move to the office: they will be sold or retired.')
-    expect(moveButton.getAttribute('aria-describedby')).toBe(warning.id)
+    expect(host.querySelector('select[aria-label="Product to move into the office with"]')).toBeNull()
+    expect(host.querySelector('input[type=checkbox]')).toBeNull()
+    const radios = [...host.querySelectorAll<HTMLInputElement>('input[type=radio]')]
+    expect(radios).toHaveLength(5)
+    expect(radios.filter((radio) => radio.disabled)).toHaveLength(3)
+    expect(radios.every((radio) => !radio.checked)).toBe(true)
+    const confirm = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Sure? Leave the garage')!
+    expect(confirm.disabled).toBe(true)
+    act(() => radios[2].click())
+    act(() => radios[0].click())
+    expect(radios.filter((radio) => radio.checked).map((radio) => radio.value)).toEqual(['501'])
+    expect(confirm.disabled).toBe(false)
+    expect(host.querySelector('#office-move-warning')?.textContent).toContain('All other products will be sold or retired.')
+    expect(confirm.getAttribute('aria-describedby')).toBe('office-move-warning')
+    expect(host.textContent).toContain('Titan')
     expect(store.state.offices[0].kind).toBe('garage')
-    expect(store.state.products).toHaveLength(2)
-    act(() => moveButton.click())
+    expect(store.state.products).toHaveLength(5)
+    act(() => confirm.click())
     expect(store.state.offices[0].kind).toBe('office')
     expect(store.state.signatureId).toBe(501)
     expect(store.state.products.map((p) => p.id)).toEqual([501])
-    expect(store.state.retired).toHaveLength(1)
+    expect(store.state.retired).toHaveLength(4)
+  })
+
+  it('uses the same Move button for confirmation, without extra action buttons', () => {
+    const store = garageStore()
+    const host = mount(store, <TeamDialog />)
+    const move = [...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Move ·'))!
+    act(() => move.click())
+    expect(move.textContent).toBe('Sure? Leave the garage')
+    expect(move.disabled).toBe(true)
+    expect(host.textContent).not.toContain('No undo')
+    expect([...host.querySelectorAll('button')].some((b) => b.textContent === 'Cancel' || b.textContent?.startsWith('Confirm move'))).toBe(false)
+    act(() => host.querySelector<HTMLInputElement>('input[type=radio]')!.click())
+    expect(move.disabled).toBe(false)
+    expect(store.state.offices[0].kind).toBe('garage')
+    act(() => move.click())
+    expect(store.state.offices[0].kind).toBe('office')
+  })
+
+  it('keeps the initial move button disabled while the studio is not ready', () => {
+    const store = garageStore()
+    store.state.stage = 1
+    const host = mount(store, <TeamDialog />)
+    expect([...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Move ·'))!.disabled).toBe(true)
+    expect(host.querySelector('input[type=radio]')).toBeNull()
   })
 })

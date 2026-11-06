@@ -147,7 +147,8 @@ export function TeamDialog() {
   const many = state.offices.length > 1
   const cafe = inCafe(state)
   const garage = state.offices.find((o) => o.kind === 'garage')
-  const moveOut = moveOutBlocker(state) ?? moveOutProductBlocker(state, moveProductId)
+  const moveReady = moveOutBlocker(state)
+  const moveOut = moveReady ?? moveOutProductBlocker(state, moveProductId)
   const toGarage = moveToGarageBlocker(state)
   const openRegions = openableRegions(state)
   const [openRegion, setOpenRegion] = useState<Region | ''>('')
@@ -212,47 +213,45 @@ export function TeamDialog() {
           <div className="upgrade">
             <span>
               Move out of the garage: <strong>{OFFICE_KINDS.office.desks} desks</strong>, rent {formatMoney(OFFICE_KINDS.office.rent)}/mo
-              {moveOut && moveOut !== 'Not enough money' && <small className="muted"> · {readiness(moveOut, 'an indie studio')}</small>}
+              {moveReady && moveReady !== 'Not enough money' && <small className="muted"> · {readiness(moveReady, 'an indie studio')}</small>}
             </span>
             <button
-              disabled={moveOut !== null}
+              disabled={(confirmMove ? moveOut : moveReady) !== null}
               className={confirmMove ? 'danger' : ''}
               aria-describedby={confirmMove ? 'office-move-warning' : undefined}
               onClick={() => (confirmMove ? report(store.moveOut(moveProductId)) : setConfirmMove(true))}
-              onBlur={() => setConfirmMove(false)}
             >
               {confirmMove ? 'Sure? Leave the garage' : `Move · ${formatMoney(MOVE_OUT_COST)}`}
             </button>
-            {confirmMove && (
-              <p id="office-move-warning" className="bad office-move-warning" role="alert">
-                Only {state.products.find((product) => product.id === moveProductId)?.name ?? 'the chosen product'} moves with you.
-                {' '}All other products will not move to the office: they will be sold or retired. This cannot be undone.
-              </p>
-            )}
           </div>
-          <label className="keep-list">
-            <span>Choose the product to move into the office with. Only this product comes with you. All other products are automatically sold where possible, or retired, when you confirm the move.</span>
-            <select
-              aria-label="Product to move into the office with"
-              value={moveProductId ?? ''}
-              onChange={(event) => {
-                setMoveProductId(event.target.value === '' ? undefined : Number(event.target.value))
-                setConfirmMove(false)
-              }}
-            >
-              <option value="">Choose a live hit…</option>
-              {state.products.filter((product) => product.hit).map((product) => (
-                <option key={product.id} value={product.id}>{product.name}</option>
+          {confirmMove && (
+            <div className="keep-list" role="group" aria-label="Product to move into the office with">
+              <strong>Choose one hit to take with you.</strong>
+              {state.products.map((product) => (
+                <label key={product.id}>
+                  <input
+                    type="radio"
+                    name="office-move-product"
+                    value={product.id}
+                    checked={moveProductId === product.id}
+                    disabled={!product.hit}
+                    onChange={() => setMoveProductId(product.id)}
+                  />
+                  <span>
+                    {product.name}
+                    <small className="muted">
+                      {' · '}{moveProductId === product.id ? 'moves with you' :
+                        !product.hit && moveProductId === undefined ? 'not a hit' :
+                        moveProductId === undefined ? 'hit' :
+                        sunsetOutcome(product) === 'sold' ? `sell for ${formatMoney(salePrice(product))}` : 'retire'}
+                    </small>
+                  </span>
+                </label>
               ))}
-            </select>
-          </label>
-          {moveProductId !== undefined && state.products.some((p) => p.id === moveProductId && p.hit) && (
-            <div className="keep-list" aria-label="Products leaving the portfolio">
-              {state.products.filter((p) => p.id !== moveProductId).map((product) => (
-                <small key={product.id} className="muted">
-                  {product.name} · {sunsetOutcome(product) === 'sold' ? `sell for ${formatMoney(salePrice(product))}` : 'retire'}
-                </small>
-              ))}
+              <p id="office-move-warning" className="bad office-move-warning">
+                All other products will be sold or retired.
+              </p>
+              {moveReady === null && moveProductId !== undefined && moveOut && <small className="muted">{moveOut}</small>}
             </div>
           )}
           </>

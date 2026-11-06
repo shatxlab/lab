@@ -4,6 +4,16 @@ The single source of TODOs, design record and handoff notes for the office-cowor
 steps", then read "Guide for the next session" (at the end) before changing anything in `src/lib/roster/` or
 `src/lib/hr/`.
 
+## Current improvement batch
+
+Implemented the first HR tasks from `game-design-improvements.md`:
+
+- Fresh careers and explicit restarts now establish Intern automatically, without the three-starter selection screen. Existing careers, collection, savings, roster progression, and suspended runs are preserved. Legacy suspended runs without an established career keep their character.
+- Promotion offers disclose their relative enemy-health and spawn-rate increases before selection, for the current accessible stage and interviews. Values come from existing difficulty functions and are rounded for EN/RU display; no balance constants or run rules changed.
+- Packs display exact odds from the draw's rarity weights (60 / 27 / 10 / 3), independent-draw wording, and explicitly no rare-or-better guarantee. No pity system was added.
+- Verified with full tests (`NODE_ENV=test npm test`: 219 files / 3,086 tests), typecheck, and EN/RU Chromium phone-sized flow checks at 360px, including existing focus and suspended-run preservation. This was not a real-device playtest or a combat retune.
+- Remaining review work (quit-effect clarity, ducks, etc.) is still pending in the improvements document. The historical notes below describe earlier versions where relevant.
+
 ## Status (2026-10-31)
 
 - **Live and public:** <https://shatx.ru/hr/> (dev: `http://127.0.0.1:4321/lab/hr`, the site's base is `/lab`). Listed
@@ -77,8 +87,8 @@ except the HR loop's daily pool, the rename and further stages:**
   (each coworker's level, xp, stats, perks; `day`; the codex), `lab:hr:v1` (`Career`: `focusId`, `owned`, `sealed`,
   `stage`, `gold`), `lab:hr:run:v1` (the run in progress). `finish` in `HrApp` runs when a run ends: a day updates the
   roster (day, review) and the career (gold); an interview only hires.
-- **Focus coworker:** the menu first asks who to grow (the three starters); after that only the focus is shown, with
-  rank, level, review progress, the day and the savings. "Start a new career" (confirm) resets the roster and career.
+- **Focus coworker:** new careers start with Intern automatically; existing selected coworkers are retained. The focus is shown with
+  rank, level, review progress, the day and the savings. "Start a new career" (confirm) resets the roster and career and establishes Intern.
   Existing saves started fresh by design (no carry-over from the old version).
 - **A run is a day:** the end of a run (win, fall or walk-out) moves `RosterSave.day` on and runs a review.
 - **Review XP** = 1 per 5 s survived + 50 for beating the auditor (walking out at once pays 0). XP from level L to the
@@ -98,7 +108,7 @@ except the HR loop's daily pool, the rename and further stages:**
 - **Packs (built):** `openPack` (`career.ts`) spends `PACKS.price` (1200 gold, about one pack per three runs) on one new
   level 1 card, rolled with the roster's rarity odds (60 / 27 / 10 / 3) and added to the roster, the codex and
   `Career.sealed` (it joins `owned` once its interview is beaten). The menu shows the reveal, "Your cards" (everyone owned but the focus, each with "Make focus", which
-  swaps the focus and keeps everyone's level). The two starters not picked at the start are not owned; they are not
+  swaps the focus and keeps everyone's level). The other two starters are not owned in new Intern-first careers; they are not
   in packs either (pack ids start at 4), so they never show up again until "Start a new career".
 - **Rarity and difficulty:** a rarer card has more bonus stat points, so `difficultyFor(level, rarity)` adds
   `PACKS.rarityLevels` (1) career levels of difficulty per bonus point past a common's. Bot check (30 seeds per

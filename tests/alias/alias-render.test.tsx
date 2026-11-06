@@ -154,6 +154,16 @@ describe("ResultsScreen", () => {
     expect(markup).not.toContain("Play again");
   });
 
+  it("explains a completed tied round in Russian", () => {
+    const markup = renderToStaticMarkup(
+      <ResultsScreen lang="ru" theme={getTheme("everyday")} teams={[team, { ...team, id: "t2" }]}
+        result={result} team={team} targetScore={10} isGameOver={false} roundComplete winner={null}
+        onNext={noop} onPlayAgain={noop} onSetup={noop} onToggleWord={noop} />,
+    );
+    expect(markup).toContain("Счёт равный — ещё полный круг!");
+    expect(markup).not.toContain("чтобы узнать победителя");
+  });
+
   it("announces the winner on game over", () => {
     const markup = renderToStaticMarkup(
       <ResultsScreen

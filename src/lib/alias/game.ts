@@ -104,15 +104,16 @@ export function isRoundComplete(activeIndex: number, teamCount: number): boolean
   return teamCount > 0 && activeIndex === teamCount - 1;
 }
 
-/**
- * Highest-scoring team among those that reached the target; ties keep the
- * earlier team. Used once a full round has been played so that turn order no
- * longer decides the winner.
- */
+/** Unique highest-scoring team at or above the target; a tie needs another full round. */
 export function resolveWinner(teams: readonly Team[], targetScore: number): Team | null {
-  const reached = teams.filter((team) => team.score >= targetScore);
-  if (reached.length === 0) return null;
-  return reached.reduce((best, team) => (team.score > best.score ? team : best), reached[0]);
+  const leaders = roundLeaders(teams, targetScore);
+  return leaders.length === 1 ? leaders[0] : null;
+}
+
+/** Eligible leaders, also used to explain tied rounds without depending on team order. */
+export function roundLeaders(teams: readonly Team[], targetScore: number): Team[] {
+  const highest = Math.max(targetScore, ...teams.map((team) => team.score));
+  return teams.filter((team) => team.score === highest);
 }
 
 export function rankTeams(teams: readonly Team[]): Team[] {

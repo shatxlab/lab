@@ -65,6 +65,7 @@ type StringKey =
   | "noWords"
   | "editWordsHint"
   | "targetReachedHint"
+  | "tiedRoundHint"
   | "markCorrect"
   | "markSkipped"
   | "nextTeam"
@@ -111,7 +112,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     ruleOne: "One player is the explainer and holds the device.",
     ruleTwo: "Describe the word without saying it, its parts or its translation.",
     ruleThree: "Your team guesses out loud. Tap Guessed for +1, Skip for a penalty.",
-    ruleFour: "Score the most points before the timer ends each turn. When a team reaches the target, the round is finished and the highest score wins.",
+    ruleFour: "Score the most points before the timer ends each turn. When a team reaches the target, finish the full round: a unique highest score wins. Tied leaders mean another full round with scores carried forward.",
     wordsInDeck: "Words in this deck",
     getReady: "Get ready",
     readyTeam: "Team {team}",
@@ -136,6 +137,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     skipped: "Skipped",
     noWords: "No words this turn.",
     editWordsHint: "Tap a word to switch it between guessed and skipped.",
+    tiedRoundHint: "Scores tied — another full round! Every team plays again; scores carry forward.",
     targetReachedHint: "A team reached the target — finish the round to see the winner.",
     markCorrect: "Mark as guessed",
     markSkipped: "Mark as skipped",
@@ -182,7 +184,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     ruleOne: "Один игрок становится объясняющим и держит устройство.",
     ruleTwo: "Объясняйте слово, не называя его, его части и перевод.",
     ruleThree: "Команда угадывает вслух. «Угадали» — +1, «Пропуск» — штраф.",
-    ruleFour: "Наберите больше очков за раунд. Когда команда достигает цели, раунд доигрывается, и побеждает команда с большим счётом.",
+    ruleFour: "Когда команда достигает цели, доиграйте полный круг. Побеждает единственный лидер. При равенстве лидеров играйте ещё полный круг, сохраняя очки.",
     wordsInDeck: "Слов в колоде",
     getReady: "Приготовьтесь",
     readyTeam: "Команда «{team}»",
@@ -207,6 +209,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     skipped: "Пропущено",
     noWords: "В этом раунде слов не было.",
     editWordsHint: "Нажмите на слово, чтобы переключить его между «угадано» и «пропущено».",
+    tiedRoundHint: "Счёт равный — ещё полный круг! Все команды играют снова, очки сохраняются.",
     targetReachedHint: "Команда достигла цели — доиграйте раунд, чтобы узнать победителя.",
     markCorrect: "Отметить как угаданное",
     markSkipped: "Отметить как пропущенное",

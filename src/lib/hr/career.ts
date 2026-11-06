@@ -1,7 +1,7 @@
 import { MAX_STAT, RARITY } from "@/lib/roster/data";
 import { generateCoworker } from "@/lib/roster/generate";
 import { recordSeen } from "@/lib/roster/save";
-import { PERK_IDS, type Coworker, type PerkId, type Rarity, type RosterSave, type Stat } from "@/lib/roster/types";
+import { RARITIES, PERK_IDS, type Coworker, type PerkId, type Rarity, type RosterSave, type Stat } from "@/lib/roster/types";
 import { random } from "@/lib/tower/sim/random";
 import { PACKS, PERK_DIFFICULTY, REVIEW, STAGE_IDS, STAGES } from "./sim/balance";
 import type { Stage } from "./sim/types";
@@ -13,9 +13,9 @@ import type { Stage } from "./sim/types";
 export const CAREER_STORAGE_KEY = "lab:hr:v1";
 
 export interface Career {
-  /** The coworker being grown; null until the player picks a starter. */
+  /** The coworker being grown; null until onboarding establishes the Intern. */
   focusId: number | null;
-  /** Ids of the cards the player owns: the starter they picked and every card hired since. */
+  /** Ids of the cards the player owns: their initial Intern and every card hired since. */
   owned: number[];
   /** Ids of cards bought in a pack that are waiting for their interview; they join `owned` once it is beaten. */
   sealed: number[];
@@ -41,6 +41,26 @@ function storageOrUndefined(): CareerStorage | undefined {
 
 export function defaultCareer(): Career {
   return { focusId: null, owned: [], sealed: [], stage: "openSpace", gold: 0 };
+}
+
+/** Keep valid careers intact; old unselected saves and new players start with the Intern.
+ * A legacy suspended run or owned card takes precedence over creating a new focus.
+ */
+export function withCareerFocus(roster: RosterSave, career: Career, suspendedCoworkerId?: number): Career {
+  const active = roster.coworkers.filter((coworker) => coworker.status.kind !== "quit");
+  if (active.some((coworker) => coworker.id === career.focusId)) return career;
+  const focus = active.find((coworker) => career.owned.includes(coworker.id))
+    ?? active.find((coworker) => coworker.id === suspendedCoworkerId)
+    ?? active.find((coworker) => coworker.id === 1 && coworker.department === "interns")
+    ?? active[0];
+  if (!focus) return { ...career, focusId: null };
+  return { ...career, focusId: focus.id, owned: [...new Set([...career.owned, focus.id])], sealed: career.sealed.filter((id) => id !== focus.id) };
+}
+
+/** The same relative rarity weights used by generateCoworker / rollRarity. No pity system. */
+export function packOdds(): { rarity: Rarity; percent: number }[] {
+  const total = RARITIES.reduce((sum, rarity) => sum + RARITY[rarity].weight, 0);
+  return RARITIES.map((rarity) => ({ rarity, percent: RARITY[rarity].weight / total * 100 }));
 }
 
 export function normalizeCareer(raw: unknown): Career {
@@ -111,6 +131,25 @@ export function difficultyFor(level: number, rarity: Rarity = "common", stage: S
  */
 export function interviewDifficultyFor(level: number, rarity: Rarity = "common", perks: readonly PerkId[] = []): number {
   return 1 + (difficultyFor(level, rarity, "openSpace", perks) - 1) / 2;
+}
+
+export interface EncounterTradeoff {
+  /** Relative increase from this coworker's current enemy health / spawn rate, in percent. */
+  health: number;
+  spawns: number;
+}
+
+/** Disclosure only: uses the unchanged normal/interview difficulty calculations. */
+export function promotionTradeoff(coworker: Coworker, perk: PerkId, stage: Stage = "openSpace"): { day: EncounterTradeoff; interview: EncounterTradeoff } {
+  const after = [...coworker.perks, perk];
+  const change = (before: number, next: number): EncounterTradeoff => ({
+    health: (next / before - 1) * 100,
+    spawns: ((1 + (next - 1) / 2) / (1 + (before - 1) / 2) - 1) * 100,
+  });
+  return {
+    day: change(difficultyFor(coworker.level, coworker.rarity, stage, coworker.perks), difficultyFor(coworker.level, coworker.rarity, stage, after)),
+    interview: change(interviewDifficultyFor(coworker.level, coworker.rarity, coworker.perks), interviewDifficultyFor(coworker.level, coworker.rarity, after)),
+  };
 }
 
 const GROWTH_ORDER: readonly Stat[] = ["output", "grit", "focus", "hustle", "luck"];

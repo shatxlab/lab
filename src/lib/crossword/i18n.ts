@@ -122,7 +122,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
 
     // Confirm clear
     clearTitle: "Clear the crossword?",
-    clearBody: "All typed letters and hints will be removed.",
+    clearBody: "All letters and hint markers will be removed. Hints used and elapsed time will be kept.",
     cancel: "Cancel",
     confirm: "Clear",
 
@@ -185,7 +185,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
 
     // Confirm clear
     clearTitle: "Очистить кроссворд?",
-    clearBody: "Все введённые буквы и подсказки будут удалены.",
+    clearBody: "Все буквы и отметки подсказок будут удалены. Число использованных подсказок и время сохранятся.",
     cancel: "Отмена",
     confirm: "Очистить",
 

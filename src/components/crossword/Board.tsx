@@ -178,7 +178,7 @@ export function Board({
   // Persist on every meaningful change (cursor moves are intentionally skipped).
   useEffect(() => {
     onPersist(built.puzzle.id, toStoredProgress(stateRef.current, completedNow));
-  }, [values, state.revealed, state.elapsed, completedNow, built.puzzle.id, onPersist]);
+  }, [values, state.revealed, state.assistanceCount, state.elapsed, completedNow, built.puzzle.id, onPersist]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -295,10 +295,11 @@ export function Board({
   }, [built, sound, showToast]);
 
   const handleHint = useCallback(() => {
+    if (crosswordReducer(built, stateRef.current, { type: "reveal" }) === stateRef.current) return;
     dispatch({ type: "reveal" });
     sound.play("tap");
     showToast({ text: TXT.letterRevealed, tone: "info" });
-  }, [sound, showToast]);
+  }, [built, sound, showToast]);
 
   const resetBoard = useCallback(() => {
     dispatch({ type: "reset" });
@@ -315,8 +316,11 @@ export function Board({
 
   const confirmClearNow = useCallback(() => {
     setConfirmClear(false);
-    resetBoard();
-  }, [resetBoard]);
+    dispatch({ type: "clear" });
+    wasCompleteRef.current = false;
+    prevSolvedRef.current = new Set<string>();
+    setShowComplete(false);
+  }, []);
 
   return (
     <div className="cw-board" style={{ "--cw-kb": `${inset}px` } as CSSProperties}>
@@ -382,7 +386,7 @@ export function Board({
             <button type="button" className="cw-tool-button" onClick={handleHint}>
               <Lightbulb aria-hidden="true" />
               <span>{TXT.hint}</span>
-              {state.revealed.length > 0 ? <span className="cw-tool-count">{state.revealed.length}</span> : null}
+              {state.assistanceCount > 0 ? <span className="cw-tool-count">{state.assistanceCount}</span> : null}
             </button>
             <button type="button" className="cw-tool-button cw-tool-clues" onClick={() => setCluesOpen(true)}>
               <List aria-hidden="true" />
@@ -428,7 +432,7 @@ export function Board({
           built={built}
           lang={lang}
           elapsed={state.elapsed}
-          hints={state.revealed.length}
+          hints={state.assistanceCount}
           hasNext={hasNext}
           onReplay={handleReplay}
           onNext={onNext}

@@ -135,6 +135,7 @@ describe("crosswordReducer", () => {
     const state = crosswordReducer(warmup, initialState(warmup), { type: "reveal" });
     expect(state.values["0:0"]).toBe("Ш");
     expect(state.revealed).toContain("0:0");
+    expect(state.assistanceCount).toBe(1);
     expect(state.cursor).toEqual({ row: 0, col: 1, dir: "across" });
   });
 
@@ -144,6 +145,38 @@ describe("crosswordReducer", () => {
     expect(state.values["0:2"]).toBe("О");
     expect(state.values["1:2"]).toBe("З");
     expect(state.revealed).toContain("1:2");
+  });
+
+  it("retains assistance through editing, deletion, and clearing; only a new attempt resets it", () => {
+    let state = crosswordReducer(warmup, initialState(warmup), { type: "reveal" });
+    state = crosswordReducer(warmup, state, { type: "select", row: 0, col: 0 });
+    state = type(state, "Я");
+    expect(state.revealed).toEqual([]);
+    expect(state.assistanceCount).toBe(1);
+    state = crosswordReducer(warmup, state, { type: "backspace" });
+    expect(state.assistanceCount).toBe(1);
+    state = crosswordReducer(warmup, state, { type: "clear" });
+    expect(state.values).toEqual({});
+    expect(state.assistanceCount).toBe(1);
+    state = crosswordReducer(warmup, state, { type: "reveal" });
+    expect(state.assistanceCount).toBe(2);
+    state = crosswordReducer(warmup, state, { type: "reset" });
+    expect(state.assistanceCount).toBe(0);
+  });
+
+  it("does not count reveals on a solved entry or black cell", () => {
+    const solved = { ...initialState(warmup), values: solutionValues(), assistanceCount: 3 };
+    expect(crosswordReducer(warmup, solved, { type: "reveal" })).toBe(solved);
+    const black = { ...initialState(warmup), cursor: { row: 0, col: 5, dir: "across" as const } };
+    expect(crosswordReducer(warmup, black, { type: "reveal" })).toBe(black);
+  });
+
+  it("reveals an incorrect letter instead of charging a hint for an already correct cell", () => {
+    const state = { ...initialState(warmup), values: { "0:0": "Ш" } };
+    const next = crosswordReducer(warmup, state, { type: "reveal" });
+    expect(next.revealed).toEqual(["0:1"]);
+    expect(next.values["0:1"]).toBe("К");
+    expect(next.assistanceCount).toBe(1);
   });
 
   it("hops to the next word at a word boundary", () => {

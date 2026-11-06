@@ -171,6 +171,9 @@
 .hr-perks button {
   display: grid;
   width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
   gap: 0.15rem;
   text-align: left;
 }

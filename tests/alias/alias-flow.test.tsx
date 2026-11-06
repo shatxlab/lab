@@ -106,6 +106,40 @@ describe("AliasGame flow", () => {
     expect(host.textContent).toContain("Play again");
   });
 
+  it("plays repeated full tied rounds with carried scores and rechecks corrections", () => {
+    const host = mount();
+    click(host, ".alias-primary-button");
+    const turn = (points: number) => {
+      click(host, ".alias-start-round");
+      answerCorrect(host, points);
+      click(host, ".alias-ghost-button");
+    };
+    turn(32);
+    expect(host.textContent).not.toContain("Scores tied");
+    click(host, ".alias-primary-button");
+    turn(32);
+    expect(host.textContent).toContain("Scores tied — another full round!");
+    expect(host.textContent).not.toContain("Play again");
+
+    // Correcting the final team's word can create a winner, then restore the tie.
+    click(host, ".alias-word-chip");
+    expect(host.textContent).toContain("Team 1 wins!");
+    click(host, ".alias-word-chip");
+    expect(host.textContent).toContain("Scores tied — another full round!");
+
+    click(host, ".alias-primary-button");
+    turn(1); // 33 vs 32, but team 2 must still play.
+    expect(host.textContent).not.toContain("wins!");
+    click(host, ".alias-primary-button");
+    turn(1); // 33 vs 33, another tie.
+    expect(host.textContent).toContain("Scores tied — another full round!");
+    click(host, ".alias-primary-button");
+    turn(1); // 34 vs 33.
+    click(host, ".alias-primary-button");
+    turn(2); // 34 vs 35.
+    expect(host.textContent).toContain("Team 2 wins!");
+  });
+
   it("lets the round result be corrected from the results list", () => {
     const host = mount();
     click(host, ".alias-primary-button");

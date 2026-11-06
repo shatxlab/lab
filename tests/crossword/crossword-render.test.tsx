@@ -6,9 +6,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { Board } from "@/components/crossword/Board";
 import { PuzzlePicker } from "@/components/crossword/PuzzlePicker";
-import { buildPuzzle } from "@/lib/crossword/grid";
+import { cellKey, buildPuzzle } from "@/lib/crossword/grid";
 import { CROSSWORD_PUZZLES } from "@/lib/crossword/puzzles";
 import { WALK_PUZZLE, WARMUP_PUZZLE } from "./fixture";
+import type { StoredPuzzleProgress } from "@/lib/crossword/storage";
 import type { CrosswordSoundEngine } from "@/lib/crossword/sound";
 
 const warmup = buildPuzzle(WARMUP_PUZZLE);
@@ -73,6 +74,39 @@ describe("Board", () => {
     act(() => hint?.click());
     expect(host.querySelector('[data-cell="0:0"]')?.textContent).toContain("Ш");
     expect(host.querySelector(".cw-toast")?.textContent).toContain("Буква подсказана");
+  });
+
+  it("keeps the durable hint count when clearing in the UI, reloading, and completing", () => {
+    let persisted: StoredPuzzleProgress | undefined;
+    const persist = (_id: string, progress: StoredPuzzleProgress) => { persisted = progress; };
+    const host = mount(<Board {...boardProps({ onPersist: persist })} />);
+    const hint = [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Подсказка"));
+    act(() => hint?.click());
+    expect(persisted?.assistanceCount).toBe(1);
+    const clear = [...host.querySelectorAll<HTMLButtonElement>(".cw-tool-button")].find((button) => button.textContent?.includes("Очистить"));
+    act(() => clear?.click());
+    act(() => host.querySelector<HTMLButtonElement>(".cw-danger-button")?.click());
+    expect(host.querySelector(".cw-tool-count")?.textContent).toBe("1");
+    expect(persisted?.values).toEqual({});
+    expect(persisted?.revealed).toEqual([]);
+    expect(persisted?.assistanceCount).toBe(1);
+
+    // Reload nearly solved with the historical count but no remaining hint markers.
+    const values = Object.fromEntries(warmup.cells.filter((cell) => !cell.isBlack).map((cell) => [cellKey(cell.row, cell.col), cell.solution]));
+    delete values["0:0"];
+    act(() => root?.unmount());
+    root = null;
+    const again = mount(<Board {...boardProps({ saved: { ...persisted!, values }, onPersist: persist })} />);
+    act(() => again.querySelector<HTMLButtonElement>('[data-cell="0:0"]')?.click());
+    const input = again.querySelector<HTMLInputElement>(".cw-input")!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, "Ш");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(again.querySelectorAll(".cw-complete-stats .cw-stat strong")[1]?.textContent).toBe("1");
+    expect(persisted?.completed).toBe(true);
+    act(() => again.querySelector<HTMLButtonElement>(".cw-complete button.cw-secondary-button")?.click());
+    expect(persisted?.assistanceCount).toBe(0);
   });
 
   it("accepts a word from the hidden input and celebrates it", () => {

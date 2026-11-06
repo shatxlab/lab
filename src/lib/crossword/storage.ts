@@ -10,6 +10,7 @@ const ANY_GRID_LETTER = /^[A-ZА-Я]$/;
 export interface StoredPuzzleProgress {
   values: Record<string, string>;
   revealed: string[];
+  assistanceCount: number;
   elapsed: number;
   completed: boolean;
 }
@@ -53,7 +54,12 @@ function sanitizeProgress(raw: unknown): StoredPuzzleProgress | null {
   const elapsed = typeof candidate.elapsed === "number" && Number.isFinite(candidate.elapsed)
     ? Math.max(0, Math.min(candidate.elapsed, 60 * 60 * 24))
     : 0;
-  return { values, revealed, elapsed, completed: candidate.completed === true };
+  // Older saves only retain current markers: they are a lower bound, not recovered history.
+  const legacyCount = new Set(revealed).size;
+  const assistanceCount = typeof candidate.assistanceCount === "number" && Number.isFinite(candidate.assistanceCount)
+    ? Math.max(legacyCount, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(candidate.assistanceCount)))
+    : legacyCount;
+  return { values, revealed, assistanceCount, elapsed, completed: candidate.completed === true };
 }
 
 export function normalizeCrosswordState(raw: unknown): StoredCrosswordState {
@@ -96,6 +102,7 @@ export function toStoredProgress(state: CrosswordState, completed: boolean): Sto
   return {
     values: state.values,
     revealed: state.revealed,
+    assistanceCount: state.assistanceCount,
     elapsed: state.elapsed,
     completed,
   };
@@ -108,6 +115,7 @@ export function applyStoredProgress(state: CrosswordState, progress: StoredPuzzl
     ...state,
     values: progress.values,
     revealed: progress.revealed,
+    assistanceCount: progress.assistanceCount,
     elapsed: progress.elapsed,
   };
 }

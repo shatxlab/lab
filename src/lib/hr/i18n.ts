@@ -1,3 +1,4 @@
+import type { EncounterTradeoff } from "./career";
 import type { AppLang } from "@/lib/apps/lang";
 import { QUIRKS } from "@/lib/roster/data";
 import type { DepartmentId, Effect, PerkId, QuirkId, Rarity, Stat } from "@/lib/roster/types";
@@ -27,6 +28,9 @@ export interface HrText {
   promoted: (rank: string) => string;
   openPack: (price: string) => string;
   packHint: string;
+  packOddsLabel: string;
+  packNoGuarantee: string;
+  percent: (value: number) => string;
   packOpened: (rarity: string) => string;
   nice: string;
   yourCards: string;
@@ -42,6 +46,7 @@ export interface HrText {
   tryAgain: string;
   perks: Record<PerkId, Blurb>;
   perkTitle: (name: string) => string;
+  perkTradeoff: (stage: string, day: EncounterTradeoff, interview: EncounterTradeoff) => string;
   perksLine: (names: string) => string;
   stages: Record<Stage, { name: string; blurb: string }>;
   whereTo: string;
@@ -112,6 +117,9 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     promoted: (rank) => `Promoted to ${rank}!`,
     openPack: (price) => `Open a pack (${price})`,
     packHint: "A pack holds one new coworker. Rarer ones are stronger, but the office pushes back harder.",
+    packOddsLabel: "Odds per pack:",
+    packNoGuarantee: "Each pack is an independent draw. No rare-or-better guarantee.",
+    percent: (value) => `${new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(value)}%`,
     packOpened: (rarity) => `New coworker: ${rarity}!`,
     nice: "Nice",
     yourCards: "Your cards",
@@ -135,6 +143,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       secondWind: { name: "Second Wind", description: "Gets back up once per run after falling." },
     },
     perkTitle: (name) => `Promotion! ${name} earns a perk`,
+    perkTradeoff: (stage, day, interview) => `Tradeoff vs. your current enemies (approx.): ${stage} — health +${HR_TEXT.en.percent(day.health)}, spawn rate +${HR_TEXT.en.percent(day.spawns)}; interviews — health +${HR_TEXT.en.percent(interview.health)}, spawn rate +${HR_TEXT.en.percent(interview.spawns)}.`,
     perksLine: (names) => `Perks: ${names}`,
     stages: {
       openSpace: { name: "Open space", blurb: "The usual office floor." },
@@ -267,6 +276,9 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     promoted: (rank) => `Повышение: ${rank}!`,
     openPack: (price) => `Открыть пакет (${price})`,
     packHint: "В пакете один новый сотрудник. Редкие сильнее, но офис давит на них сильнее.",
+    packOddsLabel: "Шансы в каждом пакете:",
+    packNoGuarantee: "Каждый пакет — независимый розыгрыш. Гарантии редкого или более ценного сотрудника нет.",
+    percent: (value) => `${new Intl.NumberFormat("ru", { maximumFractionDigits: 1 }).format(value)}%`,
     packOpened: (rarity) => `Новый сотрудник: ${rarity}!`,
     nice: "Отлично",
     yourCards: "Ваши карточки",
@@ -290,6 +302,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       secondWind: { name: "Второе дыхание", description: "Один раз за забег встаёт после падения." },
     },
     perkTitle: (name) => `Повышение! ${name} получает перк`,
+    perkTradeoff: (stage, day, interview) => `Цена относительно текущих врагов (примерно): ${stage} — здоровье +${HR_TEXT.ru.percent(day.health)}, частота появления +${HR_TEXT.ru.percent(day.spawns)}; собеседования — здоровье +${HR_TEXT.ru.percent(interview.health)}, частота появления +${HR_TEXT.ru.percent(interview.spawns)}.`,
     perksLine: (names) => `Перки: ${names}`,
     stages: {
       openSpace: { name: "Опенспейс", blurb: "Обычный офисный этаж." },

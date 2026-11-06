@@ -13,6 +13,7 @@ import {
   nextTeam,
   rankTeams,
   resolveWinner,
+  roundLeaders,
   turnPoints,
 } from "@/lib/alias/game";
 import type { TurnWord } from "@/lib/alias/types";
@@ -43,9 +44,26 @@ describe("alias scoring", () => {
       makeTeam("b", "B", "#222", 12),
       makeTeam("c", "C", "#333", 12),
     ];
-    expect(resolveWinner(teams, 10)?.score).toBe(12);
+    expect(resolveWinner(teams, 10)).toBeNull();
+    expect(roundLeaders(teams, 10).map((team) => team.id)).toEqual(["b", "c"]);
     expect(resolveWinner(teams, 20)).toBeNull();
     expect(rankTeams(teams).map((team) => team.id)).toEqual(["b", "c", "a"]);
+  });
+
+
+  it.each([29, 30, 31, 32, 33])("compares 32 with %i only at the end of a full round", (secondScore) => {
+    const teams = [makeTeam("a", "A", "#111", 32), makeTeam("b", "B", "#222", secondScore)];
+    const expected = secondScore === 32 ? null : secondScore > 32 ? "b" : "a";
+    expect(resolveWinner(teams, 30)?.id ?? null).toBe(expected);
+    expect(resolveWinner([...teams].reverse(), 30)?.id ?? null).toBe(expected);
+  });
+
+  it("requires a unique eligible leader, including multi-way ties and empty games", () => {
+    const teams = ["a", "b", "c"].map((id) => makeTeam(id, id, "#111", 32));
+    expect(resolveWinner(teams, 30)).toBeNull();
+    expect(resolveWinner(teams, 40)).toBeNull();
+    expect(resolveWinner([], 30)).toBeNull();
+    expect(resolveWinner(teams.map((team) => team.id === "c" ? applyPoints(team, 1) : team), 30)?.id).toBe("c");
   });
 
   it("only completes a round after the last team has played", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { initialState } from "@/lib/crossword/game";
+import { crosswordReducer, initialState } from "@/lib/crossword/game";
 import { buildPuzzle } from "@/lib/crossword/grid";
 import { WARMUP_PUZZLE } from "./fixture";
 import {
@@ -56,12 +56,43 @@ describe("crossword storage", () => {
     const store = withPuzzleProgress({}, "warmup", {
       values: { "0:0": "Ш" },
       revealed: [],
+      assistanceCount: 0,
       elapsed: 5,
       completed: false,
     });
     writeCrosswordState(store, storage);
     expect(storage.entries()).toHaveProperty(CROSSWORD_STORAGE_KEY);
     expect(readCrosswordState(storage).warmup.values).toEqual({ "0:0": "Ш" });
+  });
+
+  it("migrates legacy marker counts as a lower bound and sanitizes explicit counts", () => {
+    const legacy = { revealed: ["0:0", "0:0", "0:1"] };
+    const normalized = normalizeCrosswordState({
+      legacy,
+      oldCleared: { revealed: [] },
+      current: { ...legacy, assistanceCount: 7 },
+      invalid: { ...legacy, assistanceCount: -3 },
+      nonfinite: { ...legacy, assistanceCount: Infinity },
+      fractional: { assistanceCount: 4.8 },
+    });
+    expect(normalized.legacy.assistanceCount).toBe(2);
+    expect(normalized.oldCleared.assistanceCount).toBe(0);
+    expect(normalized.current.assistanceCount).toBe(7);
+    expect(normalized.invalid.assistanceCount).toBe(2);
+    expect(normalized.nonfinite.assistanceCount).toBe(2);
+    expect(normalized.fractional.assistanceCount).toBe(4);
+  });
+
+  it("round-trips assistance after clearing all highlight markers", () => {
+    const built = buildPuzzle(WARMUP_PUZZLE);
+    let state = crosswordReducer(built, initialState(built), { type: "reveal" });
+    state = crosswordReducer(built, state, { type: "clear" });
+    const storage = fakeStorage();
+    writeCrosswordState(withPuzzleProgress({}, "warmup", toStoredProgress(state, false)), storage);
+    const loaded = applyStoredProgress(initialState(built), readCrosswordState(storage).warmup);
+    expect(loaded.assistanceCount).toBe(1);
+    expect(loaded.revealed).toEqual([]);
+    expect(loaded.values).toEqual({});
   });
 
   it("returns an empty store for missing or malformed JSON", () => {
@@ -75,6 +106,7 @@ describe("crossword storage", () => {
     const merged = applyStoredProgress(fresh, {
       values: { "0:0": "Ш" },
       revealed: ["0:0"],
+      assistanceCount: 1,
       elapsed: 12,
       completed: false,
     });
@@ -91,6 +123,7 @@ describe("crossword storage", () => {
     expect(toStoredProgress(state, true)).toEqual({
       values: { "0:0": "Ш" },
       revealed: [],
+      assistanceCount: 0,
       elapsed: 9,
       completed: true,
     });

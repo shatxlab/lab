@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import HrApp from "@/components/hr/HrApp";
 import { createRun } from "@/lib/hr/sim/run";
-import { CAREER_STORAGE_KEY, readCareer } from "@/lib/hr/career";
+import { CAREER_STORAGE_KEY, readCareer, packOdds, perkOffer, promotionTradeoff } from "@/lib/hr/career";
 import { PACKS } from "@/lib/hr/sim/balance";
+import { HR_TEXT } from "@/lib/hr/i18n";
 import { readRun, RUN_STORAGE_KEY } from "@/lib/hr/snapshot";
 import { generateCoworker, starters } from "@/lib/roster/generate";
 import { readSave, ROSTER_STORAGE_KEY } from "@/lib/roster/save";
@@ -32,25 +33,32 @@ function buttons(container: HTMLElement, name: string): HTMLButtonElement[] {
 }
 
 describe("HrApp", () => {
-  it("opens on the menu asking who to grow, with the three starters, and keeps the roster it dealt", async () => {
+  it("starts new players with Intern automatically and persists that career", async () => {
     const view = await mount(<HrApp />);
     expect(view.container.querySelector("h1")?.textContent).toBe("HR Department");
-    expect(view.container.textContent).toContain("Who will you grow?");
+    expect(view.container.textContent).not.toContain("Who will you grow?");
+    expect(buttons(view.container, "Start career")).toHaveLength(0);
     const names = [...view.container.querySelectorAll(".hr-card-name")].map((element) => element.textContent);
-    expect(names).toEqual(starters().map((coworker) => coworker.name));
-    expect(view.container.textContent).toContain("Steals lunches");
+    expect(names).toEqual([starters()[0].name]);
+    expect(readCareer()).toEqual({ focusId: 1, owned: [1], sealed: [], stage: "openSpace", gold: 0 });
+    expect(view.container.textContent).toContain("Day 1");
+    expect(view.container.textContent).toContain("Trainee · Level 1");
     expect(localStorage.getItem(ROSTER_STORAGE_KEY)).not.toBeNull();
     view.unmount();
   });
 
-  it("starts a career with one starter and shows only them, on day 1", async () => {
+  it("keeps an existing non-Intern career, cards, savings, and roster unchanged", async () => {
+    const career = { focusId: 2, owned: [2, 3], sealed: [], stage: "openSpace", gold: 1234 };
+    const roster = readSave();
+    roster.day = 12;
+    roster.coworkers[1].level = 8;
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(roster));
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify(career));
     const view = await mount(<HrApp />);
-    await act(async () => buttons(view.container, "Start career")[1].click());
-    expect(readCareer().focusId).toBe(2);
-    const names = [...view.container.querySelectorAll(".hr-card-name")].map((element) => element.textContent);
-    expect(names).toEqual([starters()[1].name]);
-    expect(view.container.textContent).toContain("Day 1");
-    expect(view.container.textContent).toContain("Trainee · Level 1");
+    expect(readCareer()).toEqual(career);
+    expect(readSave()).toEqual(roster);
+    expect(view.container.textContent).toContain("Day 13");
+    expect(view.container.querySelector(".hr-card-name")?.textContent).toBe(starters()[1].name);
     view.unmount();
   });
 
@@ -125,7 +133,6 @@ describe("HrApp", () => {
 
   it("keeps the kitchen locked until the focus reaches its level, then sends them there", async () => {
     const view = await mount(<HrApp />);
-    await act(async () => buttons(view.container, "Start career")[0].click());
     const kitchenButton = () => buttons(view.container, "Kitchen")[0];
     expect(kitchenButton().disabled).toBe(true);
     expect(view.container.textContent).toContain("Kitchen opens at level 6.");
@@ -168,8 +175,53 @@ describe("HrApp", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Start a new career")[0].click());
-    expect(view.container.textContent).toContain("Who will you grow?");
-    expect(readCareer()).toEqual({ focusId: null, owned: [], sealed: [], stage: "openSpace", gold: 0 });
+    expect(view.container.textContent).not.toContain("Who will you grow?");
+    expect(readCareer()).toEqual({ focusId: 1, owned: [1], sealed: [], stage: "openSpace", gold: 0 });
+    view.unmount();
+  });
+
+  it.each(["en", "ru"] as const)("shows the actual pack odds and no guarantee in %s", async (lang) => {
+    localStorage.setItem("lab:lang", lang);
+    const view = await mount(<HrApp />);
+    const text = HR_TEXT[lang];
+    const odds = view.container.querySelector(".hr-pack-odds")?.textContent;
+    for (const { rarity, percent } of packOdds()) {
+      expect(odds).toContain(`${text.rarities[rarity]}: ${text.percent(percent)}`);
+    }
+    expect(view.container.textContent).toContain(text.packNoGuarantee);
+    view.unmount();
+  });
+
+  it.each(["en", "ru"] as const)("discloses each offered perk's current-stage and interview costs before selection in %s", async (lang) => {
+    localStorage.setItem("lab:lang", lang);
+    const save = readSave();
+    save.coworkers[0].level = 11;
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(save));
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], stage: "serverRoom", gold: 0 }));
+    const view = await mount(<HrApp />);
+    const text = HR_TEXT[lang];
+    const worker = save.coworkers[0];
+    const offered = perkOffer(worker);
+    const choices = [...view.container.querySelectorAll(".hr-perks button")];
+    expect(choices).toHaveLength(offered.length);
+    offered.forEach((perk, index) => {
+      const costs = promotionTradeoff(worker, perk, "serverRoom");
+      expect(choices[index].textContent).toContain(text.perks[perk].description);
+      expect(choices[index].textContent).toContain(text.perkTradeoff(text.stages.serverRoom.name, costs.day, costs.interview));
+    });
+    expect(readSave().coworkers[0].perks).toEqual([]);
+    view.unmount();
+  });
+
+  it("preserves a legacy non-Intern suspended run without an established career", async () => {
+    const run = createRun(starters()[2], 5);
+    run.time = 95;
+    localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(run));
+    const view = await mount(<HrApp />);
+    expect(readCareer().focusId).toBe(3);
+    expect(readRun()).toEqual(run);
+    await act(async () => buttons(view.container, "Continue the run")[0].click());
+    expect(view.container.textContent).toContain("1:35");
     view.unmount();
   });
 

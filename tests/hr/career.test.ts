@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { choosePerk, defaultCareer, difficultyFor, hire, interviewDifficultyFor, normalizeCareer, openPack, perkOffer, perksPending, rankOf, review, reviewXp, reviewXpToNext, stageFor } from "@/lib/hr/career";
+import { packOdds, promotionTradeoff, withCareerFocus, choosePerk, defaultCareer, difficultyFor, hire, interviewDifficultyFor, normalizeCareer, openPack, perkOffer, perksPending, rankOf, review, reviewXp, reviewXpToNext, stageFor } from "@/lib/hr/career";
 import { interviewBossFor, INTERVIEW_BOSSES, PACKS, PERK_DIFFICULTY, REVIEW, STAGES } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import { starters } from "@/lib/roster/generate";
 import { defaultSave } from "@/lib/roster/save";
-import { STATS } from "@/lib/roster/types";
+import { PERK_IDS, RARITIES, STATS } from "@/lib/roster/types";
+
+import { RARITY } from "@/lib/roster/data";
 
 const total = (stats: Record<string, number>) => Object.values(stats).reduce((sum, value) => sum + value, 0);
 
@@ -199,5 +201,53 @@ describe("perks", () => {
     expect(difficultyFor(6, "common", "openSpace", ["overtime"])).toBeCloseTo(difficultyFor(6) + PERK_DIFFICULTY.overtime);
     expect(difficultyFor(6, "common", "openSpace", ["overtime", "gymPass"])).toBeCloseTo(difficultyFor(6) + PERK_DIFFICULTY.overtime + PERK_DIFFICULTY.gymPass);
     expect(interviewDifficultyFor(6, "common", ["overtime"])).toBeGreaterThan(interviewDifficultyFor(6));
+  });
+});
+
+
+describe("Intern onboarding", () => {
+  it("starts an unselected save without resetting its gold or cards", () => {
+    const roster = defaultSave();
+    const career = { ...defaultCareer(), gold: 42, sealed: [9] };
+    expect(withCareerFocus(roster, career)).toEqual({ ...career, focusId: 1, owned: [1] });
+    expect(career.focusId).toBeNull();
+  });
+
+  it("preserves a valid existing focus and recovers missing focus from owned active cards", () => {
+    const roster = defaultSave();
+    const career = { ...defaultCareer(), focusId: 2, owned: [2, 3], gold: 42 };
+    expect(withCareerFocus(roster, career, 1)).toBe(career);
+    roster.coworkers[1].status = { kind: "quit", day: 1 };
+    expect(withCareerFocus(roster, career).focusId).toBe(3);
+  });
+});
+
+describe("pack probability disclosure", () => {
+  it("uses the same relative weights as the rarity draw", () => {
+    const odds = packOdds();
+    expect(odds.map(({ rarity }) => rarity)).toEqual([...RARITIES]);
+    const sum = RARITIES.reduce((value, rarity) => value + RARITY[rarity].weight, 0);
+    for (const { rarity, percent } of odds) expect(percent).toBeCloseTo(100 * RARITY[rarity].weight / sum);
+    expect(odds.reduce((value, entry) => value + entry.percent, 0)).toBeCloseTo(100);
+    expect(odds.map(({ percent }) => percent)).toEqual([60, 27, 10, 3]);
+  });
+});
+
+describe("promotion tradeoff disclosure", () => {
+  it.each(PERK_IDS)("matches unchanged day and interview health/spawn calculations for %s", (perk) => {
+    for (const stage of ["openSpace", "kitchen", "serverRoom"] as const) {
+      const worker = { ...starters()[0], level: 16, rarity: "rare" as const, perks: PERK_IDS.filter((id) => id !== perk).slice(0, 2) };
+      const before = difficultyFor(worker.level, worker.rarity, stage, worker.perks);
+      const next = difficultyFor(worker.level, worker.rarity, stage, [...worker.perks, perk]);
+      const interviewBefore = interviewDifficultyFor(worker.level, worker.rarity, worker.perks);
+      const interviewNext = interviewDifficultyFor(worker.level, worker.rarity, [...worker.perks, perk]);
+      const actual = promotionTradeoff(worker, perk, stage);
+      expect(next - before).toBeCloseTo(PERK_DIFFICULTY[perk] * STAGES[stage].difficulty);
+      expect(actual.day.health).toBeCloseTo((next / before - 1) * 100);
+      expect(actual.day.spawns).toBeCloseTo(((next + 1) / (before + 1) - 1) * 100);
+      expect(actual.interview.health).toBeCloseTo((interviewNext / interviewBefore - 1) * 100);
+      expect(actual.interview.spawns).toBeCloseTo(((interviewNext + 1) / (interviewBefore + 1) - 1) * 100);
+      expect(worker.perks).not.toContain(perk);
+    }
   });
 });

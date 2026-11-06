@@ -12,6 +12,8 @@ export interface CrosswordState {
   cursor: Cursor;
   /** Cell keys filled in by the hint button. */
   revealed: string[];
+  /** Successful reveals in this attempt; independent of removable cell highlights. */
+  assistanceCount: number;
   /** Whether the last action was "check" (wrong cells get flagged). */
   checked: boolean;
   elapsed: number;
@@ -74,6 +76,7 @@ export function initialState(built: BuiltPuzzle): CrosswordState {
     values: {},
     cursor: first ? { row: first.row, col: first.col, dir: first.dir } : { row: 0, col: 0, dir: "across" },
     revealed: [],
+    assistanceCount: 0,
     checked: false,
     elapsed: 0,
   };
@@ -375,7 +378,8 @@ export function crosswordReducer(
       // Hints target the cursor, or the next editable cell when it sits on a
       // crossing that a solved word already fixed.
       const editable = entry.cells.filter(
-        (candidate) => !isCellLocked(built, state.values, candidate.row, candidate.col),
+        (candidate) => !isCellLocked(built, state.values, candidate.row, candidate.col)
+          && valueAt(state.values, candidate) !== cellAt(built, candidate.row, candidate.col)?.solution,
       );
       const target =
         editable.find((candidate) => entry.cells.indexOf(candidate) >= index) ?? editable[0];
@@ -385,7 +389,7 @@ export function crosswordReducer(
       const key = cellKey(target.row, target.col);
       const next = setLetter(state, key, solution);
       const revealed = next.revealed.includes(key) ? next.revealed : [...next.revealed, key];
-      return { ...next, revealed, cursor: advanceAfterType(built, { ...next, revealed }) };
+      return { ...next, revealed, assistanceCount: state.assistanceCount + 1, cursor: advanceAfterType(built, { ...next, revealed }) };
     }
 
     case "check":

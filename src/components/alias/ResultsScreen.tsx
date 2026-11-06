@@ -1,6 +1,7 @@
 import { ChevronRight, RotateCcw, Settings, Trophy } from "lucide-react";
 import type { CSSProperties } from "react";
 
+import { roundLeaders } from "@/lib/alias/game";
 import { t } from "@/lib/alias/i18n";
 import type { Lang, Team, ThemeDef, TurnResult } from "@/lib/alias/types";
 import { Scoreboard, WordChip } from "@/components/alias/parts";
@@ -13,6 +14,7 @@ interface ResultsScreenProps {
   team: Team;
   targetScore: number;
   isGameOver: boolean;
+  roundComplete?: boolean;
   winner: Team | null;
   onNext: () => void;
   onPlayAgain: () => void;
@@ -28,6 +30,7 @@ export function ResultsScreen({
   team,
   targetScore,
   isGameOver,
+  roundComplete = false,
   winner,
   onNext,
   onPlayAgain,
@@ -37,6 +40,7 @@ export function ResultsScreen({
   const correct = result.words.filter((entry) => entry.correct).length;
   const skipped = result.words.length - correct;
   const sign = result.points > 0 ? "+" : "";
+  const tiedRound = !isGameOver && roundComplete && roundLeaders(teams, targetScore).length > 1;
   const targetReached = !isGameOver && teams.some((entry) => entry.score >= targetScore);
 
   return (
@@ -63,7 +67,7 @@ export function ResultsScreen({
 
         {targetReached ? (
           <p className="alias-target-hit" role="status">
-            {t(lang, "targetReachedHint")}
+            {t(lang, tiedRound ? "tiedRoundHint" : "targetReachedHint")}
           </p>
         ) : null}
 

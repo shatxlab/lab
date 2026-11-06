@@ -404,6 +404,7 @@ export default function AliasGame() {
           team={activeTeam}
           targetScore={settings.targetScore}
           isGameOver={phase === "gameOver"}
+          roundComplete={isRoundComplete(activeIndex, teams.length)}
           winner={winner}
           onNext={handleNextTeam}
           onPlayAgain={handlePlayAgain}

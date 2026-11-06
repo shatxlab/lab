@@ -5,13 +5,49 @@ The single source of TODOs and design notes for the game. Cross-game improvement
 
 ## Current state and active-run persistence
 
-- The user has completed all 20 maps and reports infrequent losses and a dominant Ballista-heavy strategy. This supersedes historical notes below saying the second chapter has not had human play. Balance experiments, wave previews, and maps 21–30 remain separate pending work; no balance changes were made in this persistence batch.
+- The user has completed all 20 maps and reports infrequent losses and a dominant Ballista-heavy strategy. This supersedes historical notes below saying the second chapter has not had human play. Wave clarity is now implemented (see below). Balance experiments and maps 21–30 remain separate pending work; neither the persistence nor clarity batch changes balance.
 - Active runs now use `lab:kingsroad:run:v1`, an envelope `{ version: 1, game }`, separate from permanent stars in `lab:kingsroad:v1`. Bump the envelope version when simulation state/map semantics become incompatible. `src/lib/kingsroad/snapshot.ts` validates nested fields, indices, branches, IDs, spawn ordering, and status consistency before restoration. All 20 maps, including Fire/Lune branches, are covered.
 - Both pre-wave setups and active waves are saved every five wall-clock seconds and immediately on player purchases/sales/upgrades, volleys, wave starts, pause, hidden/pagehide, and Save & menu. The full JSON simulation state is retained; no wall time is simulated while away. A discarded mobile tab can still lose work since the most recent successful checkpoint—unload callbacks cannot be guaranteed.
 - Continue Run shows the map and wave and restores paused at 1x, without transient selection/aim. Pause includes Save & menu; Discard and replacement runs ask for confirmation. Wave and volley controls are blocked while paused. EN/RU storage-failure warnings avoid silently promising that an unavailable save succeeded.
 - `settleRun` journals a terminal result before writing campaign best-stars, then clears the checkpoint. Startup recovers terminal journals without resuming finished runs. Star writes are idempotent/max-only. Failed campaign writes keep the journal, and an unsaved win cannot be overwritten by starting a new run. No new rewards were introduced. `writeSave` now returns a success boolean so settlement can distinguish failure from completion.
 - Verification: `NODE_ENV=test npm test` passed 221 files / 3,165 tests; `npm run typecheck` and `npm run build` passed. Chromium EN/RU checks at 360px and 390px passed on both dev and the built production pages via Astro preview: exact live-state reload, paused restoration, resume, Save & menu, discard/replacement confirmation and cancellation, setup saves, terminal recovery, incompatible-save cleanup, and quota-failure playability. Screenshots were inspected; no real-device test or balance retune was performed.
 - The sections below are historical design/measurement records where they conflict with this current-state summary.
+
+## Wave clarity and enemy guide
+
+- A compact peek above the wave/volley bar shows the next wave, scheduled total, and enemy types/counts. Tap Details
+  for the full roster and a guide to all enemy types scheduled on the selected map. Long compact text is ellipsized;
+  the full counts remain available in the dialog. During the final wave, show Enemy guide / No more waves scheduled,
+  not a fictitious extra wave. Hide the peek after terminal results.
+- `src/lib/kingsroad/wave-intel.ts` reads `waveRoster` directly. It never builds a randomized schedule, consumes live
+  RNG, changes the run, or predicts column order/roads. Counts are scheduled new arrivals; old enemies on the field
+  remain, and a warlord's summoned footmen are extra. EN/RU copy states these limits explicitly.
+- Opening the guide pauses and checkpoints even during a countdown or pre-wave setup. Close/Escape leave the game
+  paused; explicit Resume returns to the field. This is player-controlled inspection, not a change to wave timing.
+  Native disclosures work by tap or keyboard without hover. Tab/Shift+Tab stay within the new dialog, focus returns
+  to the battlefield on Resume, and the scrollable body keeps Close/Resume accessible on shorter phone screens.
+- All ten enemy profiles explain relevant counters without claiming that one strategy guarantees success. Trait
+  numbers, leak costs, and air-targeting tower lists come from the combat configuration. Explain armor subtraction
+  with its floor, burning's armor bypass, fireproof impact reduction and burn immunity, Lune damage amplification,
+  strongest/refreshing frost slows, and healing range/rate/exclusions. Other healers and flyers can be healed, but
+  the healer itself and warlords cannot. Volley arrows can hit flyers; catapult splash cannot.
+- Tower targeting is automatic: the foe closest to the gate along its route within range; frost prefers foes with
+  absent/expiring slow. The player can aim a volley at a healer, not order individual towers to focus it. No targeting
+  mechanic was added. Archer branch copy describes existing Fire/Lune rules, not a new tier or mandatory upgrade.
+- Added 64 tests. Preview composition matches `buildSpawns` for every wave of all 20 maps across four seeds; guide
+  membership matches actual scheduled kinds. Inspection preserves RNG and subsequent sim behavior. UI tests cover
+  ready/marching/countdown/final/terminal states, manual/automatic updates, Continue, pause/close/resume, EN/RU
+  accessibility, and keyboard focus. Extra controlled sim tests verify healing, burning/marks, volley air hits,
+  and catapult ground-only splash against the explanations.
+- Verification: `NODE_ENV=test npm test` passed **225 files / 3,303 tests**; `npm run typecheck` and `npm run build`
+  passed. Chromium EN/RU at 360px/390px × 780px passed on dev and the production build via Astro preview; production
+  also passed at 360px/390px × 640px. Checked first-wave peek, complete/crowded rosters, tap/keyboard disclosures,
+  paused timers/RNG/state, Close/Escape/Resume/focus, early calls, short-screen scrolling and fixed actions, final-wave
+  guide, and Continue/reload. The previous production save/recovery/quota browser regression passed as well.
+- Screenshots were inspected. No real-device playtest or balance benchmark was performed. No sim code, balance,
+  wave timing/composition, rewards, persistence schema, or other game changed. The user authorized committing and pushing this batch to `main`; deployment status must be checked separately.
+- Next work remains a separate user choice: Couples temporary skipping or KingsRoad strategy/pacing benchmarks.
+  Do not use these clarity tests as evidence that Ballista dominance is fixed. Mage branches/maps 21–30 remain pending.
 
 ## Where it stands (2026-10-30)
 

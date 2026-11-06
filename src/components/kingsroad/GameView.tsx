@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 import { Coins, FastForward, Heart, Pause, X } from "lucide-react";
 
+import { upcomingWave } from "@/lib/kingsroad/wave-intel";
 import { CHECKPOINT_MS } from "@/lib/kingsroad/snapshot";
 import { statChange } from "@/lib/tower/i18n";
 import type { KingsroadText } from "@/lib/kingsroad/i18n";
@@ -27,6 +28,8 @@ import {
 import { mapById } from "@/lib/kingsroad/sim/maps";
 import { isBossWave } from "@/lib/kingsroad/sim/waves";
 import type { ArcherBranch, Game, TowerKind } from "@/lib/kingsroad/sim/types";
+
+import { WaveIntelPanel, WavePreview } from "./WaveIntel";
 
 interface Hud {
   status: Game["status"];
@@ -89,6 +92,7 @@ export function GameView({
   const [paused, setPaused] = useState(initiallyPaused);
   const [fast, setFast] = useState(false);
   const [aiming, setAiming] = useState(false);
+  const [intelOpen, setIntelOpen] = useState(false);
   const [selection, setSelection] = useState<Selection>({ plot: null, preview: null });
   // The loop reads these every frame without re-subscribing.
   const pausedRef = useRef(initiallyPaused);
@@ -266,6 +270,14 @@ export function GameView({
     refresh();
   };
 
+  const resume = () => {
+    setIntelOpen(false);
+    pausedRef.current = false;
+    setPaused(false);
+    canvasRef.current?.focus();
+  };
+  const intel = upcomingWave({ map: game.map, status: hud.status, wave: hud.wave });
+
   const volleyReady = hud.status === "playing" && hud.volleyCharge >= 1;
   const selectedPlot = selection.plot === null ? null : map.plots[selection.plot];
   const tower = selection.plot === null ? undefined : towerOn(game, selection.plot);
@@ -354,12 +366,16 @@ export function GameView({
           </div>
         )}
 
-        {paused && !over && (
+        {intelOpen && !over && (
+          <WaveIntelPanel intel={intel} map={map} text={text} onClose={() => setIntelOpen(false)} onResume={resume} />
+        )}
+
+        {paused && !over && !intelOpen && (
           <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="kr-pause-title">
             <div className="tower-panel">
               <h2 id="kr-pause-title">{text.paused}</h2>
               <div className="tower-actions">
-                <button type="button" className="tower-button" onClick={() => { pausedRef.current = false; setPaused(false); }} autoFocus>
+                <button type="button" className="tower-button" onClick={resume} autoFocus>
                   {text.resume}
                 </button>
                 <button type="button" className="tower-button tower-button-quiet" onClick={() => onSuspend(game)}>
@@ -377,6 +393,7 @@ export function GameView({
       </div>
 
       {storageFailed && <p className="kr-save-warning" role="status">{text.saveUnavailable}</p>}
+      {!over && <WavePreview intel={intel} text={text} onInspect={() => { pause(); setIntelOpen(true); }} />}
       <div className="kr-bar">
         <button
           type="button"

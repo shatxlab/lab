@@ -15,7 +15,7 @@ For HR and KingsRoad implementation, also consult their existing game roadmaps. 
 
 ## Status and sequencing
 
-Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). The follow-up batch implements sections 7B/7C (HR trait clarity and duck investigation/feedback). Sections 2–3 (KingsRoad and Lone Tower active-run persistence) are also implemented. Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
+Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). The follow-up batch implements sections 7B/7C (HR trait clarity and duck investigation/feedback). Sections 2–3 (KingsRoad and Lone Tower active-run persistence) and section 6A (KingsRoad wave clarity) are also implemented. Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
 
 ### First-batch implementation record
 
@@ -167,13 +167,24 @@ Separate from KingsRoad because death/retreat banks run rewards into meta progre
 
 **Priority:** P1. **Scope:** medium. **Decision:** agreed.
 
-- [ ] Show upcoming enemy types and counts before the player commits to a wave.
-- [ ] Generate composition from actual wave definitions, not separately maintained copy.
-- [ ] Explain fire immunity, armor, healing, flying, and relevant attack/targeting interactions.
-- [ ] Keep explanations accessible on a narrow phone screen and without hover.
-- [ ] Update EN/RU copy.
+- [x] Show upcoming enemy types and counts before the player commits to a wave.
+- [x] Generate composition from actual wave definitions, not separately maintained copy.
+- [x] Explain fire immunity, armor, healing, flying, and relevant attack/targeting interactions.
+- [x] Keep explanations accessible on a narrow phone screen and without hover.
+- [x] Update EN/RU copy.
 
 **Acceptance:** preview matches actual spawned composition; descriptions match damage and targeting rules; threats can be understood before a costly loss.
+
+#### Implementation record
+
+- Added a compact next-wave peek above the call-wave/volley controls, showing the upcoming wave, total scheduled count, and enemy names/counts. Tap Details for the complete roster and enemy guide. The peek updates after manual and automatic wave starts, including after Continue Run. During the final wave, it offers the guide with “No more waves scheduled,” rather than inventing another wave; it is hidden after the run ends.
+- Composition is read directly from `waveRoster` through `wave-intel.ts`, not separately maintained counts or a second randomized spawn schedule. Previewing never consumes live RNG or mutates the simulation. Tests compare every wave of all 20 maps against `buildSpawns` across four seeds. The guide's available types are also derived from the map's actual wave definitions, including types absent from the immediate next wave.
+- Counts describe new scheduled arrivals, not enemies currently left on the field. EN/RU copy explains that existing enemies remain, warlord summons are additional, and column order/roads are randomized when the wave starts. The preview does not claim to predict routes or summoned totals.
+- Details pauses and checkpoints the run while reading. Close/Escape leave the normal pause menu open; only explicit Resume returns to the field. The scrollable body keeps Close/Resume reachable on short phones, uses native tap/keyboard disclosures (no hover dependency), and traps Tab/Shift+Tab within the new dialog. Resume returns keyboard focus to the battlefield.
+- Added EN/RU profiles for all ten enemy types, covering flying, armor, fire immunity, healing, reinforcements, leak costs, and counter suggestions. Numeric traits and air-capable tower lists come from combat configuration. The guide accurately distinguishes armor reduction/floor from immunity, Fire-arrow impact from burning, burning's armor bypass, Lune amplification, frost duration/nonstacking, healer self/warlord exclusions (including healing other healers/flyers), and volley versus ground-only catapult splash. It explicitly explains automatic tower targeting instead of promising manual healer focus.
+- Added 64 tests: composition/guide parity, non-mutating deterministic continuation, UI pause/update/final-wave/Continue behavior, EN/RU accessibility and keyboard focus, and controlled combat contracts for healing exclusions/range, burning/marks, airborne volley hits, and ground-only catapult splash.
+- Verification: `NODE_ENV=test npm test` passed 225 files / 3,303 tests; `npm run typecheck` and `npm run build` passed. Chromium EN/RU checks passed at 360px/390px × 780px on dev and production via Astro preview, plus 360px/390px × 640px on production. Checked first-wave setup, complete/crowded rosters, native disclosures, modal focus/Tab/Escape, paused timers/RNG/state, manual-wave updates, short-screen scrolling and fixed actions, final-wave guide, and Continue/reload. The prior production save/recovery/quota browser regression also passed. Screenshots were inspected; no real-device playtest or balance benchmark was performed.
+- No simulation code, tower/enemy numbers, wave composition/order/timing, reward logic, save schema, or other game changed. The user authorized committing and pushing this batch to `main`; deployment status must be checked separately from push success. Strategy/pacing investigation and any balance retune remain separate pending work.
 
 ### 6B. Strategy balance — investigate Ballista dominance
 

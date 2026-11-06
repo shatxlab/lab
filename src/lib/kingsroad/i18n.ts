@@ -1,7 +1,7 @@
 import type { AppLang } from "@/lib/apps/lang";
 import type { Blurb, Stat } from "@/lib/tower/i18n";
 import { BURN, MARK, type TowerLevel } from "./sim/balance";
-import type { ArcherBranch, CanvasId, MapId, TowerKind } from "./sim/types";
+import type { ArcherBranch, CanvasId, FoeKind, MapId, TowerKind } from "./sim/types";
 
 /** What one level of a tower does, as a card shows it. */
 export type LevelStats = (level: TowerLevel & { burn?: number; mark?: number }) => Stat[];
@@ -51,6 +51,27 @@ export interface KingsroadText {
   nextWave: (seconds: number, bonus: number) => string;
   marching: string;
   lastWave: string;
+  wavePreview: (wave: number) => string;
+  previewTotal: (count: number) => string;
+  previewDetails: string;
+  previewPaused: string;
+  previewScheduled: string;
+  noUpcomingWave: string;
+  enemyGuide: string;
+  guideHint: string;
+  combatRules: string;
+  foes: Record<FoeKind, Blurb>;
+  flyingFoe: string;
+  foeLeak: (count: number) => string;
+  armorRule: (armor: number, floor: number) => string;
+  fireproofRule: (share: number) => string;
+  healerRule: (rate: number, range: number) => string;
+  summonRule: (count: number, seconds: number) => string;
+  airTargetRule: (air: string, ground: string) => string;
+  targetingRule: string;
+  frostRule: (seconds: number) => string;
+  burnRule: (dps: number, seconds: number) => string;
+  markRule: (bonus: number, seconds: number) => string;
   volleyReady: string;
   volleyCharging: string;
   volleyAiming: string;
@@ -138,6 +159,38 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     nextWave: (seconds, bonus) => `Next wave in ${seconds} s · call now +${bonus}`,
     marching: "The wave is marching",
     lastWave: "Last wave",
+    wavePreview: (wave) => `Next wave ${wave}`,
+    previewTotal: (count) => `${count} ${count === 1 ? "enemy" : "enemies"}`,
+    previewDetails: "Details",
+    previewPaused: "Paused while you read. Resume when you are ready to return to the road.",
+    previewScheduled: "New scheduled arrivals only; enemies already on the field remain, and warlord summons are extra. Column order and roads are randomized when the wave starts.",
+    noUpcomingWave: "No more waves scheduled.",
+    enemyGuide: "Enemy guide",
+    guideHint: "Tap an enemy to read its traits and ways to counter it. The guide covers this map, not only the next wave.",
+    combatRules: "Damage & targeting",
+    foes: {
+      grunt: { name: "Footman", description: "Marches in a ground column. Catapult splash can catch a group; frost buys more firing time." },
+      runner: { name: "Runner", description: "Fast with little health. Rapid archer hits and frost can help cover gaps in the defense." },
+      brute: { name: "Brute", description: "Slow but durable. Upgrade damage and keep it under fire; frost extends the time in range." },
+      bat: { name: "Bat", description: "Prepare air-capable towers along its flight path, especially near the gate." },
+      boss: { name: "Warlord", description: "A slow, very tough ground enemy. Keep damage and slowing coverage on its route, and leave room to handle its reinforcements." },
+      knight: { name: "Knight", description: "Plate takes a larger share out of small hits. Heavier hits lose a smaller share; Fire-arrow burning bypasses armor." },
+      imp: { name: "Imp", description: "Use ordinary arrows, Lune arrows, or non-fire attacks instead of relying on Fire arrows. Frost still slows it." },
+      healer: { name: "Healer", description: "Walks among the footmen. Aim the volley at the healer and its escort; towers select their own targets, so you cannot command them to focus it." },
+      scamp: { name: "Scamp", description: "Tiny, fast ground swarms. Catapult splash, frost, and a well-placed volley can catch several together." },
+      gargoyle: { name: "Gargoyle", description: "An armored flyer. Use air-capable towers; heavier hits or Fire-arrow burning help against its armor." },
+    },
+    flyingFoe: "Flies toward the gate, ignoring roads. Ground-only attacks cannot hit it.",
+    foeLeak: (count) => `Costs ${count} ${count === 1 ? "life" : "lives"} if it reaches the gate.`,
+    armorRule: (armor, floor) => `Armor subtracts ${EN.num(armor)} damage from each direct hit, but at least ${EN.pct(floor)} of that hit gets through. Burning ignores armor.`,
+    fireproofRule: (share) => `Immune to burning. A Fire arrow's impact does only ${EN.pct(share)} of its normal damage; fire immunity does not reduce other attacks.`,
+    healerRule: (rate, range) => `Restores ${EN.pct(rate)} of nearby allies' maximum health per second within ${EN.num(range)} range. Cannot heal itself or warlords; it can heal other healers and flyers.`,
+    summonRule: (count, seconds) => `Summons ${count} extra footmen every ${EN.num(seconds)} s while alive. These reinforcements are not included in the scheduled count.`,
+    airTargetRule: (air, ground) => `Can target flyers: ${air}. Ground only: ${ground}. Volley arrows can hit both ground and flying enemies near their landing spots.`,
+    targetingRule: "Towers automatically target in-range enemies nearest the gate along their routes. Frost prefers enemies whose slow is absent or about to wear off. You aim the volley, not individual towers.",
+    frostRule: (seconds) => `Frost slows for ${EN.num(seconds)} s. Hits refresh the duration; the strongest applied slow wins rather than stacking.`,
+    burnRule: (dps, seconds) => `Fire arrows burn for ${EN.num(dps)} damage/s for ${EN.num(seconds)} s, ignoring armor. Hits refresh burning rather than stacking it; fireproof foes do not burn.`,
+    markRule: (bonus, seconds) => `Lune marks last ${EN.num(seconds)} s and increase damage taken by ${EN.pct(bonus)}, including burning. Marks refresh rather than stacking.`,
     volleyReady: "Volley",
     volleyCharging: "Volley reloading",
     volleyAiming: "Tap the field to loose it",
@@ -240,6 +293,38 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     nextWave: (seconds, bonus) => `Волна через ${seconds} с · сейчас +${bonus}`,
     marching: "Волна идёт",
     lastWave: "Последняя волна",
+    wavePreview: (wave) => `Следующая волна: ${wave}`,
+    previewTotal: (count) => `${count} ${plural(count, "враг", "врага", "врагов")}`,
+    previewDetails: "Подробнее",
+    previewPaused: "Пока вы читаете, игра на паузе. Нажмите «Продолжить», когда будете готовы вернуться к дороге.",
+    previewScheduled: "Только новые враги по расписанию: уже вышедшие остаются на поле, а призванные полководцем сюда не входят. Порядок колонн и дороги выбираются случайно при старте волны.",
+    noUpcomingWave: "Новых волн больше не будет.",
+    enemyGuide: "Справочник врагов",
+    guideHint: "Коснитесь врага, чтобы узнать его свойства и способы противодействия. Здесь все типы на этой карте, а не только в следующей волне.",
+    combatRules: "Урон и выбор целей",
+    foes: {
+      grunt: { name: "Пехотинец", description: "Идёт наземной колонной. Катапульта может накрыть группу, а лёд даёт башням больше времени для стрельбы." },
+      runner: { name: "Бегун", description: "Быстрый, но с небольшим запасом здоровья. Частые выстрелы лучников и замедление помогают закрыть пробелы в обороне." },
+      brute: { name: "Громила", description: "Медленный, но живучий. Улучшайте урон и держите его под огнём; лёд продлевает время в радиусе башен." },
+      bat: { name: "Летучая мышь", description: "Расставляйте башни с воздушной атакой вдоль её полёта, особенно у ворот." },
+      boss: { name: "Полководец", description: "Медленный и очень живучий наземный враг. Нужны урон и замедление вдоль его пути, а также оборона против подкреплений." },
+      knight: { name: "Рыцарь", description: "Латы отнимают большую долю слабого удара. Сильные попадания теряют меньшую долю, а горение от огненных стрел обходит броню." },
+      imp: { name: "Бес", description: "Используйте обычные или лунные стрелы и неогненные атаки, не полагаясь на огненные стрелы. Лёд по-прежнему замедляет его." },
+      healer: { name: "Лекарь", description: "Идёт среди пехоты. Направьте залп на лекаря и его сопровождение: башни выбирают цели сами, приказать им сосредоточить огонь нельзя." },
+      scamp: { name: "Бесёнок", description: "Мелкий быстрый наземный рой. Катапульта, лёд и удачно направленный залп могут накрыть сразу нескольких." },
+      gargoyle: { name: "Горгулья", description: "Летающий враг с бронёй. Нужны башни с воздушной атакой; против брони помогают сильные попадания или горение от огненных стрел." },
+    },
+    flyingFoe: "Летит к воротам, игнорируя дороги. Наземные атаки её не достают.",
+    foeLeak: (count) => `Отнимает ${count} ${plural(count, "жизнь", "жизни", "жизней")}, если доберётся до ворот.`,
+    armorRule: (armor, floor) => `Броня вычитает ${RU.num(armor)} урона из каждого прямого попадания, но пропускает не менее ${RU.pct(floor)} его урона. Горение игнорирует броню.`,
+    fireproofRule: (share) => `Не горит. Само попадание огненной стрелы наносит лишь ${RU.pct(share)} обычного урона; огнеупорность не ослабляет остальные атаки.`,
+    healerRule: (rate, range) => `Восстанавливает союзникам ${RU.pct(rate)} от их максимального здоровья в секунду в радиусе ${RU.num(range)}. Не лечит себя и полководцев, но лечит других лекарей и летающих врагов.`,
+    summonRule: (count, seconds) => `Пока жив, призывает ещё ${count} пехотинцев каждые ${RU.num(seconds)} с. Эти подкрепления не входят в число врагов по расписанию.`,
+    airTargetRule: (air, ground) => `Бьют летающих врагов: ${air}. Только наземных: ${ground}. Стрелы залпа бьют наземных и летающих врагов рядом с местом падения.`,
+    targetingRule: "Башни сами выбирают доступную цель, которой осталось меньше всего пути до ворот. Ледяной маг предпочитает врагов без замедления или с истекающим замедлением. Игрок направляет залп, но не выстрелы отдельных башен.",
+    frostRule: (seconds) => `Лёд замедляет на ${RU.num(seconds)} с. Попадания обновляют время; действует самое сильное наложенное замедление, а не сумма эффектов.`,
+    burnRule: (dps, seconds) => `Огненные стрелы поджигают на ${RU.num(seconds)} с: ${RU.num(dps)} урона в секунду сквозь броню. Попадания обновляют горение, а не складывают его; огнеупорные враги не горят.`,
+    markRule: (bonus, seconds) => `Лунная метка действует ${RU.num(seconds)} с и увеличивает получаемый урон на ${RU.pct(bonus)}, включая горение. Метки обновляются, а не складываются.`,
     volleyReady: "Залп",
     volleyCharging: "Залп перезаряжается",
     volleyAiming: "Коснитесь поля, куда стрелять",

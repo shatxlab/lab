@@ -4,7 +4,8 @@ import { Lock, Star } from "lucide-react";
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 import { KINGSROAD_TEXT, type KingsroadText } from "@/lib/kingsroad/i18n";
-import { defaultSave, isUnlocked, nextMap, readSave, recordWin, writeSave, type KingsroadSave } from "@/lib/kingsroad/meta";
+import { defaultSave, isUnlocked, nextMap, readSave, type KingsroadSave } from "@/lib/kingsroad/meta";
+import { clearRun, readRun, settleRun, writeRun } from "@/lib/kingsroad/snapshot";
 import { starsFor } from "@/lib/kingsroad/sim/balance";
 import { createGame } from "@/lib/kingsroad/sim/game";
 import { MAPS, mapById } from "@/lib/kingsroad/sim/maps";
@@ -33,26 +34,85 @@ export default function KingsroadApp() {
   const [save, setSave] = useState<KingsroadSave>(defaultSave);
   const [game, setGame] = useState<Game | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const [saved, setSaved] = useState<Game | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [storageFailed, setStorageFailed] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [session, setSession] = useState(0);
+  const [pendingWin, setPendingWin] = useState<Game | null>(null);
 
   // Storage only exists in the browser; read it after mount.
-  useEffect(() => setSave(readSave()), []);
+  useEffect(() => {
+    const checkpoint = readRun();
+    if (checkpoint && (checkpoint.status === "won" || checkpoint.status === "lost")) {
+      const settled = settleRun(checkpoint);
+      setSave(settled.save);
+      setStorageFailed(!settled.persisted);
+      if (checkpoint.status === "won" && !settled.persisted) setPendingWin(checkpoint);
+    } else {
+      setSave(readSave());
+      setSaved(checkpoint);
+    }
+    setHydrated(true);
+  }, []);
+
+  const checkpoint = useCallback((current: Game) => {
+    const kept = writeRun(current);
+    setStorageFailed(!kept);
+    return kept;
+  }, []);
 
   const start = (map: MapId) => {
+    if (!hydrated || (saved && !window.confirm(text.replaceRunConfirm))) return;
+    if (pendingWin) {
+      const settled = settleRun(pendingWin);
+      setStorageFailed(!settled.persisted);
+      if (!settled.persisted) return;
+      setSave(settled.save);
+      setPendingWin(null);
+    }
+    setSession((value) => value + 1);
+    const next = createGame(map, Math.floor(Math.random() * 2 ** 31));
+    checkpoint(next);
+    setSaved(null);
+    setRestored(false);
     setResult(null);
-    setGame(createGame(map, Math.floor(Math.random() * 2 ** 31)));
+    setGame(next);
   };
 
+  const resume = () => {
+    if (!saved) return;
+    setSession((value) => value + 1);
+    setRestored(true);
+    setResult(null);
+    setGame(saved);
+    setSaved(null);
+  };
+
+  const discard = () => {
+    if (!window.confirm(text.discardRunConfirm)) return;
+    setStorageFailed(!clearRun());
+    setSaved(null);
+  };
+
+  const suspend = useCallback((current: Game) => {
+    checkpoint(current);
+    setSaved(current);
+    setGame(null);
+  }, [checkpoint]);
+
   const finish = useCallback((ended: Game) => {
-    // Read the stored save rather than the render's copy: the loop calls this from a frame callback.
-    const before = readSave();
+    // Settlement is idempotent, including reloads between the result journal and campaign write.
+    const settled = settleRun(ended);
     const won = ended.status === "won";
     const stars = won ? starsFor(ended.lives) : 0;
-    const after = won ? recordWin(before, ended.map, stars) : before;
-    writeSave(after);
-    setSave(after);
+    setSave(settled.save);
+    setSaved(null);
+    setStorageFailed(!settled.persisted);
+    setPendingWin(won && !settled.persisted ? ended : null);
     // A wave only counts as held once it has been beaten; a loss is on the wave in progress.
     const held = won ? ended.wave : Math.max(0, ended.wave - 1);
-    setResult({ map: ended.map, won, stars, wave: held, lives: ended.lives, kills: ended.kills, newBest: stars > before.stars[ended.map] });
+    setResult({ map: ended.map, won, stars, wave: held, lives: ended.lives, kills: ended.kills, newBest: settled.newBest });
   }, []);
 
   const next = result?.won ? nextMap(result.map) : null;
@@ -60,7 +120,7 @@ export default function KingsroadApp() {
   return (
     <div className="tower-root kr-root" ref={readyRef} data-lang-sensitive>
       {game ? (
-        <GameView key={game.seed} game={game} text={text} onOver={finish}>
+        <GameView key={session} game={game} text={text} onOver={finish} initiallyPaused={restored} onCheckpoint={checkpoint} onSuspend={suspend} storageFailed={storageFailed}>
           {result && (
             <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="kr-over-title">
               <div className="tower-panel">
@@ -73,6 +133,7 @@ export default function KingsroadApp() {
                   <li>{text.kills(result.kills)}</li>
                 </ul>
                 <div className="tower-actions">
+                  {storageFailed && result.won && <button type="button" className="tower-button" onClick={() => finish(game)}>{text.retrySave}</button>}
                   {next && (
                     <button type="button" className="tower-button" onClick={() => start(next)} autoFocus>
                       {text.nextRoad}
@@ -95,13 +156,16 @@ export default function KingsroadApp() {
           )}
         </GameView>
       ) : (
-        <MenuScreen text={text} save={save} onPlay={start} />
+        <MenuScreen text={text} save={save} onPlay={start} saved={saved} onContinue={resume} onDiscard={discard} storageFailed={storageFailed} hydrated={hydrated} />
       )}
     </div>
   );
 }
 
-function MenuScreen({ text, save, onPlay }: { text: KingsroadText; save: KingsroadSave; onPlay: (map: MapId) => void }) {
+function MenuScreen({ text, save, onPlay, saved, onContinue, onDiscard, storageFailed, hydrated }: {
+  text: KingsroadText; save: KingsroadSave; onPlay: (map: MapId) => void;
+  saved: Game | null; onContinue: () => void; onDiscard: () => void; storageFailed: boolean; hydrated: boolean;
+}) {
   return (
     <div className="tower-screen">
       <div className="tower-panel tower-menu">
@@ -113,6 +177,17 @@ function MenuScreen({ text, save, onPlay }: { text: KingsroadText; save: Kingsro
             <li key={line}>{line}</li>
           ))}
         </ul>
+        {storageFailed && <p className="kr-save-warning" role="status">{text.saveUnavailable}</p>}
+        {saved && (
+          <section className="kr-continue" aria-label={text.continueRun}>
+            <p>{text.continueHint(text.maps[saved.map].name, saved.wave, mapById(saved.map).waves)}</p>
+            <div className="tower-actions">
+              <button type="button" className="tower-button" onClick={onContinue}>{text.continueRun}</button>
+              <button type="button" className="tower-button tower-button-quiet" onClick={onDiscard}>{text.discardRun}</button>
+            </div>
+            <p className="kr-continue-hint">{text.continuePaused}</p>
+          </section>
+        )}
         <h2 className="kr-menu-heading">{text.chooseRoad}</h2>
         {CANVASES.map((canvas) => (
           <section key={canvas}>
@@ -122,7 +197,7 @@ function MenuScreen({ text, save, onPlay }: { text: KingsroadText; save: Kingsro
                 const open = isUnlocked(save, map.id);
                 return (
                   <li key={map.id}>
-                    <button type="button" className="kr-map" disabled={!open} onClick={() => onPlay(map.id)}>
+                    <button type="button" className="kr-map" disabled={!hydrated || !open} onClick={() => onPlay(map.id)}>
                       <span className="kr-map-name">
                         {!open && <Lock size={14} aria-hidden="true" />} {text.maps[map.id].name}
                       </span>

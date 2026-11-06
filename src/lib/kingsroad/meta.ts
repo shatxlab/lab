@@ -47,11 +47,14 @@ export function readSave(storage: KingsroadStorage | undefined = storageOrUndefi
   }
 }
 
-export function writeSave(save: KingsroadSave, storage: KingsroadStorage | undefined = storageOrUndefined()): void {
+export function writeSave(save: KingsroadSave, storage: KingsroadStorage | undefined = storageOrUndefined()): boolean {
   try {
-    storage?.setItem(KINGSROAD_STORAGE_KEY, JSON.stringify(save));
+    if (!storage) return false;
+    storage.setItem(KINGSROAD_STORAGE_KEY, JSON.stringify(save));
+    return true;
   } catch {
-    // Private mode or a full quota: progress just isn't kept.
+    // Private mode or a full quota: callers can keep a terminal run for retry.
+    return false;
   }
 }
 

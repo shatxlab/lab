@@ -23,6 +23,15 @@ export interface KingsroadText {
   howTo: string[];
   home: string;
   chooseRoad: string;
+  continueRun: string;
+  continueHint: (map: string, wave: number, total: number) => string;
+  continuePaused: string;
+  discardRun: string;
+  discardRunConfirm: string;
+  replaceRunConfirm: string;
+  saveAndMenu: string;
+  saveUnavailable: string;
+  retrySave: string;
   /** The setting each run of ten maps is played in, as a menu heading. */
   canvases: Record<CanvasId, string>;
   maps: Record<MapId, Blurb>;
@@ -81,6 +90,15 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     ],
     home: "Home",
     chooseRoad: "Choose a road",
+    continueRun: "Continue run",
+    continueHint: (map, wave, total) => `${map} · Wave ${wave}/${total}`,
+    continuePaused: "Continues paused, at normal speed. No time passes while away.",
+    discardRun: "Discard saved run",
+    discardRunConfirm: "Discard this unfinished run? Campaign stars will be kept.",
+    replaceRunConfirm: "Start a new run and discard the unfinished one? Campaign stars will be kept.",
+    saveAndMenu: "Save & menu",
+    saveUnavailable: "Saving is unavailable. Keep this tab open: reloading may lose progress. A win must be saved before starting another run.",
+    retrySave: "Retry saving",
     canvases: { meadow: "The Meadow", autumn: "The Amber Woods" },
     maps: {
       meadow: { name: "The Meadow", description: "A long road winding across the fields. A gentle start." },
@@ -174,6 +192,15 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
     ],
     home: "На главную",
     chooseRoad: "Выберите дорогу",
+    continueRun: "Продолжить забег",
+    continueHint: (map, wave, total) => `${map} · Волна ${wave}/${total}`,
+    continuePaused: "Продолжение на паузе, с обычной скоростью. В отсутствие игрока время не идёт.",
+    discardRun: "Удалить сохранённый забег",
+    discardRunConfirm: "Удалить незавершённый забег? Звёзды кампании сохранятся.",
+    replaceRunConfirm: "Начать новый забег и удалить незавершённый? Звёзды кампании сохранятся.",
+    saveAndMenu: "Сохранить и в меню",
+    saveUnavailable: "Сохранение недоступно. Не закрывайте вкладку: перезагрузка может привести к потере прогресса. Перед новым забегом нужно сохранить победу.",
+    retrySave: "Повторить сохранение",
     canvases: { meadow: "Луг", autumn: "Янтарный лес" },
     maps: {
       meadow: { name: "Луг", description: "Длинная дорога петляет по полям. Спокойное начало." },

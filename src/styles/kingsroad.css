@@ -271,3 +271,28 @@
   text-transform: uppercase;
   color: var(--tower-muted);
 }
+
+/* An unfinished run is separate from permanent campaign stars. */
+.kr-continue {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+  background: rgba(43, 36, 24, 0.06);
+}
+
+.kr-continue p {
+  margin: 0.5rem 0;
+}
+
+.kr-continue-hint,
+.kr-save-warning {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.kr-save-warning {
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  color: #8c3b18;
+  background: #fff0cc;
+}

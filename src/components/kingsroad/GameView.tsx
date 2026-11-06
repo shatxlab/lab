@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 import { Coins, FastForward, Heart, Pause, X } from "lucide-react";
 
+import { CHECKPOINT_MS } from "@/lib/kingsroad/snapshot";
 import { statChange } from "@/lib/tower/i18n";
 import type { KingsroadText } from "@/lib/kingsroad/i18n";
 import { drawGame, fitView, toWorld, type Selection, type View } from "@/lib/kingsroad/render/draw";
@@ -63,12 +64,20 @@ export function GameView({
   game,
   text,
   onOver,
+  initiallyPaused,
+  onCheckpoint,
+  onSuspend,
+  storageFailed,
   children,
 }: {
   game: Game;
   text: KingsroadText;
   /** Called once, the moment the gate falls, the last wave is beaten or the player gives up. */
   onOver: (game: Game) => void;
+  initiallyPaused: boolean;
+  onCheckpoint: (game: Game) => boolean;
+  onSuspend: (game: Game) => void;
+  storageFailed: boolean;
   /** The end-of-game panel, shown over the field once it's over. */
   children?: React.ReactNode;
 }) {
@@ -77,20 +86,21 @@ export function GameView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>(fitView(1, 1));
   const [hud, setHud] = useState<Hud>(() => snapshot(game));
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(initiallyPaused);
   const [fast, setFast] = useState(false);
   const [aiming, setAiming] = useState(false);
   const [selection, setSelection] = useState<Selection>({ plot: null, preview: null });
   // The loop reads these every frame without re-subscribing.
-  const pausedRef = useRef(false);
+  const pausedRef = useRef(initiallyPaused);
   pausedRef.current = paused;
   const fastRef = useRef(false);
   fastRef.current = fast;
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const overRef = useRef(false);
+  const savedWaveRef = useRef(game.wave);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback((changed = false) => {
     const next = snapshot(game);
     setHud((current) => (sameHud(current, next) ? current : next));
     if ((game.status === "won" || game.status === "lost") && !overRef.current) {
@@ -98,8 +108,11 @@ export function GameView({
       setSelection({ plot: null, preview: null });
       setAiming(false);
       onOver(game);
+    } else if (game.status === "ready" || game.status === "playing") {
+      if (changed || game.wave !== savedWaveRef.current) onCheckpoint(game);
+      savedWaveRef.current = game.wave;
     }
-  }, [game, onOver]);
+  }, [game, onOver, onCheckpoint]);
 
   // Keep the canvas backing store at device resolution and the arena fitted to it.
   useEffect(() => {
@@ -154,18 +167,32 @@ export function GameView({
   }, [game, refresh]);
 
   const pause = useCallback(() => {
+    pausedRef.current = true;
     setAiming(false);
     setPaused(true);
-  }, []);
+    if (game.status === "ready" || game.status === "playing") onCheckpoint(game);
+  }, [game, onCheckpoint]);
 
-  // Switching apps or tabs pauses rather than letting the wave walk in unopposed.
+  // Periodic wall-clock checkpoints bound tab-discard losses, including at double speed.
+  // Lifecycle saves include the pre-wave setup. Never write an old run from unmount cleanup.
   useEffect(() => {
-    const onHide = () => {
-      if (document.visibilityState === "hidden" && game.status === "playing") pause();
+    const save = () => {
+      if (game.status === "ready" || game.status === "playing") onCheckpoint(game);
     };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") pause();
+      else save();
+    };
+    const onPageHide = () => pause();
+    const timer = window.setInterval(save, CHECKPOINT_MS);
     document.addEventListener("visibilitychange", onHide);
-    return () => document.removeEventListener("visibilitychange", onHide);
-  }, [game, pause]);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [game, onCheckpoint, pause]);
 
   const over = hud.status === "won" || hud.status === "lost";
   const select = (plot: number | null) => setSelection({ plot, preview: null });
@@ -177,7 +204,7 @@ export function GameView({
     if (aiming) {
       if (castVolley(game, point.x, point.y)) {
         setAiming(false);
-        refresh();
+        refresh(true);
       }
       return;
     }
@@ -213,22 +240,22 @@ export function GameView({
     if (event.key === " " || event.key === "Enter") {
       event.preventDefault();
       const target = leadFoe(game);
-      if (target && castVolley(game, target.x, target.y)) refresh();
+      if (target && castVolley(game, target.x, target.y)) refresh(true);
       return;
     }
     if (event.key === "n" || event.key === "N") {
-      if (callWave(game)) refresh();
+      if (callWave(game)) refresh(true);
     }
   };
 
   const act = (done: boolean) => {
-    if (done) refresh();
+    if (done) refresh(true);
   };
 
-  const onWave = () => act(callWave(game));
+  const onWave = () => { if (!pausedRef.current) act(callWave(game)); };
 
   const onVolley = () => {
-    if (hud.status !== "playing" || hud.volleyCharge < 1) return;
+    if (pausedRef.current || hud.status !== "playing" || hud.volleyCharge < 1) return;
     setAiming((current) => !current);
     select(null);
   };
@@ -306,7 +333,7 @@ export function GameView({
                 onSell={() => {
                   if (sell(game, tower.plot)) {
                     select(null);
-                    refresh();
+                    refresh(true);
                   }
                 }}
               />
@@ -319,7 +346,7 @@ export function GameView({
                 onBuild={(kind) => {
                   if (selection.plot !== null && build(game, selection.plot, kind)) {
                     setSelection({ plot: selection.plot, preview: null });
-                    refresh();
+                    refresh(true);
                   }
                 }}
               />
@@ -332,8 +359,11 @@ export function GameView({
             <div className="tower-panel">
               <h2 id="kr-pause-title">{text.paused}</h2>
               <div className="tower-actions">
-                <button type="button" className="tower-button" onClick={() => setPaused(false)} autoFocus>
+                <button type="button" className="tower-button" onClick={() => { pausedRef.current = false; setPaused(false); }} autoFocus>
                   {text.resume}
+                </button>
+                <button type="button" className="tower-button tower-button-quiet" onClick={() => onSuspend(game)}>
+                  {text.saveAndMenu}
                 </button>
                 <button type="button" className="tower-button tower-button-quiet" onClick={quit}>
                   {text.giveUp}
@@ -346,12 +376,13 @@ export function GameView({
         {over && children}
       </div>
 
+      {storageFailed && <p className="kr-save-warning" role="status">{text.saveUnavailable}</p>}
       <div className="kr-bar">
         <button
           type="button"
           className="tower-button kr-wave"
           onClick={onWave}
-          disabled={!(hud.status === "ready" || (hud.status === "playing" && hud.nextWaveIn !== null))}
+          disabled={paused || !(hud.status === "ready" || (hud.status === "playing" && hud.nextWaveIn !== null))}
         >
           {hud.status === "ready"
             ? text.startWave
@@ -367,7 +398,7 @@ export function GameView({
           data-ready={volleyReady}
           data-aiming={aiming}
           aria-pressed={aiming}
-          disabled={!volleyReady}
+          disabled={paused || !volleyReady}
           onClick={onVolley}
           style={{ "--charge": hud.status === "playing" ? hud.volleyCharge : 0 } as CSSProperties}
         >

@@ -15,7 +15,7 @@ For HR and KingsRoad implementation, also consult their existing game roadmaps. 
 
 ## Status and sequencing
 
-Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). The follow-up batch implements sections 7B/7C (HR trait clarity and duck investigation/feedback). Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
+Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). The follow-up batch implements sections 7B/7C (HR trait clarity and duck investigation/feedback). Section 2 (KingsRoad active-run persistence) is also implemented. Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
 
 ### First-batch implementation record
 
@@ -75,17 +75,28 @@ Target 30; first team ends its turn with 32. The second team still plays:
 
 Use HR suspend/resume as a reference, not a blind copy. Late-map runs in the review took roughly 25–32 simulated minutes at normal speed, making lost progress particularly costly.
 
-- [ ] Add a versioned, validated active-run snapshot separate from campaign/meta progress.
-- [ ] Save periodically, on important state changes, and when hidden; do not rely exclusively on unload events.
-- [ ] Offer Continue Run and an explicit discard/new-run flow so starting a new run does not silently erase the suspended one.
-- [ ] Restore paused, without offline simulation advancement.
-- [ ] Preserve map, enemies, towers and branches, resources, wave progress, timers, projectiles/effects needed for simulation continuity, and RNG state.
-- [ ] Clear terminal runs and handle malformed/incompatible saves and unavailable/full storage safely.
-- [ ] Ensure continuing or reloading cannot duplicate campaign rewards.
+- [x] Add a versioned, validated active-run snapshot separate from campaign/meta progress.
+- [x] Save periodically, on important state changes, and when hidden; do not rely exclusively on unload events.
+- [x] Offer Continue Run and an explicit discard/new-run flow so starting a new run does not silently erase the suspended one.
+- [x] Restore paused, without offline simulation advancement.
+- [x] Preserve map, enemies, towers and branches, resources, wave progress, timers, projectiles/effects needed for simulation continuity, and RNG state.
+- [x] Clear terminal runs and handle malformed/incompatible saves and unavailable/full storage safely.
+- [x] Ensure continuing or reloading cannot duplicate campaign rewards.
 
 **Acceptance:** a reload mid-wave preserves the simulation state; equivalent subsequent inputs produce equivalent results. Test round-trip snapshots, invalid versions/data, lifecycle saves, no offline time jump, terminal cleanup, and reward duplication protection.
 
 **Limit:** mobile process termination cannot guarantee a final save; periodic checkpoints bound potential loss. Do not promise lossless persistence under every browser shutdown condition.
+
+### Implementation record
+
+- Added the independent `lab:kingsroad:run:v1` slot with a versioned envelope, leaving `lab:kingsroad:v1` campaign stars unchanged. Validation checks nested simulation fields, map/road/plot references, enums, tower branches, ID uniqueness, spawn order, and terminal-state consistency before the sim or renderer uses a checkpoint. Corrupt or incompatible checkpoints are removed without changing campaign stars.
+- Saves include ready/pre-wave setups and active runs: all resources, towers/branches, foe routes and status timers, pending spawns, shots, volleys, effects, RNG, cooldowns, and wave progress. Periodic checkpoints run every five wall-clock seconds, with immediate saves after builds/upgrades/sales, volleys, manual/automatic wave starts, pause, visibility changes, pagehide, and Save & menu.
+- Continue Run identifies the map and wave and opens paused, at normal speed, with transient selection/aim cleared. No wall-time advancement occurs. Wave/volley controls are disabled while paused, including restored setups.
+- Pause offers Save & menu without surrendering. Discard and starting any replacement run require confirmation; cancellation preserves the checkpoint, and either action preserves campaign stars.
+- Finished runs first journal their outcome, then write best-stars, then remove the checkpoint. Startup recovers an interrupted terminal settlement without offering it as a playable run. Best-stars are idempotent, not additive, and cannot be lowered by a replay. A failed campaign write keeps the terminal journal for retry; starting another run is blocked until an unsaved win is persisted. Storage failures are surfaced in EN/RU while ordinary play remains usable.
+- Snapshot round-trip tests cover all 20 maps' setups and deterministic late-map continuation with Fire/Lune towers, pending spawns, foes, live shots, volley arrows, effects, and RNG. Additional tests cover malformed nested state, inaccessible/full storage, lifecycle/periodic checkpoints, confirmation flows, result recovery at both write boundaries, duplicate finish callbacks, and stale-run prevention.
+- Verified with `NODE_ENV=test npm test` (221 files / 3,165 tests), `npm run typecheck`, and `npm run build`. Chromium EN/RU checks at 360px and 390px passed against both the dev server and the production build served by Astro preview: exact mid-wave reloads, paused/no-offline advancement, resume, Save & menu, discard/replacement cancellation and confirmation, pre-wave setups, terminal recovery, incompatible checkpoints, and quota-failure playability. Screenshots were inspected. No real-device playtest or balance retune was performed.
+- No game balance, wave composition, preview feature, or Lone Tower behavior changed. The user authorized committing and pushing this batch to `main`; deployment status must be checked separately from push success.
 
 ## 3. Lone Tower — save active runs and settle rewards once
 

@@ -1,7 +1,17 @@
 # KingsRoad roadmap (`/kingsroad`)
 
-The single source of TODOs and design notes for the game. Nothing here is blocking: the ten maps below build, pass
-their tests and ship.
+The single source of TODOs and design notes for the game. Cross-game improvements are tracked in
+`game-design-improvements.md`; keep implementation decisions synchronized here.
+
+## Current state and active-run persistence
+
+- The user has completed all 20 maps and reports infrequent losses and a dominant Ballista-heavy strategy. This supersedes historical notes below saying the second chapter has not had human play. Balance experiments, wave previews, and maps 21–30 remain separate pending work; no balance changes were made in this persistence batch.
+- Active runs now use `lab:kingsroad:run:v1`, an envelope `{ version: 1, game }`, separate from permanent stars in `lab:kingsroad:v1`. Bump the envelope version when simulation state/map semantics become incompatible. `src/lib/kingsroad/snapshot.ts` validates nested fields, indices, branches, IDs, spawn ordering, and status consistency before restoration. All 20 maps, including Fire/Lune branches, are covered.
+- Both pre-wave setups and active waves are saved every five wall-clock seconds and immediately on player purchases/sales/upgrades, volleys, wave starts, pause, hidden/pagehide, and Save & menu. The full JSON simulation state is retained; no wall time is simulated while away. A discarded mobile tab can still lose work since the most recent successful checkpoint—unload callbacks cannot be guaranteed.
+- Continue Run shows the map and wave and restores paused at 1x, without transient selection/aim. Pause includes Save & menu; Discard and replacement runs ask for confirmation. Wave and volley controls are blocked while paused. EN/RU storage-failure warnings avoid silently promising that an unavailable save succeeded.
+- `settleRun` journals a terminal result before writing campaign best-stars, then clears the checkpoint. Startup recovers terminal journals without resuming finished runs. Star writes are idempotent/max-only. Failed campaign writes keep the journal, and an unsaved win cannot be overwritten by starting a new run. No new rewards were introduced. `writeSave` now returns a success boolean so settlement can distinguish failure from completion.
+- Verification: `NODE_ENV=test npm test` passed 221 files / 3,165 tests; `npm run typecheck` and `npm run build` passed. Chromium EN/RU checks at 360px and 390px passed on both dev and the built production pages via Astro preview: exact live-state reload, paused restoration, resume, Save & menu, discard/replacement confirmation and cancellation, setup saves, terminal recovery, incompatible-save cleanup, and quota-failure playability. Screenshots were inspected; no real-device test or balance retune was performed.
+- The sections below are historical design/measurement records where they conflict with this current-state summary.
 
 ## Where it stands (2026-10-30)
 
@@ -56,8 +66,8 @@ longbow:
 The tower card shows both picks with their stats at the fork (`i18n.ts`, English and Russian), fire arrows draw orange,
 lune arrows pale blue with a ring on marked foes. The bot alternates fire and lune by plot. With branches forced on, it
 does as well as the plain longbow on all ten maps (Last Stand 20 lives on more seeds), so the numbers are a floor, not a
-tuned value: retune once there are enemies that resist fire or armoured ones. No save change was needed (towers are not
-saved). Open: do the other towers get a branch in this batch? Still to decide with the enemies.
+tuned value: retune once there are enemies that resist fire or armoured ones. No save change was needed at the time (towers were not yet
+saved; active-run persistence now includes branches). Open: do the other towers get a branch in this batch? Still to decide with the enemies.
 
 **New enemies (built 2026-10-30, off until map 11).** All five ideas are in. A map lists the ones it sends in
 `MapDef.foes` (empty for maps 1 to 10, so they play as before); `FoeKind` in `sim/types.ts` is Lone Tower's five plus
@@ -87,8 +97,7 @@ ramp; they should start near where map 10 ends and not reset to 1.
 - The bot already takes the archer branch (`raise` in `playthrough.ts`); teach it any new upgrade the same way.
 - `meta.ts` unlocks by list order and the save is keyed by `MapId`, so more maps just extend the list, but the menu
   (`KingsroadApp.tsx`, ten cards in a grid) will want grouping by canvas once there are twenty.
-- Save key is `lab:kingsroad:v1`; bump it and keep `normalizeSave` tolerant if anything new is stored (branches are
-  not).
+- Campaign save key is `lab:kingsroad:v1`; keep `normalizeSave` tolerant when extending campaign data. Active runs and branches use the separate versioned envelope in `lab:kingsroad:run:v1`; see the current-state section above.
 - Reuse the plot generation approach from the maps 4 to 10 session: pick road shapes, then greedily place plots clear of
   the road (more than `ROAD_HALF + towerRadius(3)`), apart from each other (more than `PLOT_REACH * 2 - 6`) and in reach
   of the archers. `tests/kingsroad/maps.test.ts` checks all of it for every map.

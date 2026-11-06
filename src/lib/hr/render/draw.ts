@@ -431,6 +431,21 @@ function drawEffect(ctx: CanvasRenderingContext2D, kind: string, x: number, y: n
   const fade = 1 - progress;
   ctx.lineWidth = 3;
   switch (kind) {
+    case "duckHit": {
+      // A bright, short contact ring and four rays identify which duck actually hit.
+      const size = radius * (0.6 + progress * 0.4);
+      ctx.strokeStyle = `rgba(255, 205, 42, ${fade})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      for (let index = 0; index < 4; index += 1) {
+        const angle = index * Math.PI / 2;
+        ctx.moveTo(x + Math.cos(angle) * size * 1.2, y + Math.sin(angle) * size * 1.2);
+        ctx.lineTo(x + Math.cos(angle) * size * 1.6, y + Math.sin(angle) * size * 1.6);
+      }
+      ctx.stroke();
+      break;
+    }
     case "swing":
       ctx.strokeStyle = `rgba(214, 73, 138, ${fade})`;
       ctx.beginPath();

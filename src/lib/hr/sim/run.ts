@@ -679,11 +679,18 @@ function fire(run: Run, weapon: OwnedWeapon, dt: number): void {
     weapon.spin = (weapon.spin + numbers.speed * dt) % (Math.PI * 2);
     for (let index = 0; index < numbers.count; index += 1) {
       const angle = weapon.spin + (index / numbers.count) * Math.PI * 2;
-      grid.near(hero.x + Math.cos(angle) * numbers.radius, hero.y + Math.sin(angle) * numbers.radius, DUCK_RADIUS, FOE_PAD, (foe) => {
+      const x = hero.x + Math.cos(angle) * numbers.radius;
+      const y = hero.y + Math.sin(angle) * numbers.radius;
+      let hit = false;
+      grid.near(x, y, DUCK_RADIUS, FOE_PAD, (foe) => {
         if (foe.duckCooldown > 0) return;
+        const wasAlive = foe.hp > 0;
         hurtFoe(run, foe, numbers.damage, weapon.id);
         foe.duckCooldown = numbers.life;
+        hit ||= wasAlive;
       });
+      // One short flash per contacting duck, not one per enemy in a dense pack.
+      if (hit) addEffect(run, "duckHit", x, y, DUCK_RADIUS + 5, 0.18);
     }
     return;
   }

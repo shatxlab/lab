@@ -15,7 +15,7 @@ For HR and KingsRoad implementation, also consult their existing game roadmaps. 
 
 ## Status and sequencing
 
-Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
+Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). The follow-up batch implements sections 7B/7C (HR trait clarity and duck investigation/feedback). Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
 
 ### First-batch implementation record
 
@@ -242,13 +242,15 @@ A visible rare-or-better guarantee/pity system is a separate progression decisio
 
 **Decision:** investigate and clarify the user's confusion about “chance to quit.”
 
-The phrase appears to refer to an employee resigning, not dodging an attack or abandoning an action. Shared roster data contains personal and team quit-chance modifiers. The inspected combat code explicitly excludes quit-chance and salary modifiers from run stats; the spot-check did not establish a functioning resignation probability. A full trace is needed before claiming how this mechanic works.
+**Completed:** this means employee resignation, not dodging an attack or abandoning an action. End-to-end tracing found no resignation roll or salary system in HR. The shared roster can store quit/burnout status and a `stakes` flag, but HR has no logic that rolls these modifiers or pays salaries. These effects are absent from `QUIRK_NUMBER`, ignored by `baseNumbers`, and unused by career review, hiring, pack opening, and run settlement.
 
-- [ ] Trace quit-related modifiers end-to-end, including whether and when any resignation roll occurs.
-- [ ] Audit other displayed trait effects for applicability in HR.
-- [ ] Hide or clearly label inactive effects instead of presenting them as current gameplay benefits/costs.
-- [ ] For active effects, explain what changes, when it is evaluated, and what the displayed number means. Distinguish modifiers from absolute probabilities.
-- [ ] Update EN/RU descriptions and add regression tests for the actual behavior.
+Cards now show active modifiers first and explicitly name unused effects as inactive in HR, without displaying misleading probability/cost numbers. A trait with only dormant effects says it has no active run effect. Expandable EN/RU help explains gem XP versus career review XP, cooldown-based attack speed versus duck orbit speed, and the absence of resignation rolls/salaries. Trait data and saves are unchanged.
+
+- [x] Trace quit-related modifiers end-to-end, including whether and when any resignation roll occurs.
+- [x] Audit other displayed trait effects for applicability in HR.
+- [x] Hide or clearly label inactive effects instead of presenting them as current gameplay benefits/costs.
+- [x] For active effects, explain what changes, when it is evaluated, and what the displayed number means. Distinguish modifiers from absolute probabilities.
+- [x] Update EN/RU descriptions and add regression tests for the actual behavior.
 
 Do not invent a base resignation chance or add a resignation system merely to make existing labels true.
 
@@ -261,17 +263,27 @@ Source observations:
 - Damage is intended at the ducks' orbit positions, not throughout the circle around the hero.
 - Base configuration specifies 8 contact damage and a 0.4-second per-enemy duck-hit cooldown.
 - The inspected duck attack path applies damage but no knockback, despite copy saying ducks “bump” enemies.
-- These observations do not prove collision works in actual play.
+- The original spot-check did not prove collision worked in actual play. Follow-up controlled tests now verify contact damage, hero damage scaling, shared per-enemy cooldown, separate targets for multiple orbiters, upgraded counts/radii, tangent/interior/exterior cases, kills/overkill, and JSON continuation. Recorded canvas draw calls match actual collision positions at levels 1, 3, and 6. No collision failure was reproduced; the empty interior of the orbit and misleading bump wording explain a plausible source of confusion, but this is not proof of the cause of every reported miss.
 
 Tasks:
 
-- [ ] Reproduce contact in a controlled combat scene and verify rendered positions match collision positions.
-- [ ] Test contact damage, per-enemy cooldowns, multiple orbiters, upgrades, and non-contact cases.
-- [ ] Distinguish collision failure, weak effective damage, and insufficient hit feedback.
-- [ ] Add readable contact feedback where missing.
-- [ ] Correct misleading copy, or separately decide whether knockback belongs in the weapon's role.
+- [x] Reproduce contact in a controlled combat scene and verify rendered positions match collision positions.
+- [x] Test contact damage, per-enemy cooldowns, multiple orbiters, upgrades, and non-contact cases.
+- [x] Distinguish collision failure, weak effective damage, and insufficient hit feedback.
+- [x] Add readable contact feedback where missing.
+- [x] Correct misleading copy, or separately decide whether knockback belongs in the weapon's role.
 
 Do not apply a blanket damage buff before establishing the cause. Any approved balance change requires broader HR simulations under the existing roadmap guidance.
+
+### HR clarity/duck implementation record
+
+- Duck description now explicitly says contact damage on the orbit, no knockback, and no protection inside the ring. It appears on Engineering cards and weapon upgrade offers in EN/RU.
+- Successful duck hits add a brief gold contact ring with four rays, at most one effect per contacting duck per tick even in a dense pack. Empty space, cooldown-blocked contacts, and already-dead enemies create no duck flash. Existing enemy hurt flashes remain.
+- No weapon stats, damage, knockback, cooldowns, trait values, RNG, progression, rewards, or required save fields changed. The additive render-only effect kind does not require invalidating existing run snapshots.
+- Controlled before/after comparisons across 18 seeded 90-second scenarios (all three starters with ducks plus Engineering at duck levels 1/3/6) matched combat, RNG, progression, and rewards exactly after excluding render effects. These are regression comparisons, not win-rate or class-balance evidence.
+- Full verification: `NODE_ENV=test npm test` passed 220 files / 3,121 tests; `npm run typecheck` passed. Chromium checks at 360px and 390px in EN/RU verified mixed/inactive trait labels, expandable help, duck card and upgrade descriptions, a rendered hit flash, saved damage, and unchanged knockback. Screenshots were inspected; no real-device playtest was performed.
+- The phone check also exposed pre-existing stage-button overflow; stage buttons now wrap instead of overflowing the menu.
+- User subsequently authorized committing and pushing this follow-up batch to `main`. Deployment status must be checked separately from push success.
 
 ## 8. Couples — temporary skipping and partner consent
 

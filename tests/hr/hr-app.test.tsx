@@ -69,6 +69,36 @@ describe("HrApp", () => {
     view.unmount();
   });
 
+  it.each(["en", "ru"] as const)("explains inactive HR effects on cards and in expandable help in %s", async (lang) => {
+    localStorage.setItem("lab:lang", lang);
+    const roster = readSave();
+    roster.coworkers[0].quirks = ["loyal", "unionRep"];
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(roster));
+    const view = await mount(<HrApp />);
+    const text = HR_TEXT[lang];
+    const lines = [...view.container.querySelectorAll(".hr-card-quirk")].map((element) => element.textContent);
+    expect(lines[0]).toContain(text.inactiveEffects(text.effects.quitChance));
+    expect(lines[0]).toContain(lang === "en" ? "−10% speed" : "−10% скорости");
+    expect(lines[0]).not.toContain("50%");
+    expect(lines[1]).toContain(text.noActiveQuirk);
+    expect(lines[1]).not.toMatch(/10%|15%/);
+    const help = view.container.querySelector(".hr-trait-help");
+    expect(help?.querySelector("summary")?.textContent).toBe(text.traitHelpTitle);
+    expect(help?.querySelector("p")?.textContent).toBe(text.traitHelp);
+    expect(readSave().coworkers[0].quirks).toEqual(["loyal", "unionRep"]);
+    view.unmount();
+  });
+
+  it.each(["en", "ru"] as const)("explains duck contact on an Engineering card in %s", async (lang) => {
+    localStorage.setItem("lab:lang", lang);
+    const roster = readSave();
+    roster.coworkers[0].department = "engineering";
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(roster));
+    const view = await mount(<HrApp />);
+    expect(view.container.querySelector(".hr-card-body")?.textContent).toContain(HR_TEXT[lang].weapons.rubberDuck.description);
+    view.unmount();
+  });
+
   it("sends the focus in, and a walk-out still moves the day on and saves the gold", async () => {
     localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 2, owned: [2], sealed: [], stage: "openSpace", gold: 7 }));
     const view = await mount(<HrApp />);

@@ -172,7 +172,7 @@ export interface Gem {
 
 /** Something only the renderer cares about: a swing, a blast, a pop. */
 export interface Effect {
-  kind: "swing" | "blast" | "pop";
+  kind: "swing" | "blast" | "pop" | "duckHit";
   x: number;
   y: number;
   radius: number;

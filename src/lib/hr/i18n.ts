@@ -1,5 +1,6 @@
 import type { EncounterTradeoff } from "./career";
 import type { AppLang } from "@/lib/apps/lang";
+import { QUIRK_NUMBER } from "./sim/balance";
 import { QUIRKS } from "@/lib/roster/data";
 import type { DepartmentId, Effect, PerkId, QuirkId, Rarity, Stat } from "@/lib/roster/types";
 import type { Blurb } from "@/lib/tower/i18n";
@@ -58,6 +59,10 @@ export interface HrText {
   quirks: Record<QuirkId, string>;
   /** What a quirk effect changes, after its percent. */
   effects: Record<Effect, string>;
+  inactiveEffects: (effects: string) => string;
+  noActiveQuirk: string;
+  traitHelpTitle: string;
+  traitHelp: string;
   weapons: Record<WeaponId, Blurb>;
   passives: Record<PassiveId, Blurb>;
   heal: Blurb;
@@ -192,12 +197,16 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       teamQuitChance: "colleagues' chance to quit",
       salary: "salary",
     },
+    inactiveEffects: (effects) => `Inactive in HR: ${effects}.`,
+    noActiveQuirk: "No active run effect.",
+    traitHelpTitle: "How traits work",
+    traitHelp: "Trait percentages modify run stats and rewards, not absolute probabilities. XP means gem XP during a run, not career review XP. Attack-speed traits shorten weapon cooldowns; they do not speed up orbiting ducks. Resignation and salary are not implemented in HR: their effects do nothing, and no resignation rolls occur.",
     weapons: {
       stickyNotes: { name: "Sticky notes", description: "A stream of notes that chase the nearest foes." },
       spreadsheet: { name: "Spreadsheet", description: "Thrown at the nearest foe, straight through several." },
       serverRack: { name: "Server rack", description: "Dropped on a foe nearby; hits everything under it." },
       policyBinder: { name: "Policy binder", description: "A swing that hits everything close and knocks it back." },
-      rubberDuck: { name: "Rubber duck", description: "Ducks circle you and bump whatever they meet." },
+      rubberDuck: { name: "Rubber duck", description: "Ducks deal contact damage on their orbit, without knockback. The inside of the ring is not protected." },
       contract: { name: "Fine print", description: "Everything close is slowed and keeps taking damage." },
       businessCard: { name: "Business cards", description: "A fan of cards thrown the way you face." },
     },
@@ -347,16 +356,20 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       gold: "золота",
       xp: "опыта",
       damageTaken: "получаемого урона",
-      quitChance: "шанса уволиться",
-      teamQuitChance: "шанса уволиться у коллег",
-      salary: "зарплаты",
+      quitChance: "шанс уволиться",
+      teamQuitChance: "шанс увольнения коллег",
+      salary: "зарплата",
     },
+    inactiveEffects: (effects) => `Не действует в HR: ${effects}.`,
+    noActiveQuirk: "Нет действующих эффектов в забеге.",
+    traitHelpTitle: "Как работают черты",
+    traitHelp: "Проценты черт изменяют характеристики и награды в забеге, а не задают абсолютные вероятности. Опыт — это опыт из кристаллов в забеге, а не опыт аттестации. Скорость атаки сокращает перезарядку оружия, но не ускоряет уточек на орбите. Увольнения и зарплата в HR не реализованы: эти эффекты ничего не меняют, случайных увольнений нет.",
     weapons: {
       stickyNotes: { name: "Стикеры", description: "Поток стикеров летит за ближайшими врагами." },
       spreadsheet: { name: "Таблица", description: "Летит в ближайшего врага и пробивает нескольких." },
       serverRack: { name: "Серверная стойка", description: "Падает на врага рядом и бьёт всех под собой." },
       policyBinder: { name: "Папка регламентов", description: "Удар по всем рядом с отбрасыванием." },
-      rubberDuck: { name: "Резиновая уточка", description: "Уточки кружат вокруг и бьют всех, кого встретят." },
+      rubberDuck: { name: "Резиновая уточка", description: "Уточки наносят урон при касании на орбите, без отталкивания. Внутри кольца защиты нет." },
       contract: { name: "Мелкий шрифт", description: "Все рядом замедляются и постоянно получают урон." },
       businessCard: { name: "Визитки", description: "Веер визиток туда, куда вы смотрите." },
     },
@@ -411,11 +424,14 @@ export const HR_TEXT: Record<AppLang, HrText> = {
   },
 };
 
-/** "+20% speed, +15% damage taken": a quirk's effects in the reader's words. */
+/** Run modifiers first; unused roster effects are named without misleading probability numbers. */
 export function quirkLine(text: HrText, quirk: QuirkId): string {
-  return (Object.entries(QUIRKS[quirk]) as [Effect, number][])
-    .map(([effect, percent]) => `${percent > 0 ? "+" : "−"}${Math.abs(percent)}% ${text.effects[effect]}`)
-    .join(", ");
+  const effects = Object.entries(QUIRKS[quirk]) as [Effect, number][];
+  const active = effects.filter(([effect]) => QUIRK_NUMBER[effect] !== undefined);
+  const inactive = effects.filter(([effect]) => QUIRK_NUMBER[effect] === undefined);
+  const line = active.map(([effect, percent]) => `${percent > 0 ? "+" : "−"}${Math.abs(percent)}% ${text.effects[effect]}`).join(", ");
+  if (inactive.length === 0) return line;
+  return `${line || text.noActiveQuirk} ${text.inactiveEffects(inactive.map(([effect]) => text.effects[effect]).join(", "))}`;
 }
 
 /** Seconds as m:ss. */

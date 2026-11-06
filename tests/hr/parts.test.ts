@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { HERO_BASE, MAX_PASSIVES, MAX_WEAPON_LEVEL, MAX_WEAPONS, PASSIVES, WEAPON_IDS, weaponNumbers } from "@/lib/hr/sim/balance";
+import { QUIRK_NUMBER, HERO_BASE, MAX_PASSIVES, MAX_WEAPON_LEVEL, MAX_WEAPONS, PASSIVES, WEAPON_IDS, weaponNumbers } from "@/lib/hr/sim/balance";
 import { Grid } from "@/lib/hr/sim/grid";
 import { baseNumbers, withPassives } from "@/lib/hr/sim/hero";
 import { applyPick, possiblePicks, rollPicks } from "@/lib/hr/sim/picks";
 import { createRun } from "@/lib/hr/sim/run";
 import { starters } from "@/lib/roster/generate";
+import { QUIRKS } from "@/lib/roster/data";
+import { QUIRK_IDS, type Effect } from "@/lib/roster/types";
 import type { Coworker } from "@/lib/roster/types";
 
 const plain: Coworker = { ...starters()[0], quirks: [], stats: { grit: 10, output: 10, hustle: 10, focus: 10, luck: 10 } };
@@ -42,6 +44,22 @@ describe("baseNumbers", () => {
     expect(numbers.taken).toBeCloseTo(1.15);
     expect(numbers.cooldown).toBeCloseTo(1 / 1.2);
     expect(numbers.maxHp).toBeCloseTo(90);
+  });
+
+  it("ignores dormant resignation and salary effects, including a trait with no active effects", () => {
+    expect(baseNumbers({ ...plain, quirks: ["unionRep"] })).toEqual(baseNumbers(plain));
+    expect(baseNumbers({ ...plain, quirks: ["loyal"] })).toEqual({ ...HERO_BASE, speed: HERO_BASE.speed * 0.9 });
+    expect(baseNumbers({ ...plain, quirks: ["coffeeSnob"] })).toEqual({ ...HERO_BASE, cooldown: 1 / 1.1 });
+  });
+
+  it.each(QUIRK_IDS)("applies only the disclosed run modifiers for %s", (quirk) => {
+    const expected = { ...HERO_BASE };
+    for (const [effect, percent] of Object.entries(QUIRKS[quirk]) as [Effect, number][]) {
+      const key = QUIRK_NUMBER[effect];
+      if (key) expected[key] *= key === "cooldown" ? 1 / (1 + percent / 100) : 1 + percent / 100;
+    }
+    const actual = baseNumbers({ ...plain, quirks: [quirk] });
+    for (const key of Object.keys(expected) as (keyof typeof expected)[]) expect(actual[key]).toBeCloseTo(expected[key]);
   });
 
   it("stacks passives by level", () => {

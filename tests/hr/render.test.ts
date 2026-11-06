@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { clock, HR_TEXT, quirkLine } from "@/lib/hr/i18n";
 import { cameraFor, fitView, STICK_RADIUS, stickInput } from "@/lib/hr/render/draw";
 import { heroPixels } from "@/lib/hr/render/heroes";
-import { ARENA, SPAWN_DISTANCE } from "@/lib/hr/sim/balance";
+import { ARENA, QUIRK_NUMBER, SPAWN_DISTANCE } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
+import { QUIRKS } from "@/lib/roster/data";
+import { QUIRK_IDS, type Effect } from "@/lib/roster/types";
 import { starters } from "@/lib/roster/generate";
 import { CHARACTER_FRAMES } from "@/lib/tycoon/render-support/characters";
 import { POSE_PAD } from "@/lib/tycoon/render-support/poses";
@@ -89,8 +91,34 @@ describe("copy", () => {
 
   it("spells out a quirk's effects", () => {
     expect(quirkLine(HR_TEXT.en, "caffeinated")).toBe("+20% speed, +15% damage taken");
-    expect(quirkLine(HR_TEXT.en, "clockWatcher")).toBe("−15% salary, −15% XP");
-    expect(quirkLine(HR_TEXT.ru, "loyal")).toBe("−50% шанса уволиться, −10% скорости");
+    expect(quirkLine(HR_TEXT.en, "clockWatcher")).toBe("−15% XP Inactive in HR: salary.");
+    expect(quirkLine(HR_TEXT.ru, "loyal")).toBe("−10% скорости Не действует в HR: шанс уволиться.");
+  });
+
+  it.each(["en", "ru"] as const)("labels every dormant effect and retains each active modifier in %s", (lang) => {
+    const text = HR_TEXT[lang];
+    for (const quirk of QUIRK_IDS) {
+      const line = quirkLine(text, quirk);
+      const effects = Object.entries(QUIRKS[quirk]) as [Effect, number][];
+      const inactive = effects.filter(([effect]) => QUIRK_NUMBER[effect] === undefined);
+      const active = effects.filter(([effect]) => QUIRK_NUMBER[effect] !== undefined);
+      for (const [effect, percent] of active) {
+        expect(line).toContain(`${percent > 0 ? "+" : "−"}${Math.abs(percent)}% ${text.effects[effect]}`);
+      }
+      if (inactive.length) {
+        expect(line).toContain(text.inactiveEffects(inactive.map(([effect]) => text.effects[effect]).join(", ")));
+        // No dormant probability/cost numbers can masquerade as functioning HR rules.
+        for (const [effect, percent] of inactive) expect(line).not.toContain(`${Math.abs(percent)}% ${text.effects[effect]}`);
+      }
+      if (!active.length) expect(line).toContain(text.noActiveQuirk);
+    }
+  });
+
+  it("describes duck contact rather than knockback or area protection in both languages", () => {
+    expect(HR_TEXT.en.weapons.rubberDuck.description).toContain("contact damage on their orbit, without knockback");
+    expect(HR_TEXT.ru.weapons.rubberDuck.description).toContain("урон при касании на орбите, без отталкивания");
+    expect(HR_TEXT.en.traitHelp).toContain("no resignation rolls");
+    expect(HR_TEXT.ru.traitHelp).toContain("случайных увольнений нет");
   });
 
   it("shows time as m:ss and counts gold in Russian", () => {

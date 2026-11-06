@@ -263,6 +263,10 @@ export default function HrApp() {
           )}
           {roster && career && focus && (
             <>
+              <details className="hr-trait-help">
+                <summary>{text.traitHelpTitle}</summary>
+                <p className="hr-continue-hint">{text.traitHelp}</p>
+              </details>
               {[focus, ...others]
                 .filter((coworker) => perksPending(coworker) > 0)
                 .map((coworker) => (
@@ -423,6 +427,7 @@ function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer }: Card
         <p className="hr-card-department">
           {text.rarities[coworker.rarity]} · {text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
         </p>
+        {departmentWeapon(coworker) === "rubberDuck" && <p className="hr-card-quirk">{text.weapons.rubberDuck.description}</p>}
         {coworker.quirks.map((quirk) => (
           <p key={quirk} className="hr-card-quirk">
             <strong>{text.quirks[quirk]}</strong> {quirkLine(text, quirk)}

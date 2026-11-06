@@ -15,7 +15,7 @@ For HR and KingsRoad implementation, also consult their existing game roadmaps. 
 
 ## Status and sequencing
 
-Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). The follow-up batch implements sections 7B/7C (HR trait clarity and duck investigation/feedback). Section 2 (KingsRoad active-run persistence) is also implemented. Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
+Implemented in the first scoped batch: section 1 (Alias), sections 4A/4B (HR promotion disclosure and Intern onboarding), section 5 (Crosswords), and section 7A (HR pack odds). The follow-up batch implements sections 7B/7C (HR trait clarity and duck investigation/feedback). Sections 2–3 (KingsRoad and Lone Tower active-run persistence) are also implemented. Remaining tasks are pending unless explicitly deferred. Fixed-scope work can proceed independently of approval of balance experiments.
 
 ### First-batch implementation record
 
@@ -104,13 +104,24 @@ Use HR suspend/resume as a reference, not a blind copy. Late-map runs in the rev
 
 Separate from KingsRoad because death/retreat banks run rewards into meta progression.
 
-- [ ] Add versioned, validated snapshots and Continue/Discard controls.
-- [ ] Preserve upgrades, combat state, resources, timers, and RNG.
-- [ ] Save periodically, on important state changes, and when hidden; resume paused without offline advancement.
-- [ ] Make death/retreat settlement safe against reloads and repeated completion callbacks.
-- [ ] Clear terminal snapshots and handle invalid saves/storage failures safely.
+- [x] Add versioned, validated snapshots and Continue/Discard controls.
+- [x] Preserve upgrades, combat state, resources, timers, and RNG.
+- [x] Save periodically, on important state changes, and when hidden; resume paused without offline advancement.
+- [x] Make death/retreat settlement safe against reloads and repeated completion callbacks.
+- [x] Clear terminal snapshots and handle invalid saves/storage failures safely.
 
 **Acceptance:** equivalent continuation inputs yield equivalent simulation results. A completed or retreated run banks rewards exactly once, including after reload. Test crash/reload boundaries around settlement, not only a normal finish callback.
+
+### Implementation record
+
+- Added `lab:tower:run:v1`, a validated `{ version: 1, id, run }` checkpoint independent of permanent progress. The identity is separate from the seed so identical-seed runs can each earn rewards once. Combat state includes enemies and burn/frost/boss timers, arrows and hit history, in-flight volleys, caltrops/effects, resources, cooldowns, aim, upgrades/perks, spawn schedules, and RNG.
+- Head-start and between-wave pickers are saved with exact offered choices/order and remaining picks. Continue opens paused in either phase. Resume releases held fire and clears pointer/double-tap tracking, without discarding aim or simulating offline time. The pause menu is available during choices and includes Save & menu; suspending never banks rewards.
+- Checkpoints run every five foreground wall-clock seconds, immediately at wave/picker transitions, upgrade picks, volleys, firing start/end, pause, visibility changes, pagehide, and Save & menu. No unmount cleanup writes can resurrect old runs. Discard/replacement confirmations explicitly warn that unbanked run gold is lost while permanent progress is retained.
+- Meta keeps the existing `lab:tower:v1` key and tolerantly migrates legacy saves with empty `settledRunIds`. Terminal settlement journals the result, atomically writes additive gold/run count and the run-ID receipt in one meta payload, then clears the matching checkpoint. Replayed results cannot repay even after later runs or perk purchases; delayed old results do not erase newer checkpoints. Startup also suppresses an already-paid active checkpoint if terminal journaling/cleanup failed.
+- Pending reward writes block new runs and perk purchases until a retry succeeds. Failed purchases do not charge/apply a perk. Strict meta reads prevent overwriting unknown receipts; failed checkpoint reads retain the unknown data, show a warning, and require confirmation before starting anyway. EN/RU Retry controls recover pending results or reread unavailable storage. Newly purchased perks apply only to new runs, not the suspended run.
+- Added 74 regression tests (120 total in `tests/tower`), including exact rich-state round trips, deterministic continuation across four seeds, head-start and wave-clear choices, nested malformed saves, read/write/delete failures, both settlement crash boundaries, repeated callbacks, natural death, retreat, delayed results, and preservation of old progress/receipts.
+- Verification: `NODE_ENV=test npm test` passed 222 files / 3,239 tests; `npm run typecheck` and `npm run build` passed. Chromium checks in EN/RU at 360px and 390px passed on dev and the built production pages via Astro preview, covering mid-wave reloads, paused/no-offline/no-ghost-fire restoration, Save & menu, choice preservation, confirmations, perk isolation, death/retreat, both settlement crash boundaries, paid-active suppression, and incompatible saves. Additional browser checks verified a real five-second periodic save, phone touch volleys, selective meta-quota failures, all writes blocked, replacement blocking, and successful retry without duplicate rewards. Screenshots were inspected; no real-device playtest was performed.
+- No combat, upgrade/perk balance, wave generation, KingsRoad, or Tycoon changes. The user authorized committing and pushing this batch to `main`; deployment status must be checked separately from push success. Further implementation notes and persistence limits are in `tower-roadmap.md`.
 
 ## 4. HR — disclose promotion tradeoffs and start with Intern
 

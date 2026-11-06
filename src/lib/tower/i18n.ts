@@ -45,6 +45,17 @@ export interface TowerText {
   tagline: string;
   howTo: string[];
   play: string;
+  continueRun: string;
+  continueHint: (wave: number, gold: number) => string;
+  continuePaused: string;
+  discardRun: string;
+  discardRunConfirm: string;
+  replaceRunConfirm: string;
+  unknownRunConfirm: string;
+  saveAndMenu: string;
+  saveUnavailable: string;
+  retrySave: string;
+  savedPerksHint: string;
   playAgain: string;
   menu: string;
   home: string;
@@ -93,6 +104,17 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
       "Gold from every run buys perks that last.",
     ],
     play: "Play",
+    continueRun: "Continue run",
+    continueHint: (wave, gold) => `Wave ${wave} · ${gold} unbanked gold`,
+    continuePaused: "Continues paused. No time passes while away; hold the field again to shoot.",
+    discardRun: "Discard saved run",
+    discardRunConfirm: "Discard this unfinished run and its unbanked gold? Permanent gold and perks will be kept.",
+    replaceRunConfirm: "Start a new run and discard the unfinished one and its unbanked gold? Permanent gold and perks will be kept.",
+    unknownRunConfirm: "Saved runs could not be read. Start anyway? This may replace an existing run and its unbanked gold.",
+    saveAndMenu: "Save & menu",
+    saveUnavailable: "Saving is unavailable. Keep this tab open: reloading may lose progress. Finished rewards must be saved before a new run or perk purchase.",
+    retrySave: "Retry saving",
+    savedPerksHint: "New perks apply to new runs, not the saved run.",
     playAgain: "Play again",
     menu: "Menu",
     home: "Home",
@@ -191,6 +213,17 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
       "Золото из каждого забега тратится на постоянные бонусы.",
     ],
     play: "Играть",
+    continueRun: "Продолжить забег",
+    continueHint: (wave, gold) => `Волна ${wave} · ${gold} золота ещё не зачислено`,
+    continuePaused: "Продолжение на паузе. В отсутствие игрока время не идёт; для стрельбы снова удерживайте палец на поле.",
+    discardRun: "Удалить сохранённый забег",
+    discardRunConfirm: "Удалить незавершённый забег и его незачисленное золото? Постоянные золото и бонусы сохранятся.",
+    replaceRunConfirm: "Начать новый забег и удалить незавершённый вместе с незачисленным золотом? Постоянные золото и бонусы сохранятся.",
+    unknownRunConfirm: "Не удалось прочитать сохранённый забег. Всё равно начать новый? Он может заменить существующий забег и его незачисленное золото.",
+    saveAndMenu: "Сохранить и в меню",
+    saveUnavailable: "Сохранение недоступно. Не закрывайте вкладку: перезагрузка может привести к потере прогресса. Перед новым забегом или покупкой бонуса нужно сохранить награды.",
+    retrySave: "Повторить сохранение",
+    savedPerksHint: "Новые бонусы действуют в новых забегах, но не в сохранённом.",
     playAgain: "Ещё раз",
     menu: "Меню",
     home: "На главную",

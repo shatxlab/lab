@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { Pause } from "lucide-react";
 
+import { CHECKPOINT_MS } from "@/lib/tower/snapshot";
 import { createTapTracker, pressEnd, pressStart } from "@/lib/tower/double-tap";
 import { statChange, type TowerText } from "@/lib/tower/i18n";
 import { drawRun, fitView, toWorld, type View } from "@/lib/tower/render/draw";
@@ -43,12 +44,20 @@ export function RunView({
   run,
   text,
   onOver,
+  initiallyPaused,
+  onCheckpoint,
+  onSuspend,
+  storageFailed,
   children,
 }: {
   run: Run;
   text: TowerText;
   /** Called once, the moment the tower falls or the player gives up. */
   onOver: (run: Run) => void;
+  initiallyPaused: boolean;
+  onCheckpoint: () => boolean;
+  onSuspend: () => void;
+  storageFailed: boolean;
   /** The game-over panel, shown over the field once the run is over. */
   children?: React.ReactNode;
 }) {
@@ -56,8 +65,8 @@ export function RunView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>(fitView(1, 1));
   const [hud, setHud] = useState<Hud>(() => snapshot(run));
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(initiallyPaused);
+  const pausedRef = useRef(initiallyPaused);
   pausedRef.current = paused;
   // Every finger on the field, watched for a double tap that drops the volley.
   const tapsRef = useRef(createTapTracker());
@@ -65,14 +74,20 @@ export function RunView({
   const aimPointerRef = useRef<number | null>(null);
   const overRef = useRef(false);
 
-  const refresh = useCallback(() => {
+  const phaseRef = useRef(`${run.phase}:${run.wave}:${run.picksLeft}`);
+  const refresh = useCallback((changed = false) => {
     const next = snapshot(run);
     setHud((current) => (sameHud(current, next) ? current : next));
-    if (run.phase === "over" && !overRef.current) {
-      overRef.current = true;
-      onOver(run);
-    }
-  }, [run, onOver]);
+    const phase = `${run.phase}:${run.wave}:${run.picksLeft}`;
+    const transitioned = phaseRef.current !== phase;
+    phaseRef.current = phase;
+    if (run.phase === "over") {
+      if (!overRef.current) {
+        overRef.current = true;
+        onOver(run);
+      }
+    } else if (changed || transitioned) onCheckpoint();
+  }, [run, onOver, onCheckpoint]);
 
   // Keep the canvas backing store at device resolution and the arena fitted to it.
   useEffect(() => {
@@ -127,19 +142,28 @@ export function RunView({
   }, [run, refresh]);
 
   const pause = useCallback(() => {
+    pausedRef.current = true;
     holdFire(run);
     aimPointerRef.current = null;
+    tapsRef.current = createTapTracker();
     setPaused(true);
-  }, [run]);
+    if (run.phase !== "over") onCheckpoint();
+  }, [run, onCheckpoint]);
 
-  // Switching apps or tabs pauses rather than letting the wave chew through the wall.
+  // Cover the picker as well as combat; don't rely on an unload callback to keep progress.
+  // Cleanup only removes listeners/timers, never resurrects an old run by saving it.
   useEffect(() => {
-    const onHide = () => {
-      if (document.visibilityState === "hidden" && run.phase === "playing") pause();
-    };
+    const save = () => { if (run.phase !== "over") onCheckpoint(); };
+    const onHide = () => { if (document.visibilityState === "hidden") pause(); else save(); };
+    const timer = window.setInterval(save, CHECKPOINT_MS);
     document.addEventListener("visibilitychange", onHide);
-    return () => document.removeEventListener("visibilitychange", onHide);
-  }, [run, pause]);
+    window.addEventListener("pagehide", pause);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", pause);
+    };
+  }, [run, pause, onCheckpoint]);
 
   const worldPoint = (event: PointerEvent<HTMLCanvasElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -147,16 +171,17 @@ export function RunView({
   };
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (paused || run.phase !== "playing") return;
+    if (pausedRef.current || run.phase !== "playing") return;
     const point = worldPoint(event);
     // A double tap drops the volley there; held, the second press goes on shooting like any other.
     if (pressStart(tapsRef.current, event.pointerId, event.timeStamp, event.clientX, event.clientY)) {
-      if (castVolley(run, point.x, point.y)) refresh();
+      if (castVolley(run, point.x, point.y)) refresh(true);
     }
     if (aimPointerRef.current !== null) return;
     aimPointerRef.current = event.pointerId;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     aimAt(run, point.x, point.y);
+    onCheckpoint();
   };
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
@@ -170,26 +195,28 @@ export function RunView({
     if (event.pointerId !== aimPointerRef.current) return;
     aimPointerRef.current = null;
     holdFire(run);
+    if (run.phase !== "over") onCheckpoint();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLCanvasElement>) => {
     if (event.key === "Escape") {
-      if (run.phase === "playing") pause();
+      if (run.phase !== "over") pause();
       return;
     }
     if (event.key !== " " && event.key !== "Enter") return;
     event.preventDefault();
     const target = nearestEnemy(run);
-    if (target && !paused && castVolley(run, target.x, target.y)) refresh();
+    if (target && !pausedRef.current && castVolley(run, target.x, target.y)) refresh(true);
   };
 
   const pick = (id: UpgradeId) => {
-    chooseUpgrade(run, id);
-    refresh();
+    if (pausedRef.current || !chooseUpgrade(run, id)) return;
+    refresh(true);
     canvasRef.current?.focus();
   };
 
   const quit = () => {
+    pausedRef.current = false;
     setPaused(false);
     giveUp(run);
     refresh();
@@ -205,7 +232,7 @@ export function RunView({
           type="button"
           className="tower-icon-button"
           onClick={pause}
-          disabled={hud.phase !== "playing"}
+          disabled={hud.phase === "over"}
           aria-label={text.pause}
         >
           <Pause size={18} aria-hidden="true" />
@@ -249,7 +276,7 @@ export function RunView({
           onKeyDown={onKeyDown}
         />
 
-        {hud.phase === "choosing" && choices.length > 0 && (
+        {!paused && hud.phase === "choosing" && choices.length > 0 && (
           <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-pick-title">
             <div className="tower-panel">
               <p className="tower-kicker">{hud.wave === 0 ? text.headStart : text.waveCleared(hud.wave)}</p>
@@ -274,13 +301,17 @@ export function RunView({
           </div>
         )}
 
-        {paused && hud.phase === "playing" && (
+        {paused && hud.phase !== "over" && (
           <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-pause-title">
             <div className="tower-panel">
               <h2 id="tower-pause-title">{text.paused}</h2>
               <div className="tower-actions">
-                <button type="button" className="tower-button" onClick={() => setPaused(false)} autoFocus>
+                <button type="button" className="tower-button" onClick={() => { pausedRef.current = false; setPaused(false); }} autoFocus>
                   {text.resume}
+                </button>
+                {storageFailed && <button type="button" className="tower-button tower-button-quiet" onClick={onCheckpoint}>{text.retrySave}</button>}
+                <button type="button" className="tower-button tower-button-quiet" onClick={onSuspend}>
+                  {text.saveAndMenu}
                 </button>
                 <button type="button" className="tower-button tower-button-quiet" onClick={quit}>
                   {text.giveUp}

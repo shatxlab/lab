@@ -10,6 +10,8 @@ export interface TowerSave {
   best: number;
   runs: number;
   perks: PerkLevels;
+  /** Receipts are written atomically with gold/runs; never prune them and allow an old result to pay twice. */
+  settledRunIds: string[];
 }
 
 export interface TowerStorage {
@@ -26,7 +28,7 @@ function storageOrUndefined(): TowerStorage | undefined {
 }
 
 export function defaultSave(): TowerSave {
-  return { gold: 0, best: 0, runs: 0, perks: emptyPerks() };
+  return { gold: 0, best: 0, runs: 0, perks: emptyPerks(), settledRunIds: [] };
 }
 
 function count(value: unknown): number {
@@ -43,23 +45,42 @@ export function normalizeSave(raw: unknown): TowerSave {
   save.runs = count(candidate.runs);
   const perks = candidate.perks && typeof candidate.perks === "object" ? (candidate.perks as Record<string, unknown>) : {};
   for (const id of PERK_IDS) save.perks[id] = Math.min(PERKS[id].max, count(perks[id]));
+  if (Array.isArray(candidate.settledRunIds)) save.settledRunIds = [...new Set(candidate.settledRunIds.filter(validRunId))];
   return save;
 }
 
-export function readSave(storage: TowerStorage | undefined = storageOrUndefined()): TowerSave {
+/** Stable identity belongs to the checkpoint, not the random seed (seeds can repeat). */
+export function validRunId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+}
+
+/** Settlement must distinguish a fresh save from an unreadable one: never overwrite unknown receipts. */
+export function readSaveState(storage: TowerStorage | undefined = storageOrUndefined()): { save: TowerSave; readable: boolean } {
   try {
-    const raw = storage?.getItem(TOWER_STORAGE_KEY);
-    return raw ? normalizeSave(JSON.parse(raw)) : defaultSave();
+    if (!storage) return { save: defaultSave(), readable: false };
+    const raw = storage.getItem(TOWER_STORAGE_KEY);
+    if (raw === null) return { save: defaultSave(), readable: true };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { save: defaultSave(), readable: false };
+    const receipts = parsed.settledRunIds;
+    const readable = receipts === undefined || (Array.isArray(receipts) && receipts.every(validRunId));
+    return { save: normalizeSave(parsed), readable };
   } catch {
-    return defaultSave();
+    return { save: defaultSave(), readable: false };
   }
 }
 
-export function writeSave(save: TowerSave, storage: TowerStorage | undefined = storageOrUndefined()): void {
+export function readSave(storage: TowerStorage | undefined = storageOrUndefined()): TowerSave {
+  return readSaveState(storage).save;
+}
+
+export function writeSave(save: TowerSave, storage: TowerStorage | undefined = storageOrUndefined()): boolean {
   try {
-    storage?.setItem(TOWER_STORAGE_KEY, JSON.stringify(save));
+    if (!storage) return false;
+    storage.setItem(TOWER_STORAGE_KEY, JSON.stringify(save));
+    return true;
   } catch {
-    // Private mode or a full quota: progress just isn't kept.
+    return false;
   }
 }
 
@@ -76,7 +97,7 @@ export function buyPerk(save: TowerSave, id: PerkId): TowerSave | null {
   return { ...save, gold: save.gold - cost, perks: { ...save.perks, [id]: save.perks[id] + 1 } };
 }
 
-/** Bank a finished run: its gold, and its wave if it's a new best. */
+/** Pure reward calculation. Persist finished runs through snapshot.settleRun, which also writes an idempotency receipt. */
 export function bankRun(save: TowerSave, run: Run): TowerSave {
   return { ...save, gold: save.gold + run.gold, best: Math.max(save.best, run.wave), runs: save.runs + 1 };
 }

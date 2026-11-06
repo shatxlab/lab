@@ -3,11 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { withBase } from "@/lib/apps/paths";
 import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 import { statChange, TOWER_TEXT, type TowerText } from "@/lib/tower/i18n";
-import { bankRun, buyPerk, defaultSave, perkCost, readSave, writeSave, type TowerSave } from "@/lib/tower/meta";
+import { buyPerk, defaultSave, perkCost, readSaveState, writeSave, type TowerSave } from "@/lib/tower/meta";
+import { clearRun, createCheckpoint, readRunState, settleRun, writeRun, type RunCheckpoint } from "@/lib/tower/snapshot";
 import { PERK_IDS } from "@/lib/tower/sim/balance";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { emptyUpgrades } from "@/lib/tower/sim/upgrades";
-import { createRun } from "@/lib/tower/sim/run";
+import { createRun, holdFire } from "@/lib/tower/sim/run";
 import type { PerkId, PerkLevels, Run } from "@/lib/tower/sim/types";
 
 import { RunView } from "./RunView";
@@ -29,37 +30,147 @@ export default function TowerApp() {
   const readyRef = useLangReady<HTMLDivElement>();
   const [save, setSave] = useState<TowerSave>(defaultSave);
   const [screen, setScreen] = useState<Screen>("menu");
-  const [run, setRun] = useState<Run | null>(null);
+  const [active, setActive] = useState<RunCheckpoint | null>(null);
+  const [saved, setSaved] = useState<RunCheckpoint | null>(null);
+  const [pending, setPending] = useState<RunCheckpoint | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [storageFailed, setStorageFailed] = useState(false);
+  const [runReadFailed, setRunReadFailed] = useState(false);
+  const run = active?.run;
   const [result, setResult] = useState<Result | null>(null);
 
-  // Storage only exists in the browser; read it after mount.
-  useEffect(() => setSave(readSave()), []);
+  // Meta receipts also suppress an old active checkpoint if journaling/cleanup failed after banking.
+  const load = useCallback(() => {
+    const before = readSaveState();
+    const stored = readRunState();
+    const checkpoint = stored.checkpoint;
+    setRunReadFailed(!stored.readable);
+    if (checkpoint?.run.phase === "over") {
+      const settled = settleRun(checkpoint);
+      setSave(settled.save);
+      setStorageFailed(!settled.persisted);
+      if (!settled.persisted) setPending(checkpoint);
+    } else {
+      setSave(before.save);
+      setStorageFailed(!before.readable || !stored.readable);
+      if (checkpoint && before.readable && before.save.settledRunIds.includes(checkpoint.id)) clearRun(undefined, checkpoint.id);
+      else setSaved(checkpoint);
+    }
+    setHydrated(true);
+  }, []);
+  useEffect(load, [load]);
 
-  const updateSave = useCallback((next: TowerSave) => {
-    setSave(next);
-    writeSave(next);
+  const checkpoint = useCallback((current: RunCheckpoint) => {
+    const kept = writeRun(current);
+    setStorageFailed(!kept || !readSaveState().readable);
+    return kept;
   }, []);
 
+  const settle = useCallback((ended: RunCheckpoint) => {
+    const settled = settleRun(ended);
+    setSave(settled.save);
+    setStorageFailed(!settled.persisted);
+    setPending(settled.persisted ? null : ended);
+    return settled;
+  }, []);
+
+  const updateSave = (id: PerkId) => {
+    // Never turn a failed meta read (especially unknown receipts) into a fresh account write.
+    const current = readSaveState();
+    if (!current.readable) { setStorageFailed(true); return; }
+    const next = buyPerk(current.save, id);
+    if (!next) { setSave(current.save); return; }
+    const kept = writeSave(next);
+    setStorageFailed(!kept);
+    if (kept) setSave(next);
+  };
+
   const start = () => {
+    if (!hydrated) return;
+    if ((saved || runReadFailed) && !window.confirm(saved ? text.replaceRunConfirm : text.unknownRunConfirm)) return;
+    let before = save;
+    if (pending) {
+      const settled = settle(pending);
+      if (!settled.persisted) return;
+      before = settled.save;
+    }
+    const next = createCheckpoint(createRun(Math.floor(Math.random() * 2 ** 31), before.perks));
+    checkpoint(next);
+    setRunReadFailed(false);
+    setSaved(null);
+    setRestored(false);
     setResult(null);
-    setRun(createRun(Math.floor(Math.random() * 2 ** 31), save.perks));
+    setActive(next);
     setScreen("run");
   };
 
-  const finish = useCallback(
-    (ended: Run) => {
-      // Read the stored save rather than the render's copy: the loop calls this from a frame callback.
-      const before = readSave();
-      updateSave(bankRun(before, ended));
-      setResult({ wave: ended.wave, kills: ended.kills, gold: ended.gold, newBest: ended.wave > before.best, fell: ended.hp <= 0 });
-    },
-    [updateSave],
-  );
+  const resume = () => {
+    if (!saved) return;
+    // A held finger is transient input, not an instruction to keep firing after reload.
+    holdFire(saved.run);
+    setRestored(true);
+    setResult(null);
+    setActive(saved);
+    setSaved(null);
+    setScreen("run");
+  };
+
+  const discard = () => {
+    if (!window.confirm(text.discardRunConfirm)) return;
+    const cleared = clearRun();
+    setStorageFailed(!cleared);
+    if (cleared) setSaved(null);
+  };
+
+  const suspend = useCallback(() => {
+    if (!active) return;
+    checkpoint(active);
+    setSaved(active);
+    setActive(null);
+    setScreen("menu");
+  }, [active, checkpoint]);
+
+  const checkpointActive = useCallback(() => active ? checkpoint(active) : false, [active, checkpoint]);
+
+  const finish = useCallback((ended: Run) => {
+    if (!active) return;
+    const settled = settle(active);
+    setSaved(null);
+    setResult({ wave: ended.wave, kills: ended.kills, gold: ended.gold, newBest: settled.newBest, fell: ended.hp <= 0 });
+  }, [active, settle]);
+
+  const retry = () => {
+    if (pending) settle(pending);
+    else if (active?.run.phase === "over") settle(active);
+    else if (active) checkpoint(active);
+    else if (saved) checkpoint(saved);
+    else load();
+  };
 
   return (
     <div className="tower-root" ref={readyRef} data-lang-sensitive>
-      {screen === "run" && run ? (
-        <RunView key={run.seed} run={run} text={text} onOver={finish}>
+      {storageFailed && (
+        <div className="tower-save-warning" role="status">
+          <p>{text.saveUnavailable}</p>
+          {screen !== "run" && (
+            <button type="button" className="tower-button tower-button-small tower-button-quiet" onClick={retry}>
+              {text.retrySave}
+            </button>
+          )}
+        </div>
+      )}
+      {screen === "run" && run && active ? (
+        <RunView
+          key={active.id}
+          run={run}
+          text={text}
+          onOver={finish}
+          initiallyPaused={restored}
+          onCheckpoint={checkpointActive}
+          onSuspend={suspend}
+          storageFailed={storageFailed}
+        >
           {result && (
             <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-over-title">
               <div className="tower-panel">
@@ -71,10 +182,13 @@ export default function TowerApp() {
                   <li>{text.goldEarned(result.gold)}</li>
                 </ul>
                 <div className="tower-actions">
+                  {pending && (
+                    <button type="button" className="tower-button tower-button-quiet" onClick={retry}>{text.retrySave}</button>
+                  )}
                   <button type="button" className="tower-button" onClick={start} autoFocus>
                     {text.playAgain}
                   </button>
-                  <button type="button" className="tower-button tower-button-quiet" onClick={() => setScreen("menu")}>
+                  <button type="button" className="tower-button tower-button-quiet" onClick={() => { setActive(null); setScreen("menu"); }}>
                     {text.menu}
                   </button>
                 </div>
@@ -83,9 +197,19 @@ export default function TowerApp() {
           )}
         </RunView>
       ) : screen === "perks" ? (
-        <PerksScreen text={text} save={save} onBuy={updateSave} onBack={() => setScreen("menu")} />
+        <PerksScreen text={text} save={save} onBuy={updateSave} onBack={() => setScreen("menu")} hasSavedRun={!!saved} />
       ) : (
-        <MenuScreen text={text} save={save} onPlay={start} onPerks={() => setScreen("perks")} />
+        <MenuScreen
+          text={text}
+          save={save}
+          onPlay={start}
+          onPerks={() => setScreen("perks")}
+          saved={saved}
+          onContinue={resume}
+          onDiscard={discard}
+          hydrated={hydrated}
+          pending={!!pending}
+        />
       )}
     </div>
   );
@@ -96,11 +220,21 @@ function MenuScreen({
   save,
   onPlay,
   onPerks,
+  saved,
+  onContinue,
+  onDiscard,
+  hydrated,
+  pending,
 }: {
   text: TowerText;
   save: TowerSave;
   onPlay: () => void;
   onPerks: () => void;
+  saved: RunCheckpoint | null;
+  onContinue: () => void;
+  onDiscard: () => void;
+  hydrated: boolean;
+  pending: boolean;
 }) {
   return (
     <div className="tower-screen">
@@ -113,15 +247,25 @@ function MenuScreen({
             <li key={line}>{line}</li>
           ))}
         </ul>
+        {saved && (
+          <section className="tower-continue" aria-label={text.continueRun}>
+            <p>{text.continueHint(saved.run.wave, saved.run.gold)}</p>
+            <div className="tower-actions">
+              <button type="button" className="tower-button" onClick={onContinue}>{text.continueRun}</button>
+              <button type="button" className="tower-button tower-button-quiet" onClick={onDiscard}>{text.discardRun}</button>
+            </div>
+            <p className="tower-continue-hint">{text.continuePaused}</p>
+          </section>
+        )}
         <p className="tower-meta">
           <span>{text.best(save.best)}</span>
           <span>{text.gold(save.gold)}</span>
         </p>
         <div className="tower-actions">
-          <button type="button" className="tower-button" onClick={onPlay}>
+          <button type="button" className="tower-button" onClick={onPlay} disabled={!hydrated}>
             {text.play}
           </button>
-          <button type="button" className="tower-button tower-button-quiet" onClick={onPerks}>
+          <button type="button" className="tower-button tower-button-quiet" onClick={onPerks} disabled={!hydrated || pending}>
             {text.perksTitle}
           </button>
         </div>
@@ -138,17 +282,20 @@ function PerksScreen({
   save,
   onBuy,
   onBack,
+  hasSavedRun,
 }: {
   text: TowerText;
   save: TowerSave;
-  onBuy: (next: TowerSave) => void;
+  onBuy: (id: PerkId) => void;
   onBack: () => void;
+  hasSavedRun: boolean;
 }) {
   return (
     <div className="tower-screen">
       <div className="tower-panel tower-perks">
         <h1>{text.perksTitle}</h1>
         <p className="tower-tagline">{text.perksHint}</p>
+        {hasSavedRun && <p className="tower-continue-hint">{text.savedPerksHint}</p>}
         <p className="tower-meta">
           <span>{text.gold(save.gold)}</span>
         </p>
@@ -169,7 +316,7 @@ function PerksScreen({
                   type="button"
                   className="tower-button tower-button-small"
                   disabled={!next}
-                  onClick={() => next && onBuy(next)}
+                  onClick={() => next && onBuy(id)}
                 >
                   {cost === null ? text.maxed : text.buy(cost)}
                 </button>

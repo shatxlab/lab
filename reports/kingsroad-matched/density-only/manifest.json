@@ -1,0 +1,40 @@
+{
+  "baselineCommit": "542ae08a9690e6a937678b4212600d2b222d5df2",
+  "shippingInputs": {
+    "src/lib/kingsroad/sim/balance.ts": "f37055674fe4777a9f16ad53cd88e4fa2ea85d7c64b12c57b1d667008fff2360",
+    "src/lib/kingsroad/sim/game.ts": "bd2eeb94e7aeac46ef499fde8cb45aadf106087304ce5971588f39450737ac93",
+    "src/lib/kingsroad/sim/maps.ts": "d5233b4c753178c0ded03ea8d5016b779af7645cb7eac2b5c148680fe515570f",
+    "src/lib/kingsroad/sim/path.ts": "bbae2b338991e0002b9340774e2c630bec1cf7f1cf8241cc08f5b9dfabcff6a8",
+    "src/lib/kingsroad/sim/types.ts": "b420c5dcc3e1e6006e133815247d0c380b04979d27a0247c419986077b0a3c88",
+    "src/lib/kingsroad/sim/waves.ts": "08f9bd14d24d2ef182060f8bf532cada0028b4c0fd8dba3d5f0bec3de4ca4a1f",
+    "src/lib/tower/sim/balance.ts": "bd2040b42ab8ed27500144cb24f24e9fbf04627fb1be5e47f982c015256aff20",
+    "src/lib/tower/sim/random.ts": "f1b602447c4192cc5eb66ea3b618335d0f0e3091d392df52afd000a6d8b63824"
+  },
+  "rawInputs": {
+    "baseline/budget.jsonl": "41db414a93ad21273ae26e27628a461a8537c7112ef369fc0190fbecf0b2656b",
+    "baseline/early-extra.jsonl": "ceffa3aaf9168af11db9df070e8504e8e5c8443211ecda5ee970f41e40504c52",
+    "baseline/lines.jsonl": "8fec2b8f69af82caebaedba0cae1ed34606e40d8c13d13e23b7c270f29a610b8",
+    "baseline/no-volley.jsonl": "1235af99e57059e0ef23a396b3c8a9a157adb153bb8952855b7f997c8981b8a9",
+    "baseline/primary-archer.jsonl": "0873020f2eefd0e3759f4fa0bd7baab3b5f63ebeaffdf9b1f9ee4cabea7ec59e",
+    "baseline/primary-ballista.jsonl": "c170b92f1c7255ef4f4b59ba1a7d59952589e70e98ebbf867559a2bb8b556c98",
+    "baseline/primary-mixed.jsonl": "2a3e6951366ae6a5fe6e7b4a8973c96001f4de3063c991d7253e4f2e82c3881a",
+    "baseline/pure.jsonl": "2e686241294f39f1e1c077bdc63911a4064e896f79da8b8093f77661eaf52111",
+    "baseline/rush.jsonl": "f5a37089100b7cf0e0fc0b9489e4c50591aefbb92a034c87d1999e377e0281e0",
+    "density-only/budget.jsonl": "5c93e45aa6f277be2a02890abef9036da3a4f34ea92db3ec43600616b7a5f3b9",
+    "density-only/early-extra.jsonl": "ae441ff14e07237e4dc92003126d88d3c076d9df1410e98c6249b60cc301e900",
+    "density-only/lines.jsonl": "b219348c329c1bb45923e3548a549278819b001751ae5469e184fa2746099ac5",
+    "density-only/no-volley.jsonl": "1fa9555604f63f62efd9398c432f8930112bbce63deb58346515795ebb809e44",
+    "density-only/primary-archer.jsonl": "634b554612e5ac3de7cab97a7c79aa594ef0acec3ece393c303ec32503994ef5",
+    "density-only/primary-ballista.jsonl": "cc56748bf91941dd61dfbc84d9a25a6f105f0c52400b36cdbe6fb04498bc5aa7",
+    "density-only/primary-mixed.jsonl": "8d54d4a2c9334e387baede0c5768859f28febd5468e20ca539d28d62813761b5",
+    "density-only/pure.jsonl": "a95313c643b85c8ab1a3c4131350c00c9ee0fba6803582b145873065006d2d36",
+    "density-only/rush.jsonl": "10b071f694cb2a964e86a67db41ce14dc33375cd92b19475e7da3b664d2753f3"
+  },
+  "variant": "density-only",
+  "delta": "Control: fast SPACING stock; the same per-wave slow shrink s_w as matched-2x, so waves get shorter by the fast stock time. Isolates denser slow columns.",
+  "appliedTo": "Offline in-memory simulation copies only; both observed and unobserved control engines",
+  "shipped": false,
+  "humanPlaytested": false,
+  "guards": "Complete 1152-pair design; HP/gold/source ledgers; selected-variant checks; 792 historical terminal hashes; no non-Ballista identity claim (spacing arms change every enemy timing by design)",
+  "notes": "Same seeds do not lock later spawn RNG across altered combat. Runtime deltas use both-winning pairs only. No sufficient-defense pacing remeasurement, branch, cadence or price adjustment. Range changes only in the range-80 arm."
+}

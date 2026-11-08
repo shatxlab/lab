@@ -1,0 +1,42 @@
+{
+  "baselineCommit": "542ae08a9690e6a937678b4212600d2b222d5df2",
+  "shippingInputs": {
+    "src/lib/kingsroad/sim/balance.ts": "f37055674fe4777a9f16ad53cd88e4fa2ea85d7c64b12c57b1d667008fff2360",
+    "src/lib/kingsroad/sim/game.ts": "bd2eeb94e7aeac46ef499fde8cb45aadf106087304ce5971588f39450737ac93",
+    "src/lib/kingsroad/sim/maps.ts": "d5233b4c753178c0ded03ea8d5016b779af7645cb7eac2b5c148680fe515570f",
+    "src/lib/kingsroad/sim/path.ts": "bbae2b338991e0002b9340774e2c630bec1cf7f1cf8241cc08f5b9dfabcff6a8",
+    "src/lib/kingsroad/sim/types.ts": "b420c5dcc3e1e6006e133815247d0c380b04979d27a0247c419986077b0a3c88",
+    "src/lib/kingsroad/sim/waves.ts": "08f9bd14d24d2ef182060f8bf532cada0028b4c0fd8dba3d5f0bec3de4ca4a1f",
+    "src/lib/tower/sim/balance.ts": "bd2040b42ab8ed27500144cb24f24e9fbf04627fb1be5e47f982c015256aff20",
+    "src/lib/tower/sim/random.ts": "f1b602447c4192cc5eb66ea3b618335d0f0e3091d392df52afd000a6d8b63824"
+  },
+  "rawInputs": {
+    "baseline/budget.jsonl": "e4e1563b9bb8d16c95fc23911cd55254dc3e529a1bc0685693c376bf9a5a3e1a",
+    "baseline/early-extra.jsonl": "3ff42ae8efca50c85c40059f2ac02a1904f77bfbfa96ee00945f7bdd361d81b3",
+    "baseline/fixed-placement.jsonl": "84d19164ef839c1136cee83ebca2bd21a9b437a833056a8475b13cfac9fbf283",
+    "baseline/lines.jsonl": "f92d48dff5adde786d60a44b17e1e464e4e5b6cd1f6ab1a873eadc789c6fe66c",
+    "baseline/no-volley.jsonl": "dfa6e8f9d3ce964fd456ed5506cef1502349565127838800cbbf4e299d91c97a",
+    "baseline/primary-archer.jsonl": "4f0bec8322a102572a8af3d04e7901e9ff95f376489e2cdf11a23cd6882005d6",
+    "baseline/primary-ballista.jsonl": "8e730dff65c9df368b49a8986553592f81e6f0581912b365456e739a1201f1eb",
+    "baseline/primary-mixed.jsonl": "bb72109dc5ff1bb069fbc1c7712481ae39bf56f8e8f53ef290f04b90dbc7f168",
+    "baseline/pure.jsonl": "95f93b2b25ac7dfa69aef0d6a1d5fefb24d6c8b800d8befd5faa91138dcbe535",
+    "baseline/rush.jsonl": "34ca541b115308f0a60e50705100b190753b27ff80934dc2d37385da777227bb",
+    "range-80/budget.jsonl": "a0fd36b8eb65948077e49f0f9c1061888da4194d33caf963fe4d756971fa23f0",
+    "range-80/early-extra.jsonl": "184299aed1c61ba0b6c446d28c2ef0684f0269296c224565524982423108a359",
+    "range-80/fixed-placement.jsonl": "5fd0acc8509d7ff9137cb8eb9c2a4dcf6080b95a0ee8ba144a8803e000f5752a",
+    "range-80/lines.jsonl": "41e6c3891a48a904187c55c97e7f4ed2ea1163efa47b71a08aa898b595a44d20",
+    "range-80/no-volley.jsonl": "872270073295cddfdab5665c5c09176bc45afc8d40a19b5714995dd54e2f3680",
+    "range-80/primary-archer.jsonl": "06d4ee3b63eba7ae8fd03b2cf79bd954957dabba5fe18721c44a36b57a8a110c",
+    "range-80/primary-ballista.jsonl": "aa2e9180b2f812ae3b688f40538af94a97b1d04b09c11b927e4b65c975769ec2",
+    "range-80/primary-mixed.jsonl": "b7466cb97492b32e067cf4476c60bbed0b1d5c146c0116a778d3c5b1cbdf4e2e",
+    "range-80/pure.jsonl": "d4c3f770b22fba7e300e1ebce033503f98cef1eca4b9a76aecdf0a73e0333fd6",
+    "range-80/rush.jsonl": "6e1e2a971e8eb1a8bae0a266aa4180c7dd10dd20d5a2e24c938eeac82e53e70c"
+  },
+  "variant": "range-80",
+  "delta": "Only Ballista L1/L2/L3 range: 140/150/165 -> 112/120/132 (0.8x); unlimited piercing, existing 1.15x bolt-flight coupling preserved.",
+  "appliedTo": "Offline in-memory simulation copies only; both observed and unobserved control engines",
+  "shipped": false,
+  "humanPlaytested": false,
+  "guards": "Complete 1200-pair design; HP/gold/source ledgers; selected-variant checks; 840 historical terminal hashes; non-Ballista state equality",
+  "notes": "Same seeds do not lock later spawn RNG across altered combat. Runtime deltas use both-winning pairs only. No sufficient-defense pacing remeasurement, branch, cadence or price adjustment. Range changes only in the range-80 arm."
+}

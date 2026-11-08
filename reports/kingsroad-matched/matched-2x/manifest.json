@@ -1,0 +1,40 @@
+{
+  "baselineCommit": "542ae08a9690e6a937678b4212600d2b222d5df2",
+  "shippingInputs": {
+    "src/lib/kingsroad/sim/balance.ts": "f37055674fe4777a9f16ad53cd88e4fa2ea85d7c64b12c57b1d667008fff2360",
+    "src/lib/kingsroad/sim/game.ts": "bd2eeb94e7aeac46ef499fde8cb45aadf106087304ce5971588f39450737ac93",
+    "src/lib/kingsroad/sim/maps.ts": "d5233b4c753178c0ded03ea8d5016b779af7645cb7eac2b5c148680fe515570f",
+    "src/lib/kingsroad/sim/path.ts": "bbae2b338991e0002b9340774e2c630bec1cf7f1cf8241cc08f5b9dfabcff6a8",
+    "src/lib/kingsroad/sim/types.ts": "b420c5dcc3e1e6006e133815247d0c380b04979d27a0247c419986077b0a3c88",
+    "src/lib/kingsroad/sim/waves.ts": "08f9bd14d24d2ef182060f8bf532cada0028b4c0fd8dba3d5f0bec3de4ca4a1f",
+    "src/lib/tower/sim/balance.ts": "bd2040b42ab8ed27500144cb24f24e9fbf04627fb1be5e47f982c015256aff20",
+    "src/lib/tower/sim/random.ts": "f1b602447c4192cc5eb66ea3b618335d0f0e3091d392df52afd000a6d8b63824"
+  },
+  "rawInputs": {
+    "baseline/budget.jsonl": "41db414a93ad21273ae26e27628a461a8537c7112ef369fc0190fbecf0b2656b",
+    "baseline/early-extra.jsonl": "ceffa3aaf9168af11db9df070e8504e8e5c8443211ecda5ee970f41e40504c52",
+    "baseline/lines.jsonl": "8fec2b8f69af82caebaedba0cae1ed34606e40d8c13d13e23b7c270f29a610b8",
+    "baseline/no-volley.jsonl": "1235af99e57059e0ef23a396b3c8a9a157adb153bb8952855b7f997c8981b8a9",
+    "baseline/primary-archer.jsonl": "0873020f2eefd0e3759f4fa0bd7baab3b5f63ebeaffdf9b1f9ee4cabea7ec59e",
+    "baseline/primary-ballista.jsonl": "c170b92f1c7255ef4f4b59ba1a7d59952589e70e98ebbf867559a2bb8b556c98",
+    "baseline/primary-mixed.jsonl": "2a3e6951366ae6a5fe6e7b4a8973c96001f4de3063c991d7253e4f2e82c3881a",
+    "baseline/pure.jsonl": "2e686241294f39f1e1c077bdc63911a4064e896f79da8b8093f77661eaf52111",
+    "baseline/rush.jsonl": "f5a37089100b7cf0e0fc0b9489e4c50591aefbb92a034c87d1999e377e0281e0",
+    "matched-2x/budget.jsonl": "e54a07a3ea6ec1de743091af1d7aca34ba84db236be6617a3275016f9bd609bb",
+    "matched-2x/early-extra.jsonl": "4d325fd93688b885ad272e8e34f7efea726bde5f47fb0b376ce425fb8a6c14f8",
+    "matched-2x/lines.jsonl": "722d0504f5872c7d7e0d0f88ab5f9452948d2df6c038e6729ea1acf757619696",
+    "matched-2x/no-volley.jsonl": "9c2c6a5f165a81c6d6d5739e91d0ac9fcae9262faf82d01be28dce09ebfbb785",
+    "matched-2x/primary-archer.jsonl": "cd273b0f4785ef66da447b52a4f150959a5fc634ec704f3158153ac6276dad7f",
+    "matched-2x/primary-ballista.jsonl": "56ab14f8e9f85f6d0854a2d5ad255c65eba97def22124fb0169aabb35aef7ede",
+    "matched-2x/primary-mixed.jsonl": "2bce3ef04b09523bdfc38a1092be57a001ae42d72119fc59e2764d63629118c2",
+    "matched-2x/pure.jsonl": "1d0b753e43433efd1738c2fbef396f18e8f7a95d260c9828c1ef6ec9a2c5101a",
+    "matched-2x/rush.jsonl": "0867b99c580819fa288d2bc9126e84dabc0bc4b755331633d521e5a01e17acc3"
+  },
+  "variant": "matched-2x",
+  "delta": "Same fast SPACING x2 as cadence-2x; every slow kind (grunt, brute, knight, imp, gargoyle) SPACING x s_w per wave, s_w = 1 - fastStock/slowStock, so each wave keeps its stock length. Counts, HP, roads, COLUMN_GAP, tower stats unchanged.",
+  "appliedTo": "Offline in-memory simulation copies only; both observed and unobserved control engines",
+  "shipped": false,
+  "humanPlaytested": false,
+  "guards": "Complete 1152-pair design; HP/gold/source ledgers; selected-variant checks; 792 historical terminal hashes; no non-Ballista identity claim (spacing arms change every enemy timing by design)",
+  "notes": "Same seeds do not lock later spawn RNG across altered combat. Runtime deltas use both-winning pairs only. No sufficient-defense pacing remeasurement, branch, cadence or price adjustment. Range changes only in the range-80 arm."
+}

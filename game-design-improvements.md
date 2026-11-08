@@ -212,10 +212,76 @@ Price matters, but piercing and coverage may make Ballista's breadth too strong.
 
 #### Benchmark before retuning
 
-- [ ] Compare Ballista-heavy, Archer-heavy, and mixed strategies across the existing campaign with comparable budgets and several seeds.
-- [ ] Record wins, lives lost, spending, damage, overkill, missed shots, enemies hit per bolt, and useful coverage where practical.
-- [ ] Separate bot behavior from tower strength; test strategies that actually use each tower's intended strengths.
+- [x] Compare Ballista-heavy, Archer-heavy, and mixed strategies across the existing campaign with comparable budgets and several seeds.
+- [x] Record wins, lives lost, spending, damage, overkill, missed shots, enemies hit per bolt, and useful coverage where practical.
+- [x] Separate bot behavior from tower strength; test strategies that actually use each tower's intended strengths. (Upgrade-order, line placement, branch and support controls; not an optimal-strategy proof.)
 - [ ] Include hands-on playtests, especially on a phone, before claiming improved balance or fun.
+
+#### Benchmark implementation record — findings, not a retune
+
+- Full study: `kingsroad-balance-study.md`; reproducible tools: `scripts/kingsroad/study/`; compact CSV/JSON evidence,
+  hashes and wave-granular counterfactuals: `reports/kingsroad-study/`. KingsRoad's game-specific record is synchronized
+  in `kingsroad-roadmap.md`. Baseline `542ae08`; no shipping simulation/UI/balance/save changes.
+- **480 primary runs** (20 maps × 8 seeds × 3): Ballista-heavy **160/160 wins, 19.92 mean lives**, Mixed **153/160,
+  14.18**, Archer-heavy **10/160, 0.77**. Total **1,032 distinct full configurations**, plus 36 baseline repeats and
+  **926 suffix counterfactuals**. Shared spending caps, pure towers, upgrade order, line placement, branches, volley
+  removal and safe early-call controls do not erase the sampled Ballista advantage. Equal economic rules/caps do
+  not mean equal actual income/spend, and bot policies are not human play or an optimal Archer search.
+- **50.7%** of Ballista-heavy Ballista capped useful damage comes after the first pierced enemy; **10.9%** after
+  the third (Mixed: **52.6% / 13.6%**). Max-base-range average plot route coverage is **42.7%** versus Archer's
+  **26.2%**. Damage, overkill, armor/fireproof losses, healing, burning, arithmetic mark share, misses versus pending
+  shots, and availability are separate. Common 120-second windows avoid comparing whole-game damage across very
+  different survival times. These observations do not identify a final nerf magnitude or prove piercing is the only lever.
+- Recommend separately diagnosing penetration limits/falloff and equal-count/HP staggered fast approaches, with
+  range/coverage isolation if needed, **before** shipping any change. Human/phone tests remain uncompleted and
+  required before claiming better balance/fun. No new mandatory tier, gold sink, immunity or global health increase.
+- Added **45 tests**. Full suite passed **228 files / 3,376 tests** on the unchanged rerun; typecheck/build passed.
+  Initial concurrent checks hit the existing HR 5,000 ms cap-test timeout; no HR code/tests/timeouts changed. Source
+  instrumentation is read-only and in-memory; per-tick state/RNG parity and full-run/checkpoint continuation are
+  checked, and retained data passes HP/gold accounting. Individual matrix/report commands ran; shell wrapper syntax
+  checked, not separately rerun end-to-end. No browser/new human gameplay check for this non-UI study. No commit/push authorized yet.
+
+#### Three-hit diagnostic — completed, not a shipping retune
+
+- User-approved study-only three-enemy cap: `kingsroad-three-hit-experiment.md`, evidence
+  `reports/kingsroad-three-hit/`. **1,152 matched pairs / 2,304 full runs** include repeated primary sweep, shared
+  spending/no-volley/rush/pure/line controls, and first-five-map coverage extended to 32 seeds. No other rule/number change.
+- Primary Ballista-heavy **160→160/160 wins**, **19.92→19.56** mean lives; Mixed **153→127/160**, **14.18→9.95**;
+  Archer-heavy **10→10/160**, bit-identical as expected. Heavy/Mixed life advantage grows **5.74→9.61**.
+- Common spending cap Heavy **24→20/24** (four Watch losses), Mixed **14→13**; other Heavy no-volley/rush/line
+  controls remain **24/24**. So the cap has an effect, but does not deliver the desired stand-alone tradeoff.
+- Early first-five-map Mixed **157→148/160** wins: eight new Rivers losses, one Switchback loss. Heavy stays
+  **160/160**. Retired bolt maximum becomes **3**, beyond-third useful damage **0** in all experimental cases.
+- **Do not adopt this cap alone.** Shipping/default baseline stays unlimited. Ask before a separate coverage test
+  with unlimited piercing restored, or a separate cadence test; no stacked range/price/HP/wave change. Phone play
+  still required before claiming improved balance/fun, and sufficient-defense pacing not remeasured here.
+- **792** prior baseline terminal hashes reproduced; **378** non-Ballista states identical across arms; all ledgers
+  and unchanged shipping input hashes verified. Added **13** focused experiment/report tests, with matching-variant
+  controls/checkpoints and all-ten-enemy/L1–L3 collision fixtures. Final sequential verification: **229 files /
+  3,389 tests**, typecheck and production build passed; diff/shell syntax checks clean. Individual recipes/self-tests/comparison ran; wrapper syntax checked, not separately rerun end-to-end.
+  No browser/new human/physical-phone playtest, shipping change, commit or push.
+
+#### Range/coverage diagnostic — completed, not a shipping retune
+
+- User-approved next hypothesis: `kingsroad-range-experiment.md`, evidence `reports/kingsroad-range/`.
+  Predeclared **0.8× Ballista ranges, 140/150/165→112/120/132**, **unlimited piercing restored**. No other stat,
+  wave, economy or save change; the existing range×1.15 bolt-flight coupling remains, with unchanged speed.
+- **1,200 matched pairs / 2,400 full runs**, including 48 fixed stock-ranking controls beyond the earlier matrix.
+  Adaptive placement uses new ranges; fixed control retains stock ranking, not a frozen purchase/spawn tape.
+- Primary Heavy **160→160/160**, mean lives **19.92→19.54**; Mixed **153→122**, **14.18→9.36** (33 new losses,
+  two rescues); Archer **10→10**, bit-identical as expected. Mean-life gap grows **5.74→10.19** despite measured
+  max-level map-weighted plot road coverage shrinking **42.7%→32.7%**. Both placement modes keep **24/24 Heavy**
+  wins and reduce same-subset Mixed **21→15/24**, so re-ranking does not explain away the pattern on that subset.
+- Early five maps × 32 seeds: Heavy **160→160**, Mixed **157→153**, with five new losses and one rescue. Ford
+  **31→29**, Rivers **30→28**; Switchback is stable/slightly better. Shared-cap Heavy **24→20** (Watch), Mixed **14→12**.
+- **Do not ship range-80 alone or stack it with three-hit.** One scale does not disprove coverage as a lever. Next
+  separate hypothesis is cadence/spacing at original tower stats, with equal count/HP and role-appropriate policy
+  controls—only after user approval. No phone fun/optimal-play claim or sufficient-defense pacing remeasurement.
+- **840** historical baseline hashes reproduced; **378** non-Ballista states identical; all ledgers/shipping input
+  hashes verified. Added **13** range tests with actual ground/air acquisition and flight boundaries, all-map fixed/
+  adaptive ranks, unlimited piercing and matching-variant suffix parity. Final sequential checks: **230 files /
+  3,402 tests**, typecheck and production build passed; diff and shell syntax checks clean. Wrapper ran end-to-end; extra fixture/report checks afterward. No browser/human/physical-phone
+  playtest, shipping change, commit or push.
 
 #### Candidate experiments
 
@@ -224,7 +290,7 @@ Price matters, but piercing and coverage may make Ballista's breadth too strong.
 3. **Placement and mixed defenses:** branching routes, dense groups, armored anchors, and support enemies. Teach threats before combining them; avoid surprise hard counters and arbitrary Ballista immunity.
 4. **Targeting/damage-waste audit:** distinguish theoretical damage from useful damage before changing costs or stats.
 
-**Recommended first prototype:** piercing budget plus cadence pressure, not a simultaneous overhaul of every tower or a global health increase. This is a recommendation, not an approved final rule.
+**Current next diagnostic recommendation:** review the completed three-hit and range-80 findings, then separately test equal-count/equal-HP cadence/spacing at original tower stats with role-appropriate policy controls if the user approves. Do not combine levers, escalate a nerf to chase failures, or claim one range scale disproves every coverage design. Cadence work and any shipping rule remain unapproved.
 
 **Success criteria:** mixed defenses and situational tower choices become meaningful. Ballista-heavy play can remain viable, but should not be the easiest answer almost everywhere. Do not target an arbitrary failure rate or make early teaching maps punitive.
 
@@ -251,7 +317,7 @@ These are brainstorming candidates, not committed mechanics.
 
 #### Milestone schedule
 
-- [ ] Establish strategy benchmarks on maps 1–20.
+- [x] Establish strategy benchmarks on maps 1–20.
 - [ ] Prototype and playtest the Ballista/Archer adjustment.
 - [ ] Decide, implement, and test the Mage fork and campaign unlock rules.
 - [ ] Build maps 21–22 as a playable vertical slice with the new visual theme.
@@ -350,10 +416,25 @@ Do not apply a blanket damage buff before establishing the cause. Any approved b
 
 The original review found some late victories with 4,000–7,000 unspent gold. This is a signal to investigate, not proof of excessive length: the bot may hoard or fail to use available options, and Ballista dominance may end meaningful purchasing early.
 
-- [ ] Measure last useful purchase, not merely the last purchase a bot happens to make.
-- [ ] Measure time from that point to victory, remaining spending options, threats/leaks, and ability use.
-- [ ] Compare maps, seeds, and several strategies; inspect whether Ballista spam causes the apparent early finish.
-- [ ] Deliver a recommendation for a bounded experiment rather than immediately changing the whole campaign.
+- [x] Measure last useful purchase, not merely the last purchase a bot happens to make. (Operational wave-boundary sufficient-defense probes, not an exact causal last-purchase oracle.)
+- [x] Measure time from that point to victory, remaining spending options, threats/leaks, and ability use.
+- [x] Compare maps, seeds, and several strategies; inspect whether Ballista spam causes the apparent early finish.
+- [x] Deliver a recommendation for a bounded experiment rather than immediately changing the whole campaign.
+
+### Pacing findings
+
+- See `kingsroad-balance-study.md` §5 for the exact definition and data. Ordinary Watch Ballista-heavy runs have
+  **13.6 minutes** after their final purchase and about **5,856 gold** left, every plot maxed. Earlier frozen-purchase
+  boundaries preserve baseline lives with **19.0 minutes** still remaining on average over three Watch seeds, while
+  ordinary volley behavior continues. This is a sufficient-defense observation, not a precise causal final useful action.
+- After the actual final purchase, **18/18 Ballista-heavy** suffixes preserve lives/wins with no further inputs;
+  earlier removing both buying and volley still wins 18/18 but preserves lives only 10/18. Winning Mixed suffixes
+  preserve lives after last-purchase input removal in **14/16**. Large cash does not by itself prove no decisions:
+  direct upgrades may be exhausted but paid reallocation remains; late two-Archer→Ballista swaps rescue a Watch loss.
+- Safe existing early calls save only **0.47 minutes** across 24 paired Ballista-heavy wins (plus existing bonus
+  gold), not the long construction tail. Late spawn streams and combat are more important than gap removal alone.
+- Recommend balancing situational tower roles first, repeating these probes and human play, then considering a
+  bounded late-stream pacing experiment only if meaningful decisions still end too early. No wave shortening applied.
 
 Possible outcomes:
 

@@ -1,0 +1,305 @@
+{
+  "baselineCommit": "542ae08a9690e6a937678b4212600d2b222d5df2",
+  "earlyPerMap": {
+    "crossroads": {
+      "smart": 0,
+      "stock": 0
+    },
+    "ford": {
+      "smart": 0,
+      "stock": 5
+    },
+    "meadow": {
+      "smart": 24,
+      "stock": 23
+    },
+    "rivers": {
+      "smart": 0,
+      "stock": 0
+    },
+    "switchback": {
+      "smart": 18,
+      "stock": 5
+    }
+  },
+  "matrices": {
+    "budget": {
+      "smart": {
+        "meanLives": 0.08,
+        "n": 24,
+        "wins": 1
+      },
+      "stock": {
+        "meanLives": 0.04,
+        "n": 24,
+        "wins": 1
+      }
+    },
+    "early-extra": {
+      "smart": {
+        "meanLives": 5.67,
+        "n": 120,
+        "wins": 42
+      },
+      "stock": {
+        "meanLives": 3.77,
+        "n": 120,
+        "wins": 33
+      }
+    },
+    "no-volley": {
+      "smart": {
+        "meanLives": 0.0,
+        "n": 24,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "n": 24,
+        "wins": 0
+      }
+    },
+    "primary": {
+      "smart": {
+        "meanLives": 1.34,
+        "n": 160,
+        "wins": 15
+      },
+      "stock": {
+        "meanLives": 0.77,
+        "n": 160,
+        "wins": 10
+      }
+    }
+  },
+  "perMapPrimary": {
+    "citadel": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "crossroads": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "crows": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "detour": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "ford": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.1,
+        "wins": 1
+      }
+    },
+    "gauntlet": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "gorge": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "hairpin": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "harvest": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "kings": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "meadow": {
+      "smart": {
+        "meanLives": 20.0,
+        "wins": 8
+      },
+      "stock": {
+        "meanLives": 15.1,
+        "wins": 8
+      }
+    },
+    "orchards": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "parting": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "rivers": {
+      "smart": {
+        "meanLives": 0.2,
+        "wins": 1
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "saltire": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "serpent": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "switchback": {
+      "smart": {
+        "meanLives": 6.5,
+        "wins": 6
+      },
+      "stock": {
+        "meanLives": 0.1,
+        "wins": 1
+      }
+    },
+    "trident": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "watch": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    },
+    "winding": {
+      "smart": {
+        "meanLives": 0.0,
+        "wins": 0
+      },
+      "stock": {
+        "meanLives": 0.0,
+        "wins": 0
+      }
+    }
+  },
+  "policyDelta": "archer-smart: plan [archer, frost, archer, archer]; archer plots ranked by road + expected air-lane coverage (static geometry); focus-fire re-rank among top-5 plots; fork lune iff map sends imps else fire. Stock stats, waves, HP, gold, saves unchanged.",
+  "rawInputs": {
+    "smart/budget.jsonl": "5a122e77088b86dfeb1be5d6a0ff8cb6c73e15c5ff6dd70fed50490cf3515405",
+    "smart/early-extra.jsonl": "d9217bf63c370f8bfda7edfd516025dab803cbbaf631d4f1d7a668132c1f1649",
+    "smart/no-volley.jsonl": "dfd34e4513e62bc6d0aad37af3fb4d965a2b8ae868da5f82e5fc20093c5594d9",
+    "smart/primary.jsonl": "237d1fe3fb8d942ec679939557dd32bac4acc00cf1a7377ee97b4befa4b31085",
+    "stock/budget.jsonl": "efe90add165f7a6334da1dfc4e51989303e295b4a4d4d5166207ccb338761aeb",
+    "stock/early-extra.jsonl": "58ef8261a9a1796d6067fdf03752cb761d8b13ad10d06ebaa74c745e61f787fe",
+    "stock/no-volley.jsonl": "0309a1039408ae1f53f7e08fd8ba4cb6948528b598266b5746099ade709263e3",
+    "stock/primary.jsonl": "0873020f2eefd0e3759f4fa0bd7baab3b5f63ebeaffdf9b1f9ee4cabea7ec59e"
+  },
+  "references": {
+    "ballistaHeavyPrimary": "160/160, 19.92 lives",
+    "limits": "Bot-only; policy predeclared, not tuned per map; ford regression shows plan order is not optimal everywhere; no phone playtest.",
+    "mixedPrimary": "153/160, 14.18 lives (frozen study)"
+  },
+  "shipped": false,
+  "shippingInputs": {
+    "src/lib/kingsroad/sim/balance.ts": "f37055674fe4777a9f16ad53cd88e4fa2ea85d7c64b12c57b1d667008fff2360",
+    "src/lib/kingsroad/sim/game.ts": "bd2eeb94e7aeac46ef499fde8cb45aadf106087304ce5971588f39450737ac93",
+    "src/lib/kingsroad/sim/maps.ts": "d5233b4c753178c0ded03ea8d5016b779af7645cb7eac2b5c148680fe515570f",
+    "src/lib/kingsroad/sim/path.ts": "bbae2b338991e0002b9340774e2c630bec1cf7f1cf8241cc08f5b9dfabcff6a8",
+    "src/lib/kingsroad/sim/types.ts": "b420c5dcc3e1e6006e133815247d0c380b04979d27a0247c419986077b0a3c88",
+    "src/lib/kingsroad/sim/waves.ts": "08f9bd14d24d2ef182060f8bf532cada0028b4c0fd8dba3d5f0bec3de4ca4a1f",
+    "src/lib/tower/sim/balance.ts": "bd2040b42ab8ed27500144cb24f24e9fbf04627fb1be5e47f982c015256aff20",
+    "src/lib/tower/sim/random.ts": "f1b602447c4192cc5eb66ea3b618335d0f0e3091d392df52afd000a6d8b63824"
+  },
+  "variant": "baseline"
+}

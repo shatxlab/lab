@@ -5,7 +5,7 @@ The single source of TODOs and design notes for the game. Cross-game improvement
 
 ## Current state and active-run persistence
 
-- The user has completed all 20 maps and reports infrequent losses and a dominant Ballista-heavy strategy. This supersedes historical notes below saying the second chapter has not had human play. Wave clarity is now implemented (see below). Balance experiments and maps 21–30 remain separate pending work; neither the persistence nor clarity batch changes balance.
+- The user has completed all 20 maps and reports infrequent losses and a dominant Ballista-heavy strategy. This supersedes historical notes below saying the second chapter has not had human play. Wave clarity is now implemented (see below). The strategy/pacing study and study-only three-hit/range-80 diagnostics are complete (see below); neither tested rule is recommended as a stand-alone retune, and an actual playable balance prototype and maps 21–30 remain separate pending work. Neither persistence, clarity nor the study changes shipping balance.
 - Active runs now use `lab:kingsroad:run:v1`, an envelope `{ version: 1, game }`, separate from permanent stars in `lab:kingsroad:v1`. Bump the envelope version when simulation state/map semantics become incompatible. `src/lib/kingsroad/snapshot.ts` validates nested fields, indices, branches, IDs, spawn ordering, and status consistency before restoration. All 20 maps, including Fire/Lune branches, are covered.
 - Both pre-wave setups and active waves are saved every five wall-clock seconds and immediately on player purchases/sales/upgrades, volleys, wave starts, pause, hidden/pagehide, and Save & menu. The full JSON simulation state is retained; no wall time is simulated while away. A discarded mobile tab can still lose work since the most recent successful checkpoint—unload callbacks cannot be guaranteed.
 - Continue Run shows the map and wave and restores paused at 1x, without transient selection/aim. Pause includes Save & menu; Discard and replacement runs ask for confirmation. Wave and volley controls are blocked while paused. EN/RU storage-failure warnings avoid silently promising that an unavailable save succeeded.
@@ -46,8 +46,159 @@ The single source of TODOs and design notes for the game. Cross-game improvement
   guide, and Continue/reload. The previous production save/recovery/quota browser regression passed as well.
 - Screenshots were inspected. No real-device playtest or balance benchmark was performed. No sim code, balance,
   wave timing/composition, rewards, persistence schema, or other game changed. The user authorized committing and pushing this batch to `main`; deployment status must be checked separately.
-- Next work remains a separate user choice: Couples temporary skipping or KingsRoad strategy/pacing benchmarks.
-  Do not use these clarity tests as evidence that Ballista dominance is fixed. Mage branches/maps 21–30 remain pending.
+- Couples temporary skipping and the KingsRoad strategy/pacing study have since been completed. Study-only three-hit and range-80 diagnostics have since completed without a shipping change (see below). The next separate
+  choice is a cadence/role diagnostic or another explicitly approved prototype, not a claim that clarity or benchmark code fixes dominance.
+  Mage branches/maps 21–30 remain pending.
+
+## Strategy balance and pacing study — complete, no retune
+
+Full findings: `kingsroad-balance-study.md`. Reproducible harness and definitions: `scripts/kingsroad/study/README.md`.
+Compact evidence and simulation-input hashes: `reports/kingsroad-study/`. Baseline is `542ae08`; no shipping sim,
+UI, enemy/tower numbers, maps, wave timings, rewards or saves changed. No commit/push authorized for this batch yet.
+
+- Primary sweep: **20 maps × 8 seeds × 3 strategies = 480 runs**. Ballista-heavy (3 Ballistas/1 frost repeating)
+  wins **160/160**, mean **19.92 lives**; Mixed wins **153/160**, mean **14.18**; Archer-heavy (3 Archers/1 frost)
+  wins **10/160**, mean **0.77**. These are bounded bot outcomes, not human win rates or optimal defenses.
+- Total **1,032 distinct full-run conditions**, plus 36 repeated baselines for checkpoints (**1,068 full runs**),
+  and **926 suffix counterfactuals**. Controls include shared spending ceilings, spread/rush upgrades, pure towers,
+  line-aware placement, Fire/Lune branches, no volley and safe early calls. Ballista-heavy/pure Ballista win every
+  sampled control case. Actual earned income/spending are not equal merely because starting cash/caps match.
+- Ballista gets **50.7%** of its useful capped damage after a bolt's first enemy in Ballista-heavy runs; **10.9%**
+  after the third (Mixed: **52.6% / 13.6%**). Whole-run mean contacts/shot are **1.76 / 1.95**; overkill about
+  **10.8% / 11.6%**. Max-base-range route coverage averages **42.7% per plot** versus Archer **26.2%**. Useful
+  damage, overkill, fireproof/armor loss, healing, burn, marks, misses/pending shots and live target availability
+  are tracked separately. Common 120-second opening windows avoid treating early deaths as shorter victories.
+- Watch's ordinary Ballista-heavy final-purchase tail averages **13.6 minutes** with **5,856 gold** left, all plots
+  maxed. Wave-boundary freezes locate earlier sufficient defenses with **19.0 minutes** remaining on average
+  (three seeds, normal volley policy). These are sufficient-defense thresholds, not an exact causal last useful
+  purchase. Every later tested boundary must also preserve a win with at least baseline lives.
+- Removing every new input after the actual final purchase preserves lives/wins in **18/18 Ballista-heavy** pacing
+  cases; removing purchases/volleys at the earlier sufficient boundary still wins all 18 but preserves lives in only
+  10. For winning Mixed baselines, last-purchase cutoff preserves lives in **14/16**. Do not equate no upgrades with
+  no meaningful play: paid sell/rebuild options remain, and two Archer→Ballista swaps turn Watch seed 3's late loss
+  into a 5-life win. Some swaps hurt. See full counterfactuals and costs in the report.
+- Clear-field early calls save only **0.47 minutes** on 24 paired Ballista-heavy wins. Existing early-call gold also
+  changes, so this is not a pure timing test. Long late spawn streams, not only 14-second gaps, dominate duration.
+- **Initial recommendation (before the three-hit diagnostic below):** separately diagnose a mild piercing budget and equal-count/HP staggered fast approaches,
+  retaining baseline controls; isolate range if piercing is insufficient. No global HP increase, arbitrary Ballista
+  immunity, mandatory tier, gold sink or automatic wave cut. Human/phone validation must precede accepting a retune;
+  then reassess whether balanced defenses still have long passive tails.
+- Instrumentation is an in-memory build of the real game source with read-only external observers and guarded
+  anchors; shipping files are never rewritten. Per-tick full state/RNG parity, HP/gold ledgers, full-run hashes,
+  original-engine suffix continuations, policy/budget controls and all maps' plot ranking are checked.
+- Verification: **45 added tests**; `NODE_ENV=test npm test` passed **228 files / 3,376 tests** on an unchanged rerun.
+  Initial concurrent build/typecheck/testing hit HR's existing `keeps foes, shots and gems under their caps` 5,000 ms
+  timeout; no HR code/tests/timeouts changed. Typecheck and production build passed. Individual matrix commands and
+  summary generation ran; the equivalent convenience shell wrapper passed syntax checking but was not separately
+  run end-to-end. No UI browser check or new human/phone gameplay test was performed for this non-UI study.
+
+## Three-hit Ballista diagnostic — complete, not adopted
+
+Full findings: `kingsroad-three-hit-experiment.md`; paired evidence: `reports/kingsroad-three-hit/`.
+The user authorized this isolated offline experiment, **not** a live retune, commit or push.
+
+- **1,152 matched pairs / 2,304 full runs**: repeated 20×8×3 primary sweep, shared-budget/no-volley/rush/pure/line
+  controls, plus first-five-map coverage extended to 32 seeds each. All other combat/economic/wave rules fixed.
+- The study-only bolt retires immediately on its third distinct living-enemy hit; no same-tick fourth hit.
+  Both observed/unobserved engines use the same selected variant; cross-variant checkpoint restoration is refused.
+  Ordinary/default builds remain unlimited. No shipping Game/save field, range, rate, damage, price, HP or wave change.
+- Primary Heavy **160→160/160 wins**, mean lives **19.92→19.56**; Mixed **153→127/160**, **14.18→9.95**;
+  Archer-heavy **10→10/160**, bit-identical. Heavy/Mixed mean-life gap widens **5.74→9.61**. Archer's unchanged
+  result is an expected isolation control, not a requirement that a Ballista-only nerf directly improve Archers.
+- Under the shared ceiling Heavy **24→20/24** (all four Watch losses), Mixed **14→13**. No-volley/rush/line Heavy
+  retains **24/24** each; pure Ballista **24→23**. Thus the cap matters, but not in the desired stand-alone pattern.
+- First five maps × 32 seeds: Heavy **160→160**, Mixed **157→148**, with eight new Rivers losses and one Switchback
+  loss. Early mixed-defense margin worsens. Do not treat a stable Meadow as a blanket tutorial safety pass.
+- Retired-bolt maximum contacts Heavy **18→3**, Mixed **21→3**; beyond-third useful damage becomes **zero** everywhere.
+  All ledgers reconcile; **792** overlapping fresh baseline terminal hashes match the old report, and **378**
+  non-Ballista paired terminal states are identical. All eight shipping/shared input hashes remain unchanged.
+- **Recommendation: do not adopt this cap alone.** Keep unlimited baseline, ask before a separate coverage experiment
+  (or separately staggered-fast cadence), and do not stack another lever to rescue this candidate. No phone fun or
+  optimal-play claim; sufficient-defense pacing was not remeasured. Mage/maps remain separate.
+- Added **13** experiment/report tests; both builds pass per-tick observer parity, all-ten-enemy/L1–L3 collision
+  fixtures and matching-variant suffix continuations. Final sequential verification: **229 files / 3,389 tests**,
+  typecheck and production build passed; diff/shell syntax checks clean. Recipe commands ran; wrapper syntax checked, not separately rerun end-to-end.
+  No UI browser or human/physical-phone gameplay test; no shipping change, commit or push.
+
+## Range/coverage diagnostic — complete, not adopted
+
+Full report: `kingsroad-range-experiment.md`; paired evidence: `reports/kingsroad-range/`.
+The user approved testing this next hypothesis, not shipping a rule, committing or pushing.
+
+- Predeclared **20% less range at every Ballista level: 140/150/165→112/120/132**, with unlimited piercing restored.
+  Only three in-memory balance literals change; no damage, price, reload, HP, wave, reward or save change. Existing
+  range×1.15 projectile-life coupling remains; this is not an acquisition-only test with flight distance frozen.
+- **1,200 pairs / 2,400 full runs**: the same primary/budget/no-volley/rush/pure/line/32-seed early matrix, plus
+  48 fixed-baseline-plot-ranking controls. Adaptive bot ranking uses the new range, not stale stock geometry.
+- Primary Heavy **160→160/160 wins**, mean lives **19.92→19.54**; Mixed **153→122**, **14.18→9.36**;
+  Archer-heavy **10→10**, bit-identical as expected. Mixed has **33 new losses, two rescues**. Heavy/Mixed mean-life
+  gap grows **5.74→10.19**, despite measured max-level map-weighted plot road coverage shrinking **42.7%→32.7%**.
+- On the same six maps × four seeds, adaptive/fixed ranking both retain **24/24 Heavy** wins and drop Mixed
+  **21→15/24**. Re-ranking changes margins but does not explain away the qualitative outcome on this subset.
+- Under the shared spending ceiling Heavy **24→20** (four Watch losses), Mixed **14→12**. No-volley/rush/line and
+  pure Ballista each retain all **24/24** wins, though safety margins decline. A stable win count does not mean no effect.
+- First five maps × 32 seeds: Heavy **160→160**, Mixed **157→153** (five new losses, one rescue); Ford **31→29**,
+  Rivers **30→28**. Switchback retains every win and slightly improves mean lives. Not a blanket early safety pass.
+- **Recommendation: do not ship range-80 alone, and do not stack it with three-hit.** This does not disprove every
+  coverage design. Pause escalating stat nerfs; separately test cadence/spacing and role-appropriate policy at
+  original tower stats if the user approves. No optimal-play or human/phone-fun claim; passive tails not remeasured.
+- **840** original-study baseline terminal hashes match, **378** non-Ballista paired states identical, all ledgers
+  reconcile, all eight shipping inputs unchanged. Both engines pass target/flight boundaries, unlimited contact
+  fixtures, all-map rank checks, observed/control state/RNG parity and matching-variant suffix continuations.
+- Added **13** range tests. Final sequential checks: **230 files / 3,402 tests**, typecheck and production build
+  passed; diff and shell syntax checks clean.
+  The range wrapper ran end-to-end; additional fixtures and expanded report generation ran afterward. Earlier
+  three-hit corpus also passes the updated comparator, without overwriting its retained evidence. No browser,
+  human/physical-phone gameplay check, production change, commit or push.
+
+### Next steps
+
+1. Review the range-only findings; ask before another diagnostic, playable prototype or retune. ~~Prefer a separate
+   equal-count/equal-HP cadence/spacing hypothesis at original tower stats, checking role-appropriate bot policies~~ —
+   both the cadence/spacing pair and the role-appropriate policy arm are now complete (see their sections); number
+   nerfs and policy work are both exhausted. The remaining lever is design: roster pressure, stronger Archer forks,
+   or new content, plus a phone playtest.
+2. Review with the user on a phone, including early teaching maps, isolated runners, armor, air, dense lines and
+   mixed defenses. The user's existing all-20-map feedback remains valuable; headless runs do not certify fun.
+3. Repeat sufficient-defense/ability/reallocation probes after an approved balance direction, then decide whether
+   any late-stream compression is needed. Mage fork/third chapter design remains separate.
+
+## Cadence diagnostic — complete, not adopted
+
+Full findings: `kingsroad-cadence-experiment.md`; paired evidence: `reports/kingsroad-cadence/`. Offline only: runner,
+bat and scamp spawn spacing x2 (0.55/0.45/0.2 to 1.1/0.9/0.4 s), with counts, HP, roads and all tower stats unchanged.
+
+- **1,152 pairs / 2,304 full runs**, the three-hit design. Stock Ballista-heavy stays **160/160** (mean lives 19.92 to 19.96);
+  Mixed **153 to 157/160** (14.18 to 16.51); Archer-heavy **10 to 12/160**; pure Archer 0 to 1/24.
+- The Heavy-vs-Mixed life gap narrows from **5.74 to 3.45**. No Ballista-only nerf has done that before.
+- The Archer effect is real only on teaching maps (ford and switchback 5 to 14 and 5 to 16 of 24). Not on the later maps.
+- **Pacing cost:** each winning run gets about **2.6 minutes longer** (about +13%). Not a free change.
+- Verdict: **not adopted alone**. Do not stack it with three-hit or range. Shipping any cadence change needs the user's
+  choice and a phone check of the teaching maps, plus a pacing probe.
+- **Duration-matched follow-up (`kingsroad-matched-cadence-experiment.md`, `reports/kingsroad-matched/`):** fast spacing
+  x2 with the slow spacing scaled so each wave keeps its stock length (matched-2x), plus a density-only control.
+  Both-win run time is within 0.06 min of stock. Ballista-heavy stays **160/160** (19.98 lives); Mixed **153→153** wins
+  (14.70 lives); Archer-heavy **10→9**. The earlier Mixed and early-Archer gains were mostly longer waves; the early
+  Archer niche does not survive (ford 5→3, switchback 5→6). Matching the length forces slow columns about 30% denser on
+  average (up to about 3x in some waves); the density-only control alone takes Mixed to 146/160. Fast spacing at fixed
+  density helps Mixed (+7 wins, +1.9 lives versus density-only), but that roughly cancels the density cost.
+  **Not adopted.** Keep the earlier cadence result as superseded for timing claims.
+
+## Role-appropriate Archer policy — complete: the bot was not the problem
+
+Full findings: `kingsroad-archer-policy-experiment.md`; evidence: `reports/kingsroad-archer-policy/`. Offline only;
+`archer-smart` strategy in `policy.ts`, stock rules everywhere.
+
+- The predeclared policy: frost-second plan order, road + expected air-lane placement, focus-fire plot re-rank, and
+  foe-aware forks (lune vs imps, fire otherwise). 656 full runs against the stock archer on the same build.
+- **Primary 10/160 -> 15/160** (lives 0.77 -> 1.34); 18 of 20 maps stay at zero wins. Budget 1/24, no-volley 0/24
+  unchanged. Early maps 33 -> 42/120 (switchback 5 -> 18 of 24; ford 5 -> 0, the one regression). For reference:
+  Heavy 160/160 (19.92), Mixed 153/160 (14.18).
+- **Conclusion: Archer-heavy's failure is structural, not policy.** The confound flagged since the first study is now
+  measured and closed. Do not expect smarter bots or number nerfs to fix the late maps for archer-heavy; a design
+  change (roster pressure, a stronger fork, new content) is the remaining path.
+- Added 9 policy tests (frozen stock-archer terminal hash reproduced exactly); kingsroad suite **14 files / 337 tests**
+  and typecheck pass. No shipping change, commit or push.
 
 ## Where it stands (2026-10-30)
 

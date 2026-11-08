@@ -1,0 +1,3300 @@
+{
+  "fullRunsIncludingPacingReruns": 1068,
+  "distinctFullConfigurations": 1032,
+  "primary": [
+    {
+      "strategy": "archer",
+      "n": 160,
+      "wins": 10,
+      "timeouts": 0,
+      "meanLivesIncludingLosses": 0.7688,
+      "meanMinutesIncludingLosses": 5.4079,
+      "meanSpent": 1355.75,
+      "meanGold": 55.225,
+      "meanPostPurchaseMinutesWinsOnly": 0.5716,
+      "opening120Seconds": {
+        "archer": {
+          "fired": 62033,
+          "retired": 61904,
+          "pending": 129,
+          "hits": 58477,
+          "useful": 366017.1696,
+          "applied": 389462.5,
+          "overkill": 23445.3304,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 0.9427,
+          "zeroHitRetirementPercent": 5.536,
+          "overkillPercent": 6.0199,
+          "targetAvailabilityPercent": 41.7548,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 3427,
+            "1": 58477
+          }
+        },
+        "volley": {
+          "fired": 7680,
+          "retired": 7680,
+          "pending": 0,
+          "hits": 4550,
+          "useful": 66405.7928,
+          "applied": 74205.6,
+          "overkill": 7799.8072,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 0.5924,
+          "zeroHitRetirementPercent": 58.3333,
+          "overkillPercent": 10.5111,
+          "targetAvailabilityPercent": 0,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 4480,
+            "1": 2230,
+            "2": 701,
+            "3": 181,
+            "4": 68,
+            "5": 17,
+            "6": 3
+          }
+        },
+        "frost": {
+          "fired": 5959,
+          "retired": 5946,
+          "pending": 13,
+          "hits": 13631,
+          "useful": 40383.1176,
+          "applied": 40816.5,
+          "overkill": 433.3824,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 2.2875,
+          "zeroHitRetirementPercent": 6.004,
+          "overkillPercent": 1.0618,
+          "targetAvailabilityPercent": 29.9618,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 357,
+            "1": 1840,
+            "2": 1562,
+            "3": 1045,
+            "4": 571,
+            "5": 312,
+            "6": 171,
+            "7": 57,
+            "8": 24,
+            "9": 4,
+            "11": 1,
+            "12": 2
+          }
+        }
+      },
+      "wholeRun": {
+        "archer": {
+          "fired": 296339,
+          "retired": 296123,
+          "pending": 216,
+          "hits": 282459,
+          "useful": 2570371.4158,
+          "applied": 2688520.225,
+          "overkill": 118148.8092,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 5253.4583,
+          "contactsPerFiredShot": 0.9532,
+          "zeroHitRetirementPercent": 4.6143,
+          "overkillPercent": 4.3946,
+          "targetAvailabilityPercent": 62.1595,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 13664,
+            "1": 282459
+          }
+        },
+        "volley": {
+          "fired": 21240,
+          "retired": 21179,
+          "pending": 61,
+          "hits": 14026,
+          "useful": 274518.7549,
+          "applied": 299998.5,
+          "overkill": 25479.7451,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 1137.5459,
+          "contactsPerFiredShot": 0.6604,
+          "zeroHitRetirementPercent": 59.6865,
+          "overkillPercent": 8.4933,
+          "targetAvailabilityPercent": 0,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 12641,
+            "1": 5372,
+            "2": 1903,
+            "3": 682,
+            "4": 328,
+            "5": 141,
+            "6": 55,
+            "7": 27,
+            "8": 17,
+            "9": 6,
+            "10": 4,
+            "12": 3
+          }
+        },
+        "frost": {
+          "fired": 34477,
+          "retired": 34435,
+          "pending": 42,
+          "hits": 102834,
+          "useful": 451788.7331,
+          "applied": 454962.8375,
+          "overkill": 3174.1044,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 2259.1227,
+          "contactsPerFiredShot": 2.9827,
+          "zeroHitRetirementPercent": 4.69,
+          "overkillPercent": 0.6977,
+          "targetAvailabilityPercent": 52.3007,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 1615,
+            "1": 8667,
+            "2": 8232,
+            "3": 5443,
+            "4": 3442,
+            "5": 2506,
+            "6": 1663,
+            "7": 1005,
+            "8": 644,
+            "9": 441,
+            "10": 279,
+            "11": 188,
+            "12": 135,
+            "13": 85,
+            "14": 45,
+            "15": 21,
+            "16": 12,
+            "17": 5,
+            "18": 2,
+            "19": 2,
+            "20": 1,
+            "21": 1,
+            "22": 1
+          }
+        },
+        "archer-fire": {
+          "fired": 9824,
+          "retired": 9802,
+          "pending": 22,
+          "hits": 9359,
+          "useful": 155851.901,
+          "applied": 160002.24,
+          "overkill": 4150.339,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 37253.0894,
+          "arithmeticMarkShare": 16577.0299,
+          "contactsPerFiredShot": 0.9527,
+          "zeroHitRetirementPercent": 4.5195,
+          "overkillPercent": 2.5939,
+          "targetAvailabilityPercent": 87.3549,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 443,
+            "1": 9359
+          }
+        },
+        "archer-lune": {
+          "fired": 6305,
+          "retired": 6287,
+          "pending": 18,
+          "hits": 5957,
+          "useful": 76813.9095,
+          "applied": 80476.6,
+          "overkill": 3662.6905,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 15434.8966,
+          "contactsPerFiredShot": 0.9448,
+          "zeroHitRetirementPercent": 5.2489,
+          "overkillPercent": 4.5512,
+          "targetAvailabilityPercent": 82.3162,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 330,
+            "1": 5957
+          }
+        }
+      }
+    },
+    {
+      "strategy": "ballista",
+      "n": 160,
+      "wins": 160,
+      "timeouts": 0,
+      "meanLivesIncludingLosses": 19.9188,
+      "meanMinutesIncludingLosses": 19.5745,
+      "meanSpent": 5247,
+      "meanGold": 1573.4625,
+      "meanPostPurchaseMinutesWinsOnly": 3.8701,
+      "opening120Seconds": {
+        "ballista": {
+          "fired": 12332,
+          "retired": 12272,
+          "pending": 60,
+          "hits": 17124,
+          "useful": 423562.564,
+          "applied": 566128,
+          "overkill": 142565.436,
+          "pierceUseful": 156269.0288,
+          "beyondThirdUseful": 20906.7208,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 1.3886,
+          "zeroHitRetirementPercent": 7.1301,
+          "overkillPercent": 25.1825,
+          "targetAvailabilityPercent": 39.1593,
+          "pierceUsefulPercent": 36.894,
+          "beyondThirdUsefulPercent": 4.9359,
+          "hitHistogram": {
+            "0": 875,
+            "1": 7702,
+            "2": 2446,
+            "3": 808,
+            "4": 256,
+            "5": 111,
+            "6": 44,
+            "7": 25,
+            "8": 3,
+            "9": 2
+          }
+        },
+        "volley": {
+          "fired": 7680,
+          "retired": 7680,
+          "pending": 0,
+          "hits": 3547,
+          "useful": 51743.9024,
+          "applied": 57768.6,
+          "overkill": 6024.6976,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 0.4618,
+          "zeroHitRetirementPercent": 63.3073,
+          "overkillPercent": 10.429,
+          "targetAvailabilityPercent": 0,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 4862,
+            "1": 2245,
+            "2": 473,
+            "3": 66,
+            "4": 22,
+            "5": 7,
+            "6": 2,
+            "7": 2,
+            "9": 1
+          }
+        },
+        "frost": {
+          "fired": 4799,
+          "retired": 4787,
+          "pending": 12,
+          "hits": 11161,
+          "useful": 46501.7456,
+          "applied": 47276,
+          "overkill": 774.2544,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 2.3257,
+          "zeroHitRetirementPercent": 6.4968,
+          "overkillPercent": 1.6377,
+          "targetAvailabilityPercent": 35.5323,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 311,
+            "1": 1690,
+            "2": 1044,
+            "3": 772,
+            "4": 399,
+            "5": 246,
+            "6": 167,
+            "7": 84,
+            "8": 41,
+            "9": 20,
+            "10": 8,
+            "11": 2,
+            "12": 1,
+            "14": 1,
+            "15": 1
+          }
+        }
+      },
+      "wholeRun": {
+        "ballista": {
+          "fired": 397143,
+          "retired": 396775,
+          "pending": 368,
+          "hits": 700200,
+          "useful": 54582439.7696,
+          "applied": 61164717,
+          "overkill": 6582277.2304,
+          "pierceUseful": 27681738.9746,
+          "beyondThirdUseful": 5958339.8554,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 1.7631,
+          "zeroHitRetirementPercent": 8.6099,
+          "overkillPercent": 10.7616,
+          "targetAvailabilityPercent": 50.7204,
+          "pierceUsefulPercent": 50.7155,
+          "beyondThirdUsefulPercent": 10.9162,
+          "hitHistogram": {
+            "0": 34162,
+            "1": 181381,
+            "2": 96235,
+            "3": 47722,
+            "4": 19767,
+            "5": 9105,
+            "6": 4308,
+            "7": 2100,
+            "8": 1046,
+            "9": 505,
+            "10": 238,
+            "11": 111,
+            "12": 57,
+            "13": 19,
+            "14": 10,
+            "15": 4,
+            "16": 4,
+            "18": 1
+          }
+        },
+        "volley": {
+          "fired": 74604,
+          "retired": 74512,
+          "pending": 92,
+          "hits": 47511,
+          "useful": 1513993.686,
+          "applied": 1576053,
+          "overkill": 62059.314,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 0.6368,
+          "zeroHitRetirementPercent": 57.6833,
+          "overkillPercent": 3.9376,
+          "targetAvailabilityPercent": 0,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 42981,
+            "1": 21430,
+            "2": 6674,
+            "3": 2051,
+            "4": 775,
+            "5": 311,
+            "6": 179,
+            "7": 64,
+            "8": 27,
+            "9": 14,
+            "10": 5,
+            "11": 1
+          }
+        },
+        "frost": {
+          "fired": 128523,
+          "retired": 128482,
+          "pending": 41,
+          "hits": 372576,
+          "useful": 2614078.3205,
+          "applied": 2632071.5,
+          "overkill": 17993.1795,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 2.8989,
+          "zeroHitRetirementPercent": 8.4097,
+          "overkillPercent": 0.6836,
+          "targetAvailabilityPercent": 28.2797,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 10805,
+            "1": 24901,
+            "2": 27105,
+            "3": 26749,
+            "4": 14580,
+            "5": 9909,
+            "6": 6254,
+            "7": 3587,
+            "8": 1963,
+            "9": 1140,
+            "10": 681,
+            "11": 348,
+            "12": 198,
+            "13": 113,
+            "14": 65,
+            "15": 39,
+            "16": 18,
+            "17": 14,
+            "18": 5,
+            "19": 5,
+            "21": 1,
+            "22": 1,
+            "24": 1
+          }
+        }
+      }
+    },
+    {
+      "strategy": "mixed",
+      "n": 160,
+      "wins": 153,
+      "timeouts": 0,
+      "meanLivesIncludingLosses": 14.175,
+      "meanMinutesIncludingLosses": 19.6097,
+      "meanSpent": 4500.125,
+      "meanGold": 2249.9625,
+      "meanPostPurchaseMinutesWinsOnly": 5.7563,
+      "opening120Seconds": {
+        "archer": {
+          "fired": 25338,
+          "retired": 25287,
+          "pending": 51,
+          "hits": 23796,
+          "useful": 164820.5716,
+          "applied": 178582,
+          "overkill": 13761.4284,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 0.9391,
+          "zeroHitRetirementPercent": 5.8963,
+          "overkillPercent": 7.7059,
+          "targetAvailabilityPercent": 34.8358,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 1491,
+            "1": 23796
+          }
+        },
+        "catapult": {
+          "fired": 4794,
+          "retired": 4742,
+          "pending": 52,
+          "hits": 8761,
+          "useful": 111404.6672,
+          "applied": 122319,
+          "overkill": 10914.3328,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 1.8275,
+          "zeroHitRetirementPercent": 8.6461,
+          "overkillPercent": 8.9228,
+          "targetAvailabilityPercent": 51.0702,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 410,
+            "1": 1598,
+            "2": 1710,
+            "3": 636,
+            "4": 216,
+            "5": 97,
+            "6": 50,
+            "7": 15,
+            "8": 9,
+            "9": 1
+          }
+        },
+        "volley": {
+          "fired": 7680,
+          "retired": 7680,
+          "pending": 0,
+          "hits": 3815,
+          "useful": 55002.1688,
+          "applied": 61760,
+          "overkill": 6757.8312,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 0.4967,
+          "zeroHitRetirementPercent": 62.4089,
+          "overkillPercent": 10.9421,
+          "targetAvailabilityPercent": 0,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 4793,
+            "1": 2155,
+            "2": 583,
+            "3": 107,
+            "4": 37,
+            "5": 5
+          }
+        },
+        "frost": {
+          "fired": 5111,
+          "retired": 5103,
+          "pending": 8,
+          "hits": 11017,
+          "useful": 34606.1064,
+          "applied": 35023.5,
+          "overkill": 417.3936,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 2.1555,
+          "zeroHitRetirementPercent": 6.1924,
+          "overkillPercent": 1.1918,
+          "targetAvailabilityPercent": 27.1938,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 316,
+            "1": 1685,
+            "2": 1387,
+            "3": 861,
+            "4": 493,
+            "5": 222,
+            "6": 95,
+            "7": 34,
+            "8": 7,
+            "9": 1,
+            "10": 2
+          }
+        },
+        "ballista": {
+          "fired": 3690,
+          "retired": 3665,
+          "pending": 25,
+          "hits": 5310,
+          "useful": 130008.324,
+          "applied": 169545,
+          "overkill": 39536.676,
+          "pierceUseful": 48340.0032,
+          "beyondThirdUseful": 6198.9328,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 0,
+          "contactsPerFiredShot": 1.439,
+          "zeroHitRetirementPercent": 3.8745,
+          "overkillPercent": 23.3193,
+          "targetAvailabilityPercent": 62.9889,
+          "pierceUsefulPercent": 37.1822,
+          "beyondThirdUsefulPercent": 4.7681,
+          "hitHistogram": {
+            "0": 142,
+            "1": 2417,
+            "2": 676,
+            "3": 283,
+            "4": 98,
+            "5": 28,
+            "6": 15,
+            "7": 3,
+            "8": 1,
+            "9": 1,
+            "12": 1
+          }
+        }
+      },
+      "wholeRun": {
+        "archer": {
+          "fired": 273625,
+          "retired": 273593,
+          "pending": 32,
+          "hits": 253512,
+          "useful": 3222423.8464,
+          "applied": 3355732.425,
+          "overkill": 133308.5786,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 3101.2701,
+          "contactsPerFiredShot": 0.9265,
+          "zeroHitRetirementPercent": 7.3397,
+          "overkillPercent": 3.9726,
+          "targetAvailabilityPercent": 41.7044,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 20081,
+            "1": 253512
+          }
+        },
+        "catapult": {
+          "fired": 175885,
+          "retired": 175746,
+          "pending": 139,
+          "hits": 474749,
+          "useful": 19294768.5828,
+          "applied": 20132811.55,
+          "overkill": 838042.9672,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 947716.9443,
+          "contactsPerFiredShot": 2.6992,
+          "zeroHitRetirementPercent": 6.2613,
+          "overkillPercent": 4.1626,
+          "targetAvailabilityPercent": 63.7043,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 11004,
+            "1": 37175,
+            "2": 53072,
+            "3": 31658,
+            "4": 17783,
+            "5": 9843,
+            "6": 5908,
+            "7": 3617,
+            "8": 2028,
+            "9": 1278,
+            "10": 864,
+            "11": 584,
+            "12": 362,
+            "13": 233,
+            "14": 126,
+            "15": 97,
+            "16": 56,
+            "17": 28,
+            "18": 16,
+            "19": 3,
+            "20": 4,
+            "21": 3,
+            "22": 2,
+            "24": 1,
+            "32": 1
+          }
+        },
+        "volley": {
+          "fired": 74880,
+          "retired": 74819,
+          "pending": 61,
+          "hits": 51289,
+          "useful": 1707394.0007,
+          "applied": 1790608.58,
+          "overkill": 83214.5793,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 64615.7956,
+          "contactsPerFiredShot": 0.6849,
+          "zeroHitRetirementPercent": 56.9093,
+          "overkillPercent": 4.6473,
+          "targetAvailabilityPercent": 0,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 42579,
+            "1": 20692,
+            "2": 7258,
+            "3": 2545,
+            "4": 962,
+            "5": 438,
+            "6": 184,
+            "7": 81,
+            "8": 42,
+            "9": 12,
+            "10": 13,
+            "11": 5,
+            "12": 2,
+            "13": 2,
+            "14": 2,
+            "15": 2
+          }
+        },
+        "frost": {
+          "fired": 144818,
+          "retired": 144782,
+          "pending": 36,
+          "hits": 449441,
+          "useful": 3189421.0823,
+          "applied": 3211597.2875,
+          "overkill": 22176.2052,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 66952.2454,
+          "contactsPerFiredShot": 3.1035,
+          "zeroHitRetirementPercent": 8.106,
+          "overkillPercent": 0.6905,
+          "targetAvailabilityPercent": 34.8345,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 11736,
+            "1": 25849,
+            "2": 28472,
+            "3": 29634,
+            "4": 17305,
+            "5": 12074,
+            "6": 7901,
+            "7": 4777,
+            "8": 2715,
+            "9": 1654,
+            "10": 1042,
+            "11": 669,
+            "12": 382,
+            "13": 211,
+            "14": 148,
+            "15": 86,
+            "16": 41,
+            "17": 36,
+            "18": 24,
+            "19": 12,
+            "20": 6,
+            "21": 2,
+            "22": 1,
+            "23": 1,
+            "24": 2,
+            "25": 1,
+            "29": 1
+          }
+        },
+        "ballista": {
+          "fired": 166443,
+          "retired": 166291,
+          "pending": 152,
+          "hits": 324238,
+          "useful": 26619172.3873,
+          "applied": 30099340.05,
+          "overkill": 3480167.6627,
+          "pierceUseful": 13993046.1839,
+          "beyondThirdUseful": 3617432.8223,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 1583453.4066,
+          "contactsPerFiredShot": 1.948,
+          "zeroHitRetirementPercent": 5.6594,
+          "overkillPercent": 11.5623,
+          "targetAvailabilityPercent": 72.4816,
+          "pierceUsefulPercent": 52.5675,
+          "beyondThirdUsefulPercent": 13.5896,
+          "hitHistogram": {
+            "0": 9411,
+            "1": 74197,
+            "2": 40885,
+            "3": 21929,
+            "4": 9644,
+            "5": 4716,
+            "6": 2498,
+            "7": 1336,
+            "8": 705,
+            "9": 393,
+            "10": 211,
+            "11": 139,
+            "12": 89,
+            "13": 52,
+            "14": 36,
+            "15": 24,
+            "16": 13,
+            "17": 8,
+            "18": 1,
+            "19": 2,
+            "20": 1,
+            "21": 1
+          }
+        },
+        "archer-fire": {
+          "fired": 208810,
+          "retired": 208773,
+          "pending": 37,
+          "hits": 189087,
+          "useful": 3138770.7282,
+          "applied": 3214682.01,
+          "overkill": 75911.2818,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 617677.5655,
+          "arithmeticMarkShare": 476625.1389,
+          "contactsPerFiredShot": 0.9055,
+          "zeroHitRetirementPercent": 9.4294,
+          "overkillPercent": 2.3614,
+          "targetAvailabilityPercent": 45.5729,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 19686,
+            "1": 189087
+          }
+        },
+        "archer-lune": {
+          "fired": 170246,
+          "retired": 170217,
+          "pending": 29,
+          "hits": 157358,
+          "useful": 2096197.7375,
+          "applied": 2139517.85,
+          "overkill": 43320.1125,
+          "pierceUseful": 0,
+          "beyondThirdUseful": 0,
+          "burnUseful": 0,
+          "arithmeticMarkShare": 392770.722,
+          "contactsPerFiredShot": 0.9243,
+          "zeroHitRetirementPercent": 7.5545,
+          "overkillPercent": 2.0248,
+          "targetAvailabilityPercent": 44.0284,
+          "pierceUsefulPercent": 0,
+          "beyondThirdUsefulPercent": 0,
+          "hitHistogram": {
+            "0": 12859,
+            "1": 157358
+          }
+        }
+      }
+    }
+  ],
+  "maps": [
+    {
+      "map": "meadow",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 15.125,
+          "meanMinutesIncludingLosses": 7.5211,
+          "meanSpent": 1997.5,
+          "meanGold": 153.125,
+          "meanPostPurchaseMinutesWinsOnly": 0.5055
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 7.3196,
+          "meanSpent": 1980,
+          "meanGold": 161.5,
+          "meanPostPurchaseMinutesWinsOnly": 0.5435
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.375,
+          "meanMinutesIncludingLosses": 7.367,
+          "meanSpent": 2045,
+          "meanGold": 134.625,
+          "meanPostPurchaseMinutesWinsOnly": 0.316
+        }
+      ]
+    },
+    {
+      "map": "ford",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 1,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0.125,
+          "meanMinutesIncludingLosses": 6.5546,
+          "meanSpent": 1568.75,
+          "meanGold": 60.25,
+          "meanPostPurchaseMinutesWinsOnly": 0.7219
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 18.875,
+          "meanMinutesIncludingLosses": 10.3013,
+          "meanSpent": 2823.75,
+          "meanGold": 194.625,
+          "meanPostPurchaseMinutesWinsOnly": 0.7127
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 15.75,
+          "meanMinutesIncludingLosses": 10.2132,
+          "meanSpent": 2857.5,
+          "meanGold": 159.5,
+          "meanPostPurchaseMinutesWinsOnly": 0.5018
+        }
+      ]
+    },
+    {
+      "map": "crossroads",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.8613,
+          "meanSpent": 1105,
+          "meanGold": 61.5,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 15.2917,
+          "meanSpent": 4610,
+          "meanGold": 164,
+          "meanPostPurchaseMinutesWinsOnly": 0.4948
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.125,
+          "meanMinutesIncludingLosses": 15.5509,
+          "meanSpent": 4230,
+          "meanGold": 563.875,
+          "meanPostPurchaseMinutesWinsOnly": 1.8759
+        }
+      ]
+    },
+    {
+      "map": "switchback",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 1,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0.125,
+          "meanMinutesIncludingLosses": 7.9844,
+          "meanSpent": 2040,
+          "meanGold": 67.125,
+          "meanPostPurchaseMinutesWinsOnly": 0.9503
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 11.2152,
+          "meanSpent": 3150,
+          "meanGold": 230.5,
+          "meanPostPurchaseMinutesWinsOnly": 0.91
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 17.25,
+          "meanMinutesIncludingLosses": 11.5363,
+          "meanSpent": 3241.25,
+          "meanGold": 153,
+          "meanPostPurchaseMinutesWinsOnly": 0.4811
+        }
+      ]
+    },
+    {
+      "map": "rivers",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.5066,
+          "meanSpent": 1068.75,
+          "meanGold": 46.625,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 13.2251,
+          "meanSpent": 3950,
+          "meanGold": 139.25,
+          "meanPostPurchaseMinutesWinsOnly": 0.2782
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 7,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 11,
+          "meanMinutesIncludingLosses": 12.5503,
+          "meanSpent": 3556.25,
+          "meanGold": 182.375,
+          "meanPostPurchaseMinutesWinsOnly": 0.7162
+        }
+      ]
+    },
+    {
+      "map": "serpent",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.5698,
+          "meanSpent": 1286.25,
+          "meanGold": 57.375,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 15.6991,
+          "meanSpent": 4610,
+          "meanGold": 219,
+          "meanPostPurchaseMinutesWinsOnly": 0.8522
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 7,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 12.375,
+          "meanMinutesIncludingLosses": 14.8385,
+          "meanSpent": 4182.5,
+          "meanGold": 299.5,
+          "meanPostPurchaseMinutesWinsOnly": 1.3095
+        }
+      ]
+    },
+    {
+      "map": "saltire",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.275,
+          "meanSpent": 1273.75,
+          "meanGold": 44.25,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 17.6524,
+          "meanSpent": 5660,
+          "meanGold": 146.75,
+          "meanPostPurchaseMinutesWinsOnly": 0.416
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 13.625,
+          "meanMinutesIncludingLosses": 17.9114,
+          "meanSpent": 4890,
+          "meanGold": 917.125,
+          "meanPostPurchaseMinutesWinsOnly": 2.3666
+        }
+      ]
+    },
+    {
+      "map": "gorge",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.1277,
+          "meanSpent": 1198.75,
+          "meanGold": 37.125,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 20.6265,
+          "meanSpent": 5580,
+          "meanGold": 1224,
+          "meanPostPurchaseMinutesWinsOnly": 3.6317
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 11.75,
+          "meanMinutesIncludingLosses": 21.1333,
+          "meanSpent": 4490,
+          "meanGold": 2322,
+          "meanPostPurchaseMinutesWinsOnly": 6.6197
+        }
+      ]
+    },
+    {
+      "map": "trident",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.8725,
+          "meanSpent": 1190,
+          "meanGold": 69.625,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 21.6657,
+          "meanSpent": 6240,
+          "meanGold": 1025,
+          "meanPostPurchaseMinutesWinsOnly": 2.749
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 15,
+          "meanMinutesIncludingLosses": 22.1165,
+          "meanSpent": 5120,
+          "meanGold": 2150.75,
+          "meanPostPurchaseMinutesWinsOnly": 6.4487
+        }
+      ]
+    },
+    {
+      "map": "citadel",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.7738,
+          "meanSpent": 1475,
+          "meanGold": 55.5,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 26,
+          "meanSpent": 6640,
+          "meanGold": 2223.5,
+          "meanPostPurchaseMinutesWinsOnly": 6.1625
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 7,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 10.5,
+          "meanMinutesIncludingLosses": 26.5628,
+          "meanSpent": 5460,
+          "meanGold": 3382,
+          "meanPostPurchaseMinutesWinsOnly": 9.8575
+        }
+      ]
+    },
+    {
+      "map": "harvest",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.9274,
+          "meanSpent": 1080,
+          "meanGold": 52.875,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 12.0866,
+          "meanSpent": 3656.25,
+          "meanGold": 188,
+          "meanPostPurchaseMinutesWinsOnly": 0.3814
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 7,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 12.75,
+          "meanMinutesIncludingLosses": 11.822,
+          "meanSpent": 3508.75,
+          "meanGold": 141.125,
+          "meanPostPurchaseMinutesWinsOnly": 0.402
+        }
+      ]
+    },
+    {
+      "map": "orchards",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 3.3064,
+          "meanSpent": 826.25,
+          "meanGold": 40.875,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 15.2929,
+          "meanSpent": 4780,
+          "meanGold": 186,
+          "meanPostPurchaseMinutesWinsOnly": 0.6304
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 18.875,
+          "meanMinutesIncludingLosses": 15.3001,
+          "meanSpent": 4720,
+          "meanGold": 256,
+          "meanPostPurchaseMinutesWinsOnly": 0.8147
+        }
+      ]
+    },
+    {
+      "map": "hairpin",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 3.5706,
+          "meanSpent": 833.75,
+          "meanGold": 22.375,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 18.8329,
+          "meanSpent": 5580,
+          "meanGold": 628.25,
+          "meanPostPurchaseMinutesWinsOnly": 1.9381
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 7,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 14.375,
+          "meanMinutesIncludingLosses": 17.8479,
+          "meanSpent": 4161.25,
+          "meanGold": 1564.375,
+          "meanPostPurchaseMinutesWinsOnly": 5.3506
+        }
+      ]
+    },
+    {
+      "map": "crows",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.6517,
+          "meanSpent": 1168.75,
+          "meanGold": 52.625,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 21.3474,
+          "meanSpent": 6640,
+          "meanGold": 1209,
+          "meanPostPurchaseMinutesWinsOnly": 2.8807
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 13,
+          "meanMinutesIncludingLosses": 21.4626,
+          "meanSpent": 5460,
+          "meanGold": 2374.375,
+          "meanPostPurchaseMinutesWinsOnly": 5.5647
+        }
+      ]
+    },
+    {
+      "map": "detour",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.4583,
+          "meanSpent": 1502.5,
+          "meanGold": 48.25,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 21.6333,
+          "meanSpent": 6240,
+          "meanGold": 1731,
+          "meanPostPurchaseMinutesWinsOnly": 3.9333
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 16.5,
+          "meanMinutesIncludingLosses": 21.672,
+          "meanSpent": 5120,
+          "meanGold": 2866.125,
+          "meanPostPurchaseMinutesWinsOnly": 6.8648
+        }
+      ]
+    },
+    {
+      "map": "parting",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.4337,
+          "meanSpent": 1455,
+          "meanGold": 61.625,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 24.8989,
+          "meanSpent": 6240,
+          "meanGold": 3121,
+          "meanPostPurchaseMinutesWinsOnly": 7.253
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 17.75,
+          "meanMinutesIncludingLosses": 25.0867,
+          "meanSpent": 5120,
+          "meanGold": 4253.625,
+          "meanPostPurchaseMinutesWinsOnly": 10.2857
+        }
+      ]
+    },
+    {
+      "map": "winding",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.613,
+          "meanSpent": 1477.5,
+          "meanGold": 48.625,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.5,
+          "meanMinutesIncludingLosses": 25.2064,
+          "meanSpent": 6640,
+          "meanGold": 2799.375,
+          "meanPostPurchaseMinutesWinsOnly": 6.4273
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 13.875,
+          "meanMinutesIncludingLosses": 25.4626,
+          "meanSpent": 5460,
+          "meanGold": 4001,
+          "meanPostPurchaseMinutesWinsOnly": 9.6699
+        }
+      ]
+    },
+    {
+      "map": "gauntlet",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.8728,
+          "meanSpent": 1427.5,
+          "meanGold": 37.625,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 28.8028,
+          "meanSpent": 6640,
+          "meanGold": 4201.25,
+          "meanPostPurchaseMinutesWinsOnly": 10.0789
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 13.75,
+          "meanMinutesIncludingLosses": 29.2638,
+          "meanSpent": 5460,
+          "meanGold": 5467.125,
+          "meanPostPurchaseMinutesWinsOnly": 13.5857
+        }
+      ]
+    },
+    {
+      "map": "kings",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.768,
+          "meanSpent": 1622.5,
+          "meanGold": 35.25,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 32.1923,
+          "meanSpent": 6640,
+          "meanGold": 5821.75,
+          "meanPostPurchaseMinutesWinsOnly": 13.5142
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 10.625,
+          "meanMinutesIncludingLosses": 32.3568,
+          "meanSpent": 5460,
+          "meanGold": 6970.5,
+          "meanPostPurchaseMinutesWinsOnly": 16.5495
+        }
+      ]
+    },
+    {
+      "map": "watch",
+      "strategies": [
+        {
+          "strategy": "archer",
+          "n": 8,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.5103,
+          "meanSpent": 1517.5,
+          "meanGold": 51.875,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "ballista",
+          "n": 8,
+          "wins": 8,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 20,
+          "meanMinutesIncludingLosses": 32.1993,
+          "meanSpent": 6640,
+          "meanGold": 5855.5,
+          "meanPostPurchaseMinutesWinsOnly": 13.6139
+        },
+        {
+          "strategy": "mixed",
+          "n": 8,
+          "wins": 6,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 6.25,
+          "meanMinutesIncludingLosses": 32.1392,
+          "meanSpent": 5460,
+          "meanGold": 6840.25,
+          "meanPostPurchaseMinutesWinsOnly": 16.9502
+        }
+      ]
+    }
+  ],
+  "matrices": [
+    {
+      "name": "baseline-archer",
+      "maps": [
+        "meadow",
+        "ford",
+        "crossroads",
+        "switchback",
+        "rivers",
+        "serpent",
+        "saltire",
+        "gorge",
+        "trident",
+        "citadel",
+        "harvest",
+        "orchards",
+        "hairpin",
+        "crows",
+        "detour",
+        "parting",
+        "winding",
+        "gauntlet",
+        "kings",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "policies": [
+        {
+          "strategy": "archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "archer",
+          "n": 160,
+          "wins": 10,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0.7688,
+          "meanMinutesIncludingLosses": 5.4079,
+          "meanSpent": 1355.75,
+          "meanGold": 55.225,
+          "meanPostPurchaseMinutesWinsOnly": 0.5716
+        }
+      ]
+    },
+    {
+      "name": "baseline-ballista",
+      "maps": [
+        "meadow",
+        "ford",
+        "crossroads",
+        "switchback",
+        "rivers",
+        "serpent",
+        "saltire",
+        "gorge",
+        "trident",
+        "citadel",
+        "harvest",
+        "orchards",
+        "hairpin",
+        "crows",
+        "detour",
+        "parting",
+        "winding",
+        "gauntlet",
+        "kings",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 160,
+          "wins": 160,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.9188,
+          "meanMinutesIncludingLosses": 19.5745,
+          "meanSpent": 5247,
+          "meanGold": 1573.4625,
+          "meanPostPurchaseMinutesWinsOnly": 3.8701
+        }
+      ]
+    },
+    {
+      "name": "baseline-mixed",
+      "maps": [
+        "meadow",
+        "ford",
+        "crossroads",
+        "switchback",
+        "rivers",
+        "serpent",
+        "saltire",
+        "gorge",
+        "trident",
+        "citadel",
+        "harvest",
+        "orchards",
+        "hairpin",
+        "crows",
+        "detour",
+        "parting",
+        "winding",
+        "gauntlet",
+        "kings",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "policies": [
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "mixed",
+          "n": 160,
+          "wins": 153,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 14.175,
+          "meanMinutesIncludingLosses": 19.6097,
+          "meanSpent": 4500.125,
+          "meanGold": 2249.9625,
+          "meanPostPurchaseMinutesWinsOnly": 5.7563
+        }
+      ]
+    },
+    {
+      "name": "branch-fire",
+      "maps": [
+        "harvest",
+        "orchards",
+        "hairpin",
+        "crows",
+        "detour",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "archer",
+          "economy": "rush",
+          "branch": "fire",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "mixed",
+          "economy": "rush",
+          "branch": "fire",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "archer",
+          "n": 24,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 6.7018,
+          "meanSpent": 1780.4167,
+          "meanGold": 43.625,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 19,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 11.5,
+          "meanMinutesIncludingLosses": 19.3686,
+          "meanSpent": 4524.5833,
+          "meanGold": 2298.4583,
+          "meanPostPurchaseMinutesWinsOnly": 4.6211
+        }
+      ]
+    },
+    {
+      "name": "branch-lune",
+      "maps": [
+        "harvest",
+        "orchards",
+        "hairpin",
+        "crows",
+        "detour",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "archer",
+          "economy": "rush",
+          "branch": "lune",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "mixed",
+          "economy": "rush",
+          "branch": "lune",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "archer",
+          "n": 24,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 6.3056,
+          "meanSpent": 1655.8333,
+          "meanGold": 44.7917,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 22,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 12.2083,
+          "meanMinutesIncludingLosses": 19.823,
+          "meanSpent": 4663.3333,
+          "meanGold": 2369.3333,
+          "meanPostPurchaseMinutesWinsOnly": 5.6309
+        }
+      ]
+    },
+    {
+      "name": "early",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "harvest",
+        "hairpin",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": true,
+          "cap": null
+        },
+        {
+          "strategy": "archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": true,
+          "cap": null
+        },
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": true,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 24,
+          "wins": 24,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.7083,
+          "meanMinutesIncludingLosses": 18.3117,
+          "meanSpent": 4890,
+          "meanGold": 1552.2083,
+          "meanPostPurchaseMinutesWinsOnly": 3.812
+        },
+        {
+          "strategy": "archer",
+          "n": 24,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 5.1572,
+          "meanSpent": 1281.6667,
+          "meanGold": 45.3333,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 22,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 10.9583,
+          "meanMinutesIncludingLosses": 18.2616,
+          "meanSpent": 4128.75,
+          "meanGold": 2040.0417,
+          "meanPostPurchaseMinutesWinsOnly": 5.9298
+        }
+      ]
+    },
+    {
+      "name": "economy-rush",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "harvest",
+        "hairpin",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "rush",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "archer",
+          "economy": "rush",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "mixed",
+          "economy": "rush",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 24,
+          "wins": 24,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.1667,
+          "meanMinutesIncludingLosses": 18.7863,
+          "meanSpent": 4868.75,
+          "meanGold": 1546.7083,
+          "meanPostPurchaseMinutesWinsOnly": 3.9023
+        },
+        {
+          "strategy": "archer",
+          "n": 24,
+          "wins": 1,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0.0417,
+          "meanMinutesIncludingLosses": 8.3931,
+          "meanSpent": 2222.0833,
+          "meanGold": 171.125,
+          "meanPostPurchaseMinutesWinsOnly": 0.6886
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 21,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 12.9583,
+          "meanMinutesIncludingLosses": 17.7534,
+          "meanSpent": 3943.75,
+          "meanGold": 2035.75,
+          "meanPostPurchaseMinutesWinsOnly": 6.1008
+        }
+      ]
+    },
+    {
+      "name": "economy-spread",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "harvest",
+        "hairpin",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "spread",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "archer",
+          "economy": "spread",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "mixed",
+          "economy": "spread",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 24,
+          "wins": 24,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.4583,
+          "meanMinutesIncludingLosses": 18.9597,
+          "meanSpent": 4905,
+          "meanGold": 1538.5417,
+          "meanPostPurchaseMinutesWinsOnly": 3.9455
+        },
+        {
+          "strategy": "archer",
+          "n": 24,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.019,
+          "meanSpent": 944.1667,
+          "meanGold": 27.4167,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 12,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 3.2917,
+          "meanMinutesIncludingLosses": 14.0141,
+          "meanSpent": 3440.8333,
+          "meanGold": 970.125,
+          "meanPostPurchaseMinutesWinsOnly": 2.7839
+        }
+      ]
+    },
+    {
+      "name": "equal-cap",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "harvest",
+        "hairpin",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3220
+        },
+        {
+          "strategy": "archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3220
+        },
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3220
+        },
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3680
+        },
+        {
+          "strategy": "archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3680
+        },
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3680
+        },
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 4140
+        },
+        {
+          "strategy": "archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 4140
+        },
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 4140
+        },
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3450
+        },
+        {
+          "strategy": "archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3450
+        },
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": 3450
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 24,
+          "wins": 24,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.5417,
+          "meanMinutesIncludingLosses": 18.9398,
+          "meanSpent": 3598.3333,
+          "meanGold": 2832.9583,
+          "meanPostPurchaseMinutesWinsOnly": 7.4989
+        },
+        {
+          "strategy": "archer",
+          "n": 24,
+          "wins": 1,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0.0417,
+          "meanMinutesIncludingLosses": 5.3335,
+          "meanSpent": 1316.6667,
+          "meanGold": 49.9583,
+          "meanPostPurchaseMinutesWinsOnly": 0.7219
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 14,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 8.6667,
+          "meanMinutesIncludingLosses": 17.0864,
+          "meanSpent": 3487.0833,
+          "meanGold": 2094.75,
+          "meanPostPurchaseMinutesWinsOnly": 2.588
+        }
+      ]
+    },
+    {
+      "name": "lines",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "harvest",
+        "hairpin",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "lines",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "lines",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 24,
+          "wins": 24,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.9583,
+          "meanMinutesIncludingLosses": 18.8101,
+          "meanSpent": 4861.6667,
+          "meanGold": 1558.4583,
+          "meanPostPurchaseMinutesWinsOnly": 3.9893
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 22,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 12.0417,
+          "meanMinutesIncludingLosses": 18.5916,
+          "meanSpent": 4201.25,
+          "meanGold": 2011.3333,
+          "meanPostPurchaseMinutesWinsOnly": 5.1689
+        }
+      ]
+    },
+    {
+      "name": "no-volley",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "harvest",
+        "hairpin",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": false,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": false,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": false,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 24,
+          "wins": 24,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.875,
+          "meanMinutesIncludingLosses": 18.8025,
+          "meanSpent": 4880.4167,
+          "meanGold": 1547.5417,
+          "meanPostPurchaseMinutesWinsOnly": 3.8855
+        },
+        {
+          "strategy": "archer",
+          "n": 24,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.2158,
+          "meanSpent": 1018.3333,
+          "meanGold": 37.375,
+          "meanPostPurchaseMinutesWinsOnly": null
+        },
+        {
+          "strategy": "mixed",
+          "n": 24,
+          "wins": 14,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 5.875,
+          "meanMinutesIncludingLosses": 15.9085,
+          "meanSpent": 3567.9167,
+          "meanGold": 1712.5833,
+          "meanPostPurchaseMinutesWinsOnly": 4.0811
+        }
+      ]
+    },
+    {
+      "name": "pacing-ballista",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "hairpin",
+        "gauntlet",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "policies": [
+        {
+          "strategy": "ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "ballista",
+          "n": 18,
+          "wins": 18,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 19.7778,
+          "meanMinutesIncludingLosses": 21.5793,
+          "meanSpent": 5376.6667,
+          "meanGold": 2211.3333,
+          "meanPostPurchaseMinutesWinsOnly": 5.5029
+        }
+      ]
+    },
+    {
+      "name": "pacing-mixed",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "hairpin",
+        "gauntlet",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "policies": [
+        {
+          "strategy": "mixed",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "mixed",
+          "n": 18,
+          "wins": 16,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 11.9444,
+          "meanMinutesIncludingLosses": 21.1482,
+          "meanSpent": 4445,
+          "meanGold": 2878.5556,
+          "meanPostPurchaseMinutesWinsOnly": 7.4486
+        }
+      ]
+    },
+    {
+      "name": "pure",
+      "maps": [
+        "ford",
+        "rivers",
+        "citadel",
+        "harvest",
+        "hairpin",
+        "watch"
+      ],
+      "seeds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "policies": [
+        {
+          "strategy": "pure-ballista",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        },
+        {
+          "strategy": "pure-archer",
+          "economy": "staged",
+          "branch": "balanced",
+          "placement": "coverage",
+          "volley": true,
+          "early": false,
+          "cap": null
+        }
+      ],
+      "groups": [
+        {
+          "strategy": "pure-ballista",
+          "n": 24,
+          "wins": 24,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 17.125,
+          "meanMinutesIncludingLosses": 18.6726,
+          "meanSpent": 5125,
+          "meanGold": 1265.6667,
+          "meanPostPurchaseMinutesWinsOnly": 3.125
+        },
+        {
+          "strategy": "pure-archer",
+          "n": 24,
+          "wins": 0,
+          "timeouts": 0,
+          "meanLivesIncludingLosses": 0,
+          "meanMinutesIncludingLosses": 4.4427,
+          "meanSpent": 1081.25,
+          "meanGold": 37.7083,
+          "meanPostPurchaseMinutesWinsOnly": null
+        }
+      ]
+    }
+  ],
+  "pacing": {
+    "winningBaselines": 34,
+    "frozenPurchaseSuffixes": 796,
+    "volleyCutoffSuffixes": 68,
+    "reallocationControls": 20,
+    "reallocationVariants": 42,
+    "maps": [
+      {
+        "case": "ford/ballista",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 5.3389,
+        "meanRemainingMinutes": 4.9687,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "rivers/ballista",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 5.8228,
+        "meanRemainingMinutes": 7.4029,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "citadel/ballista",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 11.2014,
+        "meanRemainingMinutes": 14.7882,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "hairpin/ballista",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 8.1936,
+        "meanRemainingMinutes": 10.5997,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "gauntlet/ballista",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 9.7261,
+        "meanRemainingMinutes": 19.1298,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "watch/ballista",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 13.2606,
+        "meanRemainingMinutes": 19.0431,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "ford/mixed",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 6.9411,
+        "meanRemainingMinutes": 3.3373,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "rivers/mixed",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 8.0414,
+        "meanRemainingMinutes": 5.3637,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "citadel/mixed",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 15.3022,
+        "meanRemainingMinutes": 11.2367,
+        "afterLastPurchaseNoVolleyEquivalent": 2
+      },
+      {
+        "case": "hairpin/mixed",
+        "n": 3,
+        "wins": 2,
+        "meanSufficientTimeMinutes": 9.2439,
+        "meanRemainingMinutes": 10.0932,
+        "afterLastPurchaseNoVolleyEquivalent": 2
+      },
+      {
+        "case": "gauntlet/mixed",
+        "n": 3,
+        "wins": 3,
+        "meanSufficientTimeMinutes": 14.0853,
+        "meanRemainingMinutes": 15.1819,
+        "afterLastPurchaseNoVolleyEquivalent": 3
+      },
+      {
+        "case": "watch/mixed",
+        "n": 3,
+        "wins": 2,
+        "meanSufficientTimeMinutes": 16.7606,
+        "meanRemainingMinutes": 15.6357,
+        "afterLastPurchaseNoVolleyEquivalent": 1
+      }
+    ]
+  },
+  "geometry": [
+    {
+      "map": "meadow",
+      "plots": 13,
+      "roads": 1,
+      "waveCount": 12,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2285,
+          "meanBestFiveRouteFraction": 0.303
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2728,
+          "meanBestFiveRouteFraction": 0.3693
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.203,
+          "meanBestFiveRouteFraction": 0.2736
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.3673,
+          "meanBestFiveRouteFraction": 0.4991
+        }
+      }
+    },
+    {
+      "map": "ford",
+      "plots": 14,
+      "roads": 1,
+      "waveCount": 15,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2872,
+          "meanBestFiveRouteFraction": 0.3214
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3329,
+          "meanBestFiveRouteFraction": 0.3715
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2628,
+          "meanBestFiveRouteFraction": 0.2964
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4449,
+          "meanBestFiveRouteFraction": 0.5067
+        }
+      }
+    },
+    {
+      "map": "crossroads",
+      "plots": 14,
+      "roads": 2,
+      "waveCount": 20,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2964,
+          "meanBestFiveRouteFraction": 0.3454
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3407,
+          "meanBestFiveRouteFraction": 0.3907
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2611,
+          "meanBestFiveRouteFraction": 0.309
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4564,
+          "meanBestFiveRouteFraction": 0.5143
+        }
+      }
+    },
+    {
+      "map": "switchback",
+      "plots": 14,
+      "roads": 1,
+      "waveCount": 16,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2507,
+          "meanBestFiveRouteFraction": 0.2986
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2899,
+          "meanBestFiveRouteFraction": 0.332
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2262,
+          "meanBestFiveRouteFraction": 0.2763
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4218,
+          "meanBestFiveRouteFraction": 0.4981
+        }
+      }
+    },
+    {
+      "map": "rivers",
+      "plots": 16,
+      "roads": 2,
+      "waveCount": 18,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2265,
+          "meanBestFiveRouteFraction": 0.2776
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2619,
+          "meanBestFiveRouteFraction": 0.3206
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2011,
+          "meanBestFiveRouteFraction": 0.2521
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.3462,
+          "meanBestFiveRouteFraction": 0.4333
+        }
+      }
+    },
+    {
+      "map": "serpent",
+      "plots": 15,
+      "roads": 1,
+      "waveCount": 20,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.3148,
+          "meanBestFiveRouteFraction": 0.3939
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3617,
+          "meanBestFiveRouteFraction": 0.4501
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.274,
+          "meanBestFiveRouteFraction": 0.3385
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4916,
+          "meanBestFiveRouteFraction": 0.5895
+        }
+      }
+    },
+    {
+      "map": "saltire",
+      "plots": 16,
+      "roads": 2,
+      "waveCount": 22,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.236,
+          "meanBestFiveRouteFraction": 0.2591
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2765,
+          "meanBestFiveRouteFraction": 0.302
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.208,
+          "meanBestFiveRouteFraction": 0.2304
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4082,
+          "meanBestFiveRouteFraction": 0.4669
+        }
+      }
+    },
+    {
+      "map": "gorge",
+      "plots": 15,
+      "roads": 1,
+      "waveCount": 24,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.3512,
+          "meanBestFiveRouteFraction": 0.436
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.4034,
+          "meanBestFiveRouteFraction": 0.4816
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.3146,
+          "meanBestFiveRouteFraction": 0.3992
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.5136,
+          "meanBestFiveRouteFraction": 0.5895
+        }
+      }
+    },
+    {
+      "map": "trident",
+      "plots": 17,
+      "roads": 3,
+      "waveCount": 25,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2842,
+          "meanBestFiveRouteFraction": 0.3309
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3298,
+          "meanBestFiveRouteFraction": 0.3828
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2528,
+          "meanBestFiveRouteFraction": 0.2965
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4542,
+          "meanBestFiveRouteFraction": 0.5164
+        }
+      }
+    },
+    {
+      "map": "citadel",
+      "plots": 18,
+      "roads": 3,
+      "waveCount": 28,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2408,
+          "meanBestFiveRouteFraction": 0.2939
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2831,
+          "meanBestFiveRouteFraction": 0.3479
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2119,
+          "meanBestFiveRouteFraction": 0.2649
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4126,
+          "meanBestFiveRouteFraction": 0.5066
+        }
+      }
+    },
+    {
+      "map": "harvest",
+      "plots": 16,
+      "roads": 1,
+      "waveCount": 16,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2634,
+          "meanBestFiveRouteFraction": 0.3028
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.309,
+          "meanBestFiveRouteFraction": 0.3637
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2392,
+          "meanBestFiveRouteFraction": 0.2823
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4424,
+          "meanBestFiveRouteFraction": 0.5322
+        }
+      }
+    },
+    {
+      "map": "orchards",
+      "plots": 17,
+      "roads": 2,
+      "waveCount": 18,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2396,
+          "meanBestFiveRouteFraction": 0.3011
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2735,
+          "meanBestFiveRouteFraction": 0.3429
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2159,
+          "meanBestFiveRouteFraction": 0.2736
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.3694,
+          "meanBestFiveRouteFraction": 0.4672
+        }
+      }
+    },
+    {
+      "map": "hairpin",
+      "plots": 15,
+      "roads": 1,
+      "waveCount": 20,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2958,
+          "meanBestFiveRouteFraction": 0.366
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3526,
+          "meanBestFiveRouteFraction": 0.4468
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2544,
+          "meanBestFiveRouteFraction": 0.3113
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4594,
+          "meanBestFiveRouteFraction": 0.5613
+        }
+      }
+    },
+    {
+      "map": "crows",
+      "plots": 18,
+      "roads": 3,
+      "waveCount": 22,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2453,
+          "meanBestFiveRouteFraction": 0.2812
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2902,
+          "meanBestFiveRouteFraction": 0.3294
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2182,
+          "meanBestFiveRouteFraction": 0.246
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4319,
+          "meanBestFiveRouteFraction": 0.5216
+        }
+      }
+    },
+    {
+      "map": "detour",
+      "plots": 17,
+      "roads": 2,
+      "waveCount": 22,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2488,
+          "meanBestFiveRouteFraction": 0.2924
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3072,
+          "meanBestFiveRouteFraction": 0.3585
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2144,
+          "meanBestFiveRouteFraction": 0.255
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4281,
+          "meanBestFiveRouteFraction": 0.5013
+        }
+      }
+    },
+    {
+      "map": "parting",
+      "plots": 17,
+      "roads": 2,
+      "waveCount": 24,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2653,
+          "meanBestFiveRouteFraction": 0.3007
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3049,
+          "meanBestFiveRouteFraction": 0.3438
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2383,
+          "meanBestFiveRouteFraction": 0.2729
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4002,
+          "meanBestFiveRouteFraction": 0.4562
+        }
+      }
+    },
+    {
+      "map": "winding",
+      "plots": 18,
+      "roads": 2,
+      "waveCount": 24,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.241,
+          "meanBestFiveRouteFraction": 0.306
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2885,
+          "meanBestFiveRouteFraction": 0.3814
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2132,
+          "meanBestFiveRouteFraction": 0.2676
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4332,
+          "meanBestFiveRouteFraction": 0.5693
+        }
+      }
+    },
+    {
+      "map": "gauntlet",
+      "plots": 18,
+      "roads": 1,
+      "waveCount": 26,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2107,
+          "meanBestFiveRouteFraction": 0.2294
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2414,
+          "meanBestFiveRouteFraction": 0.2637
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.1917,
+          "meanBestFiveRouteFraction": 0.2151
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4374,
+          "meanBestFiveRouteFraction": 0.5236
+        }
+      }
+    },
+    {
+      "map": "kings",
+      "plots": 18,
+      "roads": 3,
+      "waveCount": 28,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.258,
+          "meanBestFiveRouteFraction": 0.312
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.3016,
+          "meanBestFiveRouteFraction": 0.3629
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2276,
+          "meanBestFiveRouteFraction": 0.2798
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4191,
+          "meanBestFiveRouteFraction": 0.4982
+        }
+      }
+    },
+    {
+      "map": "watch",
+      "plots": 18,
+      "roads": 3,
+      "waveCount": 28,
+      "coverage": {
+        "archer": {
+          "maxBaseRange": 110,
+          "meanPlotRouteFraction": 0.2459,
+          "meanBestFiveRouteFraction": 0.3093
+        },
+        "catapult": {
+          "maxBaseRange": 125,
+          "meanPlotRouteFraction": 0.2864,
+          "meanBestFiveRouteFraction": 0.3595
+        },
+        "frost": {
+          "maxBaseRange": 100,
+          "meanPlotRouteFraction": 0.2185,
+          "meanBestFiveRouteFraction": 0.2761
+        },
+        "ballista": {
+          "maxBaseRange": 165,
+          "meanPlotRouteFraction": 0.4041,
+          "meanBestFiveRouteFraction": 0.5153
+        }
+      }
+    }
+  ]
+}

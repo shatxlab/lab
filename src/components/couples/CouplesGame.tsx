@@ -32,12 +32,15 @@ import { readAppLang, subscribeToAppLang } from "@/lib/apps/lang";
 import { useLangReady } from "@/lib/apps/use-app-lang";
 import type { CouplesQuestion, CouplesSettings, GameId, Mode, PlayPhase, RoundResult } from "@/lib/couples/types";
 
+import { MiniGames } from "./MiniGames";
+import type { MiniGameId } from "@/lib/couples/mini-games";
+
 import { MenuScreen } from "./MenuScreen";
 import { SetupScreen } from "./SetupScreen";
 import { PlayScreen } from "./PlayScreen";
 import { SummaryScreen } from "./SummaryScreen";
 
-type Screen = "menu" | "setup" | "play" | "summary";
+type Screen = "menu" | "setup" | "play" | "summary" | "mini";
 
 const EMPTY_STATS: CouplesStats = { games: 0, cards: 0, matches: 0 };
 
@@ -53,6 +56,7 @@ export default function CouplesGame() {
   const [settings, setSettings] = useState<CouplesSettings>(() => defaultSettings("en"));
   const [stats, setStats] = useState<CouplesStats>(EMPTY_STATS);
   const [screen, setScreen] = useState<Screen>("menu");
+  const [miniGame, setMiniGame] = useState<MiniGameId>("pattern");
   const [session, setSession] = useState<Session | null>(null);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<PlayPhase>("voteA");
@@ -275,7 +279,12 @@ export default function CouplesGame() {
     finish(finalResults);
   }, [question, session, phase, pool, index, results, picksA, finish]);
 
-  const pickGame = useCallback((game: GameId) => {
+  const pickGame = useCallback((game: GameId | MiniGameId) => {
+    if (game === "pattern" || game === "split") {
+      setMiniGame(game);
+      setScreen("mini");
+      return;
+    }
     setSettings((current) => ({ ...current, game }));
     setScreen("setup");
   }, []);
@@ -318,6 +327,16 @@ export default function CouplesGame() {
     <div ref={readyRef} data-lang-sensitive="" className="cp-shell" data-phase={phase}>
       {screen === "menu" ? (
         <MenuScreen lang={settings.lang} stats={stats} onPick={pickGame} />
+      ) : null}
+
+      {screen === "mini" ? (
+        <MiniGames
+          game={miniGame}
+          lang={settings.lang}
+          names={settings.names}
+          onNames={(names) => updateSettings({ names })}
+          onMenu={toMenu}
+        />
       ) : null}
 
       {screen === "setup" ? (

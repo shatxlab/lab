@@ -94,17 +94,17 @@ type StringKey =
 const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
     appName: "Games for Couples",
-    tagline: "Three games that show how much you match",
+    tagline: "Two players. A little discovery, a little mischief.",
     language: "Language",
 
     // Menu
     menuTitle: "Pick a game",
     menuSubtitle:
-      "Two players, one phone and a stack of questions. Answer in turns — and see whether you matched.",
+      "One phone. Compare answers, rebuild secret patterns, or bluff for imaginary coins.",
     cardNew: "New game",
     open: "Play",
-    statsLine: "Games played: {games} · Cards: {cards} · Matches: {percent}%",
-    statsLineUnscored: "Games played: {games} · No scored answers yet",
+    statsLine: "Question games: {games} · Cards: {cards} · Matches: {percent}%",
+    statsLineUnscored: "Question games: {games} · No scored answers yet",
 
     // Setup
     setupTitle: "Set up the game",
@@ -178,16 +178,16 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
   },
   ru: {
     appName: "Игры для пар",
-    tagline: "Три игры, которые расскажут, насколько вы совпадаете",
+    tagline: "Двое игроков. Узнавайте, играйте, удивляйтесь.",
     language: "Язык",
 
     // Menu
     menuTitle: "Выберите игру",
-    menuSubtitle: "Два игрока, один телефон и пачка вопросов. Отвечайте по очереди — и смотрите, совпали ли.",
+    menuSubtitle: "Один телефон. Сравнивайте ответы, собирайте тайные узоры или блефуйте на вымышленные монеты.",
     cardNew: "Новая игра",
     open: "Играть",
-    statsLine: "Игр сыграно: {games} · Карточек: {cards} · Совпадений: {percent}%",
-    statsLineUnscored: "Игр сыграно: {games} · Ответов на счёт пока нет",
+    statsLine: "Игр с вопросами: {games} · Карточек: {cards} · Совпадений: {percent}%",
+    statsLineUnscored: "Игр с вопросами: {games} · Ответов на счёт пока нет",
 
     // Setup
     setupTitle: "Настройте игру",

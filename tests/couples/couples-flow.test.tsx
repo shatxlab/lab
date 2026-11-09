@@ -97,7 +97,7 @@ describe("CouplesGame flow", () => {
 
   it("plays a full match-mode game: the first partner answers every card, then the second answers the same cards", () => {
     const host = mount();
-    expect(host.querySelectorAll(".cp-game-card")).toHaveLength(3);
+    expect(host.querySelectorAll(".cp-game-card")).toHaveLength(5);
 
     startNorm(host);
 

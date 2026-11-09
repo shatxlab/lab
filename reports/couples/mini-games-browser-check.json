@@ -1,0 +1,107 @@
+{
+  "checks": [
+    {
+      "port": 4321,
+      "lang": "en",
+      "width": 360,
+      "height": 640,
+      "result": "passed"
+    },
+    {
+      "port": 4321,
+      "lang": "en",
+      "width": 390,
+      "height": 780,
+      "result": "passed"
+    },
+    {
+      "port": 4321,
+      "lang": "ru",
+      "width": 360,
+      "height": 640,
+      "result": "passed"
+    },
+    {
+      "port": 4321,
+      "lang": "ru",
+      "width": 390,
+      "height": 780,
+      "result": "passed"
+    },
+    {
+      "port": 4322,
+      "lang": "en",
+      "width": 360,
+      "height": 640,
+      "result": "passed"
+    },
+    {
+      "audit": "pattern study",
+      "violations": []
+    },
+    {
+      "audit": "split choices",
+      "violations": []
+    },
+    {
+      "audit": "split summary",
+      "violations": []
+    },
+    {
+      "port": 4322,
+      "lang": "en",
+      "width": 390,
+      "height": 780,
+      "result": "passed"
+    },
+    {
+      "audit": "pattern builder",
+      "violations": []
+    },
+    {
+      "port": 4322,
+      "lang": "ru",
+      "width": 360,
+      "height": 640,
+      "result": "passed"
+    },
+    {
+      "port": 4322,
+      "lang": "ru",
+      "width": 390,
+      "height": 780,
+      "result": "passed"
+    },
+    {
+      "audit": "dark pattern 1280×800",
+      "violations": []
+    },
+    {
+      "audit": "dark split 1280×800",
+      "violations": []
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "theme": "dark",
+      "reducedMotion": true,
+      "result": "passed"
+    },
+    {
+      "audit": "dark pattern 640×360",
+      "violations": []
+    },
+    {
+      "audit": "dark split 640×360",
+      "violations": []
+    },
+    {
+      "width": 640,
+      "height": 360,
+      "theme": "dark",
+      "reducedMotion": true,
+      "result": "passed"
+    }
+  ],
+  "errors": []
+}

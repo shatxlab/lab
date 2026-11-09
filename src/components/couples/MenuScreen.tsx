@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 
+import { MINI_GAMES, type MiniGameId } from "@/lib/couples/mini-games";
 import { GAMES } from "@/lib/couples/themes";
 import { stringsFor, t } from "@/lib/couples/i18n";
 import type { CouplesStats } from "@/lib/couples/storage";
@@ -8,7 +9,7 @@ import type { GameId, Lang } from "@/lib/couples/types";
 interface MenuScreenProps {
   lang: Lang;
   stats: CouplesStats;
-  onPick(game: GameId): void;
+  onPick(game: GameId | MiniGameId): void;
 }
 
 function statsLine(lang: Lang, stats: CouplesStats): string | null {
@@ -31,7 +32,7 @@ export function MenuScreen({ lang, stats, onPick }: MenuScreenProps) {
       </header>
 
       <div className="cp-game-grid">
-        {GAMES.map((game) => (
+        {[...GAMES, ...MINI_GAMES].map((game) => (
           <button
             key={game.id}
             type="button"

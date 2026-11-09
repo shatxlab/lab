@@ -52,7 +52,7 @@ function bookBytes(): Uint8Array {
       <li><a href="one.xhtml">Start here</a></li>
       <li><a href="two.xhtml">Security chapter</a></li>
     </ol></nav></body></html>`,
-    "OPS/one.xhtml": `<html><body><h1>Start here</h1><p>First rendered chapter.</p><p>Alpha searchable sentence.</p></body></html>`,
+    "OPS/one.xhtml": `<html><body><h1>Start here</h1><p>First rendered chapter.</p><p>Alpha searchable sentence.</p><p>Plenty more prose follows so the chapter reads as real text.</p></body></html>`,
     "OPS/two.xhtml": `<html><body><h1>Security chapter</h1><p>Second rendered chapter with security marker.</p><script>window.__epubXss=1</script><img alt="remote" src="https://tracker.invalid/pixel.png"/></body></html>`,
   });
 }
@@ -103,6 +103,34 @@ async function openBook(asset = bookAsset(bookBytes())) {
   return view;
 }
 
+/** A book whose first spine item is an image-only cover page. */
+function coverBookBytes(): Uint8Array {
+  return epub({
+    "META-INF/container.xml": `<?xml version="1.0"?>
+      <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+        <rootfiles><rootfile full-path="OEBPS/package.opf" media-type="application/oebps-package+xml"/></rootfiles>
+      </container>`,
+    "OEBPS/package.opf": `<?xml version="1.0"?>
+      <package version="3.0" xmlns="http://www.idpf.org/2007/opf">
+        <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <dc:title>Covered Book</dc:title>
+        </metadata>
+        <manifest>
+          <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+          <item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>
+          <item id="one" href="one.xhtml" media-type="application/xhtml+xml"/>
+        </manifest>
+        <spine><itemref idref="cover"/><itemref idref="one"/></spine>
+      </package>`,
+    "OEBPS/nav.xhtml": `<html><body><nav type="toc"><ol>
+      <li><a href="cover.xhtml">Cover</a></li>
+      <li><a href="one.xhtml">Chapter one</a></li>
+    </ol></nav></body></html>`,
+    "OEBPS/cover.xhtml": `<html><body><div class="cover"><img alt="cover" src="cover.png"/></div></body></html>`,
+    "OEBPS/one.xhtml": `<html><body><h1>Chapter one</h1><p>The real opening text of the covered book, long enough to count as prose.</p></body></html>`,
+  });
+}
+
 function storageJson(): unknown {
   return JSON.parse(localStorage.getItem(EPUB_READER_STORAGE_KEY) ?? "{}");
 }
@@ -118,6 +146,25 @@ describe("EpubReader", () => {
     try {
       expect(container.textContent).toContain("First rendered chapter.");
       expect(container.querySelector("article.epub-reader-prose")).toBeTruthy();
+    } finally {
+      unmount();
+    }
+  });
+
+  it("skips an image-only cover page and opens on the first chapter with text", async () => {
+    const asset = bookAsset(coverBookBytes(), "covered.epub");
+    const identity = `epub:covered.epub:${asset.size}:1234`;
+    const { container, unmount } = await mount(<EpubReader asset={asset} />);
+    try {
+      await waitFor(() => {
+        expect(container.textContent).toContain("The real opening text of the covered book");
+      });
+      expect(container.querySelector(".epub-reader-chapter-head h2")?.textContent).toBe("Chapter one");
+      // The stored position must be the readable chapter, so reopening and the
+      // progress readout never point back at the textless cover.
+      expect(storageJson()).toMatchObject({
+        books: { [identity]: { progress: { chapterHref: "OEBPS/one.xhtml" } } },
+      });
     } finally {
       unmount();
     }

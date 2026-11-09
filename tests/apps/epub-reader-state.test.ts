@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 
-import type { EpubBook } from "@/lib/apps/epub-reader";
+import type { EpubBook, EpubChapter } from "@/lib/apps/epub-reader";
 import {
   EPUB_READER_STORAGE_KEY,
   addBookmark,
   clampReaderPrefs,
   defaultReaderPrefs,
+  openingChapterIndex,
   progressForBook,
   readReaderState,
   searchChapters,
@@ -133,5 +134,51 @@ describe("epub reader state", () => {
     expect(raw).toContain("one.xhtml");
     expect(raw).not.toContain("Alpha marker first chapter");
     expect(raw).not.toContain("<p>");
+  });
+});
+
+function chapter(href: string, html: string): EpubChapter {
+  return { id: href, href, title: href, html };
+}
+
+const COVER = chapter("cover.xhtml", '<div><img src="data:image/png;base64,AAAA"/></div>');
+const TITLE_PAGE = chapter("title.xhtml", "<h1>Plate Book</h1>");
+const PROSE = (href: string, text: string) =>
+  chapter(href, `<h1>${href}</h1><p>${text}</p>`);
+
+describe("openingChapterIndex", () => {
+  const chapters = [
+    COVER,
+    TITLE_PAGE,
+    PROSE("c1.xhtml", "It was a bright cold day in April, and the clocks were striking thirteen."),
+    PROSE("c2.xhtml", "Second chapter with plenty of real readable prose for the threshold."),
+  ];
+
+  it("skips textless cover and title pages on a fresh open", () => {
+    expect(openingChapterIndex(chapters, 0)).toBe(2);
+  });
+
+  it("keeps a remembered chapter that has readable text", () => {
+    expect(openingChapterIndex(chapters, 3)).toBe(3);
+  });
+
+  it("moves a remembered cover position to the next readable chapter", () => {
+    expect(openingChapterIndex(chapters, 1)).toBe(2);
+  });
+
+  it("falls back to an earlier readable chapter when nothing later has text", () => {
+    const withBackCover = [...chapters, COVER];
+    expect(openingChapterIndex(withBackCover, 4)).toBe(2);
+  });
+
+  it("keeps the choice when no chapter has readable text", () => {
+    const plates = [COVER, chapter("p1.xhtml", "<h1>I</h1>"), TITLE_PAGE];
+    expect(openingChapterIndex(plates, 1)).toBe(1);
+  });
+
+  it("clamps out-of-range preferences and handles empty books", () => {
+    expect(openingChapterIndex(chapters, 99)).toBe(3);
+    expect(openingChapterIndex(chapters, -5)).toBe(2);
+    expect(openingChapterIndex([], 0)).toBe(0);
   });
 });

@@ -31,6 +31,7 @@ import {
   bookmarksForBook,
   clampReaderPrefs,
   defaultReaderPrefs,
+  openingChapterIndex,
   progressForBook,
   readReaderState,
   removeBookmark,
@@ -270,7 +271,13 @@ export default function EpubReader({ asset }: { asset: Asset }) {
         const rememberedIndex = remembered
           ? loaded.chapters.findIndex((chapter) => chapter.href === remembered.chapterHref)
           : -1;
-        const nextIndex = rememberedIndex >= 0 ? rememberedIndex : 0;
+        // Skip textless covers/blank pages, including a remembered one: the
+        // first spine item is usually a cover, and opening on it looks like the
+        // book has no text.
+        const nextIndex = openingChapterIndex(
+          loaded.chapters,
+          rememberedIndex >= 0 ? rememberedIndex : 0,
+        );
         const nextProgress = rememberedIndex >= 0 ? (remembered?.chapterProgress ?? 0) : 0;
         setStoredState(state);
         setPrefs(state.prefs);

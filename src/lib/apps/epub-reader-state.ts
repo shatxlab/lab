@@ -263,6 +263,32 @@ export function chapterPlainText(html: string): string {
   return (doc.body?.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** Chapters with less visible text than this are treated as cover/blank pages. */
+const MIN_OPENING_TEXT = 64;
+
+/**
+ * Where a book should open. Real EPUBs often put an image-only cover (or a
+ * blank title page) first in the spine; opening on it shows no text at all —
+ * and a remembered position can be such a page too, once it has been stored.
+ * Keep the preferred chapter when it has readable text, otherwise move to the
+ * next chapter that does (falling back to an earlier one, then to the choice
+ * itself when the whole book is plates or poems under the threshold).
+ */
+export function openingChapterIndex(chapters: EpubBook["chapters"], preferred: number): number {
+  const last = chapters.length - 1;
+  if (last < 0) return 0;
+  const choice = Math.max(0, Math.min(preferred, last));
+  const readable = (index: number) => chapterPlainText(chapters[index]!.html).length >= MIN_OPENING_TEXT;
+  if (readable(choice)) return choice;
+  for (let index = choice + 1; index <= last; index += 1) {
+    if (readable(index)) return index;
+  }
+  for (let index = 0; index < choice; index += 1) {
+    if (readable(index)) return index;
+  }
+  return choice;
+}
+
 function snippetFor(text: string, index: number, length: number): string {
   const start = Math.max(0, index - SNIPPET_RADIUS);
   const end = Math.min(text.length, index + length + SNIPPET_RADIUS);

@@ -85,6 +85,7 @@ describe("KingsRoad wave intelligence", () => {
       expect(details).toContain(text.foeLeak(def.leak));
       expect(details.includes(text.flyingFoe)).toBe(def.flying);
       expect(details.includes(text.armorRule(def.armor, ARMOR_FLOOR))).toBe(def.armor > 0);
+      expect(details.includes(text.shieldRule(def.hitCap ?? 0))).toBe(Boolean(def.hitCap));
       expect(details.includes(text.fireproofRule(FIREPROOF_HIT))).toBe(def.fireproof);
       expect(details.includes(text.healerRule(def.heal, HEAL_RANGE))).toBe(def.heal > 0);
       expect(details.includes(text.summonRule(BOSS_SUMMON.count, BOSS_SUMMON.every))).toBe(kind === "boss");

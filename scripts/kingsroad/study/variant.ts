@@ -1,5 +1,5 @@
 /** Offline-only experiment selection. Never imported by the shipping application. */
-export const VARIANTS = ["baseline", "three-hit", "range-80", "cadence-2x", "matched-2x", "density-only", "roster-spread", "bulwark"] as const;
+export const VARIANTS = ["baseline", "three-hit", "range-80", "cadence-2x", "matched-2x", "density-only", "roster-spread"] as const;
 export type Variant = typeof VARIANTS[number];
 export function isVariant(value: string): value is Variant {
   return (VARIANTS as readonly string[]).includes(value);
@@ -8,11 +8,6 @@ export function isVariant(value: string): value is Variant {
 /** The entire experimental gameplay delta: retire a bolt immediately after its third distinct hit. */
 export function variantSource(source: string, variant: Variant): string {
   if (!isVariant(variant)) throw new Error(`Unknown study variant: ${variant}`);
-  if (variant === "bulwark") {
-    const anchor = "  const raw = fire && def.fireproof ? damage * FIREPROOF_HIT : damage;\n";
-    if (source.split(anchor).length !== 2) throw new Error("Bulwark experiment anchor must occur exactly once");
-    return source.replace(anchor, "  const base = fire && def.fireproof ? damage * FIREPROOF_HIT : damage;\n  // Study only: a bulwark's tower shield caps any one blow; burning ticks are not blows.\n  const raw = Math.min(base, def.hitCap ?? Infinity);\n");
-  }
   if (variant !== "three-hit") return source;
   const anchor = "    shot.hitIds.push(foe.id);";
   if (source.split(anchor).length !== 2) throw new Error("Piercing experiment anchor must occur exactly once");
@@ -113,37 +108,4 @@ export function variantRosterSource(source: string, variant: Variant): string {
   const anchor = "      spawns.push({ kind, at, road });\n";
   if (source.split(anchor).length !== 2) throw new Error("Roster experiment anchor must occur exactly once");
   return source.replace(anchor, `      spawns.push({ kind, at, road: ["scamp", "runner"].includes(kind) ? (road + count) % map.roads.length : road });\n`);
-}
-
-/** Predeclared shielded-foe prototype: the bulwark's tower shield caps any single hit. Forced onto all 20 maps, harsher than any shipping plan. */
-// v1 (fromWave 6, every 4) was measured too punitive: Ballista-heavy 160->108 with four late maps at 0/8.
-// v2 is a single predeclared dose change: rarer, same foe and cap.
-export const BULWARK = { hp: 90, speed: 26, leak: 2, gold: 14, radius: 11, hitCap: 12, fromWave: 8, every: 6, spacing: 1.6 } as const;
-export function variantTypesSource(source: string, variant: Variant): string {
-  if (!isVariant(variant)) throw new Error(`Unknown study variant: ${variant}`);
-  if (variant !== "bulwark") return source;
-  const anchor = 'export type NewFoeKind = "knight" | "imp" | "healer" | "scamp" | "gargoyle";\n';
-  if (source.split(anchor).length !== 2) throw new Error("Bulwark type anchor must occur exactly once");
-  return source.replace(anchor, 'export type NewFoeKind = "knight" | "imp" | "healer" | "scamp" | "gargoyle" | "bulwark";\n');
-}
-export function variantBulwarkBalanceSource(source: string, variant: Variant): string {
-  if (!isVariant(variant)) throw new Error(`Unknown study variant: ${variant}`);
-  if (variant !== "bulwark") return source;
-  const fieldAnchor = "  fireproof: boolean;\n";
-  if (source.split(fieldAnchor).length !== 2) throw new Error("Bulwark balance field anchor must occur exactly once");
-  let out = source.replace(fieldAnchor, fieldAnchor + "  /** Study only: the most any single hit counts for. */\n  hitCap?: number;\n");
-  const foeAnchor = '  gargoyle: foe({ hp: 140, speed: 28, leak: 3, gold: 16, radius: 11, flying: true, armor: 2, color: "#7d8591" }),\n';
-  if (out.split(foeAnchor).length !== 2) throw new Error("Bulwark balance foe anchor must occur exactly once");
-  return out.replace(foeAnchor, foeAnchor + `  // Study only: wall-bearer behind a tower shield; no single blow counts for much.\n  bulwark: foe({ hp: ${BULWARK.hp}, speed: ${BULWARK.speed}, leak: ${BULWARK.leak}, gold: ${BULWARK.gold}, radius: ${BULWARK.radius}, color: "#4f5d6e", hitCap: ${BULWARK.hitCap} }),\n`);
-}
-export function variantBulwarkWavesSource(source: string, variant: Variant): string {
-  if (!isVariant(variant)) throw new Error(`Unknown study variant: ${variant}`);
-  if (variant !== "bulwark") return source;
-  const rosterAnchor = '    gargoyle: sends("gargoyle", wave >= 8 && wave % 4 === 0 ? 1 + Math.floor((wave - 8) / 6) : 0),\n';
-  const columnsAnchor = '(["grunt", "runner", "brute", "bat", "knight", "imp", "scamp", "gargoyle"] as const)';
-  const spacingAnchor = "  gargoyle: 1.2,\n";
-  for (const anchor of [rosterAnchor, columnsAnchor, spacingAnchor]) if (source.split(anchor).length !== 2) throw new Error("Bulwark waves anchor must occur exactly once");
-  let out = source.replace(rosterAnchor, rosterAnchor + `    // Study only: forced onto every map, harsher than shipping.\n    bulwark: wave >= ${BULWARK.fromWave} ? 1 + Math.floor((wave - ${BULWARK.fromWave}) / ${BULWARK.every}) : 0,\n`);
-  out = out.replace(columnsAnchor, '(["grunt", "runner", "brute", "bat", "knight", "imp", "scamp", "gargoyle", "bulwark"] as const)');
-  return out.replace(spacingAnchor, spacingAnchor + `  bulwark: ${BULWARK.spacing},\n`);
 }

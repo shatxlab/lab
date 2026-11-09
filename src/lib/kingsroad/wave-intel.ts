@@ -43,6 +43,7 @@ export function foeDetails(kind: FoeKind, text: KingsroadText): string[] {
     text.foes[kind].description,
     ...(def.flying ? [text.flyingFoe] : []),
     ...(def.armor > 0 ? [text.armorRule(def.armor, ARMOR_FLOOR)] : []),
+    ...(def.hitCap ? [text.shieldRule(def.hitCap)] : []),
     ...(def.fireproof ? [text.fireproofRule(FIREPROOF_HIT)] : []),
     ...(def.heal > 0 ? [text.healerRule(def.heal, HEAL_RANGE)] : []),
     ...(kind === "boss" ? [text.summonRule(BOSS_SUMMON.count, BOSS_SUMMON.every)] : []),

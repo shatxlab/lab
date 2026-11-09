@@ -199,6 +199,17 @@ describe("waves", () => {
     expect(hpScale(10)).toBeGreaterThan(hpScale(5) * 1.5);
   });
 
+  it("marches shieldbearers only on maps that list them, from wave 8", () => {
+    const harvest = mapById("harvest"), kings = mapById("kings");
+    expect(waveRoster(7, harvest).bulwark).toBe(0);
+    expect(waveRoster(8, harvest).bulwark).toBe(1);
+    expect(waveRoster(20, kings).bulwark).toBe(3);
+    expect(waveRoster(28, MEADOW).bulwark).toBe(0);
+    const spawns = buildSpawns(8, harvest, { rng: 1 });
+    const shieldbearers = spawns.filter((spawn) => spawn.kind === "bulwark");
+    expect(shieldbearers).toHaveLength(1);
+  });
+
   it("schedules a wave in time order, every walker on one of the map's roads", () => {
     for (const map of MAPS) {
       const spawns = buildSpawns(map.waves, map, { rng: 4 });
@@ -331,6 +342,27 @@ describe("towers", () => {
       expect(foe.slow).toBe(TOWERS.frost.levels[0].slow);
       expect(foe.slowLeft).toBeGreaterThan(FROST_SECONDS - 1.2);
     }
+  });
+
+  it("caps any single hit on a shieldbearer, whoever fires it", () => {
+    const game = quietGame();
+    build(game, 1, "ballista");
+    const along = besidePlot(1);
+    const shieldbearer = foeAt(game, along + 60, "bulwark", { speed: 0, hp: 500, maxHp: 500 });
+    const neighbour = foeAt(game, along + 84, "grunt", { speed: 0, hp: 500, maxHp: 500 });
+    runFor(game, 1);
+    // The bolt deals its full damage to the grunt and only the shield's bound to the shieldbearer.
+    expect(500 - shieldbearer.hp).toBe(FOES.bulwark.hitCap);
+    expect(500 - neighbour.hp).toBe(TOWERS.ballista.levels[0].damage);
+  });
+
+  it("lets under-cap shots and slows through the shieldbearer's shield untouched", () => {
+    const game = quietGame();
+    build(game, 1, "frost");
+    const shieldbearer = foeAt(game, besidePlot(1) + 60, "bulwark", { speed: 0 });
+    runFor(game, 2);
+    expect(shieldbearer.hp).toBeLessThan(FOES.bulwark.hp);
+    expect(shieldbearer.slow).toBe(TOWERS.frost.levels[0].slow);
   });
 
   it("sends a ballista bolt through everything in its line", () => {
@@ -476,6 +508,12 @@ describe("the volley", () => {
       const grunt = firstHit("grunt").dealt;
       expect(grunt).toBe(TOWERS.archer.levels[0].damage);
       expect(firstHit("knight").dealt).toBeCloseTo(Math.max(grunt * ARMOR_FLOOR, grunt - FOES.knight.armor));
+    });
+
+    it("bounds a fire arrow's hit on a shieldbearer but lets it burn", () => {
+      const shieldbearer = firstHit("bulwark", "fire");
+      expect(shieldbearer.dealt).toBe(FOES.bulwark.hitCap);
+      expect(shieldbearer.burning).toBe(true);
     });
 
     it("lets fire arrows burn a grunt but not an imp, and weakens their own hit", () => {

@@ -12,7 +12,7 @@ import type { Effect, EnemyKind, VolleyArrow } from "@/lib/tower/sim/types";
 export type { Effect, EnemyKind, VolleyArrow };
 
 /** The foes the second canvas adds, which maps list in `MapDef.foes`. */
-export type NewFoeKind = "knight" | "imp" | "healer" | "scamp" | "gargoyle";
+export type NewFoeKind = "knight" | "imp" | "healer" | "scamp" | "gargoyle" | "bulwark";
 export type FoeKind = EnemyKind | NewFoeKind;
 
 export type TowerKind = "archer" | "catapult" | "frost" | "ballista";

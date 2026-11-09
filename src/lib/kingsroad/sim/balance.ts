@@ -126,6 +126,8 @@ interface FoeStats extends FoeDef {
   armor: number;
   /** Ignores burning, and takes only `FIREPROOF_HIT` of a fire arrow's own damage. */
   fireproof: boolean;
+  /** The most any single hit counts for; burning ticks are not hits. */
+  hitCap?: number;
   /** Share of a friend's full health a healer restores each second within `HEAL_RANGE`; 0 for foes that don't. */
   heal: number;
   color: string;
@@ -156,6 +158,8 @@ export const FOES: Record<FoeKind, FoeStats> = {
   scamp: foe({ hp: 8, speed: 54, leak: 1, gold: 2, radius: 5, color: "#a8754a" }),
   // A flyer that archers, ballistas and frost can reach, and few shots hurt much.
   gargoyle: foe({ hp: 140, speed: 28, leak: 3, gold: 16, radius: 11, flying: true, armor: 2, color: "#7d8591" }),
+  // Behind a tower shield: no single blow counts for much, so a hail of arrows wears it down.
+  bulwark: foe({ hp: 90, speed: 26, leak: 2, gold: 14, radius: 11, color: "#4f5d6e", hitCap: 12 }),
 };
 
 /** Seconds between a warlord's calls for help, and how many footmen answer. */

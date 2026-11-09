@@ -65,6 +65,7 @@ export interface KingsroadText {
   foeLeak: (count: number) => string;
   armorRule: (armor: number, floor: number) => string;
   fireproofRule: (share: number) => string;
+  shieldRule: (cap: number) => string;
   healerRule: (rate: number, range: number) => string;
   summonRule: (count: number, seconds: number) => string;
   airTargetRule: (air: string, ground: string) => string;
@@ -179,11 +180,13 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
       healer: { name: "Healer", description: "Walks among the footmen. Aim the volley at the healer and its escort; towers select their own targets, so you cannot command them to focus it." },
       scamp: { name: "Scamp", description: "Tiny, fast ground swarms. Catapult splash, frost, and a well-placed volley can catch several together." },
       gargoyle: { name: "Gargoyle", description: "An armored flyer. Use air-capable towers; heavier hits or Fire-arrow burning help against its armor." },
+      bulwark: { name: "Shieldbearer", description: "Carries a tower shield that bounds any single hit. Rapid archer fire, frost and Fire-arrow burning wear it down; heavy shots waste themselves on the shield." },
     },
     flyingFoe: "Flies toward the gate, ignoring roads. Ground-only attacks cannot hit it.",
     foeLeak: (count) => `Costs ${count} ${count === 1 ? "life" : "lives"} if it reaches the gate.`,
     armorRule: (armor, floor) => `Armor subtracts ${EN.num(armor)} damage from each direct hit, but at least ${EN.pct(floor)} of that hit gets through. Burning ignores armor.`,
     fireproofRule: (share) => `Immune to burning. A Fire arrow's impact does only ${EN.pct(share)} of its normal damage; fire immunity does not reduce other attacks.`,
+    shieldRule: (cap) => `Tower shield: no single hit deals more than ${EN.num(cap)} damage. Burning ticks are not hits, so fire keeps its full effect.`,
     healerRule: (rate, range) => `Restores ${EN.pct(rate)} of nearby allies' maximum health per second within ${EN.num(range)} range. Cannot heal itself or warlords; it can heal other healers and flyers.`,
     summonRule: (count, seconds) => `Summons ${count} extra footmen every ${EN.num(seconds)} s while alive. These reinforcements are not included in the scheduled count.`,
     airTargetRule: (air, ground) => `Can target flyers: ${air}. Ground only: ${ground}. Volley arrows can hit both ground and flying enemies near their landing spots.`,
@@ -313,11 +316,13 @@ export const KINGSROAD_TEXT: Record<AppLang, KingsroadText> = {
       healer: { name: "Лекарь", description: "Идёт среди пехоты. Направьте залп на лекаря и его сопровождение: башни выбирают цели сами, приказать им сосредоточить огонь нельзя." },
       scamp: { name: "Бесёнок", description: "Мелкий быстрый наземный рой. Катапульта, лёд и удачно направленный залп могут накрыть сразу нескольких." },
       gargoyle: { name: "Горгулья", description: "Летающий враг с бронёй. Нужны башни с воздушной атакой; против брони помогают сильные попадания или горение от огненных стрел." },
+      bulwark: { name: "Щитоносец", description: "Несёт башенный щит, ограничивающий любой одиночный удар. Частые стрелы лучников, мороз и горение от огненных стрел изматывают его; тяжёлые выстрелы теряются о щит." },
     },
     flyingFoe: "Летит к воротам, игнорируя дороги. Наземные атаки её не достают.",
     foeLeak: (count) => `Отнимает ${count} ${plural(count, "жизнь", "жизни", "жизней")}, если доберётся до ворот.`,
     armorRule: (armor, floor) => `Броня вычитает ${RU.num(armor)} урона из каждого прямого попадания, но пропускает не менее ${RU.pct(floor)} его урона. Горение игнорирует броню.`,
     fireproofRule: (share) => `Не горит. Само попадание огненной стрелы наносит лишь ${RU.pct(share)} обычного урона; огнеупорность не ослабляет остальные атаки.`,
+    shieldRule: (cap) => `Башенный щит: один удар наносит не больше ${RU.num(cap)} урона. Тики горения — не удары, огонь действует полностью.`,
     healerRule: (rate, range) => `Восстанавливает союзникам ${RU.pct(rate)} от их максимального здоровья в секунду в радиусе ${RU.num(range)}. Не лечит себя и полководцев, но лечит других лекарей и летающих врагов.`,
     summonRule: (count, seconds) => `Пока жив, призывает ещё ${count} пехотинцев каждые ${RU.num(seconds)} с. Эти подкрепления не входят в число врагов по расписанию.`,
     airTargetRule: (air, ground) => `Бьют летающих врагов: ${air}. Только наземных: ${ground}. Стрелы залпа бьют наземных и летающих врагов рядом с местом падения.`,

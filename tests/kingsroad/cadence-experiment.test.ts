@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { studyPlugin } from "../../scripts/kingsroad/study/instrument";
 import { plannedComparisons, pairComparisons, validateRow, type ComparisonRow, type LabeledRow } from "../../scripts/kingsroad/study/compare";
 import { CADENCE_KINDS, STOCK_CADENCE, isVariant, variantBalanceSource, variantSource, variantWavesSource, type Variant } from "../../scripts/kingsroad/study/variant";
+import { verifyFrozenOrShippedInputs } from "./study-inputs";
 
 let dir: string;
 const bundles = new Map<Variant, string>(), rows = new Map<Variant, ComparisonRow[]>();
@@ -70,9 +71,8 @@ describe("cadence diagnostic: predeclared arm", () => {
     expect(() => variantWavesSource(waves.replace("  runner: 0.55,", "  runner: 0.6,"), "cadence-2x")).toThrow("stock runner spacing");
     expect(() => variantWavesSource(waves, "cadence-3x" as Variant)).toThrow("Unknown");
   });
-  it("keeps every shipping input byte-identical to the frozen study baseline", () => {
-    const manifest = JSON.parse(readFileSync(resolve("reports/kingsroad-study/manifest.json"), "utf8"));
-    for (const [path, hash] of Object.entries(manifest.inputs)) expect(createHash("sha256").update(readFileSync(resolve(path))).digest("hex")).toBe(hash);
+  it("keeps every shipping input at its frozen or deliberately re-shipped hash", () => {
+    expect(verifyFrozenOrShippedInputs()).toBeUndefined();
   });
 });
 
@@ -110,7 +110,7 @@ describe("cadence changes arrival spacing only", () => {
       expect(b.stateHash).not.toBe(a.stateHash);
     }
     const test = JSON.parse(execFileSync(process.execPath, [bundles.get("cadence-2x")!, "--self-test"], { encoding: "utf8" }));
-    expect(test.variant).toBe("cadence-2x"); expect(test.range.ranges).toEqual([140, 150, 165]); expect(test.piercing.simultaneousFixtures).toBe(30);
+    expect(test.variant).toBe("cadence-2x"); expect(test.range.ranges).toEqual([140, 150, 165]); expect(test.piercing.simultaneousFixtures).toBe(33);
   }, 30_000);
   it("uses the same design as the three-hit diagnostic and never adds a placement control", () => {
     const plan = plannedComparisons("cadence-2x");

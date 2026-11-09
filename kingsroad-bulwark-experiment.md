@@ -47,7 +47,11 @@ grunt beside it; an 8-damage frost stone keeps full damage and its slow. Ledgers
 4. **Readability is a real shipping cost.** "Why did my ballista do 12?" needs a visible shield state (shield bar or
    hit-spark), wave-preview text, and a gentle teaching map — all UI work the offline sim cannot check.
 
-## Recommended next step (needs the user's approval; nothing shipped)
+## Shipped since (playable prototype)
+
+The foe now ships under the name **Shieldbearer** (Щитоносец): `hitCap 12` in `FOES`, the cap in `hitFoe`, v2-dose presence (`sends("bulwark", wave >= 8 ? 1 + Math.floor((wave - 8) / 6) : 0)`) on **harvest** (teaching) and **kings** (pressure showcase), a borrowed brute figure with a filled tower shield in `draw.ts`, EN/RU copy and a `shieldRule` line in the wave intel. The study-only variant and wrapper were retired (reproduce from commit `be016a8`); shipping tests cover the cap, the roster gating, fire-through-the-shield and the intel copy. The shipping playthrough bot wins 4/5 seeds on both maps (harvest: one loss at wave 13; kings: 3–10 lives). A phone check of readability and fun is still outstanding.
+
+## Original recommended next step (was: needs the user's approval; nothing shipped)
 
 A playable prototype on the phone: the bulwark drawn and named, v2-dose presence on a small chosen set (for example
 rivers + serpent in chapter 1 as teaching maps, or two maps of chapter 2), EN/RU copy in `i18n.ts`, sprite borrowed

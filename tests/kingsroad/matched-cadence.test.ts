@@ -10,7 +10,7 @@ import { isSpacingArm, isVariant, variantWavesSource, type Variant } from "../..
 
 type Spawn = { kind: string; at: number; road: number };
 type Probe = { map: string; waves: { wave: number; roster: Record<string, number>; spawns: Spawn[] }[] };
-const SLOW_STOCK: Record<string, number> = { grunt: 0.75, brute: 1.8, knight: 1.2, imp: 0.8, gargoyle: 1.2 };
+const SLOW_STOCK: Record<string, number> = { grunt: 0.75, brute: 1.8, knight: 1.2, imp: 0.8, gargoyle: 1.2, bulwark: 1.6 };
 const FAST_STOCK: Record<string, number> = { runner: 0.55, bat: 0.45, scamp: 0.2 };
 const ARMS = ["baseline", "matched-2x", "density-only"] as const;
 

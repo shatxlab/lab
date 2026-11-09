@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { Plugin } from "esbuild";
-import { variantBalanceSource, variantBulwarkBalanceSource, variantBulwarkWavesSource, variantRosterSource, variantSource, variantTypesSource, variantWavesSource, type Variant } from "./variant.ts";
+import { variantBalanceSource, variantRosterSource, variantSource, variantWavesSource, type Variant } from "./variant.ts";
 
 /** Fail closed when the shipping source changes; never maintain a second combat implementation. */
 export function instrumentSource(source: string, observerPath: string): string {
@@ -38,14 +38,11 @@ export function studyPlugin(root = process.cwd(), variant: Variant = "baseline")
     setup(build) {
       // One shared in-memory balance module reaches combat AND bot plot ranking. Never mutate an imported object.
       build.onLoad({ filter: /[/\\]kingsroad[/\\]sim[/\\]balance\.ts$/ }, async (args) => ({
-        contents: variantBulwarkBalanceSource(variantBalanceSource(await readFile(args.path, "utf8"), variant), variant), loader: "ts", resolveDir: dirname(args.path),
+        contents: variantBalanceSource(await readFile(args.path, "utf8"), variant), loader: "ts", resolveDir: dirname(args.path),
       }));
       // Spawn spacing is the only input of the cadence arm; the table is read from the same in-memory waves module.
       build.onLoad({ filter: /[/\\]kingsroad[/\\]sim[/\\]waves\.ts$/ }, async (args) => ({
-        contents: variantBulwarkWavesSource(variantRosterSource(variantWavesSource(await readFile(args.path, "utf8"), variant), variant), variant), loader: "ts", resolveDir: dirname(args.path),
-      }));
-      build.onLoad({ filter: /[/\\]kingsroad[/\\]sim[/\\]types\.ts$/ }, async (args) => ({
-        contents: variantTypesSource(await readFile(args.path, "utf8"), variant), loader: "ts", resolveDir: dirname(args.path),
+        contents: variantRosterSource(variantWavesSource(await readFile(args.path, "utf8"), variant), variant), loader: "ts", resolveDir: dirname(args.path),
       }));
       build.onLoad({ filter: /[/\\]study[/\\](instrumented-game|variant-game)\.ts$/ }, async (args) => {
         const path = resolve(root, "src/lib/kingsroad/sim/game.ts");

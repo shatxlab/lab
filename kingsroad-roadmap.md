@@ -227,9 +227,14 @@ blows), 90 hp x hpScale, speed 26, leak 2.
 - Archer-heavy unchanged at both doses (10->12->9): mono-archer stays closed; the cap favours *mixed* defenses, which
   is the design goal, not archer spam.
 - Conclusion: the cap mechanic works, is dose-tunable, and is the first lever in eight studies that makes situational
-  defense the better answer — but only at globally punitive doses. **The shipping shape is per-map presence** (like
-  gargoyles), e.g. one or two chapter-1/chapter-2 maps or a slice of maps 21-30, with a visible shield state, preview
-  copy and a teaching map. Nothing shipped; a playable phone prototype needs the user's approval.
+  defense the better answer — but only at globally punitive doses. **The shipping shape is per-map presence.**
+- **Shipped as the Shieldbearer (follow-up session):** hitCap 12, v2 dose from wave 8 on **harvest** (teaching map) and
+  **kings** (pressure showcase: study ballista-heavy 2/8 vs mixed 7/8), drawn as a brute behind a filled tower shield,
+  with EN/RU copy and a shield rule line in the wave preview. Roster gated by `map.foes` like every other new foe; the
+  offline variant retired (reproduce from `be016a8`); frozen-study input guards now accept exactly the five re-shipped
+  sim files (`tests/kingsroad/study-inputs-after-bulwark.json`). Playthrough bot: harvest 4/5 (one wave-13 loss), kings
+  4/5 at 3–10 lives. **Phone check of readability and fun still outstanding**; dial presence (parting/trident instead of
+  kings) if kings proves too harsh in hand play.
 
 ## Where it stands (2026-10-30)
 

@@ -532,7 +532,9 @@ function landVolleys(game: Game, dt: number): void {
 /** `fire` is a fire arrow's own hit, which a fireproof foe mostly shrugs off. */
 function hitFoe(foe: Foe, damage: number, slow: number, fire = false): void {
   const def = FOES[foe.kind];
-  const raw = fire && def.fireproof ? damage * FIREPROOF_HIT : damage;
+  const base = fire && def.fireproof ? damage * FIREPROOF_HIT : damage;
+  // A tower shield bounds what any one blow can do to a bulwark; burning ticks are not blows.
+  const raw = Math.min(base, def.hitCap ?? Infinity);
   const dealt = Math.max(raw * ARMOR_FLOOR, raw - def.armor);
   foe.hp -= dealt * (foe.markLeft > 0 ? 1 + MARK.bonus : 1);
   foe.flash = 0.08;

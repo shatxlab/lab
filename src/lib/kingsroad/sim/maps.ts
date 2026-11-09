@@ -205,7 +205,7 @@ export const MAPS: readonly MapDef[] = [
     // A spiral of a road: back and forth down the field, always turning toward the gate.
     id: "harvest",
     canvas: "autumn",
-    foes: ["knight"],
+    foes: ["knight", "bulwark"],
     archerBranches: true,
     roads: [road([300, -24], [300, 90], [60, 90], [60, 200], [260, 200], [260, 310], [100, 310], [100, 420], [260, 420], [260, 490], [180, 530], [180, 572])],
     plots: plots([229, 32], [93, 124], [249, 128], [177, 140], [133, 144], [217, 160], [93, 252], [185, 252], [137, 260], [225, 272], [133, 344], [217, 356], [173, 364], [177, 456], [221, 468], [145, 488]),
@@ -317,7 +317,7 @@ export const MAPS: readonly MapDef[] = [
     // Three roads, three kings: the outer two run straight, the middle one twists.
     id: "kings",
     canvas: "autumn",
-    foes: ["knight", "scamp", "imp", "healer", "gargoyle"],
+    foes: ["knight", "scamp", "imp", "healer", "gargoyle", "bulwark"],
     archerBranches: true,
     roads: [
       road([40, -24], [40, 240], [180, 400], [180, 572]),

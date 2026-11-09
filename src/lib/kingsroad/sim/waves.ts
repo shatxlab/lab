@@ -7,7 +7,7 @@ export type Roster = Record<FoeKind, number>;
 /**
  * How many of each enemy a wave sends: runners from wave 2, a bat swarm every third wave, brutes from wave 4, a warlord
  * at the end. A map that lists new foes adds scamp swarms on even waves from 2, knights from 5, imps on odd waves from 7,
- * healers from 7 and gargoyles every fourth wave from 8.
+ * healers from 7, gargoyles every fourth wave from 8 and bulwarks from 8.
  */
 export function waveRoster(wave: number, map: MapDef): Roster {
   const sends = (kind: NewFoeKind, count: number) => (map.foes.includes(kind) ? Math.max(0, count) : 0);
@@ -17,6 +17,7 @@ export function waveRoster(wave: number, map: MapDef): Roster {
     imp: sends("imp", wave >= 7 && wave % 2 === 1 ? 3 + Math.floor((wave - 7) / 3) : 0),
     healer: sends("healer", wave >= 7 ? 1 + Math.floor((wave - 7) / 5) : 0),
     gargoyle: sends("gargoyle", wave >= 8 && wave % 4 === 0 ? 1 + Math.floor((wave - 8) / 6) : 0),
+    bulwark: sends("bulwark", wave >= 8 ? 1 + Math.floor((wave - 8) / 6) : 0),
     grunt: 4 + Math.floor(1.6 * wave),
     runner: wave >= 2 ? Math.floor(0.9 * wave) : 0,
     brute: wave >= 4 ? 1 + Math.floor((wave - 4) / 2.5) : 0,
@@ -42,6 +43,7 @@ const SPACING: Record<FoeKind, number> = {
   healer: 0,
   scamp: 0.2,
   gargoyle: 1.2,
+  bulwark: 1.6,
 };
 /** Breathing room between one column and the next. */
 const COLUMN_GAP = 2;
@@ -56,7 +58,7 @@ export function buildSpawns(wave: number, map: MapDef, source: { rng: number }):
   const roster = waveRoster(wave, map);
   const columns = shuffle(
     source,
-    (["grunt", "runner", "brute", "bat", "knight", "imp", "scamp", "gargoyle"] as const).filter((kind) => roster[kind] > 0),
+    (["grunt", "runner", "brute", "bat", "knight", "imp", "scamp", "gargoyle", "bulwark"] as const).filter((kind) => roster[kind] > 0),
   );
   const spawns: PendingSpawn[] = [];
   let at = 0;

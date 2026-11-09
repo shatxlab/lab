@@ -9,6 +9,7 @@ import { TOWERS } from "@/lib/kingsroad/sim/balance";
 import { studyPlugin } from "../../scripts/kingsroad/study/instrument";
 import { expectedRanges, isVariant, variantBalanceSource, variantSource, type Variant } from "../../scripts/kingsroad/study/variant";
 import { pairComparisons, plannedComparisons, validateRow, type ComparisonRow, type LabeledRow } from "../../scripts/kingsroad/study/compare";
+import { verifyFrozenOrShippedInputs } from "./study-inputs";
 
 let dir: string, summaryBundle: string;
 const rows = new Map<Variant, ComparisonRow[]>(), bundles = new Map<Variant, string>();
@@ -52,10 +53,8 @@ describe("range-only offline diagnostic", () => {
     expect(() => variantBalanceSource(source.replace("range: 140,", "range: 141,"), "range-80")).toThrow("three stock ranges");
     expect(() => variantBalanceSource(source, "range-70" as Variant)).toThrow("Unknown");
   });
-  it("never mutates the shipping balance object or any of the eight frozen input files", () => {
-    expect(TOWERS.ballista.levels.map(l => l.range)).toEqual([140, 150, 165]);
-    const manifest = JSON.parse(readFileSync(resolve("reports/kingsroad-study/manifest.json"), "utf8"));
-    for (const [path, hash] of Object.entries(manifest.inputs)) expect(createHash("sha256").update(readFileSync(resolve(path))).digest("hex")).toBe(hash);
+  it("never mutates the shipping balance object, and keeps inputs at frozen or re-shipped hashes", () => {
+    expect(verifyFrozenOrShippedInputs()).toBeUndefined();
   });
   it("uses the selected ranges in actual whole-game execution, not only a report label", () => {
     for (const row of rows.get("range-80")!) { expect(row.ballistaRanges).toEqual([112, 120, 132]); validateRow(row); }
@@ -74,7 +73,7 @@ describe("range-only offline diagnostic", () => {
     expect(test.range.ranges).toEqual([112, 120, 132]); expect(test.range.acquisitionFixtures).toBe(12);
     expect(test.range.groundAndAir).toBe(true); expect(test.range.projectileSpeed).toBe(460); expect(test.range.lifetimeFactor).toBe(1.15);
     expect(test.range.fixedRankMaps).toBe(20); expect(test.range.changedRankMaps).toHaveLength(20);
-    expect(test.piercing.simultaneousFixtures).toBe(30); expect(test.piercing.sequential).toBe(true);
+    expect(test.piercing.simultaneousFixtures).toBe(33); expect(test.piercing.sequential).toBe(true);
   }, 30_000);
   it("preserves non-Ballista state, decisions and telemetry exactly", () => {
     const a = rows.get("baseline")!.find(r => r.policy.strategy === "archer")!, b = rows.get("range-80")!.find(r => r.policy.strategy === "archer")!;

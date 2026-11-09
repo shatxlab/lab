@@ -10,6 +10,7 @@ import { studyPlugin } from "../../scripts/kingsroad/study/instrument";
 import { airLaneWithin, decide, newDecisions, plotOrder, type Policy } from "../../scripts/kingsroad/study/policy";
 import { validateRow, type ComparisonRow } from "../../scripts/kingsroad/study/compare";
 import * as engine from "@/lib/kingsroad/sim/game";
+import { verifyFrozenOrShippedInputs } from "./study-inputs";
 
 let dir: string, bundle: string;
 const rows = new Map<string, ComparisonRow[]>();
@@ -87,8 +88,7 @@ describe("smart Archer policy: no drift in existing strategies", () => {
     // The stock plan's first build is an archer on the top coverage plot, as before the smart policy existed.
     expect(d.purchases[0]).toMatchObject({ type: "build", kind: "archer" });
   });
-  it("never mutates the shipping engine or the frozen study inputs", () => {
-    const manifest = JSON.parse(readFileSync(resolve("reports/kingsroad-study/manifest.json"), "utf8"));
-    for (const [path, hash] of Object.entries(manifest.inputs)) expect(createHash("sha256").update(readFileSync(resolve(path))).digest("hex")).toBe(hash);
+  it("never mutates the shipping engine, and keeps inputs at frozen or re-shipped hashes", () => {
+    expect(verifyFrozenOrShippedInputs()).toBeUndefined();
   });
 });

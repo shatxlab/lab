@@ -11,6 +11,7 @@ import { comparisonStats, pairComparisons, plannedComparisons, validateRow, type
 import { play } from "../../scripts/kingsroad/study/runner";
 import { basePolicy } from "../../scripts/kingsroad/study/compare";
 import { createGame } from "@/lib/kingsroad/sim/game";
+import { verifyFrozenOrShippedInputs } from "./study-inputs";
 
 let dir: string;
 const rows = new Map<Variant, ComparisonRow[]>();
@@ -44,18 +45,15 @@ describe("isolated three-hit variant", () => {
     expect(() => variantSource("", "three-hit")).toThrow("exactly once");
     expect(() => variantSource("    shot.hitIds.push(foe.id);\n    shot.hitIds.push(foe.id);", "three-hit")).toThrow("exactly once");
   });
-  it("does not modify any shipping simulation input from the frozen study manifest", () => {
-    const manifest = JSON.parse(readFileSync(resolve("reports/kingsroad-study/manifest.json"), "utf8"));
-    for (const [file, hash] of Object.entries(manifest.inputs)) {
-      expect(createHash("sha256").update(readFileSync(resolve(file))).digest("hex")).toBe(hash);
-    }
+  it("keeps every shipping input at its frozen or deliberately re-shipped hash", () => {
+    expect(verifyFrozenOrShippedInputs()).toBeUndefined();
   });
   it("proves observed/control parity and correct unobserved suffixes for the capped variant", () => {
     const result = JSON.parse(execFileSync(process.execPath, [bundles.get("three-hit")!, "--self-test"], { encoding: "utf8" }));
     expect(result.variant).toBe("three-hit");
     expect(result.richEquivalenceSeeds).toEqual([1, 7, 31]); expect(result.suffixes).toBe(13);
-    expect(result.piercing.simultaneousFixtures).toBe(30);
-    expect(result.piercing.kinds).toHaveLength(10); expect(result.piercing.levels).toEqual([1, 2, 3]);
+    expect(result.piercing.simultaneousFixtures).toBe(33);
+    expect(result.piercing.kinds).toHaveLength(11); expect(result.piercing.levels).toEqual([1, 2, 3]);
     expect(result.piercing.sequential).toBe(true); expect(result.piercing.priorHits).toBe(true); expect(result.piercing.deadSkipped).toBe(true);
   }, 30_000);
   it("never exceeds three contacts or retains beyond-third damage in whole-game telemetry", () => {

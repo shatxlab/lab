@@ -1,0 +1,1 @@
+Two predeclared doses of the shielded-foe prototype, forced onto all 20 maps (a stress test, harsher than any shipping plan). Regenerate with scripts/kingsroad/study/reproduce-bulwark.sh after setting the dose in variant.ts (BULWARK.fromWave/every).

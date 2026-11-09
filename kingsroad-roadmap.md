@@ -200,6 +200,37 @@ Full findings: `kingsroad-archer-policy-experiment.md`; evidence: `reports/kings
 - Added 9 policy tests (frozen stock-archer terminal hash reproduced exactly); kingsroad suite **14 files / 337 tests**
   and typecheck pass. No shipping change, commit or push.
 
+## Roster distribution diagnostic — complete: distribution is not the lever either
+
+Full findings: `kingsroad-roster-experiment.md`; evidence: `reports/kingsroad-roster/`. Offline only; `roster-spread`
+variant splits scamp/runner columns round-robin across roads — same foes, counts, times and RNG draws, single-road
+maps untouched.
+
+- 1,664 full runs, 2 arms x 4 strategies (incl. archer-smart) over primary + budget + no-volley. **Ballista-heavy
+  160/160 (19.88), Archer 10->10, archer-smart 15->14, Mixed 153->150.** Not one map changes hands for either Archer
+  policy; gate convergence keeps pierce valuable; Archer loses to HP scaling, not swarm shape.
+- Predeclared criteria: not punitive **PASS**, niche **FAIL**, Mixed holds **PASS** at the boundary. Conclusion: every
+  lever inside the current rules is now measured (nerfs, spacing, policy, distribution). A real Archer role needs new
+  mechanics (per-hit shields / damage caps / rapid-fire-only pressure) or new content (Mage branches, maps 21-30);
+  archer-as-support (lune) already works in Mixed.
+- 6 new tests; shipping inputs byte-identical; no commit/push of balance.
+
+## Shielded-foe prototype (bulwark) — mechanic proven, shipping shape decided
+
+Full findings: `kingsroad-bulwark-experiment.md`; evidence: `reports/kingsroad-bulwark/` (two doses). Offline only;
+study-only foe in memory: any single hit counts for at most 12 (bolts, stones and volley capped; burn ticks are not
+blows), 90 hp x hpScale, speed 26, leak 2.
+
+- Two predeclared doses, both forced onto all 20 maps (stress test): **v1** (wave 6, +1/4) drops Ballista-heavy to
+  108/160 and loses four late maps outright but flips the budget/no-volley ordering to Mixed (15 vs 11, 12 vs 9);
+  **v2** (wave 8, +1/6) spares 17 maps, Ballista 142/160, but the flip is gone (Mixed 133; budget 14 vs 16).
+- Archer-heavy unchanged at both doses (10->12->9): mono-archer stays closed; the cap favours *mixed* defenses, which
+  is the design goal, not archer spam.
+- Conclusion: the cap mechanic works, is dose-tunable, and is the first lever in eight studies that makes situational
+  defense the better answer — but only at globally punitive doses. **The shipping shape is per-map presence** (like
+  gargoyles), e.g. one or two chapter-1/chapter-2 maps or a slice of maps 21-30, with a visible shield state, preview
+  copy and a teaching map. Nothing shipped; a playable phone prototype needs the user's approval.
+
 ## Where it stands (2026-10-30)
 
 Ten maps on one canvas (the phone-shaped field, woods along the top, castle wall and gate along the bottom), each opened by

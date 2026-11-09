@@ -1,0 +1,177 @@
+{
+  "baselineCommit": "542ae08a9690e6a937678b4212600d2b222d5df2",
+  "dose": "fromWave 8, +1 every 6 waves",
+  "foe": "hp 90 x hpScale, speed 26, leak 2, gold 14, hitCap 12, spacing 1.6, forced onto all 20 maps",
+  "matrices": {
+    "budget": {
+      "archer": {
+        "baseline": {
+          "meanLives": 0.04,
+          "n": 24,
+          "wins": 1
+        },
+        "bulwark": {
+          "meanLives": 0.0,
+          "n": 24,
+          "wins": 0
+        }
+      },
+      "archer-smart": {
+        "baseline": {
+          "meanLives": 0.08,
+          "n": 24,
+          "wins": 1
+        },
+        "bulwark": {
+          "meanLives": 0.0,
+          "n": 24,
+          "wins": 0
+        }
+      },
+      "ballista": {
+        "baseline": {
+          "meanLives": 19.54,
+          "n": 24,
+          "wins": 24
+        },
+        "bulwark": {
+          "meanLives": 10.58,
+          "n": 24,
+          "wins": 16
+        }
+      },
+      "mixed": {
+        "baseline": {
+          "meanLives": 8.67,
+          "n": 24,
+          "wins": 14
+        },
+        "bulwark": {
+          "meanLives": 8.75,
+          "n": 24,
+          "wins": 14
+        }
+      }
+    },
+    "no-volley": {
+      "archer": {
+        "baseline": {
+          "meanLives": 0.0,
+          "n": 24,
+          "wins": 0
+        },
+        "bulwark": {
+          "meanLives": 0.0,
+          "n": 24,
+          "wins": 0
+        }
+      },
+      "archer-smart": {
+        "baseline": {
+          "meanLives": 0.0,
+          "n": 24,
+          "wins": 0
+        },
+        "bulwark": {
+          "meanLives": 0.0,
+          "n": 24,
+          "wins": 0
+        }
+      },
+      "ballista": {
+        "baseline": {
+          "meanLives": 19.88,
+          "n": 24,
+          "wins": 24
+        },
+        "bulwark": {
+          "meanLives": 9.46,
+          "n": 24,
+          "wins": 18
+        }
+      },
+      "mixed": {
+        "baseline": {
+          "meanLives": 5.88,
+          "n": 24,
+          "wins": 14
+        },
+        "bulwark": {
+          "meanLives": 4.04,
+          "n": 24,
+          "wins": 8
+        }
+      }
+    },
+    "primary": {
+      "archer": {
+        "baseline": {
+          "meanLives": 0.77,
+          "n": 160,
+          "wins": 10
+        },
+        "bulwark": {
+          "meanLives": 1.02,
+          "n": 160,
+          "wins": 9
+        }
+      },
+      "archer-smart": {
+        "baseline": {
+          "meanLives": 1.34,
+          "n": 160,
+          "wins": 15
+        },
+        "bulwark": {
+          "meanLives": 1.45,
+          "n": 160,
+          "wins": 14
+        }
+      },
+      "ballista": {
+        "baseline": {
+          "meanLives": 19.92,
+          "n": 160,
+          "wins": 160
+        },
+        "bulwark": {
+          "meanLives": 14.93,
+          "n": 160,
+          "wins": 142
+        }
+      },
+      "mixed": {
+        "baseline": {
+          "meanLives": 14.18,
+          "n": 160,
+          "wins": 153
+        },
+        "bulwark": {
+          "meanLives": 12.03,
+          "n": 160,
+          "wins": 133
+        }
+      }
+    }
+  },
+  "rawInputs": {
+    "baseline/budget.jsonl": "e32d0f56032e137bb79a2fa7a1b022cded78e445aa85ff8aa6ef677428ae0e7d",
+    "baseline/no-volley.jsonl": "9da9a9a68f2ed467abdc8481d456b5258f2adfb7884ebac1618b4ad6152bc9f2",
+    "baseline/primary.jsonl": "4b3df73e381ed14505104f36219b54205a42ac2172df0c20a07f29c57c2916f0",
+    "bulwark/budget.jsonl": "ab6b69a4d3c04479f360c89a47003dc0d874bfe80af703698a006e3830ad7f98",
+    "bulwark/no-volley.jsonl": "9cdcd2a7ecd05fbdf927226950b493a62e0c914c00f1e4661478fc1e71a63090",
+    "bulwark/primary.jsonl": "72313c58d24f12fc796354ec0842e84757864ca0e30f5dda4e111e1708fc910f"
+  },
+  "shipped": false,
+  "shippingInputs": {
+    "src/lib/kingsroad/sim/balance.ts": "f37055674fe4777a9f16ad53cd88e4fa2ea85d7c64b12c57b1d667008fff2360",
+    "src/lib/kingsroad/sim/game.ts": "bd2eeb94e7aeac46ef499fde8cb45aadf106087304ce5971588f39450737ac93",
+    "src/lib/kingsroad/sim/maps.ts": "d5233b4c753178c0ded03ea8d5016b779af7645cb7eac2b5c148680fe515570f",
+    "src/lib/kingsroad/sim/path.ts": "bbae2b338991e0002b9340774e2c630bec1cf7f1cf8241cc08f5b9dfabcff6a8",
+    "src/lib/kingsroad/sim/types.ts": "b420c5dcc3e1e6006e133815247d0c380b04979d27a0247c419986077b0a3c88",
+    "src/lib/kingsroad/sim/waves.ts": "08f9bd14d24d2ef182060f8bf532cada0028b4c0fd8dba3d5f0bec3de4ca4a1f",
+    "src/lib/tower/sim/balance.ts": "bd2040b42ab8ed27500144cb24f24e9fbf04627fb1be5e47f982c015256aff20",
+    "src/lib/tower/sim/random.ts": "f1b602447c4192cc5eb66ea3b618335d0f0e3091d392df52afd000a6d8b63824"
+  },
+  "variant": "bulwark"
+}

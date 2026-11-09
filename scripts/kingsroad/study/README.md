@@ -29,10 +29,13 @@ RAW=/tmp/kr-cadence-raw REPORT=/tmp/kr-cadence-report bash scripts/kingsroad/stu
 RAW=/tmp/kr-matched-raw REPORT=/tmp/kr-matched bash scripts/kingsroad/study/reproduce-matched.sh
 ```
 
-The role-appropriate Archer policy probe runs `archer-smart` against the stock archer at stock stats:
+The role-appropriate Archer policy probe runs `archer-smart` against the stock archer at stock stats, and the roster
+diagnostic splits fast ground swarms across roads (`roster-spread`):
 
 ```sh
 RAW=/tmp/kr-archer-raw bash scripts/kingsroad/study/reproduce-archer-policy.sh
+RAW=/tmp/kr-roster-raw bash scripts/kingsroad/study/reproduce-roster.sh
+RAW=/tmp/kr-bulwark-raw bash scripts/kingsroad/study/reproduce-bulwark.sh  # dose lives in variant.ts BULWARK
 ```
 
 For a smaller run:

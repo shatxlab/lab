@@ -31,7 +31,9 @@ export function verifyPiercing(sim: Engine, variant: Variant) {
     const damage = TOWERS.ballista.levels[level - 1].damage, shot = bolt(game, damage);
     game.shots = [shot]; const rng = game.rng;
     sim.step(game, sim.STEP);
-    const expected = Math.max(damage * ARMOR_FLOOR, damage - FOES[kind].armor);
+    // The bulwark variant adds a capped foe to this table; its shield bounds what any one contact can deal.
+    const cap = (FOES[kind] as unknown as { hitCap?: number }).hitCap;
+    const expected = Math.min(Math.max(damage * ARMOR_FLOOR, damage - FOES[kind].armor), cap ?? Infinity);
     assert.equal(shot.hitIds.length, limit, `${kind}/L${level}: simultaneous contact count`);
     assert.equal(new Set(shot.hitIds).size, limit);
     game.foes.forEach((f, index) => assert.equal(f.hp, index < limit ? 1000 - expected : 1000));

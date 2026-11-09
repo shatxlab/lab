@@ -4,6 +4,7 @@ import * as original from "./variant-game";
 import type { Variant } from "./variant";
 import { verifyRange } from "./range-fixtures";
 import { verifyPiercing } from "./piercing-fixtures";
+import { verifyBulwark } from "./bulwark-fixtures";
 import { FOES, TOWERS } from "../../../src/lib/kingsroad/sim/balance";
 import type { FoeKind } from "../../../src/lib/kingsroad/sim/types";
 import { mapById } from "../../../src/lib/kingsroad/sim/maps";
@@ -157,5 +158,6 @@ export function selfTest() {
   }
   const piercing = verifyPiercing(original, original.STUDY_VARIANT);
   const range = verifyRange(original, original.STUDY_VARIANT);
-  return { range, piercing, variant: original.STUDY_VARIANT, richEquivalenceSeeds: [1, 7, 31], ticksPerSeed: 12_000, fullRun: "meadow seed 7 mixed", suffixes: baseline.checkpoints.length, mapCount: mapById("meadow").waves };
+  const bulwark = verifyBulwark(original, original.STUDY_VARIANT);
+  return { range, piercing, bulwark, variant: original.STUDY_VARIANT, richEquivalenceSeeds: [1, 7, 31], ticksPerSeed: 12_000, fullRun: "meadow seed 7 mixed", suffixes: baseline.checkpoints.length, mapCount: mapById("meadow").waves };
 }

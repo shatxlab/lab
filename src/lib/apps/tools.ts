@@ -37,6 +37,22 @@ export const CATEGORY_TITLES: Record<ToolCategory, Localized> = {
 
 export const TOOLS: readonly ToolEntry[] = [
   {
+    id: "potions",
+    path: "/potions",
+    category: "games",
+    files: { en: "You vs bots · 2–7 alchemists · offline", ru: "Вы против ботов · 2–7 алхимиков · офлайн" },
+    title: { en: "Potion panic", ru: "Переполох в котле" },
+    description: {
+      en: "Spot three matching numbers, race bots for ingredients, and bank cards whose sum is a multiple of ten. A quick-thinking potion card game.",
+      ru: "Заметьте три одинаковых числа, опередите ботов и соберите ингредиенты на круглую сумму. Карточная игра на реакцию и счёт.",
+    },
+    keywords: "potions alchemy cards bots brew reaction polyjuice зелье алхимия карты боты оборотное реакция",
+    seo: {
+      title: "Potion panic — alchemy card game",
+      description: "Race bot alchemists for potion ingredients, spot triples and make multiples of ten. An original-looking browser card game, free and offline.",
+    },
+  },
+  {
     id: "tools",
     path: "/tools",
     category: "files",

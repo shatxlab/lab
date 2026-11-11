@@ -1,7 +1,8 @@
+import { PatternToken } from "./PatternToken";
 import { useReducer } from "react";
 import {
-  generatePattern, miniStrings, miniText, PATTERN_ROUNDS, TILE_SYMBOLS, tileName,
-  type Pattern, type Tile,
+  generatePattern, miniStrings, miniText, PATTERN_ROUNDS, patternTools, patternDifficulty, tileName,
+  type Pattern,
 } from "@/lib/couples/mini-games";
 import { initialPattern, patternReducer } from "@/lib/couples/mini-session";
 import type { Lang } from "@/lib/couples/types";
@@ -14,7 +15,7 @@ function Board({ board, lang, onPlace, label, compare }: {
   return <div className="cp-pattern-board" role="group" aria-label={label}>
     {board.map((tile, i) => {
       const name = miniText(T.cell, { row: Math.floor(i / 3) + 1, col: i % 3 + 1, tile: tileName(tile, lang) });
-      const body = <span aria-hidden="true">{TILE_SYMBOLS[tile]}</span>;
+      const body = <PatternToken tile={tile} />;
       const props = {
         className: "cp-pattern-cell", "data-tile": tile, "data-cell": i,
         "data-correct": compare ? compare[i] === tile : undefined,
@@ -39,7 +40,7 @@ export function SecretPattern({ lang, names, onReplay, onMenu }: MiniPlayProps) 
   }), { correct: 0, total: 0, perfect: 0, peeks: 0 });
   const handoff = state.phase === "handoff-study" || state.phase === "handoff-build" || state.phase === "handoff-peek";
   return <div className="cp-mini-content" ref={ref} data-mini-phase={state.phase}>
-    {state.phase !== "summary" ? <p className="cp-counter">{T.round} {state.round + 1} / {PATTERN_ROUNDS}</p> : null}
+    {state.phase !== "summary" ? <p className="cp-counter">{T.round} {state.round + 1} / {PATTERN_ROUNDS} · {miniText(T.difficulty, patternDifficulty(state.round))}</p> : null}
     {handoff ? <MiniHandoff lang={lang} name={state.phase === "handoff-build" ? builder : describer}
       onReady={() => dispatch({ type: "ready" })} /> : null}
 
@@ -59,9 +60,9 @@ export function SecretPattern({ lang, names, onReplay, onMenu }: MiniPlayProps) 
       <h2 tabIndex={-1}>{miniText(T.build, { name: builder })}</h2>
       <p className="cp-note">{T.buildHint}</p>
       <div className="cp-pattern-palette" role="group" aria-label={T.palette}>
-        {([0, 1, 2, 3] as Tile[]).map((tile) => <button type="button" key={tile} data-tool={tile}
+        {patternTools(state.round).map((tile) => <button type="button" key={tile} data-tool={tile}
           className="cp-pattern-cell" data-tile={tile} aria-pressed={state.tool === tile} aria-label={tileName(tile, lang)}
-          onClick={() => dispatch({ type: "tool", tile })}><span aria-hidden="true">{tile === 0 ? "⌫" : TILE_SYMBOLS[tile]}</span></button>)}
+          onClick={() => dispatch({ type: "tool", tile })}>{tile === 0 ? <span aria-hidden="true">⌫</span> : <PatternToken tile={tile} />}</button>)}
       </div>
       <Board board={state.draft} lang={lang} label={T.rebuilt} onPlace={(cell) => dispatch({ type: "place", cell })} />
       <div className="cp-mini-actions">

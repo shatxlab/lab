@@ -5,7 +5,6 @@ import { stringsFor } from "@/lib/couples/i18n";
 import type { Lang } from "@/lib/couples/types";
 import { useMiniPhaseFocus, type MiniPlayProps } from "./MiniGameUI";
 import { SecretPattern } from "./SecretPattern";
-import { SplitOrSteal } from "./SplitOrSteal";
 
 function ExitDialog({ lang, onCancel, onLeave }: { lang: Lang; onCancel(): void; onLeave(): void }) {
   const T = miniStrings(lang);
@@ -55,8 +54,7 @@ export function MiniGames({ game, lang, names, onNames, onMenu }: {
     content = <div className="cp-mini-content" ref={setupRef}>
       <section className="cp-mini-panel">
         <h2 tabIndex={-1}>{T.rules}</h2>
-        <p>{game === "pattern" ? T.patternRules : T.splitRules}</p>
-        {game === "split" ? <p className="cp-mini-caution">{T.fiction}</p> : null}
+        <p>{T.patternRules}</p>
       </section>
       <section className="cp-field">
         <h2>{T.names}</h2>
@@ -75,7 +73,7 @@ export function MiniGames({ game, lang, names, onNames, onMenu }: {
       }}>{T.start}</button>
     </div>;
   } else {
-    content = game === "pattern" ? <SecretPattern key={run} {...playProps} /> : <SplitOrSteal key={run} {...playProps} />;
+    content = <SecretPattern key={run} {...playProps} />;
   }
   return <div className="cp-mini" data-mini-game={game}>
     <div className="cp-mini-layout" inert={confirmExit}>

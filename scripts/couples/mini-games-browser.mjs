@@ -15,7 +15,7 @@ const phase = async p => p.locator('[data-mini-phase]').getAttribute('data-mini-
 const action = (p, a) => p.locator(`[data-action="${a}"]`).click();
 const ready = p => p.locator('[data-handoff] button').click();
 const noSecrets = async p => {
-  assert.equal(await p.locator('.cp-pattern-board, [data-choice], .cp-split-options').count(), 0);
+  assert.equal(await p.locator('.cp-pattern-board').count(), 0);
 };
 const layout = async p => {
   const issues = await p.evaluate(() => {
@@ -49,7 +49,7 @@ try {
     await p.goto(`http://127.0.0.1:${port}/couples/`);
     await p.locator('.cp-shell[data-lang-ready]').waitFor();
     if(port===4321) await p.addStyleTag({content:'astro-dev-toolbar { display:none !important; }'});
-    assert.equal(await p.locator('.cp-game-card').count(),5);
+    assert.equal(await p.locator('.cp-game-card').count(),4);
     await p.locator('.cp-game-card').nth(3).click();
     await layout(p);
     await action(p,'start'); await noSecrets(p);
@@ -58,11 +58,16 @@ try {
       await ready(p);
       const target = await p.locator('.cp-pattern-board [data-cell]').evaluateAll(c=>c.map(x=>Number(x.dataset.tile)));
       await layout(p);
-      if(round===0 && port===4322 && lang==='en' && width===390) {
-        await p.screenshot({animations:'disabled',path:`${out}/secret-pattern-study.png`});
+      if((round===0 || round===4) && port===4322 && lang==='en' && width===390) {
+        await p.screenshot({animations:'disabled',path:`${out}/secret-pattern-study-${round}.png`});
         await audit(p,'pattern study');
       }
       await action(p,'pass'); await noSecrets(p); await ready(p);
+      await layout(p);
+      if(round===4 && port===4322 && width===390) {
+        await audit(p, `four-colour builder ${lang}`);
+        await p.screenshot({animations:'disabled',path:`${out}/secret-pattern-build-final-${lang}.png`});
+      }
       for(let i=0;i<9;i++) if(target[i]) {
         await p.locator(`[data-tool="${target[i]}"]`).click();
         await p.locator(`[data-cell="${i}"]`).click();
@@ -84,7 +89,7 @@ try {
       await action(p,'next');
     }
     assert.equal(await phase(p),'summary');
-    assert.match(await p.locator('.cp-score-value').innerText(),/21 \/ 21/);
+    assert.match(await p.locator('.cp-score-value').innerText(),/25 \/ 25/);
     await layout(p); await action(p,'replay');
     assert.equal(await phase(p),'handoff-study');
     await p.locator('.cp-mini-exit').click();
@@ -94,37 +99,10 @@ try {
     assert.equal(await p.locator('[role="dialog"]').count(),0);
     assert.equal(await p.locator('.cp-mini-exit').evaluate(e=>e===document.activeElement),true);
     await p.locator('.cp-mini-exit').click(); await p.locator('[role="dialog"] .cp-danger').click();
-    await p.locator('.cp-game-card').nth(4).click(); await action(p,'start');
-    for(let round=0;round<8;round++) {
-      assert.equal(await phase(p),'negotiate'); await action(p,'begin'); await noSecrets(p); await ready(p);
-      if(round===0) {
-        await layout(p);
-        if(port===4322 && lang==='en' && width===390) {
-          await audit(p,'split choices');
-          await p.screenshot({animations:'disabled',path:`${out}/split-or-steal-choose.png`});
-          // Native keyboard activation: select Split via Tab and Enter.
-          await p.keyboard.press('Tab');
-          assert.equal(await p.locator('[data-action="split"]').evaluate(e=>e===document.activeElement),true);
-          await p.keyboard.press('Enter');
-        } else await action(p,'split');
-      } else await action(p,'split');
-      assert.equal(await phase(p),'handoff-second'); await noSecrets(p); await ready(p);
-      await action(p,'split'); assert.equal(await phase(p),'locked'); await noSecrets(p);
-      await action(p,'reveal'); await layout(p);
-      if(round===0 && port===4322 && lang==='en' && width===390) await p.screenshot({animations:'disabled',path:`${out}/split-or-steal-reveal.png`});
-      await action(p,'next');
-    }
-    assert.equal(await phase(p),'summary'); await layout(p);
-    const scores = await p.locator('.cp-mini-result-number').allTextContents();
-    assert.deepEqual(scores,['24','24']);
-    assert.equal(await p.locator('.cp-mini-history li').count(),8);
     const stored = await p.evaluate(()=>JSON.parse(localStorage.getItem('lab:couples:v1')));
     assert.deepEqual(stored.stats,{games:2,cards:10,matches:6});
-    if(port===4322 && lang==='en' && width===390) await audit(p,'split summary');
-    await action(p,'replay'); assert.equal(await phase(p),'negotiate');
-    await action(p,'begin'); await ready(p); await action(p,'steal');
     await p.reload(); await p.locator('.cp-shell[data-lang-ready]').waitFor();
-    assert.equal(await p.locator('.cp-game-card').count(),5);
+    assert.equal(await p.locator('.cp-game-card').count(),4);
     assert.equal(await p.locator('[data-mini-game]').count(),0);
     checks.push({port,lang,width,height,result:'passed'});
     console.log('PASS',port,lang,width,height);
@@ -143,10 +121,6 @@ try {
     await action(p,'prepare-reveal'); await action(p,'reveal'); await layout(p);
     assert.equal(await p.locator('.cp-mini-reveal').evaluate(e=>getComputedStyle(e).animationName),'none');
     await p.locator('.cp-mini-exit').click(); await p.locator('[role="dialog"] .cp-danger').click();
-    await p.locator('.cp-game-card').nth(4).click(); await action(p,'start'); await action(p,'begin'); await ready(p);
-    await layout(p); await audit(p,`dark split ${width}×${height}`);
-    await action(p,'steal'); await ready(p); await action(p,'split'); await action(p,'reveal');
-    await layout(p); assert.equal(await p.locator('.cp-mini-reveal').evaluate(e=>getComputedStyle(e).animationName),'none');
     checks.push({width,height,theme:'dark',reducedMotion:true,result:'passed'});
     await context.close();
   }

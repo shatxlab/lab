@@ -26,7 +26,7 @@ function click(host: HTMLElement, selector: string) {
 function action(host: HTMLElement, name: string) { click(host, `[data-action="${name}"]`); }
 function phase(host: HTMLElement) { return host.querySelector("[data-mini-phase]")?.getAttribute("data-mini-phase"); }
 function ready(host: HTMLElement) { click(host, "[data-handoff] button"); }
-function open(host: HTMLElement, game: MiniGameId) { click(host, `.cp-game-card:nth-child(${game === "pattern" ? 4 : 5})`); }
+function open(host: HTMLElement, game: MiniGameId) { click(host, `.cp-game-card:nth-child(${4})`); }
 function start(host: HTMLElement, game: MiniGameId) { open(host, game); action(host, "start"); }
 function tiles(host: HTMLElement): Tile[] {
   return [...host.querySelectorAll(".cp-pattern-board [data-cell]")].map((cell) => Number(cell.getAttribute("data-tile")) as Tile);
@@ -34,7 +34,6 @@ function tiles(host: HTMLElement): Tile[] {
 function noPrivateDOM(host: HTMLElement) {
   expect(host.querySelector(".cp-pattern-board")).toBeNull();
   expect(host.querySelector("[data-choice]")).toBeNull();
-  expect(host.querySelector(".cp-split-options")).toBeNull();
 }
 const stats = { games: 7, cards: 20, matches: 13 };
 const history = { seq: 3, seen: { "norm:old": 3 }, hidden: ["who:hidden"] };
@@ -80,7 +79,7 @@ describe.each(["en", "ru"] as const)("deck-free games (%s)", (lang) => {
       action(host, "next");
     }
     expect(phase(host)).toBe("summary");
-    expect(host.textContent).toContain("21 / 21");
+    expect(host.textContent).toContain("25 / 25");
     expect(host.textContent).toContain(`${T.perfectCount}: 5 / 5`);
     expect(host.querySelectorAll(".cp-mini-history li")).toHaveLength(5);
     noPrivateDOM(host); unchangedStats();
@@ -90,50 +89,9 @@ describe.each(["en", "ru"] as const)("deck-free games (%s)", (lang) => {
     expect(tiles(host)).toEqual(Array(9).fill(0));
   });
 
-  it("plays eight private Split or Steal rounds, maps reversed player order, totals correctly, and replays fresh", () => {
-    seedStats(lang);
-    const host = mount(lang); const T = miniStrings(lang);
-    start(host, "split");
-    const expected: [number, number] = [0, 0];
-    const pairs = [["split", "split"], ["steal", "split"], ["split", "steal"], ["steal", "steal"]] as const;
-    for (let round = 0; round < 8; round++) {
-      expect(phase(host)).toBe("negotiate");
-      action(host, "begin"); noPrivateDOM(host);
-      expect(host.textContent).toContain(miniText(T.lookAway, { name: round % 2 ? "Sam" : "Alex" }));
-      ready(host); expect(phase(host)).toBe("choose-first");
-      const pair = pairs[round % 4];
-      action(host, pair[round % 2]); noPrivateDOM(host);
-      expect(phase(host)).toBe("handoff-second");
-      ready(host); expect(phase(host)).toBe("choose-second");
-      expect(host.querySelector("[data-choice]")).toBeNull();
-      expect(host.querySelector(".cp-mini-history")).toBeNull();
-      action(host, pair[1 - round % 2]); noPrivateDOM(host);
-      expect(phase(host)).toBe("locked");
-      unchangedStats();
-      action(host, "reveal"); expect(phase(host)).toBe("result");
-      const coins = round % 4 === 0 ? [3, 3] : round % 4 === 1 ? [5, 0] : round % 4 === 2 ? [0, 5] : [0, 0];
-      expected[0] += coins[0]; expected[1] += coins[1];
-      const players = host.querySelectorAll("[data-choice]");
-      expect(players[0].getAttribute("data-choice")).toBe(pair[0]);
-      expect(players[1].getAttribute("data-choice")).toBe(pair[1]);
-      expect(players[0].textContent).toContain(`+${coins[0]}`);
-      expect(players[1].textContent).toContain(`+${coins[1]}`);
-      action(host, "next");
-    }
-    expect(phase(host)).toBe("summary");
-    expect(host.querySelectorAll(".cp-mini-history li")).toHaveLength(8);
-    expect(host.textContent).toContain(`${T.combined}: ${expected[0] + expected[1]} ${T.coins}`);
-    expect(host.textContent).toContain(T.tie);
-    unchangedStats();
-    action(host, "replay"); expect(phase(host)).toBe("negotiate");
-    expect(host.querySelector(".cp-mini-history")).toBeNull();
-    expect(host.textContent).toContain(`${T.round} 1 / 8`);
-  });
-
-  it.each(["pattern", "split"] as const)("supports cancel/confirm exit and discards %s state on remount", (game) => {
+  it.each(["pattern"] as const)("supports cancel/confirm exit and discards %s state on remount", (game) => {
     const host = mount(lang); start(host, game);
     if (game === "pattern") { ready(host); action(host, "pass"); ready(host); click(host, '[data-cell="0"]'); }
-    else { action(host, "begin"); ready(host); action(host, "steal"); }
     const before = phase(host);
     click(host, ".cp-mini-exit");
     expect(host.querySelector('[role="dialog"]')).not.toBeNull();
@@ -144,12 +102,12 @@ describe.each(["en", "ru"] as const)("deck-free games (%s)", (lang) => {
     expect(host.querySelector('[role="dialog"]')).toBeNull(); expect(phase(host)).toBe(before);
     expect(document.activeElement).toBe(host.querySelector(".cp-mini-exit"));
     click(host, ".cp-mini-exit"); click(host, '[role="dialog"] .cp-danger');
-    expect(host.querySelectorAll(".cp-game-card")).toHaveLength(5);
+    expect(host.querySelectorAll(".cp-game-card")).toHaveLength(4);
     start(host, game);
-    expect(phase(host)).toBe(game === "pattern" ? "handoff-study" : "negotiate");
+    expect(phase(host)).toBe("handoff-study");
     act(() => root?.unmount()); root = null; document.body.innerHTML = "";
     const reload = mount(lang);
-    expect(reload.querySelectorAll(".cp-game-card")).toHaveLength(5);
+    expect(reload.querySelectorAll(".cp-game-card")).toHaveLength(4);
     expect(reload.querySelector("[data-mini-game]")).toBeNull();
   });
 
@@ -163,28 +121,13 @@ describe.each(["en", "ru"] as const)("deck-free games (%s)", (lang) => {
     expect(host.textContent).toContain("<Alex>$&");
     expect(host.querySelector("Alex")).toBeNull();
     click(host, ".cp-mini-exit"); click(host, '[role="dialog"] .cp-danger');
-    open(host, "split");
+    open(host, "pattern");
     expect(host.querySelector<HTMLInputElement>("input")?.value).toBe("<Alex>$&");
     expect(host.querySelectorAll<HTMLInputElement>("input")[1].value).toBe(lang === "en" ? "Player 2" : "Игрок 2");
   });
 });
 
 describe("mini-game edge cases", () => {
-  it.each(["steal", "winner"] as const)("renders %s outcomes without invented percentages", (scenario) => {
-    const host = mount(); start(host, "split");
-    for (let round = 0; round < 8; round++) {
-      action(host, "begin"); ready(host);
-      action(host, scenario === "steal" || round % 2 === 0 ? "steal" : "split");
-      ready(host); action(host, scenario === "steal" || round % 2 !== 0 ? "steal" : "split");
-      action(host, "reveal"); action(host, "next");
-    }
-    expect(phase(host)).toBe("summary");
-    expect(host.textContent).not.toContain("%");
-    const scores = [...host.querySelectorAll(".cp-mini-result-number")].map((node) => node.textContent);
-    expect(scores).toEqual(scenario === "steal" ? ["0", "0"] : ["40", "0"]);
-    expect(host.textContent).toContain(scenario === "steal" ? "A tie!" : "Player 1 finishes ahead");
-    action(host, "menu"); expect(host.querySelector(".cp-menu")).not.toBeNull();
-  });
   it("scores five empty drafts honestly and permits erasing an edit", () => {
     const host = mount(); start(host, "pattern");
     for (let round = 0; round < 5; round++) {
@@ -194,28 +137,24 @@ describe("mini-game edge cases", () => {
       action(host, "prepare-reveal"); action(host, "reveal");
       expect(host.textContent).not.toContain("Perfect pattern!"); action(host, "next");
     }
-    expect(host.textContent).toContain("0 / 21");
+    expect(host.textContent).toContain("0 / 25");
     expect(host.textContent).toContain("Perfect patterns: 0 / 5");
     expect(host.textContent).not.toContain("%");
   });
-  it.each(["pattern", "split"] as const)("follows live language changes without resetting %s", (game) => {
+  it.each(["pattern"] as const)("follows live language changes without resetting %s", (game) => {
     const host = mount(); start(host, game);
     if (game === "pattern") { ready(host); action(host, "pass"); ready(host); click(host, '[data-cell="0"]'); }
-    else { action(host, "begin"); ready(host); action(host, "steal"); }
     const before = phase(host);
     act(() => changeAppLang("ru"));
     expect(phase(host)).toBe(before);
     if (game === "pattern") {
       expect(host.textContent).toContain("Игрок 2 собирает"); expect(tiles(host)[0]).toBe(1);
-    } else {
-      expect(host.textContent).toContain("Игрок 2"); ready(host); action(host, "split"); action(host, "reveal");
-      expect(host.querySelector('[data-choice="steal"]')?.textContent).toContain("Игрок 1");
     }
   });
-  it.each(["pattern", "split"] as const)("still starts %s when storage is unavailable", (game) => {
+  it.each(["pattern"] as const)("still starts %s when storage is unavailable", (game) => {
     const host = mount(); open(host, game);
     const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage blocked"); });
-    try { action(host, "start"); expect(phase(host)).toBe(game === "pattern" ? "handoff-study" : "negotiate"); }
+    try { action(host, "start"); expect(phase(host)).toBe("handoff-study"); }
     finally { set.mockRestore(); }
   });
 });

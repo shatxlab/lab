@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { generatePattern, miniStrings, miniText, scorePattern, splitPayoff, splitTotals, type SplitChoice, type Tile } from "@/lib/couples/mini-games";
-import { firstChooser, initialPattern, initialSplit, patternReducer, splitReducer } from "@/lib/couples/mini-session";
+import { generatePattern, miniStrings, miniText, scorePattern, tileColor, tileName, patternTools, type Tile } from "@/lib/couples/mini-games";
+import { initialPattern, patternReducer } from "@/lib/couples/mini-session";
 
 function seeded(seed: number) { return () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32); }
 const target: Tile[] = [1, 0, 2, 0, 3, 0, 0, 0, 0];
@@ -13,12 +13,22 @@ describe("generated Secret Pattern", () => {
       for (let round = 0; round < 5; round++) {
         const board = generatePattern(round, random);
         expect(board).toHaveLength(9);
-        expect(board.every((tile) => [0, 1, 2, 3].includes(tile))).toBe(true);
-        expect(board.filter(Boolean)).toHaveLength([3, 4, 4, 5, 5][round]);
-        distinct.add(board.join(""));
+        expect(board.every((tile) => patternTools(round).includes(tile))).toBe(true);
+        expect(board.filter(Boolean)).toHaveLength([3, 4, 5, 6, 7][round]);
+        expect(new Set(board.filter(Boolean).map(tileColor)).size).toBe(Math.min(4, round + 1));
+        distinct.add(board.join(","));
       }
     }
     expect(distinct.size).toBeGreaterThan(400);
+  });
+  it("scores colour independently and names every combination in both languages", () => {
+    expect(scorePattern([1, 4, 7, 10], [4, 1, 10, 7]).correct).toBe(0);
+    for (const lang of ["en", "ru"] as const) {
+      expect(new Set(patternTools(4).map(tile => tileName(tile, lang))).size).toBe(13);
+    }
+    let state = initialPattern(target);
+    state = patternReducer(patternReducer(patternReducer(state, { type: "ready" }), { type: "pass" }), { type: "ready" });
+    expect(patternReducer(state, { type: "tool", tile: 4 })).toBe(state);
   });
   it("is deterministic with an injected source and doesn't mutate its inputs", () => {
     expect(generatePattern(2, seeded(42))).toEqual(generatePattern(2, seeded(42)));
@@ -66,7 +76,7 @@ describe("generated Secret Pattern", () => {
     ] as const) expect(patternReducer(start, action)).toBe(start);
     let state = patternReducer(patternReducer(patternReducer(start, { type: "ready" }), { type: "pass" }), { type: "ready" });
     for (const cell of [-1, 9, NaN, 0.5]) expect(patternReducer(state, { type: "place", cell })).toBe(state);
-    expect(patternReducer(state, { type: "tool", tile: 7 as Tile })).toBe(state);
+    expect(patternReducer(state, { type: "tool", tile: 13 as Tile })).toBe(state);
   });
   it("finishes exactly five rounds, scores once, clears grids, and resets round-local state", () => {
     let state = initialPattern(target);
@@ -96,59 +106,6 @@ describe("generated Secret Pattern", () => {
     expect(state.target).toEqual([]);
     expect(state.draft).toEqual([]);
     expect(state.results.every((r) => r.perfect)).toBe(true);
-  });
-});
-
-describe("Split or Steal rules", () => {
-  it.each([
-    ["split", "split", [3, 3]], ["split", "steal", [0, 5]],
-    ["steal", "split", [5, 0]], ["steal", "steal", [0, 0]],
-  ] as const)("pays %s / %s correctly", (a, b, coins) => {
-    expect(splitPayoff(a, b)).toEqual(coins);
-  });
-  it("alternates first chooser", () => {
-    expect(Array.from({ length: 8 }, (_, i) => firstChooser(i))).toEqual([0, 1, 0, 1, 0, 1, 0, 1]);
-  });
-  it("ignores actions out of sequence and duplicate submissions", () => {
-    let state = initialSplit();
-    for (const type of ["ready", "reveal", "next", "finish"] as const) expect(splitReducer(state, { type })).toBe(state);
-    expect(splitReducer(state, { type: "choose", choice: "split" })).toBe(state);
-    state = splitReducer(state, { type: "begin" });
-    state = splitReducer(state, { type: "ready" });
-    state = splitReducer(state, { type: "choose", choice: "steal" });
-    expect(splitReducer(state, { type: "choose", choice: "split" })).toBe(state);
-    expect(splitReducer(state, { type: "reveal" })).toBe(state);
-  });
-  it("keeps choices private until reveal, pays once, attributes alternating choices, and completes eight rounds", () => {
-    let state = initialSplit();
-    for (let i = 0; i < 8; i++) {
-      state = splitReducer(state, { type: "begin" });
-      state = splitReducer(state, { type: "ready" });
-      state = splitReducer(state, { type: "choose", choice: "steal" });
-      expect(state.results).toHaveLength(i);
-      state = splitReducer(state, { type: "ready" });
-      state = splitReducer(state, { type: "choose", choice: "split" });
-      expect(state.phase).toBe("locked");
-      expect(state.results).toHaveLength(i);
-      state = splitReducer(state, { type: "reveal" });
-      expect(state.pending).toEqual([null, null]);
-      expect(state.results[i].coins).toEqual(i % 2 ? [0, 5] : [5, 0]);
-      expect(splitReducer(state, { type: "reveal" })).toBe(state);
-      if (i < 7) {
-        expect(splitReducer(state, { type: "finish" })).toBe(state);
-        state = splitReducer(state, { type: "next" });
-        expect(state.pending).toEqual([null, null]);
-      }
-    }
-    expect(splitTotals(state.results)).toEqual([20, 20]);
-    expect(splitReducer(state, { type: "next" })).toBe(state);
-    state = splitReducer(state, { type: "finish" });
-    expect(state.phase).toBe("summary");
-    expect(splitTotals([])).toEqual([0, 0]);
-  });
-  it.each(["split", "steal"] as SplitChoice[])("supports all-%s matches", (choice) => {
-    const coins = splitPayoff(choice, choice);
-    expect(splitTotals(Array.from({ length: 8 }, () => ({ choices: [choice, choice], coins })))).toEqual(choice === "split" ? [24, 24] : [0, 0]);
   });
 });
 

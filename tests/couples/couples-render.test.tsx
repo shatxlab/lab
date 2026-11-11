@@ -15,7 +15,7 @@ const question = questionsFor("norm", "all")[0];
 const options = resolveOptions(question, settings.names);
 
 describe("couples screens render", () => {
-  it("menu lists five games and the shared stats", () => {
+  it("menu lists four games and the shared stats", () => {
     const html = renderToStaticMarkup(
       <MenuScreen lang="ru" stats={{ games: 2, cards: 40, matches: 30 }} onPick={() => undefined} />,
     );
@@ -23,7 +23,7 @@ describe("couples screens render", () => {
     expect(html).toContain("ИлиТо");
     expect(html).toContain("Кто из нас");
     expect(html).toContain("Тайный узор");
-    expect(html).toContain("Делить или забрать");
+    expect(html).not.toContain("Делить или забрать");
     expect(html).toContain("75%");
   });
 

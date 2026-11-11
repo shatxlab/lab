@@ -129,19 +129,19 @@ export const TOOLS: readonly ToolEntry[] = [
     path: "/couples",
     category: "games",
     files: {
-      en: "English · Русский · 5 games · one phone",
-      ru: "Русский · English · 5 игр · один телефон",
+      en: "English · Русский · 4 games · one phone",
+      ru: "Русский · English · 4 игры · один телефон",
     },
     title: { en: "Games for couples", ru: "Игры для пар" },
     description: {
-      en: "Five games for two: compare answers, rebuild secret patterns, or bluff in Split or Steal. One phone, no account.",
-      ru: "Пять игр для двоих: сравнивайте ответы, собирайте тайные узоры или блефуйте в «Делить или забрать». Один телефон, без регистрации.",
+      en: "Four games for two: compare answers or rebuild colourful secret patterns. One phone, no account.",
+      ru: "Четыре игры для двоих: сравнивайте ответы, собирайте тайные узоры. Один телефон, без регистрации.",
     },
-    keywords: "couples pairs two players this or that normal or nah who of us secret pattern split or steal пары двоих илито норм стрём тайный узор делить забрать",
+    keywords: "couples pairs two players this or that normal or nah who of us secret pattern пары двоих илито норм стрём тайный узор",
     seo: {
       title: "Games for couples: This or That & more",
       description:
-        "Five one-phone games for couples: Normal or Nah, This or That, Who of Us, Secret Pattern and Split or Steal. Play in English or Russian.",
+        "Four one-phone games for couples: Normal or Nah, This or That, Who of Us and Secret Pattern. Play in English or Russian.",
     },
   },
   {

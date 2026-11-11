@@ -1,34 +1,6 @@
 {
   "checks": [
     {
-      "port": 4321,
-      "lang": "en",
-      "width": 360,
-      "height": 640,
-      "result": "passed"
-    },
-    {
-      "port": 4321,
-      "lang": "en",
-      "width": 390,
-      "height": 780,
-      "result": "passed"
-    },
-    {
-      "port": 4321,
-      "lang": "ru",
-      "width": 360,
-      "height": 640,
-      "result": "passed"
-    },
-    {
-      "port": 4321,
-      "lang": "ru",
-      "width": 390,
-      "height": 780,
-      "result": "passed"
-    },
-    {
       "port": 4322,
       "lang": "en",
       "width": 360,
@@ -40,11 +12,11 @@
       "violations": []
     },
     {
-      "audit": "split choices",
+      "audit": "pattern study",
       "violations": []
     },
     {
-      "audit": "split summary",
+      "audit": "four-colour builder en",
       "violations": []
     },
     {
@@ -66,6 +38,10 @@
       "result": "passed"
     },
     {
+      "audit": "four-colour builder ru",
+      "violations": []
+    },
+    {
       "port": 4322,
       "lang": "ru",
       "width": 390,
@@ -77,10 +53,6 @@
       "violations": []
     },
     {
-      "audit": "dark split 1280×800",
-      "violations": []
-    },
-    {
       "width": 1280,
       "height": 800,
       "theme": "dark",
@@ -89,10 +61,6 @@
     },
     {
       "audit": "dark pattern 640×360",
-      "violations": []
-    },
-    {
-      "audit": "dark split 640×360",
       "violations": []
     },
     {

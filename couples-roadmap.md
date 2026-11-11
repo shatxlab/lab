@@ -4,7 +4,15 @@ The shared review backlog is `game-design-improvements.md` (§8 consent/temporar
 
 ## Status
 
-Two deck-free games are implemented: **Secret Pattern / Тайный узор** and **Split or Steal / Делить или забрать**. The menu now has five games; the new games do not change question-game stats or history. The user has explicitly authorized committing and pushing this implementation to `main`. Deployment status must be verified separately from push success.
+Four menu games: the three question games and **Secret Pattern / Тайный узор**. **Split or Steal removed** after the user's two-person playtest: not fun. The original two-game implementation record below is historical/superseded. The user authorized committing and pushing this follow-up to `main`. Deployment must be verified separately.
+
+### Playtest follow-up — Secret Pattern
+
+- Same three shapes, now sculpted SVG tokens with gradients, highlights and shadows; no new shape mechanics.
+- Five rounds on the same 3×3 board: **3 / 4 / 5 / 6 / 7** occupied cells. Independent colours unlock **1 / 2 / 3 / 4 / 4**; every unlocked colour is guaranteed to appear. Twelve possible shape/colour combinations, exact-match scoring includes both attributes.
+- Palette grows with the round; locked colours cannot be selected. EN/RU names identify both shape and colour. Private handoffs, unlimited peeks, alternating roles, memory-only sessions and question-game stats unchanged.
+- Removed Split or Steal component, rules, reducer, strings, menu/catalogue/search references and obsolete test/browser flows.
+- Verification: full Vitest **236 files / 3,465 tests passed**; typecheck and production build passed. Production Chromium: EN/RU full five-round sessions at 360×640 and 390×780, plus dark/reduced-motion 1280×800 and 640×360; private DOM checks, peeks, exact scoring, touch targets, overflow, replay/exit/reload and scoped axe audits. No page errors or accessibility violations. Screenshots inspected; not a fresh human difficulty playtest.
 
 Temporary skipping is implemented for all three question games (`norm`, `either`, `who`), both modes, and EN/RU. The user authorized committing and pushing the earlier temporary-skipping batch to `main` (not the new deck-free games). Deployment status is separate from push success.
 
@@ -72,7 +80,7 @@ The user explicitly requested building both games. No new question decks, conten
 
 ## Next steps — separate authorization/scope
 
-1. Two-person playtest the new games: communication/peek friction on one phone, difficulty of five patterns, and whether eight fixed-payoff bluffing rounds stay interesting. No claim of human-tested fun yet.
+1. Two-person playtest the harder Secret Pattern progression: colour recall, describing shape + colour + position, and late-round palette/peek friction. Split or Steal was rejected and removed; do not restore it.
 2. English authored-content editorial pilot: choose a small theme sample and compare tone, specificity, naturalness, and usefulness for discussion before broader expansion. Do not generate or rewrite the English catalog as part of the consent batch.
 3. No extra persistence, answer-sharing, analytics, new modes, or deck/balance changes are part of temporary skipping. New deck-free games are a separate authorized implementation, not a change to the question-game consent contract.
 

@@ -4,8 +4,10 @@ import { Board } from "./Board";
 import { PuzzlePicker, type PickerItem } from "./PuzzlePicker";
 import { buildPuzzle } from "@/lib/crossword/grid";
 import { CROSSWORD_PUZZLES } from "@/lib/crossword/puzzles";
+import { LEGACY_CROSSWORD_PUZZLES } from "@/lib/crossword/legacy-puzzles";
 import { createCrosswordSoundEngine, type CrosswordSoundEngine } from "@/lib/crossword/sound";
 import {
+  hasSavedProgress,
   readCrosswordState,
   withPuzzleProgress,
   writeCrosswordState,
@@ -18,6 +20,10 @@ import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 const BUILT = {
   en: CROSSWORD_PUZZLES.en.map(buildPuzzle),
   ru: CROSSWORD_PUZZLES.ru.map(buildPuzzle),
+};
+const LEGACY_BUILT = {
+  en: LEGACY_CROSSWORD_PUZZLES.en.map(buildPuzzle),
+  ru: LEGACY_CROSSWORD_PUZZLES.ru.map(buildPuzzle),
 };
 
 export default function CrosswordGame() {
@@ -63,6 +69,7 @@ export default function CrosswordGame() {
       if (!current) return current;
       const list = BUILT[lang];
       const index = list.findIndex((item) => item.puzzle.id === current);
+      // A legacy ID is deliberately absent: its next board is the first new one.
       const next = list[(index + 1) % list.length];
       return next?.puzzle.id ?? current;
     });
@@ -70,16 +77,28 @@ export default function CrosswordGame() {
 
   const items: PickerItem[] = useMemo(
     () =>
-      BUILT[lang].map((built) => ({
-        puzzle: built.puzzle,
-        built,
-        progress: store[built.puzzle.id],
-      })),
+      [
+        ...BUILT[lang].map((built) => ({
+          puzzle: built.puzzle,
+          built,
+          progress: store[built.puzzle.id],
+        })),
+        ...LEGACY_BUILT[lang]
+          .filter((built) => hasSavedProgress(store[built.puzzle.id]))
+          .map((built) => ({
+            puzzle: built.puzzle,
+            built,
+            progress: store[built.puzzle.id],
+            legacy: true,
+          })),
+      ],
     [store, lang],
   );
 
   const active = activeId
-    ? BUILT[lang].find((item) => item.puzzle.id === activeId) ?? null
+    ? BUILT[lang].find((item) => item.puzzle.id === activeId)
+      ?? LEGACY_BUILT[lang].find((item) => item.puzzle.id === activeId)
+      ?? null
     : null;
 
   return (
@@ -90,7 +109,9 @@ export default function CrosswordGame() {
           built={active}
           lang={lang}
           saved={storeRef.current[active.puzzle.id]}
-          hasNext={BUILT[lang].length > 1}
+          hasNext={BUILT[lang].length > 1 || (
+            BUILT[lang].length > 0 && LEGACY_BUILT[lang].some((item) => item.puzzle.id === activeId)
+          )}
           sound={sound}
           soundOn={soundOn}
           onToggleSound={() => setSoundOn((value) => !value)}

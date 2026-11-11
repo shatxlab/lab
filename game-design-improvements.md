@@ -161,6 +161,13 @@ Separate from KingsRoad because death/retreat banks run rewards into meta progre
 
 **Acceptance:** reveal → edit/clear → finish still reports assistance; reload preserves the count. Explicit new-attempt reset clears it. Highlighting remains independent of accounting.
 
+### Crosswords follow-up — expanded grids and native-keyboard navigation
+
+Implemented locally on user authorization: 50 EN + 50 RU puzzles, exact 10→50-word progression,
+readable zoom/pan and cursor following, unchanged stock-keyboard input, versioned layout IDs,
+and resumable previous-edition saves. Details and verification: `crossword-roadmap.md`.
+The user subsequently authorized committing and pushing this batch to `main`; deployment must be verified separately.
+
 ## 6. KingsRoad — wave clarity, meaningful difficulty, and maps 21–30
 
 ### 6A. Upcoming-wave composition and enemy counters

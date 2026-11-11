@@ -66,7 +66,9 @@ type StringKey =
   | "prevClue"
   | "nextClue"
   | "toggleDirection"
-  | "empty";
+  | "empty"
+  | "hideKeyboard" | "gridView" | "zoomIn" | "zoomOut" | "fitGrid" | "readableSize" | "overview" | "panHint"
+  | "emptyCell" | "cellPosition" | "inputLabel" | "legacyEdition" | "editionNotice";
 
 const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -131,6 +133,10 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     nextClue: "Next word",
     toggleDirection: "Change direction",
     empty: "—",
+    hideKeyboard: "Hide keyboard", gridView: "Grid view", zoomIn: "Zoom in", zoomOut: "Zoom out", fitGrid: "Fit grid", readableSize: "Readable size",
+    overview: "Overview", panHint: "Swipe or drag to pan · Tap a cell in overview to start typing",
+    emptyCell: "empty cell", cellPosition: "row {row}, column {col}", inputLabel: "Crossword letter input",
+    legacyEdition: "Previous edition", editionNotice: "10–50 words. Saved puzzles from the previous edition can still be resumed.",
   },
   ru: {
     appName: "Кроссворд",
@@ -194,6 +200,10 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     nextClue: "Следующее слово",
     toggleDirection: "Сменить направление",
     empty: "—",
+    hideKeyboard: "Скрыть клавиатуру", gridView: "Вид сетки", zoomIn: "Увеличить", zoomOut: "Уменьшить", fitGrid: "Вся сетка", readableSize: "Удобный размер клеток",
+    overview: "Обзор", panHint: "Листайте или перетаскивайте сетку · Нажмите клетку в обзоре для ввода",
+    emptyCell: "пустая клетка", cellPosition: "ряд {row}, столбец {col}", inputLabel: "Ввод букв кроссворда",
+    legacyEdition: "Прошлая версия", editionNotice: "От 10 до 50 слов. Сохранённые кроссворды прошлой версии по-прежнему доступны.",
   },
 };
 

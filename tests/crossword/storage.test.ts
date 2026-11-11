@@ -7,6 +7,7 @@ import {
   applyStoredProgress,
   CROSSWORD_STORAGE_KEY,
   normalizeCrosswordState,
+  hasSavedProgress,
   readCrosswordState,
   toStoredProgress,
   withPuzzleProgress,
@@ -93,6 +94,44 @@ describe("crossword storage", () => {
     expect(loaded.assistanceCount).toBe(1);
     expect(loaded.revealed).toEqual([]);
     expect(loaded.values).toEqual({});
+  });
+
+  it("round-trips more than 400 letters and markers without losing assistance history", () => {
+    const storage = fakeStorage();
+    const keys = Array.from({ length: 1024 }, (_, i) => `${Math.floor(i / 32)}:${i % 32}`);
+    const progress = {
+      values: Object.fromEntries(keys.map((key) => [key, "A"])),
+      revealed: keys,
+      assistanceCount: 2048,
+      elapsed: 321,
+      completed: false,
+    };
+    writeCrosswordState({ large: progress }, storage);
+    expect(readCrosswordState(storage).large).toEqual(progress);
+  });
+
+  it("bounds valid letters and markers at 4096, retaining durable assistance", () => {
+    const keys = Array.from({ length: 4200 }, (_, i) => `0:${i}`);
+    const progress = normalizeCrosswordState({ large: {
+      values: Object.fromEntries(keys.map((key) => [key, "A"])),
+      revealed: keys,
+      assistanceCount: 5000,
+    } }).large;
+    expect(Object.keys(progress.values)).toHaveLength(4096);
+    expect(progress.revealed).toEqual(keys.slice(0, 4096));
+    expect(progress.assistanceCount).toBe(5000);
+  });
+
+  it("recognizes any actual progress, including cleared assistance and completed-only saves", () => {
+    const empty = { values: {}, revealed: [], assistanceCount: 0, elapsed: 0, completed: false };
+    expect(hasSavedProgress(undefined)).toBe(false);
+    expect(hasSavedProgress(empty)).toBe(false);
+    for (const changed of [
+      { values: { "0:0": "A" } }, { revealed: ["0:0"] },
+      { assistanceCount: 1 }, { elapsed: 1 }, { completed: true },
+    ]) {
+      expect(hasSavedProgress({ ...empty, ...changed })).toBe(true);
+    }
   });
 
   it("returns an empty store for missing or malformed JSON", () => {

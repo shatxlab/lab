@@ -17,7 +17,7 @@ import type { CSSProperties, InputEventHandler, KeyboardEvent } from "react";
 import { ClueBar } from "./ClueBar";
 import { CluePanel, ClueSheet } from "./CluePanel";
 import { CompletionOverlay } from "./CompletionOverlay";
-import { Grid } from "./Grid";
+import { GridViewport } from "./GridViewport";
 
 import { useKeyboardInset } from "./useKeyboardInset";
 import {
@@ -198,7 +198,7 @@ export function Board({
       sound.resume();
       dispatch({ type: "type", letters });
     },
-    [sound],
+    [sound, lang],
   );
 
   const lastBackspaceRef = useRef(0);
@@ -323,7 +323,7 @@ export function Board({
   }, []);
 
   return (
-    <div className="cw-board" style={{ "--cw-kb": `${inset}px` } as CSSProperties}>
+    <div className="cw-board" data-keyboard={inset > 0 ? "open" : "closed"} style={{ "--cw-kb": `${inset}px` } as CSSProperties}>
       <header className="cw-topbar">
         <button type="button" className="cw-icon-button" onClick={onBack} aria-label={TXT.back}>
           <ArrowLeft aria-hidden="true" />
@@ -360,8 +360,9 @@ export function Board({
             onPrev={handlePrev}
             onNext={handleNextClue}
           />
-          <div className="cw-stage">
-            <Grid
+          <GridViewport
+              keyboardOpen={inset > 0}
+              onDismissKeyboard={() => inputRef.current?.blur()}
               built={built}
               values={values}
               cursor={state.cursor}
@@ -376,8 +377,7 @@ export function Board({
               onKeyDown={handleKeyDown}
               onBeforeInput={handleBeforeInput}
               onFocusChange={setFocused}
-            />
-          </div>
+          />
           <div className="cw-actions">
             <button type="button" className="cw-tool-button" onClick={handleCheck}>
               <CircleHelp aria-hidden="true" />

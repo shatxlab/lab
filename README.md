@@ -12,7 +12,7 @@ locally, your files stay on your device, and no accounts or telemetry are involv
 | `/focus` | Focus office · Офис фокуса | A Pomodoro timer with stakes and lo-fi music, always open in a full-screen pixel office. Press Start and follow the 25/5/15 flow (a break after every Pomodoro, a long one after every fourth); during a break people go for coffee, water, a sit on the sofa, a book or a snack; give a Pomodoro up and one of the six people packs a box and walks out the door, and when the office is empty you hire a new team. Music is generated in the browser. Pause, skip breaks, mute, the countdown in the tab title. Nothing is saved. |
 | `/board` | Whiteboard · Доска | A deliberately small whiteboard: rectangles, arrows and text in white chalk on a dark board, one line weight, undo and redo, one button that clears the board and one that downloads a PNG. Dragging an element moves it, dragging the empty canvas moves the board; two fingers or Ctrl and the wheel zoom. One board, saved in the browser. |
 | `/alias` | Alias word game | Bilingual (English/Русский) party word-guessing game: ten themed decks of 1000+ words each, team scoring, timer, keyboard shortcuts, synthesised sound feedback, and a results list where any word can be re-marked as guessed or skipped. Reaching the target score ends the game only after the whole round is played, so the highest score wins. |
-| `/crossword` | Кроссворд · Crossword | 50 crosswords in each of Russian and English, played with the phone's own keyboard: a tap-friendly grid, a clue card above the board, locking of solved words, hints, mistake checking and progress saved locally. |
+| `/crossword` | Кроссворд · Crossword | 50 crosswords per language, progressing from 10 to 50 words. Native phone keyboard, readable zoomable/pannable grid, active clue, hints and local saves; previous-edition saved puzzles remain resumable. |
 | `/couples` | Игры для пар | Couples games in Russian and English — «Норм или стрём» / "Normal or Nah", «ИлиТо» / "This or That" and «Кто из нас» / "Who of Us". Thousands of prompts across ten themes, secret two-player voting with an agreement score, or a shared-answer discussion mode with a conversation-starter line on each hand-written card. |
 | `/tycoon` | Software Tycoon · Империя софта | A management sim about running a small software studio: hire a team, pick a product and its features, watch Design / Engineering / QA fill up, ship, and grow from a garage through offices to a company while rivals and events push back. The PixiJS office scene animates your staff; the whole simulation is pure TypeScript with an autosave to local storage. |
 
@@ -201,17 +201,23 @@ hand-written theme is not drowned out by a large generated one.
 
 ### Crosswords
 
-The 50 boards and their clues are generated from a harder Russian word bank
-(`src/lib/crossword/wordbank.ts`) by `scripts/generate-crosswords.mjs`
-(`npm run gen:crosswords`), which writes `wordbank.ts` and `puzzles.ts`. The
-generator uses a crossing-first greedy search and rejects grids with fewer than
-eight words or a fill below 40%. `buildPuzzle` derives the grid, the crossings
-and the classic numbering, and throws if two answers ever disagree on a letter.
-`tests/crossword/` rebuilds every puzzle, exercises the reducer (typing,
-backspace, navigation, hints, solved detection, locking) and checks the
-localStorage round-trip. The board types with the phone's stock keyboard by
-parking one invisible `<input>` on the active cell, so no custom on-screen
-keyboard is needed.
+The generator (`npm run gen:crosswords`) writes 50 EN and 50 RU boards with exact,
+nondecreasing targets from **10 to 50 words**. Easy: 10–15 with an explicit familiar-word
+pool; medium: 16–30; hard: 31–50. Search is deterministic and bounded, requires connected
+crossings, no touching unclued runs, exact targets and >40% fill. A v2/index/layout-hash ID
+prevents saves attaching to changed grids. Frozen v1 layouts remain available only when
+they have saved progress; those saves keep their original IDs and storage key.
+
+One permanent invisible `<input>` follows the active cell, retaining the phone's stock
+keyboard. Cells default to **44px**, with +/− zoom, a fit-whole-grid overview (tap a cell or
+navigate/type to return to readable size), native touch/trackpad panning and mouse drag.
+Only the grid scrolls to follow the cursor or keyboard/viewport resize. A keyboard-dismiss
+button and compact landscape layout retain a usable board with the keyboard open.
+
+`tests/crossword/` covers content geometry/progression, input/reducer, assistance history,
+large save round-trips, previous-edition continuity and zoom/focus behavior. See
+[`crossword-roadmap.md`](crossword-roadmap.md) for implementation details, verification,
+reproducible browser checks and remaining physical-device playtest scope.
 
 ### Software Tycoon
 

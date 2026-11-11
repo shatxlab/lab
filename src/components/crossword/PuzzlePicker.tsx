@@ -3,13 +3,14 @@ import type { CSSProperties } from "react";
 
 import { solvedEntryIds } from "@/lib/crossword/game";
 import { difficultyLabel, progressText, stringsFor } from "@/lib/crossword/i18n";
-import type { StoredPuzzleProgress } from "@/lib/crossword/storage";
+import { hasSavedProgress, type StoredPuzzleProgress } from "@/lib/crossword/storage";
 import type { BuiltPuzzle, CrosswordPuzzle, Lang } from "@/lib/crossword/types";
 
 export interface PickerItem {
   puzzle: CrosswordPuzzle;
   built: BuiltPuzzle;
   progress: StoredPuzzleProgress | undefined;
+  legacy?: boolean;
 }
 
 interface PuzzlePickerProps {
@@ -38,7 +39,7 @@ function statusOf(item: PickerItem) {
   const solved = item.progress ? solvedEntryIds(item.built, item.progress.values).size : 0;
   const completed = item.progress?.completed === true || solved === total;
   const TXT = stringsFor(item.puzzle.lang);
-  const label = completed ? TXT.solvedBadge : solved > 0 ? TXT.progressBadge : TXT.newBadge;
+  const label = completed ? TXT.solvedBadge : hasSavedProgress(item.progress) ? TXT.progressBadge : TXT.newBadge;
   return { solved, total, completed, label };
 }
 
@@ -50,6 +51,7 @@ export function PuzzlePicker({ items, lang, onOpen }: PuzzlePickerProps) {
         <p className="cw-eyebrow">{TXT.appName}</p>
         <h1>{TXT.pickTitle}</h1>
         <p className="cw-picker-note">{TXT.pickSubtitle}</p>
+        <p className="cw-picker-note">{TXT.editionNotice}</p>
 
       </header>
       <div className="cw-card-grid">
@@ -62,12 +64,17 @@ export function PuzzlePicker({ items, lang, onOpen }: PuzzlePickerProps) {
               type="button"
               className="cw-card"
               data-completed={status.completed ? "true" : "false"}
+              data-puzzle-id={item.puzzle.id}
+              data-words={item.built.entries.length}
               onClick={() => onOpen(item.puzzle.id)}
             >
               <span className="cw-card-top">
                 <MiniGrid built={item.built} />
                 <span className="cw-card-info">
                   <span className="cw-card-badges">
+                    {item.legacy && (
+                      <span className="cw-badge" data-tone="ghost">{TXT.legacyEdition}</span>
+                    )}
                     <span className="cw-badge" data-tone={status.completed ? "success" : "muted"}>
                       {status.label}
                     </span>

@@ -21,11 +21,13 @@ describe("crossword grid layout", () => {
     expect(rule(".cw-grid")).toMatch(/position:\s*relative/);
   });
 
-  it("fits the viewport: fixed-height board and a grid sized from both axes", () => {
+  it("bounds the board while the readable grid pans inside its own viewport", () => {
     expect(rule(".cw-board")).toMatch(/height:\s*calc\(100dvh/);
     expect(rule(".cw-board")).toMatch(/overflow:\s*hidden/);
     expect(rule(".cw-stage")).toMatch(/container-type:\s*size/);
-    expect(rule(".cw-grid")).toMatch(/100cqh/);
+    expect(css).toMatch(/\.cw-grid-viewport\s*\{[^}]*overflow:\s*auto/);
+    expect(css).toMatch(/touch-action:\s*pan-x pan-y pinch-zoom/);
+    expect(rule(".cw-grid")).not.toMatch(/100cqh/);
   });
 
   it("keeps blocks visibly darker than playable squares in both themes", () => {

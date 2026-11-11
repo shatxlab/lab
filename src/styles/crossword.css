@@ -418,16 +418,30 @@ body:has(.cw-shell) {
   width: 100%;
 }
 
-/* The stage is whatever space is left; the grid scales to fit it. */
+/* Readable cells live in a bounded scroll viewport; overview is explicitly requested. */
 .cw-stage {
-  align-items: center;
   container-type: size;
   display: flex;
   flex: 1 1 0;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.3rem;
   min-height: 0;
+  min-width: 0;
   width: 100%;
 }
+
+.cw-zoom-controls { align-items: center; display: flex; flex: 0 0 auto; gap: .3rem; min-width: 0; }
+.cw-fit-button { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; color: var(--fg); display: inline-flex; font: inherit; font-size: .75rem; gap: .35rem; justify-content: center; min-height: 44px; min-width: 80px; padding: .4rem .55rem; }
+.cw-fit-button svg { height: 16px; width: 16px; }
+.cw-zoom-controls .cw-icon-button { height: 44px; width: 44px; }
+.cw-zoom-controls button:disabled { opacity: .4; }
+.cw-zoom-label { color: var(--muted-fg); font-size: .75rem; min-width: 3rem; text-align: center; }
+.cw-pan-hint { color: var(--muted-fg); font-size: .72rem; margin-left: auto; max-width: 20rem; text-align: right; }
+@media (max-width: 639px) { .cw-pan-hint { display: none; } }
+.cw-grid-viewport { border: 1px solid var(--border); border-radius: .65rem; flex: 1 1 0; min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; touch-action: pan-x pan-y pinch-zoom; width: 100%; }
+.cw-grid-canvas { box-sizing: border-box; display: grid; height: 100%; min-height: 100%; min-width: 100%; padding: 8px; place-items: center; width: 100%; }
+.cw-grid-viewport .cw-cell { border-radius: 4px; user-select: none; }
+
 
 .cw-side {
   display: none;
@@ -439,14 +453,14 @@ body:has(.cw-shell) {
   aspect-ratio: calc(var(--cw-cols) / var(--cw-rows));
   container-type: inline-size;
   display: grid;
-  gap: clamp(2px, 0.55vw, 5px);
+  gap: 2px;
   grid-template-columns: repeat(var(--cw-cols), 1fr);
   grid-template-rows: repeat(var(--cw-rows), 1fr);
   position: relative;
   touch-action: manipulation;
-  width: min(100%, 30rem);
-  /* Fit both axes of the stage so the board never needs scrolling. */
-  width: min(100cqw, 34rem, calc(100cqh * var(--cw-cols) / var(--cw-rows)));
+  flex-shrink: 0;
+  /* GridViewport supplies measured pixel dimensions, never shrinking cells implicitly. */
+  width: max-content;
 }
 
 .cw-cell {
@@ -472,7 +486,7 @@ body:has(.cw-shell) {
 }
 
 .cw-cell-number {
-  color: var(--muted-fg);
+  color: var(--fg);
   font-size: clamp(0.5rem, 1.9vw, 0.72rem);
   font-weight: 700;
   left: 0.16em;
@@ -502,11 +516,11 @@ body:has(.cw-shell) {
 
 .cw-cell.is-solved {
   background: color-mix(in srgb, var(--success) 28%, var(--cw-cell));
-  color: color-mix(in srgb, var(--success) 78%, var(--fg));
+  color: var(--fg);
 }
 
 .cw-cell.is-solved .cw-cell-number {
-  color: color-mix(in srgb, var(--success) 60%, var(--muted-fg));
+  color: var(--fg);
 }
 
 .cw-cell.is-wrong {
@@ -524,7 +538,7 @@ body:has(.cw-shell) {
 }
 
 .cw-cell.is-active .cw-cell-number {
-  color: color-mix(in srgb, var(--accent-fg) 78%, transparent);
+  color: var(--accent-fg);
 }
 
 .cw-cell.is-active .cw-cell-dot {
@@ -627,7 +641,7 @@ body:has(.cw-shell) {
   align-items: center;
   background: color-mix(in srgb, var(--accent) 20%, transparent);
   border-radius: 999px;
-  color: var(--accent);
+  color: var(--fg);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 0.8rem;
@@ -644,7 +658,7 @@ body:has(.cw-shell) {
 }
 
 .cw-cluebar[data-solved="true"] .cw-clue-badge {
-  background: var(--success);
+  background: #166534;
   color: #fff;
 }
 
@@ -674,10 +688,10 @@ body:has(.cw-shell) {
   color: var(--fg);
   display: inline-flex;
   flex: 0 0 auto;
-  height: 2.5rem;
+  height: 44px;
   justify-content: center;
   transition: background-color 140ms ease, color 140ms ease;
-  width: 2.3rem;
+  width: 44px;
 }
 
 .cw-clue-nav svg {
@@ -1257,3 +1271,29 @@ body:has(.cw-shell) {
 
 
 
+
+/* A landscape keyboard leaves too little room for all chrome. Keep the clue,
+   readable cells and an explicit keyboard-dismiss control; other tools return
+   as soon as the keyboard closes. This is still the device's native keyboard. */
+.cw-dismiss-keyboard { margin-left: auto; }
+@media (max-height: 500px) {
+  .cw-board[data-keyboard="open"] { height: calc(100dvh - var(--cw-kb)); inset: 0 0 auto; padding: 2px 8px; position: fixed; z-index: 55; }
+  .cw-board[data-keyboard="open"] .cw-topbar,
+  .cw-board[data-keyboard="open"] .cw-progress-track,
+  .cw-board[data-keyboard="open"] .cw-actions { display: none; }
+  .cw-board[data-keyboard="open"] .cw-main,
+  .cw-board[data-keyboard="open"] .cw-stage { gap: 3px; }
+  .cw-board[data-keyboard="open"] .cw-cluebar { padding: 0 3px; }
+  .cw-board[data-keyboard="open"] .cw-clue-body { min-height: 44px; }
+  .cw-board[data-keyboard="open"] .cw-pan-hint { display: none; }
+}
+
+/* Bright word highlights in dark mode need white, not the muted warm page ink.
+   The active tile keeps the shared dark-on-bright accent treatment. */
+[data-theme="dark"] .cw-cell.is-word:not(.is-active) .cw-cell-number,
+[data-theme="dark"] .cw-cell.is-word:not(.is-active) .cw-cell-letter { color: #fff; }
+.cw-grid-viewport[data-view="readable"] .cw-cell-number { font-size: max(9px, calc(var(--cw-cell-px) * .23)); }
+
+.cw-grid-viewport[data-view="fit"] .cw-cell { border-radius: 0; border-width: 0; min-height: 0; min-width: 0; }
+.cw-grid-viewport[data-view="fit"] .cw-cell-number,
+.cw-grid-viewport[data-view="fit"] .cw-cell-dot { display: none; }

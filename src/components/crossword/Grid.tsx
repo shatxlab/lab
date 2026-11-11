@@ -1,5 +1,6 @@
 import type { CSSProperties, InputEventHandler, KeyboardEvent, RefObject } from "react";
 
+import { stringsFor, t } from "@/lib/crossword/i18n";
 import { cellKey } from "@/lib/crossword/grid";
 import type { Cursor } from "@/lib/crossword/game";
 import type { BuiltPuzzle } from "@/lib/crossword/types";
@@ -11,7 +12,8 @@ import type { BuiltPuzzle } from "@/lib/crossword/types";
  */
 const SENTINEL = "\u200b";
 
-interface GridProps {
+export interface GridProps {
+  style?: CSSProperties;
   built: BuiltPuzzle;  values: Record<string, string>;
   cursor: Cursor;
   /** Cells that belong to the word being edited. */
@@ -39,6 +41,7 @@ interface GridProps {
  */
 export function Grid({
   built,
+  style,
   values,
   cursor,
   activeCells,
@@ -53,13 +56,14 @@ export function Grid({
   onBeforeInput,
   onFocusChange,
 }: GridProps) {
+  const TXT = stringsFor(built.puzzle.lang);
   return (
     <div
       className="cw-grid"
       role="group"
-      aria-label={`Кроссворд ${built.puzzle.title}`}
+      aria-label={`${TXT.appName} ${built.puzzle.title}`}
       data-focused={focused ? "true" : "false"}
-      style={{ "--cw-cols": built.cols, "--cw-rows": built.rows } as CSSProperties}
+      style={{ "--cw-cols": built.cols, "--cw-rows": built.rows, ...style } as CSSProperties}
     >
       {built.cells.map((cell) => {
         if (cell.isBlack) {
@@ -74,8 +78,8 @@ export function Grid({
         if (cell.row === cursor.row && cell.col === cursor.col) classes.push("is-active");
         const label = [
           cell.number ? `${cell.number}.` : "",
-          letter || "пустая клетка",
-          `${cell.row + 1} ряд, ${cell.col + 1} столбец`,
+          letter || TXT.emptyCell,
+          t(built.puzzle.lang, "cellPosition", { row: cell.row + 1, col: cell.col + 1 }),
         ]
           .filter(Boolean)
           .join(" ");
@@ -86,6 +90,7 @@ export function Grid({
             className={classes.join(" ")}
             data-cell={key}
             aria-label={label}
+            onMouseDown={event => event.preventDefault()}
             onClick={() => onSelect(cell.row, cell.col)}
           >
             {cell.number ? <span className="cw-cell-number">{cell.number}</span> : null}
@@ -100,14 +105,14 @@ export function Grid({
         style={{ gridArea: `${cursor.row + 1} / ${cursor.col + 1}` }}
         type="text"
         inputMode="text"
-        lang="ru"
+        lang={built.puzzle.lang}
         defaultValue={SENTINEL}
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="characters"
         spellCheck={false}
         enterKeyHint="done"
-        aria-label="Ввод букв кроссворда"
+        aria-label={TXT.inputLabel}
         onChange={(event) => {
           const target = event.currentTarget;
           const text = target.value;

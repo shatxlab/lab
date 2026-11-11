@@ -32,6 +32,7 @@ function storageOrUndefined(): CrosswordStorage | undefined {
 }
 
 const CELL_KEY = /^\d+:\d+$/;
+const MAX_SAVED_CELLS = 4096;
 
 function sanitizeProgress(raw: unknown): StoredPuzzleProgress | null {
   if (!raw || typeof raw !== "object") return null;
@@ -45,11 +46,11 @@ function sanitizeProgress(raw: unknown): StoredPuzzleProgress | null {
       if (!ANY_GRID_LETTER.test(letter)) continue;
       values[key] = letter;
       count += 1;
-      if (count >= 400) break;
+      if (count >= MAX_SAVED_CELLS) break;
     }
   }
   const revealed = Array.isArray(candidate.revealed)
-    ? candidate.revealed.filter((key): key is string => typeof key === "string" && CELL_KEY.test(key)).slice(0, 400)
+    ? candidate.revealed.filter((key): key is string => typeof key === "string" && CELL_KEY.test(key)).slice(0, MAX_SAVED_CELLS)
     : [];
   const elapsed = typeof candidate.elapsed === "number" && Number.isFinite(candidate.elapsed)
     ? Math.max(0, Math.min(candidate.elapsed, 60 * 60 * 24))
@@ -118,6 +119,17 @@ export function applyStoredProgress(state: CrosswordState, progress: StoredPuzzl
     assistanceCount: progress.assistanceCount,
     elapsed: progress.elapsed,
   };
+}
+
+/** Empty snapshots alone do not make a previous-edition puzzle visible. */
+export function hasSavedProgress(progress: StoredPuzzleProgress | undefined): boolean {
+  return !!progress && (
+    Object.keys(progress.values).length > 0 ||
+    progress.revealed.length > 0 ||
+    progress.assistanceCount > 0 ||
+    progress.elapsed > 0 ||
+    progress.completed
+  );
 }
 
 /** Merge one puzzle's progress into the whole store (pure, for callers/tests). */

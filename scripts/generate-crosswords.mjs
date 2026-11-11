@@ -1,11 +1,11 @@
 // Generates src/lib/crossword/wordbank.ts and src/lib/crossword/puzzles.ts.
 //
-// Each language below is the single source of truth for answers and clues; the
-// generator places words on grids with a greedy, crossing-first strategy and
-// writes a self-consistent puzzle file. Run with `npm run gen:crosswords`.
-//
-// The Russian bank, seed and algorithm are unchanged, so the shipped Russian
-// grids stay byte-identical across regenerations.
+// Banks and explicit common-word shortlists below are the source of truth.
+// Exact targets, seeded bounded search, geometric validation and density checks:
+// never publish a partial layout. Run with `npm run gen:crosswords`.
+// IDs include the v2 generation plus a canonical topology/answer hash; old saves
+// deliberately cannot load into the expanded layouts. No network/LLM dependency.
+import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,6 +70,7 @@ const RU_BANK_TEXT = `
 НАТЮРМОРТ|Картина с предметами
 ПЕЙЗАЖ|Картина природы
 ПОРТРЕТ|Изображение человека
+УЗОР|Рисунок из повторяющихся линий или фигур
 ФРЕСКА|Роспись по сырой штукатурке
 МОЗАИКА|Картина из кусочков
 ВИТРАЖ|Цветное стекло в окне
@@ -652,9 +653,45 @@ const EN_SUBTITLES = [
 ];
 
 const PUZZLE_COUNT = 50;
-const SIZES = [
-  [9, 9], [9, 10], [10, 10], [10, 11], [11, 11], [11, 12], [12, 12], [12, 13], [13, 13],
-];
+// Familiar answers, not a length filter: includes longer everyday words such as
+// ТЕРМОМЕТР / WATERFALL, excludes short specialist terms such as КВАРК / AXIOM.
+// The harder puzzles can use the full banks. Keep these lists hand-reviewed.
+const COMMON_ANSWERS = {
+  ru: `ТЕЛЕСКОП ТЕРМОМЕТР АНТЕННА ПРОГРАММА МОНИТОР ПРИНТЕР СКАНЕР ПАРОЛЬ
+    БРАУЗЕР ПИРАМИДА КОЛЛЕКЦИЯ ПОРТРЕТ ПЕЙЗАЖ МОЗАИКА ЭСКИЗ УЗОР
+    АРКА КУПОЛ КОЛОННА ВУЛКАН ЛЕДНИК АЙСБЕРГ ПОЛУОСТРОВ БОЛОТО ТАЙГА
+    ДЖУНГЛИ МРАМОР ЯНТАРЬ ЖЕМЧУГ БАРСУК БОБР ДИКОБРАЗ ЛЕНИВЕЦ ГЕПАРД
+    ЛЕОПАРД РЫСЬ ФЛАМИНГО ПЕЛИКАН ЖУРАВЛЬ КОЛИБРИ ПАПОРОТНИК ОРХИДЕЯ
+    КАКТУС ТОПОЛЬ ОСИНА КЕДР СИРЕНЬ РЯБИНА КАЛИНА БРОККОЛИ БАКЛАЖАН
+    КАБАЧОК РЕДИС ГОРЧИЦА ИМБИРЬ ВАНИЛЬ БАЛАЛАЙКА АРФА ОРГАН ЯКОРЬ
+    ШТУРВАЛ КАЮТА ПАЛУБА МАЧТА ШТИЛЬ ЛОГИКА`.split(/\s+/),
+  en: `BATTERY MONITOR PRINTER PASSWORD BROWSER INTERNET KEYBOARD ROBOT CASTLE
+    KNIGHT TREASURE PYRAMID SKETCH PORTRAIT LANDSCAPE MOSAIC ARCH DOME GALLERY
+    POSTER STATUE VOLCANO ICEBERG CANYON SWAMP JUNGLE DESERT WATERFALL HORIZON
+    SUMMIT BEAVER SLOTH CHEETAH LEOPARD FLAMINGO PELICAN PENGUIN DOLPHIN
+    WALRUS CHAMELEON HEDGEHOG MOLE SQUIRREL FERN CACTUS BAMBOO CLOVER NETTLE
+    MINT MOSS WILLOW BIRCH MAPLE POPPY LILY TULIP BROCCOLI CELERY EGGPLANT
+    RADISH GINGER VANILLA MUSTARD CINNAMON GARLIC PEPPER HONEY PIANO VIOLIN
+    FLUTE TRUMPET DRUM MELODY CHORUS ANCHOR CABIN DECK MAST BREEZE HARBOR
+    COMPASS CAPTAIN SAILOR LIFEBOAT RAFT TIDE STORM FOG MEMORY WISDOM OAK ELM
+    IVY OWL FOX BAT MOON STAR COMET GLOBE SEA LAKE RIVER STONE SAND SNOW RAIN
+    WIND CLOUD SEED ROOT LEAF NEST WING TAIL PAW HIVE ANT BEE FISH FROG DEER
+    HARE WOLF BEAR`.split(/\s+/),
+};
+
+function targetFor(index) {
+  return 10 + Math.round(index * 40 / (PUZZLE_COUNT - 1));
+}
+
+function difficultyFor(count) {
+  return count <= 15 ? "easy" : count <= 30 ? "medium" : "hard";
+}
+
+function layoutHash(entries) {
+  // Sort serialized tuples by code units, independent of host locale/ICU.
+  const canonical = entries.map(({ answer, row, col, dir }) => JSON.stringify([row, col, dir, answer])).sort();
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex").slice(0, 12);
+}
 
 const LANGS = [
   {
@@ -664,7 +701,7 @@ const LANGS = [
     titles: RU_TITLES,
     subtitles: RU_SUBTITLES,
     letterRe: /^[А-Я]+$/,
-    bankComment: "Harder Russian answer pool: answer -> clue.",
+    bankComment: "Russian answer pool: everyday words and general knowledge.",
   },
   {
     code: "en",
@@ -673,7 +710,7 @@ const LANGS = [
     titles: EN_TITLES,
     subtitles: EN_SUBTITLES,
     letterRe: /^[A-Z]+$/,
-    bankComment: "Harder English answer pool: answer -> clue.",
+    bankComment: "English answer pool: everyday words and general knowledge.",
   },
 ];
 
@@ -717,31 +754,48 @@ function generateLanguage({ code, idPrefix, bankText, titles, subtitles, letterR
   const BANK = parseBank(bankText);
   assertBank(BANK, letterRe, code);
 
-  const BY_LETTER = (() => {
+  const common = new Set(COMMON_ANSWERS[code]);
+  for (const answer of common) {
+    if (!BANK.some((entry) => entry.answer === answer)) throw new Error(`[${code}] missing common answer: ${answer}`);
+  }
+  const pools = {
+    easy: BANK.filter(({ answer }) => common.has(answer)),
+    medium: BANK,
+    hard: BANK,
+  };
+  // Index letter positions once per pool. Candidates only anchor on cells that
+  // belong to a single perpendicular entry, never on already-crossed cells.
+  const indexes = Object.fromEntries(Object.entries(pools).map(([difficulty, pool]) => {
     const map = new Map();
-    for (const { answer } of BANK) {
-      for (const letter of new Set(answer)) {
-        if (!map.has(letter)) map.set(letter, []);
-        map.get(letter).push(answer);
+    pool.forEach(({ answer }) => {
+      for (let i = 0; i < answer.length; i += 1) {
+        if (!map.has(answer[i])) map.set(answer[i], []);
+        map.get(answer[i]).push({ word: answer, offset: i });
       }
-    }
-    return map;
-  })();
+    });
+    return [difficulty, map];
+  }));
 
-  function attempt(rng, rows, cols, target) {
+  function attempt(rng, rows, cols, target, difficulty) {
     const W = cols;
     const H = rows;
-    const grid = new Map();
+    const grid = new Array(H * W);
+    // 1 across, 2 down, 3 crossing: forbids same-axis overlap, including
+    // matching substrings (which the previous letter-only checker allowed).
+    const axes = new Uint8Array(H * W);
+    const occupied = [];
     const placed = [];
     const used = new Set();
-    const excluded = new Set(shuffle(BANK, rng).slice(0, Math.floor(BANK.length * 0.3)).map((w) => w.answer));
-
+    let minR = H, minC = W, maxR = -1, maxC = -1;
+    const pool = pools[difficulty];
+    const byLetter = indexes[difficulty];
     const key = (r, c) => r * W + c;
-    const get = (r, c) => (r < 0 || c < 0 || r >= H || c >= W ? undefined : grid.get(key(r, c)));
+    const get = (r, c) => (r < 0 || c < 0 || r >= H || c >= W ? undefined : grid[key(r, c)]);
 
     function valid(word, r, c, dir) {
       const dr = dir === "down" ? 1 : 0;
       const dc = dir === "across" ? 1 : 0;
+      const axis = dir === "across" ? 1 : 2;
       const n = word.length;
       const er = r + dr * (n - 1);
       const ec = c + dc * (n - 1);
@@ -754,7 +808,7 @@ function generateLanguage({ code, idPrefix, bankText, titles, subtitles, letterR
         const cc = c + dc * i;
         const existing = get(rr, cc);
         if (existing) {
-          if (existing !== word[i]) return -1;
+          if (existing !== word[i] || (axes[key(rr, cc)] & axis)) return -1;
           crossings += 1;
         } else if (dir === "across") {
           if (get(rr - 1, cc) || get(rr + 1, cc)) return -1;
@@ -766,14 +820,23 @@ function generateLanguage({ code, idPrefix, bankText, titles, subtitles, letterR
     function place(word, r, c, dir) {
       const dr = dir === "down" ? 1 : 0;
       const dc = dir === "across" ? 1 : 0;
-      for (let i = 0; i < word.length; i += 1) grid.set(key(r + dr * i, c + dc * i), word[i]);
+      for (let i = 0; i < word.length; i += 1) {
+        const idx = key(r + dr * i, c + dc * i);
+        if (!grid[idx]) occupied.push(idx);
+        grid[idx] = word[i];
+        axes[idx] |= dir === "across" ? 1 : 2;
+      }
+      minR = Math.min(minR, r);
+      minC = Math.min(minC, c);
+      maxR = Math.max(maxR, r + dr * (word.length - 1));
+      maxC = Math.max(maxC, c + dc * (word.length - 1));
       placed.push({ word, r, c, dir });
       used.add(word);
     }
 
     const maxLen = Math.max(rows, cols);
     const starters = shuffle(
-      BANK.map((w) => w.answer).filter((w) => w.length >= 6 && w.length <= maxLen && !excluded.has(w)),
+      pool.map((w) => w.answer).filter((w) => w.length >= 6 && w.length <= W),
       rng,
     );
     if (starters.length === 0) return [];
@@ -782,34 +845,40 @@ function generateLanguage({ code, idPrefix, bankText, titles, subtitles, letterR
     const sc = Math.floor((W - first.length) / 2);
     place(first, sr, sc, "across");
 
+    // Bounded top-k rather than sorting thousands of candidates per word.
+    // Compact growth and new letters balance dense reuse against dead ends.
+    const crossingWeight = 6 + rng() * 3;
+    const growthWeight = 0.10 + rng() * 0.12;
+    const lengthWeight = 0.35 + rng() * 0.4;
     while (placed.length < target) {
       const options = [];
-      const seen = new Set();
-      for (const idx of grid.keys()) {
+      for (const idx of occupied) {
+        if (axes[idx] === 3) continue;
         const r = Math.floor(idx / W);
         const c = idx % W;
-        const ch = grid.get(idx);
-        for (const word of BY_LETTER.get(ch) ?? []) {
-          if (used.has(word) || excluded.has(word) || word.length > maxLen) continue;
-          for (let i = 0; i < word.length; i += 1) {
-            if (word[i] !== ch) continue;
-            for (const dir of ["across", "down"]) {
-              const rr = dir === "down" ? r - i : r;
-              const cc = dir === "across" ? c - i : c;
-              const signature = `${word}@${rr},${cc},${dir}`;
-              if (seen.has(signature)) continue;
-              seen.add(signature);
-              const crossings = valid(word, rr, cc, dir);
-              if (crossings > 0) options.push({ word, r: rr, c: cc, dir, crossings, jitter: rng() });
-            }
-          }
+        const dir = axes[idx] === 1 ? "down" : "across";
+        for (const { word, offset } of byLetter.get(grid[idx]) ?? []) {
+          if (used.has(word) || word.length > maxLen) continue;
+          const rr = dir === "down" ? r - offset : r;
+          const cc = dir === "across" ? c - offset : c;
+          const crossings = valid(word, rr, cc, dir);
+          if (crossings <= 0) continue;
+          const height = Math.max(maxR, rr + (dir === "down" ? word.length - 1 : 0)) - Math.min(minR, rr) + 1;
+          const width = Math.max(maxC, cc + (dir === "across" ? word.length - 1 : 0)) - Math.min(minC, cc) + 1;
+          const growth = height * width - (maxR - minR + 1) * (maxC - minC + 1);
+          const score = crossings * crossingWeight + word.length * lengthWeight
+            - growth * growthWeight - Math.abs(height - width) * 0.15 + rng() * 2;
+          if (options.length === 4 && score <= options[3].score) continue;
+          const candidate = { word, r: rr, c: cc, dir, score };
+          // A multi-crossing candidate has several anchors; keep it only once.
+          if (options.some((p) => p.word === word && p.r === rr && p.c === cc && p.dir === dir)) continue;
+          const at = options.findIndex((p) => p.score < score);
+          options.splice(at < 0 ? options.length : at, 0, candidate);
+          if (options.length > 4) options.pop();
         }
       }
       if (options.length === 0) break;
-      options.sort(
-        (a, b) => b.crossings - a.crossings || b.word.length - a.word.length || b.jitter - a.jitter,
-      );
-      const pick = options[Math.floor(rng() * Math.min(4, options.length))];
+      const pick = options[Math.floor(rng() * options.length)];
       place(pick.word, pick.r, pick.c, pick.dir);
     }
     return placed;
@@ -833,61 +902,63 @@ function generateLanguage({ code, idPrefix, bankText, titles, subtitles, letterR
     return { minR, minC, rows: maxR - minR + 1, cols: maxC - minC + 1 };
   }
 
-  function score(placed) {
-    const b = bounds(placed);
-    return placed.length * 1000 - b.rows * b.cols * 1.5 - Math.abs(b.rows - b.cols) * 12;
-  }
-
-  function generatePuzzle(rng, rows, cols, target) {
-    let best = null;
-    for (let i = 0; i < 30; i += 1) {
-      const placed = attempt(rng, rows, cols, target);
-      if (placed.length < 8) continue;
-      const value = score(placed);
-      if (!best || value > best.value) best = { placed, value };
-      if (best.placed.length >= target) break;
-    }
-    return best?.placed ?? null;
-  }
-
-  function difficultyFor(words, rows, cols) {
-    const span = Math.max(rows, cols);
-    if (words >= 13 || span >= 13) return "hard";
-    return "medium";
-  }
-
-  const rng = mulberry32(0x5eed1234);
+  const started = performance.now();
   const puzzles = [];
-  let guard = 0;
-  while (puzzles.length < PUZZLE_COUNT && guard < PUZZLE_COUNT * 400) {
-    guard += 1;
-    const [rows, cols] = SIZES[Math.floor(rng() * SIZES.length)];
-    const target = Math.min(14, Math.max(8, Math.round((rows + cols) / 2)));
-    const placed = generatePuzzle(rng, rows, cols, target);
-    if (!placed) continue;
-    const b = bounds(placed);
-    const entries = placed.map((p) => ({
-      answer: p.word,
-      row: p.r - b.minR,
-      col: p.c - b.minC,
-      dir: p.dir,
-    }));
-    puzzles.push({
-      id: "",
-      title: "",
-      subtitle: "",
-      difficulty: difficultyFor(placed.length, b.rows, b.cols),
-      rows: b.rows,
-      cols: b.cols,
-      entries,
-    });
+  const hashes = new Set();
+  for (let index = 0; index < PUZZLE_COUNT; index += 1) {
+    const puzzleStarted = performance.now();
+    const target = targetFor(index);
+    const difficulty = difficultyFor(target);
+    // Independent seeds keep earlier puzzles stable if a later search changes.
+    const rng = mulberry32(0x5eed1234 + index * 7919 + (code === "en" ? 104729 : 0));
+    // Roughly eleven cells of area per word, with controlled expansion on
+    // restarts. Trim after placement. A larger canvas is not permission to
+    // publish a sparse or underfilled board.
+    const base = Math.ceil(Math.sqrt(target * 11));
+    let puzzle;
+    let bestCount = 0;
+    let attempts = 0;
+    for (; attempts < 120; attempts += 1) {
+      const side = base + Math.floor(attempts / 30);
+      const placed = attempt(rng, side, side + (attempts % 2), target, difficulty);
+      bestCount = Math.max(bestCount, placed.length);
+      if (placed.length !== target) continue;
+      const b = bounds(placed);
+      const entries = placed.map((p) => ({
+        answer: p.word,
+        row: p.r - b.minR,
+        col: p.c - b.minC,
+        dir: p.dir,
+      }));
+      const cells = new Set();
+      for (const e of entries) {
+        for (let i = 0; i < e.answer.length; i += 1) {
+          cells.add(`${e.row + (e.dir === "down" ? i : 0)}:${e.col + (e.dir === "across" ? i : 0)}`);
+        }
+      }
+      if (cells.size / (b.rows * b.cols) <= 0.4) continue;
+      const hash = layoutHash(entries);
+      if (hashes.has(hash)) continue;
+      hashes.add(hash);
+      puzzle = {
+        id: `${idPrefix}cw-v2-${String(index + 1).padStart(2, "0")}-${hash}`,
+        title: titles[index % titles.length],
+        // Do not describe an easy, familiar-word board as "Trickier words".
+        subtitle: difficulty === "easy"
+          ? (code === "en" ? "Everyday words" : "Знакомые слова")
+          : subtitles[index % subtitles.length],
+        difficulty,
+        rows: b.rows,
+        cols: b.cols,
+        entries,
+      };
+      process.stdout.write(`[${code}] ${index + 1}/${PUZZLE_COUNT} ${difficulty}: ${target} words, ${b.rows}x${b.cols}, ${cells.size} filled (${(100 * cells.size / (b.rows * b.cols)).toFixed(1)}%), ${attempts + 1} attempts, ${((performance.now() - puzzleStarted) / 1000).toFixed(2)}s\n`);
+      break;
+    }
+    if (!puzzle) throw new Error(`[${code}] puzzle ${index + 1}: exact target ${target} / density >0.4 unmet after ${attempts} attempts (best count ${bestCount}); no files written`);
+    puzzles.push(puzzle);
   }
-  puzzles.sort((a, b) => a.rows * a.cols - b.rows * b.cols);
-  puzzles.forEach((puzzle, index) => {
-    puzzle.id = `${idPrefix}cw-${String(index + 1).padStart(2, "0")}`;
-    puzzle.title = titles[index % titles.length];
-    puzzle.subtitle = subtitles[index % subtitles.length];
-  });
+  process.stdout.write(`[${code}] generation: ${((performance.now() - started) / 1000).toFixed(2)}s\n`);
 
   const words = puzzles.map((p) => p.entries.length);
   const reused = new Set(puzzles.flatMap((p) => p.entries.map((e) => e.answer)));
@@ -911,7 +982,7 @@ function tsString(value) {
 function renderWordbank(generated) {
   const lines = [
     "// GENERATED by scripts/generate-crosswords.mjs. Do not edit by hand.",
-    "// Harder answer pools per language: answer -> clue.",
+    "// Answer pools per language: answer -> clue. Easy puzzles use COMMON_ANSWERS.",
     "/** Languages the crossword ships content for. */",
     'export type WordBankLang = "en" | "ru";',
     "",
@@ -922,6 +993,12 @@ function renderWordbank(generated) {
     lines.push(`  ${code}: {`);
     for (const { answer, clue } of BANK) lines.push(`    ${tsString(answer)}: ${tsString(clue)},`);
     lines.push("  },");
+  }
+  lines.push("};", "");
+  lines.push("/** Easy puzzles use only this hand-reviewed familiar vocabulary. */");
+  lines.push("export const COMMON_ANSWERS: Record<WordBankLang, readonly string[]> = {");
+  for (const { code } of generated) {
+    lines.push(`  ${code}: ${JSON.stringify(COMMON_ANSWERS[code])},`);
   }
   lines.push("};", "");
   return lines.join("\n");

@@ -114,14 +114,14 @@ export const TOOLS: readonly ToolEntry[] = [
     files: { en: "English · Русский · 100 crosswords", ru: "Русский · English · 100 кроссвордов" },
     title: { en: "Crossword", ru: "Кроссворд" },
     description: {
-      en: "Bilingual crosswords with a phone-friendly grid, hints, mistake checking and saved progress.",
-      ru: "Кроссворды на русском и английском: крупная сетка, подсказки, проверка ошибок и сохранение прогресса.",
+      en: "English and Russian crosswords: 10–50 words, a zoomable grid, your phone’s keyboard, hints and saved progress.",
+      ru: "Кроссворды на русском и английском: от 10 до 50 слов, масштабируемая сетка, клавиатура телефона, подсказки и сохранение.",
     },
     keywords: "crossword puzzle clues кроссворд головоломка",
     seo: {
       title: "Free crosswords in English & Russian",
       description:
-        "Solve 100 crosswords with a phone-friendly grid, hints, mistake checking and saved progress. English and Russian, free and offline.",
+        "Solve 100 English and Russian crosswords with 10–50 words each. Zoom and pan the grid, type with your native keyboard, get hints and save progress offline.",
     },
   },
   {

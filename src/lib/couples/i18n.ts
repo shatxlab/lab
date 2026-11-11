@@ -100,7 +100,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     // Menu
     menuTitle: "Pick a game",
     menuSubtitle:
-      "One phone. Compare answers or rebuild colourful secret patterns.",
+      "One phone. Compare answers, rebuild secret patterns, or share stories in Never Have I Ever.",
     cardNew: "New game",
     open: "Play",
     statsLine: "Question games: {games} · Cards: {cards} · Matches: {percent}%",
@@ -183,7 +183,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
 
     // Menu
     menuTitle: "Выберите игру",
-    menuSubtitle: "Один телефон. Сравнивайте ответы или собирайте разноцветные тайные узоры.",
+    menuSubtitle: "Один телефон. Сравнивайте ответы, собирайте тайные узоры или делитесь историями в «Я никогда не».",
     cardNew: "Новая игра",
     open: "Играть",
     statsLine: "Игр с вопросами: {games} · Карточек: {cards} · Совпадений: {percent}%",

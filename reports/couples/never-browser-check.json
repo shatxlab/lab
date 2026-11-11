@@ -1,0 +1,189 @@
+{
+  "checks": [
+    {
+      "audit": "setup en 360 light",
+      "violations": []
+    },
+    {
+      "audit": "answer en 360 light",
+      "violations": []
+    },
+    {
+      "audit": "story en 360 light",
+      "violations": []
+    },
+    {
+      "audit": "summary en 360 light",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 360,
+      "height": 640,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "setup en 390 light",
+      "violations": []
+    },
+    {
+      "audit": "answer en 390 light",
+      "violations": []
+    },
+    {
+      "audit": "story en 390 light",
+      "violations": []
+    },
+    {
+      "audit": "summary en 390 light",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 390,
+      "height": 780,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "setup en 390 dark",
+      "violations": []
+    },
+    {
+      "audit": "answer en 390 dark",
+      "violations": []
+    },
+    {
+      "audit": "story en 390 dark",
+      "violations": []
+    },
+    {
+      "audit": "summary en 390 dark",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 390,
+      "height": 780,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "audit": "setup en 640 dark",
+      "violations": []
+    },
+    {
+      "audit": "answer en 640 dark",
+      "violations": []
+    },
+    {
+      "audit": "story en 640 dark",
+      "violations": []
+    },
+    {
+      "audit": "summary en 640 dark",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 640,
+      "height": 360,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "audit": "setup ru 360 light",
+      "violations": []
+    },
+    {
+      "audit": "answer ru 360 light",
+      "violations": []
+    },
+    {
+      "audit": "story ru 360 light",
+      "violations": []
+    },
+    {
+      "audit": "summary ru 360 light",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 360,
+      "height": 640,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "setup ru 390 light",
+      "violations": []
+    },
+    {
+      "audit": "answer ru 390 light",
+      "violations": []
+    },
+    {
+      "audit": "story ru 390 light",
+      "violations": []
+    },
+    {
+      "audit": "summary ru 390 light",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 390,
+      "height": 780,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "setup ru 390 dark",
+      "violations": []
+    },
+    {
+      "audit": "answer ru 390 dark",
+      "violations": []
+    },
+    {
+      "audit": "story ru 390 dark",
+      "violations": []
+    },
+    {
+      "audit": "summary ru 390 dark",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 390,
+      "height": 780,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "audit": "setup ru 640 dark",
+      "violations": []
+    },
+    {
+      "audit": "answer ru 640 dark",
+      "violations": []
+    },
+    {
+      "audit": "story ru 640 dark",
+      "violations": []
+    },
+    {
+      "audit": "summary ru 640 dark",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 640,
+      "height": 360,
+      "theme": "dark",
+      "result": "passed"
+    }
+  ],
+  "errors": []
+}

@@ -1,7 +1,7 @@
 import type { GameDef, Lang } from "./types";
 
-/** Separate from GameId: these games have no question deck or agreement score. */
-export type MiniGameId = "pattern";
+/** Separate from GameId: these games do not contribute to question-game agreement scores. */
+export type MiniGameId = "pattern" | "never";
 export const MINI_GAMES: readonly (Omit<GameDef, "id"> & { id: MiniGameId })[] = [
   {
     id: "pattern", emoji: "🧩",
@@ -13,7 +13,16 @@ export const MINI_GAMES: readonly (Omit<GameDef, "id"> & { id: MiniGameId })[] =
     },
     gradient: "linear-gradient(135deg, #115e59, #0f766e)", accent: "#5eead4",
   },
-
+  {
+    id: "never", emoji: "✨",
+    name: { en: "Never Have I Ever", ru: "Я никогда не" },
+    tagline: { en: "Little confessions, good stories", ru: "У каждой мелочи — своя история" },
+    description: {
+      en: "Everyday surprises, unexpected stories, and an optional closer deck. Answer together, skip freely. No drinks or scores.",
+      ru: "Жизненные мелочи, неожиданные истории и личный набор по желанию. Отвечайте вместе, пропускайте свободно. Без алкоголя и очков.",
+    },
+    gradient: "linear-gradient(135deg, #701a75, #be185d)", accent: "#fbcfe8",
+  },
 ];
 
 export const PATTERN_ROUNDS = 5;
@@ -57,7 +66,7 @@ export function scorePattern(target: Pattern, draft: Pattern) {
 const en = {
   rules: "How to play", start: "Start game", back: "Back", exit: "Exit game",
   cancel: "Keep playing", leave: "Leave game", exitTitle: "Leave this game?",
-  exitBody: "This game's progress will be discarded. Patterns and results are not saved.",
+  exitBody: "This game's progress will be discarded. Answers, patterns and results are not saved.",
   names: "What are your names?", firstName: "First name", secondName: "Second name",
   again: "Play again", menu: "Choose another game", round: "Round", next: "Next round", finish: "See results",
   pass: "Pass the phone", ready: "I'm {name} — ready", lookAway: "Only {name} should look at the next screen.",
@@ -79,7 +88,7 @@ type MiniStrings = Record<keyof typeof en, string>;
 const ru: MiniStrings = {
   rules: "Как играть", start: "Начать игру", back: "Назад", exit: "Выйти из игры",
   cancel: "Продолжить", leave: "Выйти", exitTitle: "Выйти из игры?",
-  exitBody: "Прогресс этой игры будет потерян. Узоры и результаты не сохраняются.",
+  exitBody: "Прогресс этой игры будет потерян. Ответы, узоры и результаты не сохраняются.",
   names: "Как вас зовут?", firstName: "Первое имя", secondName: "Второе имя",
   again: "Сыграть ещё", menu: "Выбрать другую игру", round: "Раунд", next: "Следующий раунд", finish: "К итогам",
   pass: "Передайте телефон", ready: "Я {name} — можно", lookAway: "Следующий экран смотрит только {name}.",

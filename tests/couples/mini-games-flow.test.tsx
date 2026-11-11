@@ -102,12 +102,12 @@ describe.each(["en", "ru"] as const)("deck-free games (%s)", (lang) => {
     expect(host.querySelector('[role="dialog"]')).toBeNull(); expect(phase(host)).toBe(before);
     expect(document.activeElement).toBe(host.querySelector(".cp-mini-exit"));
     click(host, ".cp-mini-exit"); click(host, '[role="dialog"] .cp-danger');
-    expect(host.querySelectorAll(".cp-game-card")).toHaveLength(4);
+    expect(host.querySelectorAll(".cp-game-card")).toHaveLength(5);
     start(host, game);
     expect(phase(host)).toBe("handoff-study");
     act(() => root?.unmount()); root = null; document.body.innerHTML = "";
     const reload = mount(lang);
-    expect(reload.querySelectorAll(".cp-game-card")).toHaveLength(4);
+    expect(reload.querySelectorAll(".cp-game-card")).toHaveLength(5);
     expect(reload.querySelector("[data-mini-game]")).toBeNull();
   });
 

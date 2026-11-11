@@ -280,7 +280,7 @@ export default function CouplesGame() {
   }, [question, session, phase, pool, index, results, picksA, finish]);
 
   const pickGame = useCallback((game: GameId | MiniGameId) => {
-    if (game === "pattern") {
+    if (game === "pattern" || game === "never") {
       setMiniGame(game);
       setScreen("mini");
       return;

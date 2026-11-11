@@ -4,7 +4,20 @@ The shared review backlog is `game-design-improvements.md` (§8 consent/temporar
 
 ## Status
 
-Four menu games: the three question games and **Secret Pattern / Тайный узор**. **Split or Steal removed** after the user's two-person playtest: not fun. The original two-game implementation record below is historical/superseded. The user authorized committing and pushing this follow-up to `main`. Deployment must be verified separately.
+Five menu games: the three comparison/question games, **Secret Pattern / Тайный узор**, and **Never Have I Ever / Я никогда не**. **Split or Steal removed** after the user's two-person playtest: not fun. The original two-game implementation record below is historical/superseded. The Secret Pattern follow-up was pushed as `95268cf`. The user authorized committing and pushing the Never Have I Ever implementation and expanded decks to `main`. Deployment must be verified separately.
+
+### Never Have I Ever / Я никогда не — implementation
+
+- One-phone **together** game: read a statement, each person taps **I have / Never** (RU **Было / Никогда**), then optionally discuss a tailored follow-up. Answers are deliberately visible, editable before advancing; no secret/comparison mode, drinking, points, relationship rating or answer recap.
+- **172 independently authored cards per language**, not translations: 58 everyday/light, 57 stories, 57 closer/personal. Default mix excludes closer. Both choose their deck together; closer is explicit opt-in. Round sizes 10/15/20 (15 default), unique random deal within each round. Replay re-deals and may repeat cards; no persistent seen history.
+- Content created with **three CLI subagents**: independent EN and RU authors plus bilingual editorial reviewer. Reviewer read both full decks and improved 18 EN / 37 RU cards, especially story incidents and playful non-explicit flirting instead of hobby/virtue checklists. Final decks reviewed by the main agent. Record: `reports/couples/never-editorial-review.md`. No human fun/comfort playtest claimed.
+- Expansion request: **100 additional cards per language** (34 light / 33 stories / 33 closer), written by two new EN/RU content subagents and checked by a third bilingual reviewer against all original and new cards. Reviewer edited 22 EN / 28 RU additions; main-agent copy pass simplified five additional RU prompts. Original 72 cards/language preserved with IDs, text and order unchanged. Review: `reports/couples/never-expansion-review.md`. Expanded default mix: 115 non-personal cards/language; closer remains opt-in. Gameplay/storage unchanged.
+- Expansion verification on final merged decks: full suite **238 files / 3,483 tests passed** with `NODE_ENV=test`, typecheck + production build passed. Same eight EN/RU mobile/landscape light/dark browser cases and 32 scoped axe audits passed, no page errors. A direct production-preview deal also confirmed newly added cards reach the UI. No new human content playtest claimed.
+- Either person can skip **before or after either/both answers**; both answers are immediately cleared. Only explored/skipped aggregate counts remain, no declined prompt/answer or identity in recap. No lifetime agreement effects. Names are reused; deck selection, prompts and answers are memory-only, exit/reload discard the run. Existing storage schemas untouched.
+- Independent language content is pinned at round start so changing UI language never silently substitutes an unrelated question. UI switches immediately, cards keep their `lang` attribute and show an explanatory note; replay uses the new language.
+- New pure deal/reducer/content tests and EN/RU app-flow tests: consent defaults, category/count selection, both answer states, answer changes, skip after 0/1/2 answers, all skipped/mixed runs, duplicate/stale action guards, replay, language switch, exit/reload, blocked storage and unchanged stats/history.
+- Final verification on final reviewed content: `NODE_ENV=test npm test` **238 files / 3,483 tests passed**; typecheck + production build passed. Production Chromium checks: EN/RU × 360×640 and 390×780 light, 390×780 and 640×360 dark/reduced-motion; full rounds, touch targets, overflow, keyboard, skip/privacy, replay, exit focus and reload. **32 scoped axe audits, no violations; no page errors**. Secret Pattern browser regression also passed EN/RU phone flows + dark/reduced-motion layouts. Screenshots inspected. Harness: `scripts/couples/never-browser.mjs`; evidence: `reports/couples/never-*`.
+- Subagents initially ran plain `npm test` under inherited `NODE_ENV=production`, which yields React `TypeError: act is not a function`. Main-agent final full-suite run explicitly used `NODE_ENV=test` and passed; the initial output is retained in the editorial report for transparency.
 
 ### Playtest follow-up — Secret Pattern
 
@@ -80,7 +93,7 @@ The user explicitly requested building both games. No new question decks, conten
 
 ## Next steps — separate authorization/scope
 
-1. Two-person playtest the harder Secret Pattern progression: colour recall, describing shape + colour + position, and late-round palette/peek friction. Split or Steal was rejected and removed; do not restore it.
+1. Two-person playtest Never Have I Ever: prompt hit-rate, humour, optional closer comfort and follow-up naturalness. Also playtest the harder Secret Pattern progression: colour recall, describing shape + colour + position, and late-round palette/peek friction. Split or Steal was rejected and removed; do not restore it.
 2. English authored-content editorial pilot: choose a small theme sample and compare tone, specificity, naturalness, and usefulness for discussion before broader expansion. Do not generate or rewrite the English catalog as part of the consent batch.
 3. No extra persistence, answer-sharing, analytics, new modes, or deck/balance changes are part of temporary skipping. New deck-free games are a separate authorized implementation, not a change to the question-game consent contract.
 

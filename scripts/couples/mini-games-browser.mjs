@@ -49,7 +49,7 @@ try {
     await p.goto(`http://127.0.0.1:${port}/couples/`);
     await p.locator('.cp-shell[data-lang-ready]').waitFor();
     if(port===4321) await p.addStyleTag({content:'astro-dev-toolbar { display:none !important; }'});
-    assert.equal(await p.locator('.cp-game-card').count(),4);
+    assert.equal(await p.locator('.cp-game-card').count(),5);
     await p.locator('.cp-game-card').nth(3).click();
     await layout(p);
     await action(p,'start'); await noSecrets(p);
@@ -102,7 +102,7 @@ try {
     const stored = await p.evaluate(()=>JSON.parse(localStorage.getItem('lab:couples:v1')));
     assert.deepEqual(stored.stats,{games:2,cards:10,matches:6});
     await p.reload(); await p.locator('.cp-shell[data-lang-ready]').waitFor();
-    assert.equal(await p.locator('.cp-game-card').count(),4);
+    assert.equal(await p.locator('.cp-game-card').count(),5);
     assert.equal(await p.locator('[data-mini-game]').count(),0);
     checks.push({port,lang,width,height,result:'passed'});
     console.log('PASS',port,lang,width,height);

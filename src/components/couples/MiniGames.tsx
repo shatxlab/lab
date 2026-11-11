@@ -5,6 +5,10 @@ import { stringsFor } from "@/lib/couples/i18n";
 import type { Lang } from "@/lib/couples/types";
 import { useMiniPhaseFocus, type MiniPlayProps } from "./MiniGameUI";
 import { SecretPattern } from "./SecretPattern";
+import { NeverHaveIEver } from "./NeverHaveIEver";
+import { dealNever } from "@/lib/couples/never/game";
+import { neverStrings } from "@/lib/couples/never/i18n";
+import type { NeverCard, NeverDeck } from "@/lib/couples/never/types";
 
 function ExitDialog({ lang, onCancel, onLeave }: { lang: Lang; onCancel(): void; onLeave(): void }) {
   const T = miniStrings(lang);
@@ -38,6 +42,14 @@ export function MiniGames({ game, lang, names, onNames, onMenu }: {
   const gameDef = MINI_GAMES.find((entry) => entry.id === game)!;
   const [started, setStarted] = useState(false);
   const [run, setRun] = useState(0);
+  const [neverDeck, setNeverDeck] = useState<NeverDeck>("mix");
+  const [neverCount, setNeverCount] = useState(15);
+  const [neverRun, setNeverRun] = useState<{ cards: NeverCard[]; lang: Lang } | null>(null);
+  const N = neverStrings(lang);
+  const replay = () => {
+    if (game === "never") setNeverRun({ cards: dealNever(lang, neverDeck, neverCount), lang });
+    setRun(n => n + 1);
+  };
   const [confirmExit, setConfirmExit] = useState(false);
   const exitButton = useRef<HTMLButtonElement>(null);
   const wasConfirming = useRef(false);
@@ -47,15 +59,27 @@ export function MiniGames({ game, lang, names, onNames, onMenu }: {
   }, [confirmExit]);
   const setupRef = useMiniPhaseFocus(started ? "play" : "setup");
   const playProps: MiniPlayProps = {
-    lang, names: effectiveNames(names, lang), onReplay: () => setRun((n) => n + 1), onMenu,
+    lang, names: effectiveNames(names, lang), onReplay: replay, onMenu,
   };
   let content: ReactNode;
   if (!started) {
     content = <div className="cp-mini-content" ref={setupRef}>
       <section className="cp-mini-panel">
         <h2 tabIndex={-1}>{T.rules}</h2>
-        <p>{T.patternRules}</p>
+        <p>{game === "never" ? N.rules : T.patternRules}</p>
       </section>
+      {game === "never" ? <>
+        <fieldset className="cp-never-decks"><legend>{N.deck}</legend>
+          {(["mix", "light", "stories", "closer"] as const).map(deck => <label key={deck} className="cp-never-deck">
+            <input type="radio" name="never-deck" value={deck} checked={neverDeck === deck} onChange={() => setNeverDeck(deck)} />
+            <span><strong>{N[deck]}</strong><span className="cp-note cp-note-small">{N[`${deck}Hint`]}</span></span>
+          </label>)}
+        </fieldset>
+        <p className="cp-note">{N.consent}</p>
+        <label className="cp-never-count">{N.count}<select value={neverCount} onChange={event => setNeverCount(Number(event.target.value))}>
+          {[10, 15, 20].map(count => <option key={count} value={count}>{count}</option>)}
+        </select></label>
+      </> : null}
       <section className="cp-field">
         <h2>{T.names}</h2>
         <div className="cp-name-grid">
@@ -67,13 +91,15 @@ export function MiniGames({ game, lang, names, onNames, onMenu }: {
           </label>)}
         </div>
       </section>
-      <p className="cp-note cp-note-small">{T.noStats}</p>
+      <p className="cp-note cp-note-small">{game === "never" ? N.privacy : T.noStats}</p>
       <button type="button" className="cp-primary cp-wide" data-action="start" onClick={() => {
-        onNames(effectiveNames(names, lang)); setStarted(true);
+        onNames(effectiveNames(names, lang));
+        if (game === "never") setNeverRun({ cards: dealNever(lang, neverDeck, neverCount), lang });
+        setStarted(true);
       }}>{T.start}</button>
     </div>;
   } else {
-    content = <SecretPattern key={run} {...playProps} />;
+    content = game === "never" && neverRun ? <NeverHaveIEver key={run} {...playProps} cards={neverRun.cards} cardLang={neverRun.lang} /> : <SecretPattern key={run} {...playProps} />;
   }
   return <div className="cp-mini" data-mini-game={game}>
     <div className="cp-mini-layout" inert={confirmExit}>

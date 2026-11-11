@@ -1071,3 +1071,24 @@ body:has(.cp-shell) {
 @media (prefers-reduced-motion: no-preference) {
   .cp-mini-reveal { animation: cp-mini-reveal 220ms ease-out; }
 }
+
+/* Never Have I Ever: a shared conversation, not an agreement test. */
+.cp-never-decks { border: 0; display: grid; gap: .6rem; margin: 0; min-width: 0; padding: 0; width: 100%; }
+.cp-never-decks legend { font-weight: 700; margin-bottom: .65rem; }
+.cp-never-deck { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; cursor: pointer; display: flex; gap: .75rem; min-height: 64px; padding: .8rem; text-align: left; }
+.cp-never-deck:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.cp-never-deck input { accent-color: var(--accent); flex-shrink: 0; height: 22px; width: 22px; }
+.cp-never-deck span span { display: block; margin: .25rem 0 0; }
+.cp-never-count { align-items: center; display: flex; gap: 1rem; justify-content: space-between; width: 100%; }
+.cp-never-count select { background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; color: var(--fg); font: inherit; min-height: 44px; padding: .5rem 1rem; }
+.cp-never-prompt { background: radial-gradient(ellipse at top, #be185d14, transparent 80%), var(--surface); }
+.cp-never-prompt h2 { font-size: clamp(1.35rem, 5.5vw, 1.85rem); line-height: 1.35; overflow-wrap: anywhere; }
+.cp-never-spark { color: #be185d; font-size: 2rem; }
+.cp-never-players { display: grid; gap: .8rem; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+.cp-never-players fieldset { border: 1px solid var(--border); border-radius: 1rem; margin: 0; min-width: 0; padding: .65rem; }
+.cp-never-players legend { font-weight: 700; max-width: 100%; overflow-wrap: anywhere; padding: 0 .3rem; }
+.cp-never-answers { display: grid; gap: .5rem; }
+.cp-never-answers [aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.cp-never-story h3 { font-size: 1rem; }
+
+.cp-never-word { white-space: nowrap; }

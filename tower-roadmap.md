@@ -109,7 +109,7 @@ normal checkpoint/settlement path; repeating the read is harmless.
 - Both skills are tested with mouse, touch, multi-touch cancellation and keyboard at 360×640 and 390×780 in EN/RU.
 - Human phone playtesting is required before calling either skill fun, balanced or preferable to the old volley.
 
-### Implementation record — two-skill vertical slice (local, uncommitted)
+### Implementation record — two-skill vertical slice (shipped in `216242f`)
 
 - **Skills:** Catapult (8 s, radius 45, 0.65 s flight, 35 impact damage, 4/s for 3 s burn, hits ground and air) and
   Frost Field (12 s, radius 55, 1.25 s freeze + 35%/2 s slow; bosses 35% slow for 1.25 s, never frozen) implemented as
@@ -315,9 +315,9 @@ playtest remains a separate required acceptance step, not something inferred fro
 
 - Continue working on `main`; commit/push subsequent batches only when explicitly authorized. The full plan above
   records the proposed design direction; it does not by itself approve numerical balance changes or a commit/push.
-- **The two-skill vertical slice is implemented locally and verified (see its record above) but not committed.** After
-  the user authorizes committing/pushing and it deploys, the required next step is a real-phone comparison of both
-  skills: discover the cast flow, target/cancel, reload during combat and choices, then retreat and verify banked
+- **The two-skill vertical slice is implemented, verified and shipped to `main` (`216242f`); deployment status is
+  separate from push success.** The required next step after deployment is a real-phone comparison of both skills:
+  discover the cast flow, target/cancel, reload during combat and choices, then retreat and verify banked
   gold/run count once, including a pre-skill v1 run carried over. Do not treat the bot baseline as the fun verdict.
 - Then decide Catapult vs Fireball theming and the first single-number adjustments (Frost Field looked weak in the
   baseline) — one variable at a time against the harness, with a fresh 30-seed comparison per change.

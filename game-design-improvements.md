@@ -131,7 +131,7 @@ implementation plan. Its next proposed batch replaces the hidden double-tap/rand
 targeted active skill: Catapult (area burst) or Frost Field (control), plus explicit old-run migration. Prototype numbers
 remain hypotheses; the plan does not approve a numerical retune, implementation, commit or push by itself.
 
-**Implemented locally (uncommitted):** the two-skill vertical slice shipped as described — Catapult and Frost Field with
+**Implemented and shipped to `main` (`216242f`; deployment to be verified separately):** the two-skill vertical slice shipped as described — Catapult and Frost Field with
 visible button/drag-release targeting, keyboard support, skill upgrades replacing volley upgrades, Tactics converted,
 and explicit v1→v2 checkpoint migration. Verified with the full suite (242 files / 3,530 tests), typecheck, production
 build, and EN/RU phone-size Chromium checks on dev and production. A 30-seed baseline harness exists

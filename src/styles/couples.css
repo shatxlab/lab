@@ -1023,7 +1023,8 @@ body:has(.cp-shell) {
 .cp-mini-panel h2 { font-size: clamp(1.15rem, 4vw, 1.6rem); line-height: 1.2; margin: 0; }
 .cp-mini-panel h3 { font-size: 0.85rem; margin: 0 0 0.6rem; }
 .cp-mini-panel p { line-height: 1.5; margin: 0; }
-.cp-mini-panel h2:focus { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 0.2rem; }
+/* Programmatic phase focus: only show the ring for keyboard users, not after every tap. */
+.cp-mini-panel h2:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 0.2rem; }
 .cp-mini button { min-height: 44px; touch-action: manipulation; }
 .cp-mini-handoff { justify-content: center; min-height: 17rem; }
 .cp-mini-caution { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border-radius: 0.8rem; padding: 0.7rem; font-size: 0.82rem; }

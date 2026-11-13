@@ -19,9 +19,9 @@ export function NeverHaveIEver({ lang, names, cards, cardLang, onReplay, onMenu 
   return <div className="cp-mini-content cp-never" ref={ref} data-never-phase={state.phase}>
     {state.phase !== "summary" && card ? <>
       <p className="cp-counter">{state.index + 1} / {cards.length} · {T[card.category]}</p>
-      <section className="cp-mini-panel cp-never-prompt" lang={cardLang}>
+      <section className="cp-mini-panel cp-never-prompt" lang={cardLang} aria-live="polite" aria-atomic="true">
         <span className="cp-never-spark" aria-hidden="true">✦</span>
-        <h2 tabIndex={-1}><CardText text={card.prompt} /></h2>
+        <h2><CardText text={card.prompt} /></h2>
       </section>
       {lang !== cardLang ? <p className="cp-note cp-note-small">{T.cardLanguage}</p> : null}
       <p className="cp-note">{T.answerHint}</p>

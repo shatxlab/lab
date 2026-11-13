@@ -62,6 +62,23 @@ describe.each(["en", "ru"] as const)("Never Have I Ever flow (%s)", lang => {
     expect(host.querySelector(".cp-counter")?.textContent).toContain("1 / 15");
     expect(host.querySelectorAll('[aria-pressed="true"]')).toHaveLength(0);
   });
+  it("does not focus questions on start, next, skip or replay", () => {
+    const host = mount(lang); open(host); action(host, "start");
+    const checkPrompt = () => {
+      const prompt = host.querySelector(".cp-never-prompt h2")!;
+      expect(prompt.hasAttribute("tabindex")).toBe(false);
+      expect(document.activeElement).not.toBe(prompt);
+      expect(host.querySelector(".cp-never-prompt")?.getAttribute("aria-live")).toBe("polite");
+    };
+    checkPrompt();
+    answer(host, 0, "have"); answer(host, 1, "never");
+    action(host, "never-next"); checkPrompt();
+    action(host, "never-skip"); checkPrompt();
+    for (let i = 2; i < 15; i++) action(host, "never-skip");
+    expect(phase(host)).toBe("summary");
+    expect(document.activeElement).toBe(host.querySelector(".cp-mini-panel h2"));
+    action(host, "replay"); checkPrompt();
+  });
   it("allows opting into closer and 10 cards, skips before/after either answer, and shows only aggregate counts", () => {
     const host = mount(lang); const T = neverStrings(lang); open(host);
     click(host, 'input[value="closer"]');

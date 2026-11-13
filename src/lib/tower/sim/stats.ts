@@ -1,5 +1,5 @@
-import { BASE, MIN_VOLLEY_COOLDOWN, PERK_STEP, WALL_HP } from "./balance";
-import type { PerkLevels, UpgradeLevels } from "./types";
+import { BASE, MIN_SKILL_COOLDOWN, PERK_STEP, SKILLS, WALL_HP } from "./balance";
+import type { PerkLevels, SkillId, UpgradeLevels } from "./types";
 
 export interface TowerStats {
   maxHp: number;
@@ -18,18 +18,20 @@ export interface TowerStats {
   /** Fraction of speed a frosted enemy loses. */
   frost: number;
   frostSeconds: number;
-  volleyArrows: number;
-  volleyRadius: number;
-  volleyDamage: number;
-  volleyCooldown: number;
+  /** Equipped-skill values; the selected skill determines base radius/cooldown. */
+  skillRadius: number;
+  skillCooldown: number;
+  skillDamage: number;
+  skillBurnDps: number;
   /** 0 when missed arrows just vanish. */
   caltropSlow: number;
   caltropLife: number;
 }
 
 /** What the tower can do with these upgrades and perks; recomputed whenever it's needed. */
-export function towerStats(upgrades: UpgradeLevels, perks: PerkLevels): TowerStats {
+export function towerStats(upgrades: UpgradeLevels, perks: PerkLevels, skill: SkillId = "catapult"): TowerStats {
   const damageMultiplier = (1 + 0.25 * upgrades.damage) * (1 + PERK_STEP.fletching * perks.fletching);
+  const definition = SKILLS[skill];
   return {
     maxHp: BASE.maxHp + WALL_HP * upgrades.wall + PERK_STEP.fortify * perks.fortify,
     regen: upgrades.regen,
@@ -45,13 +47,14 @@ export function towerStats(upgrades: UpgradeLevels, perks: PerkLevels): TowerSta
     burnSeconds: 3,
     frost: 0.15 * upgrades.frost,
     frostSeconds: 1.5,
-    volleyArrows: BASE.volleyArrows + 5 * upgrades.volleySize,
-    volleyRadius: BASE.volleyRadius + 8 * upgrades.volleySize,
-    volleyDamage: BASE.volleyDamage * damageMultiplier,
-    volleyCooldown: Math.max(
-      MIN_VOLLEY_COOLDOWN,
-      BASE.volleyCooldown - 1.2 * upgrades.volleyCooldown - PERK_STEP.tactics * perks.tactics,
+    skillRadius: definition.radius + 8 * upgrades.skillSize,
+    skillCooldown: Math.max(
+      MIN_SKILL_COOLDOWN,
+      definition.cooldown - 1.2 * upgrades.skillCooldown - PERK_STEP.tactics * perks.tactics,
     ),
+    // Catapult damage and its burn each scale once. Fire arrows improve its burn, never its impact twice.
+    skillDamage: SKILLS.catapult.damage * damageMultiplier,
+    skillBurnDps: (SKILLS.catapult.burnDps + 2 * upgrades.fire) * damageMultiplier,
     caltropSlow: upgrades.caltrops === 0 ? 0 : 0.15 + 0.1 * upgrades.caltrops,
     caltropLife: 3 + 3 * upgrades.caltrops,
   };

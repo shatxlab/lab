@@ -10,6 +10,8 @@ import {
   WALL_Y,
   WAVE_CLEAR_HEAL,
   BASE,
+  LEGACY_VOLLEY_SPLASH,
+  SKILLS,
   hpScale,
   speedScale,
 } from "./balance";
@@ -17,7 +19,7 @@ import { random } from "./random";
 import { towerStats, type TowerStats } from "./stats";
 import { emptyPerks, emptyUpgrades, rollChoices } from "./upgrades";
 import { buildSpawns, laneX } from "./waves";
-import type { Arrow, Effect, EffectKind, Enemy, EnemyKind, PerkLevels, Run, UpgradeId } from "./types";
+import type { Arrow, Effect, EffectKind, Enemy, EnemyKind, PerkLevels, Run, SkillCast, SkillId, UpgradeId } from "./types";
 
 /** The fixed tick the page steps the sim with, so every device plays the same game. */
 export const STEP = 1 / 60;
@@ -30,7 +32,7 @@ const MULTISHOT_SPREAD = 0.1;
 const AIM_LIMIT = 0.1;
 const DUST = "#d9c8a0";
 
-export function createRun(seed: number, perks: PerkLevels = emptyPerks()): Run {
+export function createRun(seed: number, perks: PerkLevels = emptyPerks(), skill: SkillId = "catapult"): Run {
   const upgrades = emptyUpgrades();
   const run: Run = {
     seed,
@@ -43,13 +45,16 @@ export function createRun(seed: number, perks: PerkLevels = emptyPerks()): Run {
     choices: [],
     upgrades,
     perks: { ...perks },
-    hp: towerStats(upgrades, perks).maxHp,
+    skill,
+    hp: towerStats(upgrades, perks, skill).maxHp,
     reloadLeft: 0,
-    volleyLeft: 0,
+    skillLeft: 0,
     aim: -Math.PI / 2,
     firing: false,
     enemies: [],
     arrows: [],
+    skillCasts: [],
+    // Only old checkpoints can still carry legacy random-scatter volley arrows.
     volleys: [],
     caltrops: [],
     effects: [],
@@ -77,11 +82,12 @@ export function step(run: Run, dt: number): void {
     spawnEnemy(run, spawn.kind, laneX(run), 0);
   }
   run.hp = Math.min(tower.maxHp, run.hp + tower.regen * dt);
-  run.volleyLeft = Math.max(0, run.volleyLeft - dt);
+  run.skillLeft = Math.max(0, run.skillLeft - dt);
 
   shoot(run, tower, dt);
   moveArrows(run, tower, dt);
-  landVolleys(run, tower, dt);
+  landSkillCasts(run, dt);
+  landLegacyVolleys(run, tower, dt);
   moveEnemies(run, tower, dt);
   reapEnemies(run);
   fadeGround(run, dt);
@@ -112,35 +118,31 @@ export function holdFire(run: Run): void {
   run.firing = false;
 }
 
-/** Rain the volley on a spot. False when it is still reloading or no wave is running. */
-export function castVolley(run: Run, x: number, y: number): boolean {
-  if (run.phase !== "playing" || run.volleyLeft > 0) return false;
+/** Target the equipped skill. False while reloading or outside combat. Casting consumes no RNG. */
+export function castSkill(run: Run, x: number, y: number): boolean {
+  if (run.phase !== "playing" || run.skillLeft > 0) return false;
   const tower = stats(run);
   const centerX = clamp(x, 0, ARENA.width);
   const centerY = clamp(y, 0, ARENA.height);
-  for (let index = 0; index < tower.volleyArrows; index += 1) {
-    const angle = random(run) * Math.PI * 2;
-    const reach = Math.sqrt(random(run)) * tower.volleyRadius;
-    const toX = clamp(centerX + Math.cos(angle) * reach, 0, ARENA.width);
-    const toY = clamp(centerY + Math.sin(angle) * reach, 0, ARENA.height);
-    run.volleys.push({
-      id: run.nextId++,
-      fromX: TOWER.x,
-      fromY: TOWER.y,
-      toX,
-      toY,
-      t: 0,
-      duration: 0.4 + random(run) * 0.25 + Math.hypot(toX - TOWER.x, toY - TOWER.y) / 900,
-      damage: tower.volleyDamage,
-    });
-  }
-  addEffect(run, "mark", centerX, centerY, tower.volleyRadius, 0.9, "#ffffff");
-  run.volleyLeft = tower.volleyCooldown;
-  run.aim = fieldAngle(centerX, centerY);
+  const definition = SKILLS[run.skill];
+  const cast: SkillCast = {
+    id: run.nextId++,
+    skill: run.skill,
+    x: centerX,
+    y: centerY,
+    t: 0,
+    duration: definition.flight,
+    radius: tower.skillRadius,
+    damage: run.skill === "catapult" ? tower.skillDamage : 0,
+    burnDps: run.skill === "catapult" ? tower.skillBurnDps : 0,
+  };
+  run.skillCasts.push(cast);
+  addEffect(run, "mark", centerX, centerY, cast.radius, cast.duration, run.skill === "catapult" ? "#ff8a2a" : "#7fd4ff");
+  run.skillLeft = tower.skillCooldown;
   return true;
 }
 
-/** The nearest enemy to the tower, for casting a volley from the keyboard. */
+/** The nearest enemy to the tower, also used to place an initial keyboard skill target. */
 export function nearestEnemy(run: Run): Enemy | undefined {
   let best: Enemy | undefined;
   let bestDistance = Infinity;
@@ -185,9 +187,10 @@ function startWave(run: Run): void {
   run.waveTime = 0;
   run.spawns = buildSpawns(run.wave, run);
   run.arrows = [];
+  run.skillCasts = [];
   run.volleys = [];
   run.reloadLeft = 0;
-  run.volleyLeft = 0;
+  run.skillLeft = 0;
   run.firing = false;
   run.choices = [];
   run.phase = "playing";
@@ -197,6 +200,7 @@ function finishWave(run: Run, tower: TowerStats): void {
   run.gold += 2 * run.wave;
   run.hp = Math.min(tower.maxHp, run.hp + WAVE_CLEAR_HEAL);
   run.arrows = [];
+  run.skillCasts = [];
   run.volleys = [];
   run.firing = false;
   run.picksLeft += 1;
@@ -224,6 +228,7 @@ function spawnEnemy(run: Run, kind: EnemyKind, x: number, y: number, targetX = l
     burnDps: 0,
     slowLeft: 0,
     slow: 0,
+    freezeLeft: 0,
     summonTimer: BOSS_SUMMON.every,
     flash: 0,
     phase: random(run) * Math.PI * 2,
@@ -314,7 +319,37 @@ function ricochet(run: Run, arrow: Arrow, tower: TowerStats): boolean {
   return true;
 }
 
-function landVolleys(run: Run, tower: TowerStats, dt: number): void {
+function landSkillCasts(run: Run, dt: number): void {
+  const pending: SkillCast[] = [];
+  for (const cast of run.skillCasts) {
+    cast.t += dt / cast.duration;
+    if (cast.t < 1) {
+      pending.push(cast);
+      continue;
+    }
+    for (const enemy of run.enemies) {
+      if (enemy.hp <= 0 || Math.hypot(enemy.x - cast.x, enemy.y - cast.y) > cast.radius + enemy.radius) continue;
+      if (cast.skill === "catapult") {
+        enemy.hp -= cast.damage;
+        enemy.flash = 0.08;
+        enemy.burnLeft = Math.max(enemy.burnLeft, SKILLS.catapult.burnSeconds);
+        enemy.burnDps = Math.max(enemy.burnDps, cast.burnDps);
+      } else {
+        const frost = SKILLS.frostField;
+        const freeze = enemy.kind === "boss" ? 0 : frost.freezeSeconds;
+        const slowSeconds = enemy.kind === "boss" ? frost.bossSlowSeconds : freeze + frost.slowSeconds;
+        enemy.freezeLeft = Math.max(enemy.freezeLeft, freeze);
+        enemy.slowLeft = Math.max(enemy.slowLeft, slowSeconds);
+        enemy.slow = Math.max(enemy.slow, frost.slow);
+      }
+    }
+    addEffect(run, "puff", cast.x, cast.y, cast.radius, 0.45, cast.skill === "catapult" ? "#ff8a2a" : "#7fd4ff");
+  }
+  run.skillCasts = pending;
+}
+
+/** Resolve only old-run arrows. New casts never use random scatter or leave caltrops. */
+function landLegacyVolleys(run: Run, tower: TowerStats, dt: number): void {
   const airborne = [];
   for (const volley of run.volleys) {
     volley.t += dt / volley.duration;
@@ -324,7 +359,7 @@ function landVolleys(run: Run, tower: TowerStats, dt: number): void {
     }
     for (const enemy of run.enemies) {
       if (enemy.hp <= 0) continue;
-      if (Math.hypot(enemy.x - volley.toX, enemy.y - volley.toY) <= BASE.volleySplash + enemy.radius / 2) {
+      if (Math.hypot(enemy.x - volley.toX, enemy.y - volley.toY) <= LEGACY_VOLLEY_SPLASH + enemy.radius / 2) {
         hitEnemy(enemy, tower, volley.damage);
       }
     }
@@ -342,7 +377,7 @@ function hitEnemy(enemy: Enemy, tower: TowerStats, damage: number): void {
     enemy.burnDps = Math.max(enemy.burnDps, tower.burnDps);
   }
   if (tower.frost > 0) {
-    enemy.slowLeft = tower.frostSeconds;
+    enemy.slowLeft = Math.max(enemy.slowLeft, tower.frostSeconds);
     enemy.slow = Math.max(enemy.slow, tower.frost);
   }
 }
@@ -355,11 +390,15 @@ function moveEnemies(run: Run, tower: TowerStats, dt: number): void {
       enemy.burnLeft -= dt;
       if (enemy.burnLeft <= 0) enemy.burnDps = 0;
     }
+    const frozen = enemy.freezeLeft > 0;
+    enemy.freezeLeft = Math.max(0, enemy.freezeLeft - dt);
     if (enemy.slowLeft > 0) {
       enemy.slowLeft -= dt;
       if (enemy.slowLeft <= 0) enemy.slow = 0;
     }
     if (enemy.hp <= 0) continue;
+    // Burn and visual flash advance during freeze; movement, attacks and summons wait without catching up.
+    if (frozen) continue;
 
     if (!atWall(enemy)) {
       const dx = enemy.targetX - enemy.x;

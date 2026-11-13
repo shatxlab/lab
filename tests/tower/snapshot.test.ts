@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { bankRun, buyPerk, defaultSave, normalizeSave, readSave, readSaveState, TOWER_STORAGE_KEY, writeSave } from "@/lib/tower/meta";
 import { createCheckpoint, clearRun, normalizeRun, readRun, readRunState, RUN_STORAGE_KEY, settleRun, writeRun, type RunCheckpoint, type RunStorage } from "@/lib/tower/snapshot";
-import { aimAt, castVolley, chooseUpgrade, createRun, giveUp, step, STEP } from "@/lib/tower/sim/run";
+import { aimAt, castSkill, chooseUpgrade, createRun, giveUp, step, STEP } from "@/lib/tower/sim/run";
 import { emptyPerks } from "@/lib/tower/sim/upgrades";
 import { richRun } from "./fixtures";
 
@@ -11,6 +11,28 @@ function storage(): RunStorage & { data: Map<string, string> } {
   return { data, getItem: (key) => data.get(key) ?? null, setItem: (key, value) => void data.set(key, value), removeItem: (key) => void data.delete(key) };
 }
 const json = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+
+/** A genuinely shaped v1 envelope, including an in-flight random-scatter arrow. */
+function legacyV1(id = "legacy-one"): any {
+  const raw: any = json(createCheckpoint(richRun()));
+  raw.version = 1;
+  raw.id = id;
+  raw.run.volleyLeft = raw.run.skillLeft;
+  raw.run.upgrades.volleySize = raw.run.upgrades.skillSize;
+  raw.run.upgrades.volleyCooldown = raw.run.upgrades.skillCooldown;
+  delete raw.run.skill;
+  delete raw.run.skillLeft;
+  delete raw.run.skillCasts;
+  delete raw.run.upgrades.skillSize;
+  delete raw.run.upgrades.skillCooldown;
+  for (const enemy of raw.run.enemies) delete enemy.freezeLeft;
+  raw.run.volleys = [{
+    id: raw.run.nextId++, fromX: 180, fromY: 560, toX: 100, toY: 250,
+    t: 0.2, duration: 0.8, damage: 6,
+  }];
+  return raw;
+}
+
 function ended(id = "finished-one", fell = false): RunCheckpoint {
   const checkpoint = createCheckpoint(createRun(99));
   checkpoint.id = id;
@@ -43,7 +65,7 @@ describe("Lone Tower checkpoints", () => {
     const run = checkpoint.run;
     expect(run.enemies.some((enemy) => enemy.kind === "boss")).toBe(true);
     expect(run.enemies.some((enemy) => enemy.burnLeft > 0 && enemy.slowLeft > 0)).toBe(true);
-    for (const list of [run.enemies, run.arrows, run.volleys, run.caltrops, run.effects, run.spawns]) expect(list.length).toBeGreaterThan(0);
+    for (const list of [run.enemies, run.arrows, run.skillCasts, run.caltrops, run.effects, run.spawns]) expect(list.length).toBeGreaterThan(0);
     const store = storage();
     writeRun(checkpoint, store);
     expect(readRun(store)).toEqual(checkpoint);
@@ -51,11 +73,11 @@ describe("Lone Tower checkpoints", () => {
   });
 
   it.each([1, 445, 912, 167])("continues deterministically after serialization (seed %i)", (seed) => {
-    const run = richRun(seed);
+    const run = richRun(seed, seed % 2 === 0 ? "frostField" : "catapult");
     const copy = normalizeRun(json(createCheckpoint(run)))!.run;
     for (let tick = 0; tick < 1800; tick += 1) {
       if (tick % 80 === 0) { aimAt(run, 90, 350); aimAt(copy, 90, 350); }
-      if (tick % 400 === 0) { castVolley(run, 100, 300); castVolley(copy, 100, 300); }
+      if (tick % 400 === 0) { castSkill(run, 100, 300); castSkill(copy, 100, 300); }
       if (run.phase === "choosing") { const choice = run.choices[0]; chooseUpgrade(run, choice); chooseUpgrade(copy, choice); }
       step(run, STEP); step(copy, STEP);
     }
@@ -87,6 +109,9 @@ describe("Lone Tower checkpoints", () => {
     (save: any) => { save.run.perks.fortify = 11; },
     (save: any) => { save.run.choices = ["unknown"]; },
     (save: any) => { save.run.phase = "choosing"; },
+    (save: any) => { save.run.skill = "volley"; },
+    (save: any) => { delete save.run.enemies[0].freezeLeft; },
+    (save: any) => { save.run.skillCasts[0].duration = 0; },
     (save: any) => { save.run.enemies[0].kind = "unknown"; },
     (save: any) => { save.run.enemies[0].flying = !save.run.enemies[0].flying; },
     (save: any) => { save.run.enemies[0].attackEvery = 0; },
@@ -94,7 +119,7 @@ describe("Lone Tower checkpoints", () => {
     (save: any) => { save.run.arrows[0].hitIds = [null]; },
     (save: any) => { save.run.arrows[0].id = save.run.enemies[0].id; },
     (save: any) => { save.run.arrows[0].ricochetLeft = 99; },
-    (save: any) => { save.run.volleys[0].duration = 0; },
+    (save: any) => { save.run.skillCasts[0].x = NaN; },
     (save: any) => { delete save.run.caltrops[0].angle; },
     (save: any) => { save.run.effects[0].kind = "unknown"; },
     (save: any) => { save.run.spawns.reverse(); },
@@ -105,6 +130,46 @@ describe("Lone Tower checkpoints", () => {
     const raw = json(createCheckpoint(richRun()));
     damage(raw);
     expect(normalizeRun(raw)).toBeNull();
+  });
+
+  it("migrates rich v1 runs explicitly and finishes legacy volley arrows", () => {
+    const raw = legacyV1("old-run-id");
+    const before = json(raw.run);
+    const migrated = normalizeRun(raw)!;
+    expect(migrated.version).toBe(2);
+    expect(migrated.id).toBe("old-run-id");
+    expect(migrated.run).toMatchObject({
+      skill: "catapult",
+      skillLeft: before.volleyLeft,
+      seed: before.seed,
+      rng: before.rng,
+      wave: before.wave,
+      gold: before.gold,
+      hp: before.hp,
+      upgrades: { skillSize: before.upgrades.volleySize, skillCooldown: before.upgrades.volleyCooldown },
+    });
+    expect(migrated.run.enemies.every((enemy) => enemy.freezeLeft === 0)).toBe(true);
+    expect(migrated.run.skillCasts).toEqual([]);
+    expect(migrated.run.volleys).toHaveLength(1);
+    expect(Object.hasOwn(migrated.run, "volleyLeft")).toBe(false);
+    const store = storage();
+    expect(writeRun(migrated, store)).toBe(true);
+    expect(readRun(store)).toEqual(migrated);
+    migrated.run.caltrops = [];
+    for (let tick = 0; tick < 60; tick += 1) step(migrated.run, STEP);
+    expect(migrated.run.volleys).toHaveLength(0);
+    expect(migrated.run.caltrops.length).toBeGreaterThan(0);
+  });
+
+  it("migrates a terminal v1 reward journal without changing its identity or settlement", () => {
+    const raw = legacyV1("old-terminal");
+    raw.run.phase = "over";
+    raw.run.hp = 0;
+    const migrated = normalizeRun(raw)!;
+    const store = storage();
+    expect(migrated.id).toBe("old-terminal");
+    expect(settleRun(migrated, store)).toMatchObject({ persisted: true, save: { gold: raw.run.gold, best: raw.run.wave, runs: 1, settledRunIds: ["old-terminal"] } });
+    expect(normalizeRun(raw)).not.toBeNull();
   });
 
   it("drops corrupt/incompatible checkpoints without affecting permanent progress", () => {

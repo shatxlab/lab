@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE, ENEMIES, MIN_VOLLEY_COOLDOWN, TOWER, WALL_HP, WALL_Y } from "@/lib/tower/sim/balance";
-import { aimAt, castVolley, chooseUpgrade, createRun, giveUp, holdFire, stats, step, STEP } from "@/lib/tower/sim/run";
+import { BASE, ENEMIES, MIN_SKILL_COOLDOWN, SKILLS, TOWER, WALL_HP, WALL_Y } from "@/lib/tower/sim/balance";
+import { aimAt, castSkill, chooseUpgrade, createRun, giveUp, holdFire, stats, step, STEP } from "@/lib/tower/sim/run";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { emptyPerks, emptyUpgrades } from "@/lib/tower/sim/upgrades";
 import type { Enemy, EnemyKind, Run, UpgradeId } from "@/lib/tower/sim/types";
@@ -26,6 +26,7 @@ function enemyAt(run: Run, x: number, y: number, kind: EnemyKind = "grunt", over
     burnDps: 0,
     slowLeft: 0,
     slow: 0,
+    freezeLeft: 0,
     summonTimer: 99,
     flash: 0,
     phase: 0,
@@ -176,36 +177,92 @@ describe("step", () => {
   });
 });
 
-describe("castVolley", () => {
-  it("rains arrows on the spot, then has to reload", () => {
+describe("active skills", () => {
+  it("casts one deterministic Catapult impact, burns once and reloads", () => {
     const run = quietRun();
     run.reloadLeft = Infinity;
-    const target = enemyAt(run, 60, 120, "brute", { speed: 0 });
-    expect(castVolley(run, 60, 120)).toBe(true);
-    expect(run.volleys).toHaveLength(BASE.volleyArrows);
-    expect(castVolley(run, 60, 120)).toBe(false);
-    runFor(run, 1.5);
+    const target = enemyAt(run, 60, 120, "brute", { speed: 0, hp: 200, maxHp: 200 });
+    const rng = run.rng;
+    expect(castSkill(run, 60, 120)).toBe(true);
+    expect(run.rng).toBe(rng);
+    expect(run.skillCasts).toHaveLength(1);
     expect(run.volleys).toHaveLength(0);
-    expect(target.hp).toBeLessThan(target.maxHp);
-    runFor(run, BASE.volleyCooldown);
-    expect(castVolley(run, 60, 120)).toBe(true);
+    expect(castSkill(run, 60, 120)).toBe(false);
+    runFor(run, 1);
+    expect(run.skillCasts).toHaveLength(0);
+    expect(200 - target.hp).toBeGreaterThan(SKILLS.catapult.damage);
+    expect(200 - target.hp).toBeLessThan(SKILLS.catapult.damage + SKILLS.catapult.burnDps * 0.4);
+    expect(target.burnDps).toBe(SKILLS.catapult.burnDps);
+    runFor(run, SKILLS.catapult.cooldown);
+    expect(castSkill(run, 60, 120)).toBe(true);
   });
 
-  it("leaves caltrops behind only with the upgrade", () => {
-    const plain = quietRun();
-    plain.reloadLeft = Infinity;
-    enemyAt(plain, TOWER.x, 10, "grunt", { speed: 0 });
-    castVolley(plain, 300, 400);
-    runFor(plain, 1.5);
-    expect(plain.caltrops).toHaveLength(0);
+  it("hits ground and air throughout the marked circle, including its edge, without caltrops", () => {
+    const run = quietRun();
+    run.upgrades.caltrops = 3;
+    const center = enemyAt(run, 60, 120, "grunt", { speed: 0, hp: 100, maxHp: 100 });
+    const edge = enemyAt(run, 60 + SKILLS.catapult.radius, 120, "bat", { speed: 0, hp: 100, maxHp: 100 });
+    const outside = enemyAt(run, 150, 120, "grunt", { speed: 0, hp: 100, maxHp: 100 });
+    castSkill(run, 60, 120);
+    runFor(run, 0.7);
+    expect(center.hp).toBeLessThan(100 - SKILLS.catapult.damage);
+    expect(edge.hp).toBeLessThan(100 - SKILLS.catapult.damage);
+    expect(outside.hp).toBe(100);
+    expect(run.caltrops).toHaveLength(0);
+  });
 
-    const spiked = quietRun();
-    spiked.reloadLeft = Infinity;
-    spiked.upgrades.caltrops = 1;
-    enemyAt(spiked, TOWER.x, 10, "grunt", { speed: 0 });
-    castVolley(spiked, 300, 400);
-    runFor(spiked, 1.5);
-    expect(spiked.caltrops).toHaveLength(BASE.volleyArrows);
+  it("freezes ordinary movement while burn continues, then applies the follow-up slow", () => {
+    const run = createRun(5, emptyPerks(), "frostField");
+    run.spawns = [];
+    const target = enemyAt(run, 100, 100, "grunt", { speed: 20, targetX: 100, burnLeft: 3, burnDps: 4 });
+    const start = { x: target.x, y: target.y, hp: target.hp };
+    castSkill(run, 100, 100);
+    runFor(run, 0.3);
+    const frozen = { x: target.x, y: target.y };
+    runFor(run, 0.7);
+    expect(target.freezeLeft).toBeGreaterThan(0);
+    expect(target.x).toBe(frozen.x);
+    expect(target.y).toBe(frozen.y);
+    expect(target.hp).toBeLessThan(start.hp);
+    runFor(run, 0.5);
+    expect(target.freezeLeft).toBe(0);
+    expect(target.slow).toBe(SKILLS.frostField.slow);
+    expect(target.y).toBe(frozen.y);
+    runFor(run, 0.5);
+    expect(target.y).toBeGreaterThan(frozen.y);
+  });
+
+  it("pauses attacks during freeze without a catch-up blow", () => {
+    const run = createRun(5, emptyPerks(), "frostField");
+    run.spawns = [];
+    const enemy = enemyAt(run, 60, WALL_Y - 9, "grunt", { attackTimer: 1 });
+    castSkill(run, 60, enemy.y);
+    runFor(run, 1.3);
+    expect(enemy.attackTimer).toBeCloseTo(0.75, 4);
+    expect(run.hp).toBe(BASE.maxHp);
+    runFor(run, 0.6);
+    expect(enemy.attackTimer).toBeGreaterThan(0);
+    expect(enemy.attackTimer).toBeLessThan(0.75);
+    expect(run.hp).toBe(BASE.maxHp);
+    runFor(run, 0.5);
+    expect(run.hp).toBeLessThan(BASE.maxHp);
+  });
+
+  it("slows rather than hard-freezes bosses", () => {
+    const run = createRun(5, emptyPerks(), "frostField");
+    run.spawns = [];
+    const boss = enemyAt(run, 100, 100, "boss", { speed: 20, targetX: 100 });
+    castSkill(run, 100, 100);
+    runFor(run, 0.5);
+    expect(boss.freezeLeft).toBe(0);
+    expect(boss.slow).toBe(SKILLS.frostField.slow);
+    expect(boss.y).toBeCloseTo(100 + 20 * 0.25 + 20 * 0.65 * 0.25, 4);
+  });
+
+  it("does nothing outside a wave", () => {
+    const run = quietRun();
+    giveUp(run);
+    expect(castSkill(run, 100, 100)).toBe(false);
   });
 
   it("slows walkers crossing caltrops but not bats", () => {
@@ -220,12 +277,6 @@ describe("castVolley", () => {
     const walked = Math.hypot(walker.x - start.x, walker.y - start.y);
     expect(walked).toBeCloseTo(walker.speed * STEP * (1 - stats(run).caltropSlow), 5);
     expect(Math.hypot(bat.x - start.x, bat.y - start.y)).toBeGreaterThan(walked);
-  });
-
-  it("does nothing outside a wave", () => {
-    const run = quietRun();
-    giveUp(run);
-    expect(castVolley(run, 100, 100)).toBe(false);
   });
 });
 
@@ -267,14 +318,15 @@ describe("chooseUpgrade", () => {
 
 describe("towerStats", () => {
   it("stacks upgrades and perks", () => {
-    const upgrades = { ...emptyUpgrades(), damage: 2, reload: 1, multishot: 2, volleyCooldown: 3 };
+    const upgrades = { ...emptyUpgrades(), damage: 2, reload: 1, multishot: 2, skillCooldown: 3 };
     const perks = { ...emptyPerks(), fletching: 1, fortify: 2, quickDraw: 2, tactics: 4 };
     const tower = towerStats(upgrades, perks);
     expect(tower.damage).toBeCloseTo(BASE.damage * 1.5 * 1.08);
     expect(tower.reload).toBeCloseTo((BASE.reload * 0.88) / 1.1);
     expect(tower.multishot).toBe(3);
     expect(tower.maxHp).toBe(BASE.maxHp + 30);
-    expect(tower.volleyCooldown).toBe(MIN_VOLLEY_COOLDOWN);
+    expect(tower.skillCooldown).toBeCloseTo(SKILLS.catapult.cooldown - 3.6 - 2);
+    expect(towerStats({ ...upgrades, skillCooldown: 10 }, perks).skillCooldown).toBe(MIN_SKILL_COOLDOWN);
   });
 });
 
@@ -285,7 +337,7 @@ describe("determinism", () => {
       for (let tick = 0; tick < 60 * 90 && run.phase !== "over"; tick += 1) {
         if (run.phase === "choosing") chooseUpgrade(run, run.choices[0]);
         if (tick % 10 === 0 && run.enemies[0]) aimAt(run, run.enemies[0].x, run.enemies[0].y);
-        if (tick % 200 === 0 && run.enemies[0]) castVolley(run, run.enemies[0].x, run.enemies[0].y);
+        if (tick % 200 === 0 && run.enemies[0]) castSkill(run, run.enemies[0].x, run.enemies[0].y);
         step(run, STEP);
       }
       return JSON.stringify(run);

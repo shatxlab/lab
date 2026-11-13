@@ -9,9 +9,10 @@
 import { ARENA, TOWER, WALL_Y } from "../sim/balance";
 import { random } from "../sim/random";
 import { stats } from "../sim/run";
-import type { Caltrop, Enemy, Run } from "../sim/types";
+import type { Caltrop, Enemy, Run, SkillCast } from "../sim/types";
 import {
   COLORS,
+  circle,
   drawArcher,
   drawArrow,
   drawCourtyard,
@@ -23,6 +24,7 @@ import {
   drawTufts,
   drawVolleyArrow,
   drawWall,
+  ellipse,
   ring,
   treeline,
   type House,
@@ -80,7 +82,13 @@ const TUFTS: Tuft[] = (() => {
   return tufts;
 })();
 
-export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, time: number): void {
+export function drawRun(
+  ctx: CanvasRenderingContext2D,
+  run: Run,
+  view: View,
+  time: number,
+  skillTarget: { x: number; y: number } | null = null,
+): void {
   // Past the arena's edges the woods carry on above the wall and the courtyard below it.
   const wallOnScreen = view.offsetY + WALL_Y * view.scale;
   ctx.fillStyle = COLORS.forest;
@@ -95,6 +103,7 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, tim
   const right = (view.width - view.offsetX) / view.scale;
 
   drawGround(ctx, run);
+  if (skillTarget) drawSkillTarget(ctx, run, skillTarget.x, skillTarget.y);
   drawCourtyard(ctx, left, right, WALL_Y, ARENA.height);
   drawHouses(ctx, HOUSES);
   drawWall(ctx, left, right, WALL_Y);
@@ -106,6 +115,7 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, tim
   for (const enemy of run.enemies) if (enemy.flying) drawEnemy(ctx, enemy, time);
   drawTrees(ctx, TREES);
   for (const volley of run.volleys) drawVolleyArrow(ctx, volley);
+  for (const cast of run.skillCasts) drawSkillCast(ctx, cast);
   for (const effect of run.effects) if (effect.kind !== "mark") drawEffect(ctx, effect);
 
   ctx.restore();
@@ -149,9 +159,9 @@ function drawTower(ctx: CanvasRenderingContext2D, run: Run, time: number): void 
   ring(ctx, x, y, radius + 5, 0, 1, COLORS.hpBack, 3.5);
   ring(ctx, x, y, radius + 5, 0, share, share > 0.5 ? COLORS.good : share > 0.25 ? COLORS.warn : COLORS.bad, 3.5);
 
-  // Volley charge: a thin arc filling up, then a soft pulse once it's ready.
-  if (run.volleyLeft > 0) {
-    ring(ctx, x, y, radius + 10, 0, 1 - run.volleyLeft / tower.volleyCooldown, "rgba(255, 255, 255, 0.85)", 2);
+  // Skill charge: a thin arc filling up, then a soft pulse once it's ready.
+  if (run.skillLeft > 0) {
+    ring(ctx, x, y, radius + 10, 0, 1 - run.skillLeft / tower.skillCooldown, "rgba(255, 255, 255, 0.85)", 2);
   } else if (run.phase === "playing") {
     const pulse = 0.5 + 0.5 * Math.sin(time * 5);
     ring(ctx, x, y, radius + 10 + pulse * 3, 0, 1, `rgba(255, 255, 255, ${0.35 + 0.4 * pulse})`, 2);
@@ -161,6 +171,45 @@ function drawTower(ctx: CanvasRenderingContext2D, run: Run, time: number): void 
 /** An enemy faces the bit of wall it is heading for. */
 function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy, time: number): void {
   drawFoe(ctx, enemy, Math.atan2(WALL_Y - enemy.y, enemy.targetX - enemy.x), time);
+}
+
+function drawSkillTarget(ctx: CanvasRenderingContext2D, run: Run, x: number, y: number): void {
+  const radius = stats(run).skillRadius;
+  const color = run.skill === "catapult" ? "#ff8a2a" : "#7fd4ff";
+  ctx.save();
+  ctx.fillStyle = run.skill === "catapult" ? "rgba(255, 138, 42, 0.13)" : "rgba(127, 212, 255, 0.16)";
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([7, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y);
+  ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawSkillCast(ctx: CanvasRenderingContext2D, cast: SkillCast): void {
+  const t = Math.min(1, cast.t);
+  if (cast.skill === "frostField") {
+    ctx.strokeStyle = "#d9f3ff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cast.x, cast.y, Math.max(2, cast.radius * t), 0, Math.PI * 2);
+    ctx.stroke();
+    circle(ctx, cast.x, cast.y, 4 + 3 * t, "#7fd4ff");
+    return;
+  }
+  const groundX = TOWER.x + (cast.x - TOWER.x) * t;
+  const groundY = TOWER.y + (cast.y - TOWER.y) * t;
+  const height = Math.sin(Math.PI * t) * Math.min(100, Math.hypot(cast.x - TOWER.x, cast.y - TOWER.y) * 0.25);
+  ellipse(ctx, groundX, groundY, 5, 2.5, "rgba(30, 40, 20, 0.22)");
+  circle(ctx, groundX, groundY - height, 7, "#ff8a2a");
+  circle(ctx, groundX - 1.5, groundY - height - 1.5, 4.5, "#746b60");
 }
 
 function drawCaltrop(ctx: CanvasRenderingContext2D, caltrop: Caltrop): void {

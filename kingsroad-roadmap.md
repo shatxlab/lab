@@ -235,6 +235,9 @@ blows), 90 hp x hpScale, speed 26, leak 2.
   sim files (`tests/kingsroad/study-inputs-after-bulwark.json`). Playthrough bot: harvest 4/5 (one wave-13 loss), kings
   4/5 at 3–10 lives. **Phone check of readability and fun still outstanding**; dial presence (parting/trident instead of
   kings) if kings proves too harsh in hand play.
+- Guard chain extended once more, unrelated to balance: Lone Tower's `sim/balance.ts` was re-shipped for its active-skill
+  batch (volley constants replaced; KingsRoad imports only the unchanged `ENEMIES` from it), recorded in
+  `tests/kingsroad/study-inputs-after-tower-skills.json`. No KingsRoad sim input changed.
 
 ## Where it stands (2026-10-30)
 

@@ -9,11 +9,12 @@ import { PERK_IDS } from "@/lib/tower/sim/balance";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { emptyUpgrades } from "@/lib/tower/sim/upgrades";
 import { createRun, holdFire } from "@/lib/tower/sim/run";
-import type { PerkId, PerkLevels, Run } from "@/lib/tower/sim/types";
+import type { PerkId, PerkLevels, Run, SkillId } from "@/lib/tower/sim/types";
 
 import { RunView } from "./RunView";
 
-type Screen = "menu" | "perks" | "run";
+type Screen = "menu" | "perks" | "skills" | "run";
+const SKILL_IDS: SkillId[] = ["catapult", "frostField"];
 
 interface Result {
   wave: number;
@@ -86,16 +87,29 @@ export default function TowerApp() {
     if (kept) setSave(next);
   };
 
-  const start = () => {
+  const chooseSkill = () => {
     if (!hydrated) return;
-    if ((saved || runReadFailed) && !window.confirm(saved ? text.replaceRunConfirm : text.unknownRunConfirm)) return;
+    setActive(null);
+    setResult(null);
+    setScreen("skills");
+  };
+
+  const start = (skill: SkillId) => {
+    if (!hydrated) return;
+    if ((saved || runReadFailed) && !window.confirm(saved ? text.replaceRunConfirm : text.unknownRunConfirm)) {
+      setScreen("menu");
+      return;
+    }
     let before = save;
     if (pending) {
       const settled = settle(pending);
-      if (!settled.persisted) return;
+      if (!settled.persisted) {
+        setScreen("menu");
+        return;
+      }
       before = settled.save;
     }
-    const next = createCheckpoint(createRun(Math.floor(Math.random() * 2 ** 31), before.perks));
+    const next = createCheckpoint(createRun(Math.floor(Math.random() * 2 ** 31), before.perks, skill));
     checkpoint(next);
     setRunReadFailed(false);
     setSaved(null);
@@ -185,7 +199,7 @@ export default function TowerApp() {
                   {pending && (
                     <button type="button" className="tower-button tower-button-quiet" onClick={retry}>{text.retrySave}</button>
                   )}
-                  <button type="button" className="tower-button" onClick={start} autoFocus>
+                  <button type="button" className="tower-button" onClick={chooseSkill} autoFocus>
                     {text.playAgain}
                   </button>
                   <button type="button" className="tower-button tower-button-quiet" onClick={() => { setActive(null); setScreen("menu"); }}>
@@ -198,11 +212,13 @@ export default function TowerApp() {
         </RunView>
       ) : screen === "perks" ? (
         <PerksScreen text={text} save={save} onBuy={updateSave} onBack={() => setScreen("menu")} hasSavedRun={!!saved} />
+      ) : screen === "skills" ? (
+        <SkillScreen text={text} perks={save.perks} onPick={start} onBack={() => setScreen("menu")} />
       ) : (
         <MenuScreen
           text={text}
           save={save}
-          onPlay={start}
+          onPlay={chooseSkill}
           onPerks={() => setScreen("perks")}
           saved={saved}
           onContinue={resume}
@@ -272,6 +288,39 @@ function MenuScreen({
         <a className="tower-home" href={withBase("/")}>
           {text.home}
         </a>
+      </div>
+    </div>
+  );
+}
+
+function SkillScreen({ text, perks, onPick, onBack }: { text: TowerText; perks: PerkLevels; onPick: (skill: SkillId) => void; onBack: () => void }) {
+  return (
+    <div className="tower-screen">
+      <div className="tower-panel">
+        <h1>{text.chooseSkill}</h1>
+        <p className="tower-tagline">{text.skillSelectionHint}</p>
+        <div className="tower-skill-list">
+          {SKILL_IDS.map((id, index) => {
+            const values = text.skillStats[id](towerStats(emptyUpgrades(), perks, id));
+            return (
+              <button
+                key={id}
+                type="button"
+                className="tower-choice tower-skill-option"
+                data-skill={id}
+                onClick={() => onPick(id)}
+                autoFocus={index === 0}
+              >
+                <span className="tower-choice-name">{text.skills[id].name}</span>
+                <span className="tower-choice-description">{text.skills[id].description}</span>
+                <span className="tower-choice-stats">{statChange(values, values)}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="tower-actions">
+          <button type="button" className="tower-button tower-button-quiet" onClick={onBack}>{text.back}</button>
+        </div>
       </div>
     </div>
   );

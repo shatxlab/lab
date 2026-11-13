@@ -54,6 +54,8 @@ export interface FoeSprite {
   hp: number;
   maxHp: number;
   slowLeft: number;
+  /** Present for Lone Tower; optional for KingsRoad's shared sprites. */
+  freezeLeft?: number;
   burnLeft: number;
   flash: number;
   /** Offsets the stride, flap and burn embers so a column doesn't move in step. */
@@ -285,6 +287,22 @@ export function drawFoe(ctx: CanvasRenderingContext2D, foe: FoeSprite, facing: n
     ctx.beginPath();
     ctx.arc(x, y, radius + 1.5, 0, Math.PI * 2);
     ctx.stroke();
+  }
+  if ((foe.freezeLeft ?? 0) > 0) {
+    ctx.fillStyle = "rgba(127, 212, 255, 0.34)";
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#d9f3ff";
+    ctx.lineWidth = 1.5;
+    for (const angle of [0, Math.PI / 3, Math.PI * 2 / 3]) {
+      const dx = Math.cos(angle) * (radius + 3);
+      const dy = Math.sin(angle) * (radius + 3);
+      ctx.beginPath();
+      ctx.moveTo(x - dx, y - dy);
+      ctx.lineTo(x + dx, y + dy);
+      ctx.stroke();
+    }
   }
   if (foe.burnLeft > 0) {
     for (let index = 0; index < 3; index += 1) {
@@ -581,7 +599,7 @@ export function drawEffect(ctx: CanvasRenderingContext2D, effect: Effect): void 
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
-    ctx.arc(effect.x, effect.y, effect.radius * (1 - progress * 0.25), 0, Math.PI * 2);
+    ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
   } else if (effect.kind === "pop") {

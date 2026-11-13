@@ -25,6 +25,17 @@ describe("upgrade cards", () => {
   });
 });
 
+describe("skill pickers and upgrades", () => {
+  it("derive both skills' initial values and their equipped-skill upgrades from combat stats", () => {
+    const initial = towerStats(emptyUpgrades(), emptyPerks());
+    expect(statChange(TOWER_TEXT.en.skillStats.catapult(initial), TOWER_TEXT.en.skillStats.catapult(initial))).toBe("Damage 35 · Area 45 · Reload 8 s");
+    const frostInitial = towerStats(emptyUpgrades(), emptyPerks(), "frostField");
+    expect(statChange(TOWER_TEXT.en.skillStats.frostField(frostInitial), TOWER_TEXT.en.skillStats.frostField(frostInitial))).toBe("Freeze 1.3 s · Area 55 · Reload 12 s");
+    const larger = towerStats({ ...emptyUpgrades(), skillSize: 1 }, emptyPerks(), "frostField");
+    expect(statChange(TOWER_TEXT.en.upgradeStats.skillSize(frostInitial), TOWER_TEXT.en.upgradeStats.skillSize(larger))).toBe("Area 55 → 63");
+  });
+});
+
 describe("perk cards", () => {
   it("show the perk's running total", () => {
     const stats = (fletching: number) => towerStats(emptyUpgrades(), { ...emptyPerks(), fletching });

@@ -123,6 +123,21 @@ Separate from KingsRoad because death/retreat banks run rewards into meta progre
 - Verification: `NODE_ENV=test npm test` passed 222 files / 3,239 tests; `npm run typecheck` and `npm run build` passed. Chromium checks in EN/RU at 360px and 390px passed on dev and the built production pages via Astro preview, covering mid-wave reloads, paused/no-offline/no-ghost-fire restoration, Save & menu, choice preservation, confirmations, perk isolation, death/retreat, both settlement crash boundaries, paid-active suppression, and incompatible saves. Additional browser checks verified a real five-second periodic save, phone touch volleys, selective meta-quota failures, all writes blocked, replacement blocking, and successful retry without duplicate rewards. Screenshots were inspected; no real-device playtest was performed.
 - No combat, upgrade/perk balance, wave generation, KingsRoad, or Tycoon changes. The user authorized committing and pushing this batch to `main`; deployment status must be checked separately from push success. Further implementation notes and persistence limits are in `tower-roadmap.md`.
 
+### Follow-up gameplay plan
+
+The user reports that volley is unusable and never used, and requested a full plan including alternatives such as area
+freeze and a more dependable fireball/catapult. `tower-roadmap.md` is now the single source for that design and sequenced
+implementation plan. Its next proposed batch replaces the hidden double-tap/random-scatter volley with one visible,
+targeted active skill: Catapult (area burst) or Frost Field (control), plus explicit old-run migration. Prototype numbers
+remain hypotheses; the plan does not approve a numerical retune, implementation, commit or push by itself.
+
+**Implemented locally (uncommitted):** the two-skill vertical slice shipped as described — Catapult and Frost Field with
+visible button/drag-release targeting, keyboard support, skill upgrades replacing volley upgrades, Tactics converted,
+and explicit v1→v2 checkpoint migration. Verified with the full suite (242 files / 3,530 tests), typecheck, production
+build, and EN/RU phone-size Chromium checks on dev and production. A 30-seed baseline harness exists
+(`scripts/tower/playthrough.ts`); its numbers are an un-tuned signal, not a balance verdict. Full record, open items and
+the required real-phone playtest: `tower-roadmap.md`.
+
 ## 4. HR — disclose promotion tradeoffs and start with Intern
 
 ### 4A. Promotion tradeoffs

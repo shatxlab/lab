@@ -32,6 +32,11 @@ function button(container: HTMLElement, name: string): HTMLButtonElement {
   return match;
 }
 
+async function startRun(view: { container: HTMLElement }, skill = "catapult", start = "Play") {
+  await act(async () => button(view.container, start).click());
+  await act(async () => (view.container.querySelector(`[data-skill="${skill}"]`) as HTMLButtonElement | null)?.click());
+}
+
 describe("TowerApp", () => {
   it("opens on the menu with the saved best and gold", async () => {
     localStorage.setItem(TOWER_STORAGE_KEY, JSON.stringify({ gold: 42, best: 7, runs: 3, perks: {} }));
@@ -51,36 +56,75 @@ describe("TowerApp", () => {
 
   it("starts a run on the field", async () => {
     const view = await mount(<TowerApp />);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(view.container.querySelector("canvas")).toBeTruthy();
     expect(view.container.textContent).toContain("Wave 1");
     expect(view.container.querySelector('[role="meter"]')?.getAttribute("aria-valuenow")).toBe("100");
     view.unmount();
   });
 
-  it("drops the volley on a double tap of the field", async () => {
+  it("casts through the visible skill button, with cancel and no double-tap shortcut", async () => {
     const view = await mount(<TowerApp />);
-    await act(async () => button(view.container, "Play").click());
-    const meter = view.container.querySelector(".tower-volley")!;
-    expect(meter.textContent).toBe("Volley ready: double-tap the field");
+    await startRun(view);
+    const skill = view.container.querySelector(".tower-skill") as HTMLButtonElement;
+    expect(skill.textContent).toBe("CatapultReady");
     const canvas = view.container.querySelector("canvas")!;
-    const press = (type: string) =>
-      canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, clientX: 50, clientY: 50 }));
-    await act(async () => {
-      press("pointerdown");
-      press("pointerup");
-      press("pointerdown");
-      press("pointerup");
-    });
-    expect(meter.textContent).toBe("Volley reloading");
-    expect(meter.getAttribute("data-ready")).toBe("false");
+    const pointer = (type: string, id = 1) =>
+      canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: id, clientX: 50, clientY: 50 }));
+    await act(async () => { pointer("pointerdown"); pointer("pointerup"); pointer("pointerdown"); pointer("pointerup"); });
+    expect(readRun()?.run.skillCasts).toHaveLength(0);
+    await act(async () => skill.click());
+    expect(skill.getAttribute("data-targeting")).toBe("true");
+    await act(async () => skill.click());
+    expect(skill.getAttribute("data-targeting")).toBe("false");
+    await act(async () => skill.click());
+    await act(async () => { pointer("pointerdown", 2); pointer("pointermove", 2); pointer("pointerup", 2); });
+    expect(readRun()?.run.skill).toBe("catapult");
+    expect(readRun()?.run.skillCasts).toHaveLength(1);
+    expect(readRun()?.run.skillLeft).toBeGreaterThan(0);
+    expect(skill.getAttribute("data-targeting")).toBe("false");
+    view.unmount();
+  });
+
+  it("cancels touch/keyboard targeting without casting or leaving stuck input", async () => {
+    const view = await mount(<TowerApp />);
+    await startRun(view);
+    const skill = view.container.querySelector(".tower-skill") as HTMLButtonElement;
+    const canvas = view.container.querySelector("canvas")!;
+    await act(async () => skill.click());
+    await act(async () => canvas.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 4, clientX: 50, clientY: 50 })));
+    await act(async () => canvas.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerId: 4, clientX: 50, clientY: 50 })));
+    expect(skill.getAttribute("data-targeting")).toBe("false");
+    expect(readRun()?.run.skillCasts).toHaveLength(0);
+    await act(async () => canvas.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "1" })));
+    expect(skill.getAttribute("data-targeting")).toBe("true");
+    await act(async () => canvas.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })));
+    expect(skill.getAttribute("data-targeting")).toBe("false");
+    await act(async () => canvas.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "1" })));
+    await act(async () => (view.container.querySelector(".tower-icon-button") as HTMLButtonElement).click());
+    expect(skill.getAttribute("data-targeting")).toBe("false");
+    expect(view.container.querySelector("#tower-pause-title")).toBeTruthy();
+    await act(async () => button(view.container, "Resume").click());
+    await act(async () => canvas.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: " " })));
+    expect(readRun()?.run.firing).toBe(true);
+    await act(async () => canvas.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: " " })));
+    expect(readRun()?.run.firing).toBe(false);
+    expect(readRun()?.run.skillCasts).toHaveLength(0);
+    view.unmount();
+  });
+
+  it("offers Frost Field as an equally available starting skill", async () => {
+    const view = await mount(<TowerApp />);
+    await startRun(view, "frostField");
+    expect(readRun()?.run.skill).toBe("frostField");
+    expect(view.container.querySelector(".tower-skill")?.textContent).toBe("Frost FieldReady");
     view.unmount();
   });
 
   it("opens a run with a head start on the upgrade picker", async () => {
     localStorage.setItem(TOWER_STORAGE_KEY, JSON.stringify({ gold: 0, best: 0, runs: 0, perks: { headStart: 1 } }));
     const view = await mount(<TowerApp />);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     const choices = view.container.querySelectorAll(".tower-choice");
     expect(choices).toHaveLength(3);
     await act(async () => (choices[0] as HTMLButtonElement).click());
@@ -178,7 +222,7 @@ describe("TowerApp", () => {
   it("writes every five seconds and never writes stale state from unmount cleanup", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const view = await mount(<TowerApp />);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     const checkpoint = readRun();
     expect(checkpoint?.run.phase).toBe("playing");
     localStorage.removeItem(RUN_STORAGE_KEY);
@@ -190,16 +234,17 @@ describe("TowerApp", () => {
     expect(readRun()).toBeNull();
   });
 
-  it("saves keyboard volleys immediately", async () => {
+  it("saves keyboard skill casts immediately", async () => {
     const checkpoint = createCheckpoint(createRun(19));
     for (let i = 0; i < 100; i += 1) step(checkpoint.run, STEP);
     writeRun(checkpoint);
     const view = await mount(<TowerApp />);
     await act(async () => button(view.container, "Continue run").click());
     await act(async () => button(view.container, "Resume").click());
-    await press(view.container.querySelector("canvas")!, " ");
-    expect(readRun()?.run.volleys.length).toBeGreaterThan(0);
-    expect(readRun()?.run.volleyLeft).toBeGreaterThan(0);
+    await press(view.container.querySelector("canvas")!, "1");
+    await press(view.container.querySelector("canvas")!, "Enter");
+    expect(readRun()?.run.skillCasts.length).toBeGreaterThan(0);
+    expect(readRun()?.run.skillLeft).toBeGreaterThan(0);
     view.unmount();
   });
 
@@ -225,7 +270,7 @@ describe("TowerApp", () => {
     writeSave({ ...defaultSave(), gold: 50, best: 8, runs: 3 });
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const view = await mount(<TowerApp />);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(readRun()).toEqual(checkpoint);
     expect(view.container.querySelector("canvas")).toBeNull();
     await act(async () => button(view.container, "Discard saved run").click());
@@ -234,7 +279,7 @@ describe("TowerApp", () => {
     await act(async () => button(view.container, "Discard saved run").click());
     expect(readRun()).toBeNull();
     expect(readSave()).toMatchObject({ gold: 50, best: 8, runs: 3 });
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(readRun()?.id).not.toBe(checkpoint.id);
     expect(readRun()?.run.wave).toBe(1);
     view.unmount();
@@ -247,7 +292,7 @@ describe("TowerApp", () => {
     writeSave(before);
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const view = await mount(<TowerApp />);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(readRun()?.id).not.toBe(checkpoint.id);
     expect(readRun()?.run.gold).toBe(0);
     expect(readSave()).toEqual(before);
@@ -283,7 +328,7 @@ describe("TowerApp", () => {
     await act(async () => window.dispatchEvent(new Event("pagehide")));
     expect(readRun()).toBeNull();
     expect(readSave()).toEqual(paid);
-    await act(async () => button(view.container, "Play again").click());
+    await startRun(view, "catapult", "Play again");
     expect(readRun()?.id).not.toBe(checkpoint.id);
     expect(view.container.querySelector("#tower-over-title")).toBeNull();
     view.unmount();
@@ -339,7 +384,7 @@ describe("TowerApp", () => {
     const view = await mount(<TowerApp />);
     expect(view.container.querySelector(".tower-save-warning")).toBeTruthy();
     expect(button(view.container, "Perks").disabled).toBe(true);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(view.container.querySelector("canvas")).toBeNull();
     expect(readRun()?.run.phase).toBe("over");
     vi.mocked(Storage.prototype.setItem).mockRestore();
@@ -347,7 +392,7 @@ describe("TowerApp", () => {
     expect(readSave()).toMatchObject({ gold: checkpoint.run.gold, runs: 1 });
     expect(readRun()).toBeNull();
     expect(button(view.container, "Perks").disabled).toBe(false);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(readRun()?.run.phase).toBe("playing");
     expect(readSave().runs).toBe(1);
     view.unmount();
@@ -374,7 +419,7 @@ describe("TowerApp", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const view = await mount(<TowerApp />);
     expect(view.container.querySelector(".tower-save-warning")).toBeTruthy();
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(confirm).toHaveBeenCalledWith(TOWER_TEXT.en.unknownRunConfirm);
     expect(view.container.querySelector("canvas")).toBeNull();
     vi.mocked(Storage.prototype.getItem).mockRestore();
@@ -411,7 +456,7 @@ describe("TowerApp", () => {
   it("keeps ordinary play usable when checkpoint writes are blocked", async () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw Error("quota"); });
     const view = await mount(<TowerApp />);
-    await act(async () => button(view.container, "Play").click());
+    await startRun(view);
     expect(view.container.querySelector("canvas")).toBeTruthy();
     expect(view.container.querySelector(".tower-save-warning")?.textContent).toContain("Saving is unavailable");
     await act(async () => (view.container.querySelector(".tower-icon-button") as HTMLButtonElement).click());

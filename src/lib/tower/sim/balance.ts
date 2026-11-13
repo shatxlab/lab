@@ -1,4 +1,4 @@
-import type { EnemyKind, PerkId, UpgradeId } from "./types";
+import type { EnemyKind, PerkId, SkillId, UpgradeId } from "./types";
 
 /**
  * The field in world units, a phone-shaped portrait arena. Enemies come out of
@@ -20,13 +20,24 @@ export const BASE = {
   arrowSpeed: 520,
   critChance: 0.05,
   critMultiplier: 2,
-  volleyArrows: 10,
-  volleyRadius: 42,
-  volleyDamage: 6,
-  volleyCooldown: 6,
-  /** How close to a landing volley arrow an enemy has to be to get hit. */
-  volleySplash: 15,
 } as const;
+
+/** Targeted active skills. Their numbers are the first playable prototype, not a final balance verdict. */
+export const SKILLS = {
+  catapult: { cooldown: 8, radius: 45, flight: 0.65, damage: 35, burnDps: 4, burnSeconds: 3 },
+  frostField: {
+    cooldown: 12,
+    radius: 55,
+    flight: 0.25,
+    freezeSeconds: 1.25,
+    slow: 0.35,
+    slowSeconds: 2,
+    bossSlowSeconds: 1.25,
+  },
+} as const satisfies Record<SkillId, object>;
+
+/** How close a migrated volley arrow has to land to an enemy to hit it. */
+export const LEGACY_VOLLEY_SPLASH = 15;
 
 /** HP the wall gets back after clearing a wave. */
 export const WAVE_CLEAR_HEAL = 15;
@@ -79,8 +90,8 @@ export const UPGRADE_MAX: Record<UpgradeId, number> = {
   frost: 3,
   wall: 5,
   regen: 3,
-  volleySize: 3,
-  volleyCooldown: 3,
+  skillSize: 3,
+  skillCooldown: 3,
   caltrops: 3,
 };
 
@@ -121,7 +132,7 @@ export const PERK_STEP = {
   tactics: 0.5,
 } as const;
 
-/** The volley never reloads faster than this, whatever is stacked on it. */
-export const MIN_VOLLEY_COOLDOWN = 1.5;
+/** No active skill reloads faster than this, whatever is stacked on it. */
+export const MIN_SKILL_COOLDOWN = 1.5;
 
 export const PERK_IDS = Object.keys(PERKS) as PerkId[];

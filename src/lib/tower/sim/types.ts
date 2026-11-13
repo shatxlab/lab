@@ -8,6 +8,7 @@
  */
 
 export type EnemyKind = "grunt" | "runner" | "brute" | "bat" | "boss";
+export type SkillId = "catapult" | "frostField";
 
 export type UpgradeId =
   | "damage"
@@ -21,8 +22,8 @@ export type UpgradeId =
   | "frost"
   | "wall"
   | "regen"
-  | "volleySize"
-  | "volleyCooldown"
+  | "skillSize"
+  | "skillCooldown"
   | "caltrops";
 
 /** Permanent bonuses bought with gold between runs. */
@@ -50,6 +51,8 @@ export interface Enemy {
   burnDps: number;
   slowLeft: number;
   slow: number;
+  /** Hard control from Frost Field. Action timers wait while this is positive. */
+  freezeLeft: number;
   /** Bosses call in grunts on this timer. */
   summonTimer: number;
   /** Seconds of white hit flash left, for the renderer. */
@@ -73,7 +76,7 @@ export interface Arrow {
   hitIds: number[];
 }
 
-/** One arrow of a volley, arcing from the tower to a spot on the ground. */
+/** A legacy volley arrow retained only so an old checkpoint can finish its flight. */
 export interface VolleyArrow {
   id: number;
   fromX: number;
@@ -84,6 +87,22 @@ export interface VolleyArrow {
   t: number;
   duration: number;
   damage: number;
+}
+
+/** One deterministic targeted skill cast, saved while its impact is pending. */
+export interface SkillCast {
+  id: number;
+  skill: SkillId;
+  x: number;
+  y: number;
+  /** Flight progress, 0 at the tower and 1 at the target. */
+  t: number;
+  duration: number;
+  radius: number;
+  /** Zero for Frost Field. */
+  damage: number;
+  /** Zero for Frost Field. */
+  burnDps: number;
 }
 
 /** An arrow stuck in the ground that slows whoever walks over it. */
@@ -97,7 +116,7 @@ export interface Caltrop {
 
 export type EffectKind = "puff" | "pop" | "mark";
 
-/** Purely visual: dust on landing, enemies popping, the volley's target ring. */
+/** Purely visual: dust on landing, enemies popping, the skill's target ring. */
 export interface Effect {
   kind: EffectKind;
   x: number;
@@ -130,15 +149,19 @@ export interface Run {
   choices: UpgradeId[];
   upgrades: UpgradeLevels;
   perks: PerkLevels;
+  /** The active skill is fixed for the run; restore never opens the picker again. */
+  skill: SkillId;
   hp: number;
   reloadLeft: number;
-  volleyLeft: number;
+  skillLeft: number;
   /** Where the archer is aiming, radians; the player's finger sets it. */
   aim: number;
   /** True while the player holds the field, which is the only time the archer shoots. */
   firing: boolean;
   enemies: Enemy[];
   arrows: Arrow[];
+  skillCasts: SkillCast[];
+  /** Empty in new runs. Only migrated v1 checkpoints can still contain these. */
   volleys: VolleyArrow[];
   caltrops: Caltrop[];
   effects: Effect[];

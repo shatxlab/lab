@@ -338,23 +338,26 @@ export function RunView({
           onLostPointerCapture={onPointerEnd}
         />
 
-        {hud.status === "playing" && picks.length > 0 && (
+        {hud.status === "playing" && (picks.length > 0 || hud.cleared) && (
           <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="hr-pick-title">
             <div className="tower-panel">
               <p className="tower-kicker">{hud.cleared ? text.floor(hud.floor) : text.level(hud.level)}</p>
               <h2 id="hr-pick-title">{hud.cleared ? text.floorCleared : text.levelUp}</h2>
-              <div className="tower-choices">
-                {picks.map((pick, index) => {
-                  const blurb = pickBlurb(text, pick);
-                  return (
-                    <button key={JSON.stringify(pick)} type="button" className="tower-choice" onClick={() => takePick(index)} autoFocus={index === 0 && !hud.cleared}>
-                      <span className="tower-choice-name">{blurb.name}</span>
-                      <span className="tower-choice-level">{pickLevel(text, pick)}</span>
-                      <span className="tower-choice-description">{blurb.description}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* A cleared floor keeps its panel even with every pick taken: the stairs button must stay reachable. */}
+              {picks.length > 0 && (
+                <div className="tower-choices">
+                  {picks.map((pick, index) => {
+                    const blurb = pickBlurb(text, pick);
+                    return (
+                      <button key={JSON.stringify(pick)} type="button" className="tower-choice" onClick={() => takePick(index)} autoFocus={index === 0 && !hud.cleared}>
+                        <span className="tower-choice-name">{blurb.name}</span>
+                        <span className="tower-choice-level">{pickLevel(text, pick)}</span>
+                        <span className="tower-choice-description">{blurb.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {hud.cleared && (
                 <>
                   <p className="tower-tagline">{text.floorClearedHint}</p>

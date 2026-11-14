@@ -32,6 +32,7 @@ for (const lang of ['en', 'ru']) {
   const roster = JSON.parse(rosterJson)
   const coworker = roster.coworkers[0]
   const runJson = sim.craftClearedRun(coworker)
+  const emptyJson = sim.craftClearedNoPicksRun(coworker)
 
   // 1. Fresh start.
   await page.evaluate(() => localStorage.removeItem('lab:hr:run:v1'))
@@ -83,6 +84,37 @@ for (const lang of ['en', 'ru']) {
     const floor2 = lang === 'en' ? ['Floor 2', 'Meeting Chair in'] : ['Этаж 2', 'Кресло совещаний через']
     check(floor2.some((needle) => hud2.includes(needle)), `${lang}: after the stairs the HUD shows floor 2 (${hud2.trim()})`)
     await page.screenshot({ path: `/tmp/hr-floors-${lang}-floor2.png` })
+
+    // 3. A cleared floor with every pick taken keeps the stairs reachable (the field froze here once). Descending
+    // may owe level-up offers; take them all before pausing, or Escape will not pause.
+    for (let offer = 0; offer < 20; offer += 1) {
+      const choiceEl = await page.evaluateHandle(() => document.querySelector('.tower-choice')).then((h) => h.asElement())
+      if (!choiceEl) break
+      await choiceEl.click()
+      await sleep(300)
+    }
+    await page.keyboard.press('Escape')
+    await sleep(400)
+    const walk2El = await page.evaluateHandle((label) => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === label), outLabel).then((h) => h.asElement())
+    if (!walk2El) { check(false, `${lang}: found the walk-out button for the empty-panel phase`); continue }
+    await walk2El.click()
+    await sleep(600)
+    await page.evaluate((json) => localStorage.setItem('lab:hr:run:v1', json), emptyJson)
+    await page.reload({ waitUntil: 'networkidle0' })
+    const cont2El = await page.evaluateHandle((label) => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === label), continueLabel).then((h) => h.asElement())
+    if (!cont2El) { check(false, `${lang}: the empty-pick run is offered`); continue }
+    await cont2El.click()
+    await sleep(1200)
+    const body3 = await page.evaluate(() => document.body.textContent)
+    check(body3.includes(clearedTitle), `${lang}: the empty-pick cleared panel still shows`)
+    const stairsEl = await page.evaluateHandle((label) => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === label), descendLabel).then((h) => h.asElement())
+    check(Boolean(stairsEl), `${lang}: the stairs stay reachable with no picks left`)
+    if (stairsEl) {
+      await stairsEl.click()
+      await sleep(1200)
+      const hud3 = await page.evaluate(() => document.querySelector('.hr-hud-clock')?.textContent ?? '')
+      check(floor2.some((needle) => hud3.includes(needle)), `${lang}: the empty-pick descent reaches floor 2 (${hud3.trim()})`)
+    }
   }
 }
 

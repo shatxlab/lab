@@ -3,12 +3,13 @@ import { Pause } from "lucide-react";
 
 import { CHECKPOINT_MS } from "@/lib/tower/snapshot";
 import { statChange, type TowerText } from "@/lib/tower/i18n";
-import { ARENA, TOWER } from "@/lib/tower/sim/balance";
+import { ARENA, TOWER, WALL_Y } from "@/lib/tower/sim/balance";
 import { drawRun, fitView, toWorld, type View } from "@/lib/tower/render/draw";
 import { aimAt, castSkill, chooseUpgrade, giveUp, holdFire, nearestEnemy, stats, step, STEP } from "@/lib/tower/sim/run";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { isBossWave } from "@/lib/tower/sim/waves";
-import type { Run, UpgradeId } from "@/lib/tower/sim/types";
+import { enemiesLeft, incomingRoster } from "@/lib/tower/wave-intel";
+import type { Enemy, Run, UpgradeId } from "@/lib/tower/sim/types";
 
 interface Hud {
   phase: Run["phase"];
@@ -16,6 +17,8 @@ interface Hud {
   hp: number;
   maxHp: number;
   gold: number;
+  /** Enemies still queued or on the field. */
+  left: number;
   /** 0 just cast, 1 ready; in twentieths so the HUD only re-renders when the bar visibly moves. */
   skillCharge: number;
   skillSeconds: number;
@@ -31,6 +34,7 @@ function snapshot(run: Run): Hud {
     hp: Math.ceil(run.hp),
     maxHp: stats(run).maxHp,
     gold: run.gold,
+    left: enemiesLeft(run),
     skillCharge: Math.floor((1 - run.skillLeft / stats(run).skillCooldown) * 20) / 20,
     skillSeconds: Math.ceil(run.skillLeft * 10) / 10,
     choices: run.choices.join(","),
@@ -45,6 +49,17 @@ function sameHud(a: Hud, b: Hud): boolean {
 const MAX_CATCH_UP = 0.1;
 const KEY_TARGET_STEP = 14;
 
+/** Where an enemy is heading, to lead a shot or an auto-fired aim. */
+function leadPoint(enemy: Enemy, seconds: number): { x: number; y: number } {
+  if (enemy.freezeLeft > 0) return { x: enemy.x, y: enemy.y };
+  const dx = enemy.targetX - enemy.x;
+  const dy = WALL_Y - enemy.radius - enemy.y;
+  const distance = Math.max(1e-6, Math.hypot(dx, dy));
+  const slow = enemy.slowLeft > 0 ? enemy.slow : 0;
+  const travel = Math.min(distance, enemy.speed * (1 - slow) * seconds);
+  return { x: enemy.x + (dx / distance) * travel, y: enemy.y + (dy / distance) * travel };
+}
+
 export function RunView({
   run,
   text,
@@ -53,6 +68,9 @@ export function RunView({
   onCheckpoint,
   onSuspend,
   storageFailed,
+  autofire,
+  tutorial,
+  onTutorialSeen,
   children,
 }: {
   run: Run;
@@ -63,6 +81,9 @@ export function RunView({
   onCheckpoint: () => boolean;
   onSuspend: () => void;
   storageFailed: boolean;
+  autofire: boolean;
+  tutorial: boolean;
+  onTutorialSeen: () => void;
   /** The game-over panel, shown over the field once the run is over. */
   children?: React.ReactNode;
 }) {
@@ -81,6 +102,11 @@ export function RunView({
   const [, setTarget] = useState<Point | null>(null);
   const targetRef = useRef<Point | null>(null);
   const overRef = useRef(false);
+  const autofireRef = useRef(autofire);
+  autofireRef.current = autofire;
+  // The hints only owe their hints once: the first shot landed and the first skill cast.
+  const skillUsedRef = useRef(run.skillLeft > 0 || run.skillCasts.length > 0);
+  const tutorialDoneRef = useRef(false);
 
   const updateTarget = (point: Point) => {
     const next = { x: Math.max(0, Math.min(ARENA.width, point.x)), y: Math.max(0, Math.min(ARENA.height, point.y)) };
@@ -122,7 +148,11 @@ export function RunView({
         onOver(run);
       }
     } else if (changed || transitioned) onCheckpoint();
-  }, [run, onOver, onCheckpoint, cancelTargeting]);
+    if (!tutorialDoneRef.current && run.kills > 0 && skillUsedRef.current) {
+      tutorialDoneRef.current = true;
+      onTutorialSeen();
+    }
+  }, [run, onOver, onCheckpoint, cancelTargeting, onTutorialSeen]);
 
   // Keep the canvas backing store at device resolution and the arena fitted to it.
   useEffect(() => {
@@ -160,6 +190,15 @@ export function RunView({
         while (pending >= STEP && run.phase === "playing") {
           step(run, STEP);
           pending -= STEP;
+        }
+        // Auto-fire is comfort input, not a simulation change: it aims like a held finger would.
+        if (autofireRef.current && aimPointerRef.current === null) {
+          const threat = run.enemies.reduce<Enemy | undefined>((nearest, enemy) => !nearest || enemy.y > nearest.y ? enemy : nearest, undefined);
+          if (threat) {
+            const tower = stats(run);
+            const point = leadPoint(threat, Math.hypot(threat.x - TOWER.x, threat.y - TOWER.y) / tower.arrowSpeed);
+            aimAt(run, point.x, point.y);
+          } else holdFire(run);
         }
       } else {
         pending = 0;
@@ -207,7 +246,10 @@ export function RunView({
 
   const finishSkill = (point: Point) => {
     updateTarget(point);
-    if (!pausedRef.current && run.phase === "playing" && castSkill(run, point.x, point.y)) refresh(true);
+    if (!pausedRef.current && run.phase === "playing" && castSkill(run, point.x, point.y)) {
+      skillUsedRef.current = true;
+      refresh(true);
+    }
     cancelTargeting();
   };
 
@@ -346,6 +388,9 @@ export function RunView({
         <div className="tower-hud-wave">
           <span>{text.wave(hud.wave)}</span>
           {isBossWave(hud.wave) && <span className="tower-tag">{text.bossWave}</span>}
+          {hud.phase === "playing" && hud.left > 0 && (
+            <span className="tower-hud-left">{text.enemiesLeft(hud.left)}</span>
+          )}
         </div>
         <div className="tower-hud-gold">{text.gold(hud.gold)}</div>
       </div>
@@ -383,13 +428,27 @@ export function RunView({
           onKeyUp={onKeyUp}
         />
 
-        {targeting && <p className="tower-target-help" role="status">{text.skillTarget(skillName)}</p>}
+        {targeting && <p className="tower-field-hint" role="status">{text.skillTarget(skillName)}</p>}
+        {!targeting && !paused && hud.phase === "playing" && tutorial && hud.left > 0 && !skillUsedRef.current && (
+          <p className="tower-field-hint" role="status">{text.hintSkill}</p>
+        )}
+        {!targeting && !paused && hud.phase === "playing" && tutorial && !autofire && run.kills === 0 && (
+          <p className="tower-field-hint tower-hint-low" role="status">{text.hintHold}</p>
+        )}
 
         {!paused && hud.phase === "choosing" && choices.length > 0 && (
           <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-pick-title">
             <div className="tower-panel">
               <p className="tower-kicker">{hud.wave === 0 ? text.headStart : text.waveCleared(hud.wave)}</p>
               <h2 id="tower-pick-title">{text.chooseUpgrade}</h2>
+              <ul className="tower-preview" aria-label={text.nextWave(hud.wave + 1)}>
+                {incomingRoster(hud.wave + 1).map(([kind, count]) => (
+                  <li key={kind}>
+                    <span className="tower-preview-name">{text.bestiary[kind].name} ×{count}</span>
+                    <span className="tower-preview-trait">{text.bestiary[kind].description}</span>
+                  </li>
+                ))}
+              </ul>
               <div className="tower-choices">
                 {choices.map((id, index) => (
                   <button
@@ -426,6 +485,22 @@ export function RunView({
                   {text.giveUp}
                 </button>
               </div>
+              <details className="tower-loadout">
+                <summary>{text.loadout}</summary>
+                <p className="tower-loadout-skill">
+                  {text.loadoutSkill}: {skillName} · {statChange(text.skillStats[run.skill](stats(run)), text.skillStats[run.skill](stats(run)))}
+                </p>
+                <ul>
+                  {(Object.keys(run.upgrades) as UpgradeId[]).filter((id) => run.upgrades[id] > 0).map((id) => (
+                    <li key={id}>
+                      <span>{text.upgrades[id].name}</span>
+                      <span className="tower-loadout-level">{text.level(run.upgrades[id])}</span>
+                      <span className="tower-loadout-stats">{statChange(text.upgradeStats[id](stats(run)), text.upgradeStats[id](stats(run)))}</span>
+                    </li>
+                  ))}
+                </ul>
+                {Object.values(run.upgrades).every((level) => level === 0) && <p className="tower-loadout-empty">{text.loadoutEmpty}</p>}
+              </details>
             </div>
           </div>
         )}

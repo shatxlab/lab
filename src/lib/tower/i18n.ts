@@ -1,7 +1,7 @@
 import type { AppLang } from "@/lib/apps/lang";
 import { BASE, SKILLS } from "./sim/balance";
 import type { TowerStats } from "./sim/stats";
-import type { PerkId, SkillId, UpgradeId } from "./sim/types";
+import type { EnemyKind, PerkId, SkillId, UpgradeId } from "./sim/types";
 
 export interface Blurb {
   name: string;
@@ -71,6 +71,18 @@ export interface TowerText {
   maxed: string;
   wave: (wave: number) => string;
   bossWave: string;
+  nextWave: (wave: number) => string;
+  enemiesLeft: (count: number) => string;
+  bestiary: Record<EnemyKind, Blurb>;
+  autofire: string;
+  autofireHint: string;
+  on: string;
+  off: string;
+  loadout: string;
+  loadoutSkill: string;
+  loadoutEmpty: string;
+  hintHold: string;
+  hintSkill: string;
   wall: string;
   skillReady: string;
   skillRecharging: (seconds: string) => string;
@@ -136,6 +148,24 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
     maxed: "Max",
     wave: (wave) => `Wave ${wave}`,
     bossWave: "Boss",
+    nextWave: (wave) => `Next: wave ${wave}`,
+    enemiesLeft: (count) => `${count} left`,
+    bestiary: {
+      grunt: { name: "Footman", description: "Marches straight at the wall." },
+      runner: { name: "Runner", description: "Fast but frail." },
+      brute: { name: "Brute", description: "Slow, heavy blows at the wall." },
+      bat: { name: "Bat", description: "Flies over caltrops; arrows and skills still hit it." },
+      boss: { name: "Warlord", description: "Calls in grunts every 8 s — watch for his horn call." },
+    },
+    autofire: "Auto-fire",
+    autofireHint: "The archer shoots the nearest threat on his own. Hold the field to take over.",
+    on: "on",
+    off: "off",
+    loadout: "Loadout",
+    loadoutSkill: "Skill",
+    loadoutEmpty: "No upgrades yet.",
+    hintHold: "Hold the field to shoot",
+    hintSkill: "Skill: press the button, then drag and release",
     wall: "Wall",
     skillReady: "Ready",
     skillRecharging: (seconds) => `${seconds} s`,
@@ -262,6 +292,24 @@ export const TOWER_TEXT: Record<AppLang, TowerText> = {
     maxed: "Макс.",
     wave: (wave) => `Волна ${wave}`,
     bossWave: "Босс",
+    nextWave: (wave) => `Далее: волна ${wave}`,
+    enemiesLeft: (count) => `Осталось: ${count}`,
+    bestiary: {
+      grunt: { name: "Пехотинец", description: "Идёт прямо к стене." },
+      runner: { name: "Бегун", description: "Быстрый, но хрупкий." },
+      brute: { name: "Громила", description: "Медленный, бьёт стену сильно." },
+      bat: { name: "Летучая мышь", description: "Летит над шипами; стрелы и навыки её всё же достают." },
+      boss: { name: "Военачальник", description: "Зовёт пехотинцев каждые 8 с — следите за его сигналом." },
+    },
+    autofire: "Автострельба",
+    autofireHint: "Лучник сам стреляет по ближайшей угрозе. Удерживайте поле, чтобы взять управление.",
+    on: "вкл",
+    off: "выкл",
+    loadout: "Снаряжение",
+    loadoutSkill: "Навык",
+    loadoutEmpty: "Улучшений пока нет.",
+    hintHold: "Удерживайте поле, чтобы стрелять",
+    hintSkill: "Навык: нажмите кнопку, затем проведите по полю и отпустите",
     wall: "Стена",
     skillReady: "Готов",
     skillRecharging: (seconds) => `${seconds} с`,

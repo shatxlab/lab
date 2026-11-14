@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TowerApp from "@/components/tower/TowerApp";
 import { createCheckpoint, readRun, RUN_STORAGE_KEY, writeRun, CHECKPOINT_MS } from "@/lib/tower/snapshot";
+import { TOWER_SETTINGS_KEY } from "@/lib/tower/settings";
 import { createRun, giveUp, step, STEP } from "@/lib/tower/sim/run";
 import { emptyPerks } from "@/lib/tower/sim/upgrades";
 import { TOWER_TEXT } from "@/lib/tower/i18n";
@@ -119,6 +120,97 @@ describe("TowerApp", () => {
     expect(readRun()?.run.skill).toBe("frostField");
     expect(view.container.querySelector(".tower-skill")?.textContent).toBe("Frost FieldReady");
     view.unmount();
+  });
+
+  it("previews the next wave's real composition in the picker", async () => {
+    localStorage.setItem(TOWER_STORAGE_KEY, JSON.stringify({ gold: 0, best: 0, runs: 0, perks: { headStart: 1 } }));
+    const view = await mount(<TowerApp />);
+    await startRun(view);
+    const preview = view.container.querySelector(".tower-preview")!;
+    expect(preview.textContent).toContain("Footman ×4");
+    expect(preview.textContent).toContain("Marches straight at the wall.");
+    expect(preview.textContent).not.toContain("Bat");
+    await act(async () => (view.container.querySelector(".tower-choice") as HTMLButtonElement).click());
+    expect(view.container.querySelector(".tower-preview")).toBeNull();
+    view.unmount();
+  });
+
+  it("counts the enemies still coming during combat", async () => {
+    const view = await mount(<TowerApp />);
+    await startRun(view);
+    expect(view.container.querySelector(".tower-hud-left")?.textContent).toBe("4 left");
+    view.unmount();
+  });
+
+  it("toggles auto-fire from the menu, persists it, and fires without a held finger", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    localStorage.setItem(TOWER_SETTINGS_KEY, JSON.stringify({ autofire: false, tutorialSeen: true }));
+    const checkpoint = createCheckpoint(createRun(19));
+    for (let i = 0; i < 100; i += 1) step(checkpoint.run, STEP);
+    writeRun(checkpoint);
+    let frame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => { frame = callback; return 1; }));
+    const view = await mount(<TowerApp />);
+    await act(async () => button(view.container, "Auto-fire: off").click());
+    expect(JSON.parse(localStorage.getItem(TOWER_SETTINGS_KEY)!).autofire).toBe(true);
+    await act(async () => button(view.container, "Continue run").click());
+    await act(async () => button(view.container, "Resume").click());
+    await act(async () => frame?.(performance.now() + 100));
+    // The periodic foreground save proves the archer took over: it writes without holding fire.
+    await act(async () => vi.advanceTimersByTime(CHECKPOINT_MS));
+    const saved = readRun();
+    expect(saved?.run.firing).toBe(true);
+    expect(saved?.run.aim).toBeLessThan(0);
+    view.unmount();
+  });
+
+  it("keeps auto-fire off by default: the archer waits for the player's finger", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const checkpoint = createCheckpoint(createRun(19));
+    for (let i = 0; i < 100; i += 1) step(checkpoint.run, STEP);
+    writeRun(checkpoint);
+    let frame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => { frame = callback; return 1; }));
+    const view = await mount(<TowerApp />);
+    await act(async () => button(view.container, "Continue run").click());
+    await act(async () => button(view.container, "Resume").click());
+    await act(async () => frame?.(performance.now() + 100));
+    await act(async () => vi.advanceTimersByTime(CHECKPOINT_MS));
+    expect(readRun()?.run.firing).toBe(false);
+    view.unmount();
+  });
+
+  it("inspects the loadout from the pause menu without losing the run", async () => {
+    localStorage.setItem(TOWER_STORAGE_KEY, JSON.stringify({ gold: 0, best: 0, runs: 0, perks: { headStart: 1 } }));
+    const view = await mount(<TowerApp />);
+    await startRun(view);
+    const first = view.container.querySelector(".tower-choice")!;
+    await act(async () => (first as HTMLButtonElement).click());
+    await act(async () => (view.container.querySelector(".tower-icon-button") as HTMLButtonElement).click());
+    const loadout = view.container.querySelector(".tower-loadout") as HTMLDetailsElement;
+    expect(loadout.open).toBe(false);
+    await act(async () => loadout.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })));
+    const text = loadout.textContent!;
+    const picked = first.querySelector(".tower-choice-name")!.textContent;
+    expect(text).toContain("Skill: Catapult");
+    expect(text).toContain(picked!);
+    expect(text).toMatch(/Lv 1/);
+    expect(readRun()?.run.phase).toBe("playing");
+    view.unmount();
+  });
+
+  it("shows first-run hints until the player has shot and cast, then never again", async () => {
+    const view = await mount(<TowerApp />);
+    await startRun(view);
+    const hints = view.container.querySelectorAll(".tower-field-hint");
+    expect([...hints].map((hint) => hint.textContent)).toContain("Hold the field to shoot");
+    expect([...hints].map((hint) => hint.textContent)).toContain("Skill: press the button, then drag and release");
+    view.unmount();
+    localStorage.setItem(TOWER_SETTINGS_KEY, JSON.stringify({ autofire: false, tutorialSeen: true }));
+    const again = await mount(<TowerApp />);
+    await startRun(again);
+    expect(again.container.querySelector(".tower-field-hint")).toBeNull();
+    again.unmount();
   });
 
   it("opens a run with a head start on the upgrade picker", async () => {

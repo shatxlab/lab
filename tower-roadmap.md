@@ -146,15 +146,45 @@ normal checkpoint/settlement path; repeating the read is harmless.
 
 After the active-skill vertical slice is coherent:
 
-- [ ] Show the actual next-wave enemy types/counts in the between-wave picker and remaining enemies during combat.
-- [ ] Explain new traits before they can cause a costly loss; no hover-only information.
-- [ ] Telegraph boss summons, charges and wall attacks, with the warning matching the gameplay timer.
-- [ ] Add optional auto-fire/aim assist while retaining manual target priority as the skilled option.
-- [ ] Let the player inspect current upgrades, derived stats and skill effects without leaving or losing the run.
-- [ ] Add a short contextual first-run tutorial for aim, manual fire, the equipped skill and upgrade selection.
+- [x] Show the actual next-wave enemy types/counts in the between-wave picker and remaining enemies during combat.
+- [x] Explain new traits before they can cause a costly loss; no hover-only information. (Bestiary trait lines for the
+  current five enemies; extend per enemy as new ones arrive.)
+- [x] Telegraph boss summons, charges and wall attacks, with the warning matching the gameplay timer. (Summons done;
+  charges/wall-attack windups wait for those mechanics to exist.)
+- [x] Add optional auto-fire/aim assist while retaining manual target priority as the skilled option.
+- [x] Let the player inspect current upgrades, derived stats and skill effects without leaving or losing the run.
+- [x] Add a short contextual first-run tutorial for aim, manual fire, the equipped skill and upgrade selection.
 
 Avoid turning Lone Tower into an idle game by default. Auto-fire is an accessibility/comfort option, not a substitute
 for interesting target selection.
+
+### Implementation record — clarity and comfort batch (local, uncommitted)
+
+- **Next-wave preview:** the between-wave picker (and the head-start picker) lists the next wave's exact enemy names and
+  counts with a one-line trait each, read from `waveRoster` through `src/lib/tower/wave-intel.ts` — never a second
+  schedule, never consuming RNG. Tests compare the preview against `buildSpawns` for waves 1–25 across four seeds.
+  EN/RU bestiary lines cover all five current enemies (bats over caltrops, the warlord's 8 s call, brute hits).
+- **Enemies left:** the HUD shows the spawn queue plus field count during combat, hidden while choosing or over.
+- **Boss-summon telegraph:** for the last 1.5 s of a warlord's summon timer the renderer draws a pulsing dashed orange
+  ring with markers where the grunts will appear, matching `BOSS_SUMMON` exactly. Render-only; no simulation change.
+- **Auto-fire:** a menu toggle persisted in `lab:tower:settings:v1` (`autofire`, `tutorialSeen`), off by default. When
+  on, the archer aims at the wall-nearest enemy with arrow-flight lead and fires whenever combat runs, the game is
+  unpaused and no finger holds the field; an empty field holds fire. It is pure input on top of `aimAt`/`holdFire` —
+  no sim, RNG or checkpoint change — and restored runs still open paused without ghost firing.
+- **Loadout inspection:** the pause menu gains a native `<details>` section with the equipped skill's current stats and
+  every owned upgrade's level and derived numbers, computed by the same `towerStats`/`upgradeStats` functions combat
+  uses. Inspecting never suspends, banks or mutates the run.
+- **First-run hints:** "Hold the field to shoot" (suppressed while auto-fire is on) and a skill hint appear over the
+  field until the player has both scored a kill and cast the skill once; `tutorialSeen` then persists and they never
+  return. Both hints are `role="status"`, EN/RU.
+- **Verification:** tower suite **8 files / 142 tests** (wave-intel parity and ordering, settings normalization and
+  failed writes, picker preview contents, enemies-left, auto-fire on/off proven through the periodic checkpoint,
+  loadout disclosure, hint lifecycle). Full suite **244 files / 3,546 tests**; `npm run typecheck` and
+  `npm run build` passed. Chromium EN/RU at 360×640 and 390×780 on the dev server and the production build: toggle →
+  hints → auto-fire engaging on its own → pause/loadout → Save & menu → resume without hints returning; boss-telegraph
+  and picker-preview screenshots inspected; no console errors, no horizontal overflow.
+- **Not done:** real-device playtest (still the gating acceptance step for the whole iteration); charge/wall-attack
+  telegraphs and any new-enemy trait copy wait for those mechanics. No balance, save-schema or skill numbers changed.
 
 ## P1 — builds with identities, not just linear stats
 
@@ -229,6 +259,7 @@ situations, and can predict the result. Numerical targets are set from baseline 
    perk/upgrade mapping, checkpoint migration and focused regression tests. This is the next implementation batch.
    *(Done locally, uncommitted — see the implementation record above; harness included.)*
 3. **Clarity and comfort:** next-wave preview, remaining count, telegraphs, optional auto-fire and contextual tutorial.
+   *(Done locally, uncommitted — see the clarity record below.)*
 4. **Build iteration:** reroll, build panel and one bounded capstone/tradeoff experiment; add richer run results.
 5. **Encounter iteration:** healer vertical slice, then shieldbearer, then one new boss behavior; human test each.
 6. **Goals/progression:** wave-15 milestone and one bow sidegrade prototype; defer seeded challenges until later.

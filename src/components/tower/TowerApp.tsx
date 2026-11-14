@@ -6,6 +6,7 @@ import { statChange, TOWER_TEXT, type TowerText } from "@/lib/tower/i18n";
 import { buyPerk, defaultSave, perkCost, readSaveState, writeSave, type TowerSave } from "@/lib/tower/meta";
 import { clearRun, createCheckpoint, readRunState, settleRun, writeRun, type RunCheckpoint } from "@/lib/tower/snapshot";
 import { PERK_IDS } from "@/lib/tower/sim/balance";
+import { defaultSettings, readSettings, writeSettings, type TowerSettings } from "@/lib/tower/settings";
 import { towerStats } from "@/lib/tower/sim/stats";
 import { emptyUpgrades } from "@/lib/tower/sim/upgrades";
 import { createRun, holdFire } from "@/lib/tower/sim/run";
@@ -38,6 +39,7 @@ export default function TowerApp() {
   const [hydrated, setHydrated] = useState(false);
   const [storageFailed, setStorageFailed] = useState(false);
   const [runReadFailed, setRunReadFailed] = useState(false);
+  const [settings, setSettings] = useState<TowerSettings>(defaultSettings);
   const run = active?.run;
   const [result, setResult] = useState<Result | null>(null);
 
@@ -58,6 +60,7 @@ export default function TowerApp() {
       if (checkpoint && before.readable && before.save.settledRunIds.includes(checkpoint.id)) clearRun(undefined, checkpoint.id);
       else setSaved(checkpoint);
     }
+    setSettings(readSettings());
     setHydrated(true);
   }, []);
   useEffect(load, [load]);
@@ -137,6 +140,23 @@ export default function TowerApp() {
     if (cleared) setSaved(null);
   };
 
+  const toggleAutofire = () => {
+    setSettings((current) => {
+      const next = { ...current, autofire: !current.autofire };
+      writeSettings(next);
+      return next;
+    });
+  };
+
+  const markTutorialSeen = useCallback(() => {
+    setSettings((current) => {
+      if (current.tutorialSeen) return current;
+      const next = { ...current, tutorialSeen: true };
+      writeSettings(next);
+      return next;
+    });
+  }, []);
+
   const suspend = useCallback(() => {
     if (!active) return;
     checkpoint(active);
@@ -184,6 +204,9 @@ export default function TowerApp() {
           onCheckpoint={checkpointActive}
           onSuspend={suspend}
           storageFailed={storageFailed}
+          autofire={settings.autofire}
+          tutorial={!settings.tutorialSeen}
+          onTutorialSeen={markTutorialSeen}
         >
           {result && (
             <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-over-title">
@@ -225,6 +248,8 @@ export default function TowerApp() {
           onDiscard={discard}
           hydrated={hydrated}
           pending={!!pending}
+          autofire={settings.autofire}
+          onToggleAutofire={toggleAutofire}
         />
       )}
     </div>
@@ -241,6 +266,8 @@ function MenuScreen({
   onDiscard,
   hydrated,
   pending,
+  autofire,
+  onToggleAutofire,
 }: {
   text: TowerText;
   save: TowerSave;
@@ -251,6 +278,8 @@ function MenuScreen({
   onDiscard: () => void;
   hydrated: boolean;
   pending: boolean;
+  autofire: boolean;
+  onToggleAutofire: () => void;
 }) {
   return (
     <div className="tower-screen">
@@ -284,7 +313,11 @@ function MenuScreen({
           <button type="button" className="tower-button tower-button-quiet" onClick={onPerks} disabled={!hydrated || pending}>
             {text.perksTitle}
           </button>
+          <button type="button" className="tower-button tower-button-quiet" onClick={onToggleAutofire} disabled={!hydrated}>
+            {text.autofire}: {autofire ? text.on : text.off}
+          </button>
         </div>
+        <p className="tower-continue-hint">{text.autofireHint}</p>
         <a className="tower-home" href={withBase("/")}>
           {text.home}
         </a>

@@ -434,7 +434,8 @@
   text-align: right;
 }
 
-.tower-target-help {
+.tower-target-help,
+.tower-field-hint {
   position: absolute;
   z-index: 2;
   top: 0.5rem;
@@ -451,6 +452,97 @@
   line-height: 1.3;
   text-align: center;
   pointer-events: none;
+}
+
+.tower-hint-low {
+  top: auto;
+  bottom: 0.5rem;
+}
+
+/* What the next wave sends, read from the real wave definitions. */
+.tower-preview {
+  margin: 0.9rem 0 0;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.7rem;
+  background: rgba(43, 36, 24, 0.06);
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.tower-preview li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  align-items: baseline;
+}
+
+.tower-preview-name {
+  font-weight: 700;
+}
+
+.tower-preview-trait {
+  color: var(--tower-muted);
+  font-size: 0.82rem;
+}
+
+.tower-hud-left {
+  color: rgba(251, 245, 230, 0.72);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Pause-menu loadout: native disclosure, no hover dependency. */
+.tower-loadout {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.tower-loadout summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.4rem 0;
+}
+
+.tower-loadout ul {
+  margin: 0.3rem 0 0;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.6rem;
+  background: rgba(43, 36, 24, 0.06);
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+}
+
+.tower-loadout li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  align-items: baseline;
+}
+
+.tower-loadout-level {
+  color: var(--tower-accent);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.tower-loadout-stats {
+  color: var(--tower-muted);
+  font-size: 0.8rem;
+}
+
+.tower-loadout-skill,
+.tower-loadout-empty {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+}
+
+.tower-loadout-empty {
+  color: var(--tower-muted);
 }
 
 /* KingsRoad still uses tower-volley/tower-volley-fill above for its shared bar. */

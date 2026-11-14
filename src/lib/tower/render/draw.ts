@@ -6,7 +6,7 @@
  * device pixel ratio and `drawRun` adds the arena fit on top, so nothing
  * here has to think about screen size.
  */
-import { ARENA, TOWER, WALL_Y } from "../sim/balance";
+import { ARENA, BOSS_SUMMON, TOWER, WALL_Y } from "../sim/balance";
 import { random } from "../sim/random";
 import { stats } from "../sim/run";
 import type { Caltrop, Enemy, Run, SkillCast } from "../sim/types";
@@ -168,8 +168,25 @@ function drawTower(ctx: CanvasRenderingContext2D, run: Run, time: number): void 
   }
 }
 
-/** An enemy faces the bit of wall it is heading for. */
+/** An enemy faces the bit of wall it is heading for. Bosses warn before calling for help. */
 function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy, time: number): void {
+  if (enemy.kind === "boss" && enemy.summonTimer <= 1.5) {
+    const urgency = 1 - enemy.summonTimer / 1.5;
+    const pulse = 0.5 + 0.5 * Math.sin(time * (6 + urgency * 10));
+    ctx.save();
+    ctx.strokeStyle = `rgba(255, 138, 42, ${0.45 + 0.45 * pulse})`;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, enemy.radius + 8 + urgency * 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (let index = 0; index < BOSS_SUMMON.count; index += 1) {
+      const angle = (index / BOSS_SUMMON.count) * Math.PI * 2 + enemy.phase;
+      circle(ctx, enemy.x + Math.cos(angle) * (enemy.radius + 12), enemy.y + Math.sin(angle) * (enemy.radius + 12), 3, "#ff8a2a");
+    }
+    ctx.restore();
+  }
   drawFoe(ctx, enemy, Math.atan2(WALL_Y - enemy.y, enemy.targetX - enemy.x), time);
 }
 

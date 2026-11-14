@@ -20,7 +20,7 @@ function scene(level = 1) {
 
 function target(run: Run, x: number, y: number, fields: Partial<Foe> = {}): Foe {
   const foe: Foe = {
-    id: run.nextId++, kind: "replyAll", x, y, radius: 8, hp: 1000, maxHp: 1000,
+    id: run.nextId++, kind: "replyAll", boss: false, x, y, radius: 8, hp: 1000, maxHp: 1000,
     speed: 0, touch: 0, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0,
     timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, hurt: 0,
     ...fields,

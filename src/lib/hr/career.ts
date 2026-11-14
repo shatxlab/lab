@@ -100,8 +100,10 @@ export function clearCareer(storage: CareerStorage | undefined = storageOrUndefi
 }
 
 /** Review XP for a run: a little for every few seconds survived, and a bonus for beating the auditor. */
-export function reviewXp(time: number, won: boolean, stage: Stage = "openSpace"): number {
-  return Math.floor((Math.floor(Math.max(0, time) / REVIEW.secondsPerXp) + (won ? REVIEW.winBonus : 0)) * STAGES[stage].xp);
+/** Review XP from a day: the time survived, the floors cleared on the way down, and a win's bonus. */
+export function reviewXp(time: number, won: boolean, stage: Stage = "openSpace", floorsCleared = 0): number {
+  const timeXp = Math.floor(Math.max(0, time) / REVIEW.secondsPerXp);
+  return Math.floor((timeXp + floorsCleared * REVIEW.perFloor + (won ? REVIEW.winBonus : 0)) * STAGES[stage].xp);
 }
 
 /** The stage a coworker of this level is actually sent to: the chosen one if they have reached it. */

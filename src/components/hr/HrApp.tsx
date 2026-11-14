@@ -5,7 +5,7 @@ import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 import { choosePerk, clearCareer, defaultCareer, difficultyFor, hire, interviewDifficultyFor, openPack, packOdds, promotionTradeoff, withCareerFocus, perkOffer, perksPending, rankOf, readCareer, review, reviewXp, reviewXpToNext, stageFor, writeCareer, type Career } from "@/lib/hr/career";
 import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
-import { AUDIT_CLOSES, INTERVIEW, interviewBossFor, PACKS, STAGE_IDS, STAGES } from "@/lib/hr/sim/balance";
+import { INTERVIEW, interviewBossFor, PACKS, STAGE_IDS, STAGES } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import type { Run } from "@/lib/hr/sim/types";
 import { clearRun, readRun, writeRun } from "@/lib/hr/snapshot";
@@ -23,6 +23,8 @@ interface Result {
   time: number;
   level: number;
   kills: number;
+  /** Floors of the floor plan cleared on the way down. */
+  floors: number;
   gold: number;
   /** The performance review that followed: null when the coworker is gone from the roster. */
   review: { xp: number; level: number; levelsGained: number; promotedTo: number | null } | null;
@@ -78,7 +80,9 @@ export default function HrApp() {
 
   const start = (coworker: Coworker) => {
     const stage = stageFor(coworker.level, careerRef.current?.stage ?? "openSpace");
-    begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity, stage, coworker.perks), null, stage));
+    // The stage sets the day's difficulty (and, at level 6+, the paid kitchen and server room); the descent's own
+    // stages come from the floor plan.
+    begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity, stage, coworker.perks)));
   };
 
   /** The focus fights the boss of a sealed card; winning hires the card. */
@@ -119,7 +123,7 @@ export default function HrApp() {
         interviewed = { candidate, hired };
       }
     } else if (before && worker) {
-      const outcome = review(worker, reviewXp(ended.time, ended.status === "won", ended.stage));
+      const outcome = review(worker, reviewXp(ended.time, ended.status === "won", ended.stage, ended.floorsCleared));
       const after: RosterSave = { ...before, day: before.day + 1, coworkers: before.coworkers.map((coworker) => (coworker.id === worker.id ? outcome.coworker : coworker)) };
       writeSave(after);
       setRoster(after);
@@ -132,10 +136,12 @@ export default function HrApp() {
     setResult({
       status: ended.status,
       abandoned: ended.abandoned,
-      closed: ended.status === "lost" && ended.hero.hp > 0 && ended.time >= (ended.interview ? INTERVIEW.closesAt : AUDIT_CLOSES),
+      // Only an interview can be closed by the clock now; a day ends by falling or by beating the audit.
+      closed: ended.interview !== null && ended.status === "lost" && ended.hero.hp > 0 && ended.time >= INTERVIEW.closesAt,
       time: ended.time,
       level: ended.level,
       kills: ended.kills,
+      floors: ended.floorsCleared,
       gold: Math.floor(ended.gold),
       review: reviewed,
       interview: interviewed,
@@ -202,6 +208,7 @@ export default function HrApp() {
                 <p className="tower-result">{text.lasted(clock(result.time))}</p>
                 <ul className="tower-stats">
                   <li>{text.reached(result.level)}</li>
+                  {!result.interview && <li>{text.floors(result.floors)}</li>}
                   <li>{text.kills(result.kills)}</li>
                   {!result.interview && <li>{text.goldEarned(result.gold)}</li>}
                   {result.interview?.hired && <li className="hr-promoted">{text.hiredLine(result.interview.candidate.name)}</li>}

@@ -19,9 +19,9 @@ import process from 'node:process'
 import { generateCoworker, starters } from '../../src/lib/roster/generate.ts'
 import type { Rarity } from '../../src/lib/roster/types.ts'
 import type { Coworker } from '../../src/lib/roster/types.ts'
-import { ARENA, AUDIT_CLOSES, BOSS_AT, INTERVIEW, MINI_BOSS_AT } from '../../src/lib/hr/sim/balance.ts'
+import { ARENA, LAST_FLOOR } from '../../src/lib/hr/sim/balance.ts'
 import { choosePerk, difficultyFor, interviewDifficultyFor, perkOffer, perksPending, review, reviewXpToNext } from '../../src/lib/hr/career.ts'
-import { choose, createRun, step } from '../../src/lib/hr/sim/run.ts'
+import { choose, createRun, descend, step } from '../../src/lib/hr/sim/run.ts'
 import type { Input, InterviewBoss, Pick, Run, Stage } from '../../src/lib/hr/sim/types.ts'
 
 /** How far ahead the bot looks, in seconds. */
@@ -116,11 +116,15 @@ function steer(run: Run): Input {
 }
 
 function play(coworker: Coworker, seed: number, verbose: boolean) {
-  const run = createRun(coworker, seed, boss ? interviewDifficultyFor(coworker.level, coworker.rarity, coworker.perks) : difficultyFor(coworker.level, coworker.rarity, stage, coworker.perks), boss ? { boss, candidateId: 99 } : null, stage)
+  const run = createRun(coworker, seed, boss ? interviewDifficultyFor(coworker.level, coworker.rarity, coworker.perks) : difficultyFor(coworker.level, coworker.rarity, stage, coworker.perks), boss ? { boss, candidateId: 99 } : null)
   let tick = 0
   let input: Input = { dx: 0, dy: 0 }
   let nextReport = 60
   while (run.status === 'playing') {
+    if (run.cleared) {
+      descend(run)
+      continue
+    }
     if (run.picks) {
       choose(run, decidePick(run))
       continue
@@ -172,8 +176,8 @@ for (const [index, base] of starters().entries()) {
       wins += 1
       teamWins += 1
     }
-    const end = run.status === 'won' ? (boss ? `beat the ${boss}` : 'beat the auditor') : run.time >= (boss ? INTERVIEW.closesAt : AUDIT_CLOSES) ? 'the audit closed' : `fell to ${run.lastHitBy}`
-    const stage = run.time >= BOSS_AT ? 'boss' : run.time >= MINI_BOSS_AT ? 'past mini-boss' : 'early'
+    const end = run.status === 'won' ? (boss ? `beat the ${boss}` : 'beat the auditor') : `fell to ${run.lastHitBy} on floor ${run.floor}/${LAST_FLOOR}`
+    const stage = run.floorsCleared >= 12 ? 'audit' : `floor ${run.floor}/13`
     const dealt = Object.entries(run.dealt)
       .sort((a, b) => b[1] - a[1])
       .map(([weapon, damage]) => `${weapon} ${Math.round(damage / 1000)}k`)

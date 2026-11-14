@@ -104,7 +104,7 @@ describe("HrApp", () => {
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Go to work")[0].click());
     expect(view.container.querySelector("canvas.tower-canvas")).toBeTruthy();
-    expect(view.container.textContent).toContain("Middle Manager in 2:30");
+    expect(view.container.textContent).toContain("Middle Manager in 0:40");
     expect(readRun()?.coworkerId).toBe(2);
     await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
     await act(async () => buttons(view.container, "Walk out")[0].click());
@@ -179,8 +179,9 @@ describe("HrApp", () => {
     // The server room waits for level 11.
     expect(buttons(again.container, "Server room")[0].disabled).toBe(true);
     await act(async () => buttons(again.container, "Go to work")[0].click());
-    expect(readRun()?.stage).toBe("kitchen");
-    expect(readRun()?.hazards.length).toBeGreaterThan(0);
+    // The chosen stage sets the day's difficulty now; the descent itself always starts on floor 1.
+    expect(readRun()?.stage).toBe("openSpace");
+    expect(readRun()?.hazards.length).toBe(0);
     again.unmount();
   });
 

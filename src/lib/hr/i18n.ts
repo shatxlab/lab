@@ -76,7 +76,12 @@ export interface HrText {
   foes: Record<FoeKind, string>;
   /** What comes next on the clock, e.g. "Auditor in 1:20". */
   next: (who: string, time: string) => string;
-  auditCloses: (time: string) => string;
+  /** Where the descent is, e.g. "Floor 3". */
+  floor: (floor: number) => string;
+  /** The panel after a floor's boss falls. */
+  floorCleared: string;
+  floorClearedHint: string;
+  descend: string;
   pause: string;
   paused: string;
   resume: string;
@@ -88,6 +93,7 @@ export interface HrText {
   walkedOut: string;
   lasted: (time: string) => string;
   reached: (level: number) => string;
+  floors: (floors: number) => string;
   kills: (kills: number) => string;
   goldEarned: (amount: number) => string;
   playAgain: string;
@@ -241,7 +247,10 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       recruiter: "Recruiter",
     },
     next: (who, time) => `${who} in ${time}`,
-    auditCloses: (time) => `The audit closes in ${time}`,
+    floor: (floor) => `Floor ${floor}`,
+    floorCleared: "Floor cleared",
+    floorClearedHint: "Take a pick, then take the stairs.",
+    descend: "Descend",
     pause: "Pause",
     paused: "Paused",
     resume: "Resume",
@@ -253,6 +262,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     walkedOut: "Walked out",
     lasted: (time) => `Lasted ${time}`,
     reached: (level) => `Reached level ${level}`,
+    floors: (floors) => `Floor ${floors} reached`,
     kills: (kills) => `${kills} foes cleared`,
     goldEarned: (amount) => `${amount} gold earned`,
     playAgain: "Again",
@@ -404,7 +414,10 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       recruiter: "Рекрутёр",
     },
     next: (who, time) => `${who} через ${time}`,
-    auditCloses: (time) => `Аудит закроется через ${time}`,
+    floor: (floor) => `Этаж ${floor}`,
+    floorCleared: "Этаж зачищен",
+    floorClearedHint: "Забери улучшение и спускайся ниже.",
+    descend: "Спуститься",
     pause: "Пауза",
     paused: "Пауза",
     resume: "Продолжить",
@@ -416,6 +429,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     walkedOut: "Ушли",
     lasted: (time) => `Продержались ${time}`,
     reached: (level) => `Дошли до уровня ${level}`,
+    floors: (floors) => `Пройдено этажей: ${floors}`,
     kills: (kills) => `Разобрано врагов: ${kills}`,
     goldEarned: (amount) => `Заработано золота: ${amount}`,
     playAgain: "Ещё раз",

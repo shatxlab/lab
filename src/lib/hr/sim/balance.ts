@@ -34,10 +34,10 @@ export const FOE_HURT_FLASH = 0.1;
 
 // ---- The clock ---------------------------------------------------------------------------------------------------
 
-export const MINI_BOSS_AT = 150;
-export const BOSS_AT = 300;
-/** If the auditor still stands at this time, the audit closes and the run is lost. */
-export const AUDIT_CLOSES = 450;
+// ---- The floor plan ---------------------------------------------------------------------------------------------
+
+/** The day's last floor, where the audit waits. */
+export const LAST_FLOOR = 13;
 
 /** Foes per second at `time` seconds; halved while the auditor is out. */
 export function spawnRate(time: number): number {
@@ -153,6 +153,48 @@ export const AUDITOR_SUMMONS = 6;
 export const PUSH_FADE = 8;
 /** Bosses only take this share of knockback. */
 export const BOSS_PUSH = 0.15;
+
+// ---- The floor plan ---------------------------------------------------------------------------------------------
+
+// ---- The floor plan ---------------------------------------------------------------------------------------------
+
+/** Which stage's arena a floor is fought in; the audit is back in the open space. */
+export function floorStage(floor: number): Stage {
+  if (floor <= 4) return "openSpace";
+  if (floor <= 8) return "kitchen";
+  if (floor <= 12) return "serverRoom";
+  return "openSpace";
+}
+
+export interface FloorPlan {
+  stage: Stage;
+  /** Seconds of horde before the floor's boss walks in. */
+  horde: number;
+  boss: FoeKind;
+  /** The boss's hp before the run's difficulty. */
+  bossHp: number;
+}
+
+/**
+ * The thirteen floors of a day, each ending in its own boss. The kinds and numbers are prototype stand-ins
+ * (see `hr-floors-roadmap.md`): the schedule, the hp ramp and the horde length are what the bot tunes first,
+ * one boss kind at a time; distinct skills and looks per floor are the next iterations.
+ */
+export const FLOOR_PLAN: readonly FloorPlan[] = [
+  { stage: "openSpace", horde: 40, boss: "middleManager", bossHp: 500 },
+  { stage: "openSpace", horde: 42, boss: "meetingInvite", bossHp: 400 },
+  { stage: "openSpace", horde: 45, boss: "teamLead", bossHp: 900 },
+  { stage: "openSpace", horde: 48, boss: "hrManager", bossHp: 700 },
+  { stage: "kitchen", horde: 50, boss: "lunchMonitor", bossHp: 1200 },
+  { stage: "kitchen", horde: 52, boss: "hrManager", bossHp: 1000 },
+  { stage: "kitchen", horde: 55, boss: "sysadmin", bossHp: 1100 },
+  { stage: "kitchen", horde: 58, boss: "recruiter", bossHp: 1400 },
+  { stage: "serverRoom", horde: 60, boss: "recruiter", bossHp: 1700 },
+  { stage: "serverRoom", horde: 62, boss: "sysadmin", bossHp: 1600 },
+  { stage: "serverRoom", horde: 65, boss: "sysadmin", bossHp: 1900 },
+  { stage: "serverRoom", horde: 68, boss: "lunchMonitor", bossHp: 2200 },
+  { stage: "openSpace", horde: 70, boss: "auditor", bossHp: FOES.auditor.hp },
+];
 
 // ---- Weapons -----------------------------------------------------------------------------------------------------
 
@@ -281,6 +323,8 @@ export const REVIEW = {
   secondsPerXp: 5,
   /** Extra XP for beating the auditor. */
   winBonus: 50,
+  /** Review XP per floor of the floor plan cleared, so a descent that ends early still pays. */
+  perFloor: 8,
   /** XP from level L to the next: `toNextBase + toNextPerLevel * L`. */
   toNextBase: 60,
   toNextPerLevel: 20,
@@ -310,14 +354,12 @@ export interface StageDef {
   /** Multiply the gold from foes and the review XP from the run, so a harder stage pays. */
   gold: number;
   xp: number;
-  /** Comes in place of the middle manager at `MINI_BOSS_AT`. */
-  miniBoss: FoeKind;
 }
 
 export const STAGES: Readonly<Record<Stage, StageDef>> = {
-  openSpace: { unlockLevel: 1, difficulty: 1, gold: 1, xp: 1, miniBoss: "middleManager" },
-  kitchen: { unlockLevel: 6, difficulty: 1.05, gold: 1.25, xp: 1.2, miniBoss: "lunchMonitor" },
-  serverRoom: { unlockLevel: 11, difficulty: 1.05, gold: 1.5, xp: 1.4, miniBoss: "sysadmin" },
+  openSpace: { unlockLevel: 1, difficulty: 1, gold: 1, xp: 1 },
+  kitchen: { unlockLevel: 6, difficulty: 1.05, gold: 1.25, xp: 1.2 },
+  serverRoom: { unlockLevel: 11, difficulty: 1.05, gold: 1.5, xp: 1.4 },
 };
 
 export const STAGE_IDS = Object.keys(STAGES) as Stage[];

@@ -4,8 +4,8 @@ import { Pause } from "lucide-react";
 import { clock, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, type HeroFrames, type Sheet } from "@/lib/hr/render/heroes";
 import { drawRun, fitView, stickInput, type Stick, type View } from "@/lib/hr/render/draw";
-import { AUDIT_CLOSES, BOSS_AT, FOES, INTERVIEW, MINI_BOSS_AT, STAGES, xpToNext } from "@/lib/hr/sim/balance";
-import { abandon, choose, step, STEP } from "@/lib/hr/sim/run";
+import { FLOOR_PLAN, FOES, INTERVIEW, xpToNext } from "@/lib/hr/sim/balance";
+import { abandon, choose, descend, step, STEP } from "@/lib/hr/sim/run";
 import type { FoeKind, Pick, Run } from "@/lib/hr/sim/types";
 import { writeRun } from "@/lib/hr/snapshot";
 import type { Coworker } from "@/lib/roster/types";
@@ -21,13 +21,18 @@ interface Hud {
   xp: number;
   /** Whole seconds. */
   time: number;
+  /** Whole seconds; a floor's horde counts from its own start. */
+  floorStart: number;
   gold: number;
+  floor: number;
+  /** The floor's boss is down and the stairs wait. */
+  cleared: boolean;
   boss: FoeKind | null;
   bossHp: number;
 }
 
 function snapshot(run: Run): Hud {
-  const boss = run.foes.find((foe) => FOES[foe.kind].boss) ?? null;
+  const boss = run.foes.find((foe) => foe.boss) ?? null;
   return {
     status: run.status,
     picks: run.picks ? JSON.stringify(run.picks) : "",
@@ -36,7 +41,10 @@ function snapshot(run: Run): Hud {
     level: run.level,
     xp: Math.floor((run.xp / xpToNext(run.level)) * 20) / 20,
     time: Math.floor(run.time),
+    floorStart: Math.floor(run.floorStart),
     gold: Math.floor(run.gold),
+    floor: run.floor,
+    cleared: run.cleared,
     boss: boss?.kind ?? null,
     bossHp: boss ? Math.ceil((boss.hp / boss.maxHp) * 50) / 50 : 0,
   };
@@ -93,12 +101,14 @@ export function RunView({
   framesRef.current = frames;
 
   const lastPicksRef = useRef("");
+  const lastClearedRef = useRef(false);
 
   const refresh = useCallback(() => {
     const next = snapshot(run);
-    // A new offer is a natural place to save: the player stops to read it.
-    if (next.picks && next.picks !== lastPicksRef.current) writeRun(run);
+    // A new offer, or a cleared floor, is a natural place to save: the player stops to read it.
+    if ((next.picks && next.picks !== lastPicksRef.current) || (next.cleared && !lastClearedRef.current)) writeRun(run);
     lastPicksRef.current = next.picks;
+    lastClearedRef.current = next.cleared;
     setHud((current) => (sameHud(current, next) ? current : next));
     if (run.status !== "playing" && !overRef.current) {
       overRef.current = true;
@@ -139,10 +149,10 @@ export function RunView({
       last = now;
       const fromX = run.hero.x;
       const fromY = run.hero.y;
-      if (!pausedRef.current && run.status === "playing" && !run.picks) {
+      if (!pausedRef.current && run.status === "playing" && !run.picks && !run.cleared) {
         pending += elapsed;
         const input = currentInput(stickRef.current, keysRef.current);
-        while (pending >= STEP && run.status === "playing" && !run.picks) {
+        while (pending >= STEP && run.status === "playing" && !run.picks && !run.cleared) {
           step(run, input);
           pending -= STEP;
         }
@@ -239,6 +249,12 @@ export function RunView({
     canvasRef.current?.focus();
   };
 
+  const takeStairs = () => {
+    descend(run);
+    refresh();
+    canvasRef.current?.focus();
+  };
+
   const walkOut = () => {
     setPaused(false);
     abandon(run);
@@ -247,13 +263,12 @@ export function RunView({
 
   const picks: Pick[] = hud.picks ? (JSON.parse(hud.picks) as Pick[]) : [];
   const hpShare = hud.maxHp > 0 ? hud.hp / hud.maxHp : 0;
+  const plan = FLOOR_PLAN[hud.floor - 1];
   const next = run.interview
     ? text.interviewClock(text.foes[run.interview.boss], clock(INTERVIEW.closesAt - hud.time))
-    : hud.time < MINI_BOSS_AT
-      ? text.next(text.foes[STAGES[run.stage].miniBoss], clock(MINI_BOSS_AT - hud.time))
-      : hud.time < BOSS_AT
-        ? text.next(text.foes.auditor, clock(BOSS_AT - hud.time))
-        : text.auditCloses(clock(AUDIT_CLOSES - hud.time));
+    : plan && !run.cleared && hud.time - hud.floorStart < plan.horde
+      ? text.next(text.foes[plan.boss], clock(plan.horde - (hud.time - hud.floorStart)))
+      : text.floor(hud.floor);
 
   return (
     <div className="tower-run">
@@ -312,13 +327,13 @@ export function RunView({
         {hud.status === "playing" && picks.length > 0 && (
           <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="hr-pick-title">
             <div className="tower-panel">
-              <p className="tower-kicker">{text.level(hud.level)}</p>
-              <h2 id="hr-pick-title">{text.levelUp}</h2>
+              <p className="tower-kicker">{hud.cleared ? text.floor(hud.floor) : text.level(hud.level)}</p>
+              <h2 id="hr-pick-title">{hud.cleared ? text.floorCleared : text.levelUp}</h2>
               <div className="tower-choices">
                 {picks.map((pick, index) => {
                   const blurb = pickBlurb(text, pick);
                   return (
-                    <button key={JSON.stringify(pick)} type="button" className="tower-choice" onClick={() => takePick(index)} autoFocus={index === 0}>
+                    <button key={JSON.stringify(pick)} type="button" className="tower-choice" onClick={() => takePick(index)} autoFocus={index === 0 && !hud.cleared}>
                       <span className="tower-choice-name">{blurb.name}</span>
                       <span className="tower-choice-level">{pickLevel(text, pick)}</span>
                       <span className="tower-choice-description">{blurb.description}</span>
@@ -326,11 +341,21 @@ export function RunView({
                   );
                 })}
               </div>
+              {hud.cleared && (
+                <>
+                  <p className="tower-tagline">{text.floorClearedHint}</p>
+                  <div className="tower-actions">
+                    <button type="button" className="tower-button" onClick={takeStairs} autoFocus>
+                      {text.descend}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {paused && hud.status === "playing" && (
+        {paused && hud.status === "playing" && !hud.cleared && (
           <div className="tower-overlay" role="dialog" aria-modal="true" aria-labelledby="hr-pause-title">
             <div className="tower-panel">
               <h2 id="hr-pause-title">{text.paused}</h2>

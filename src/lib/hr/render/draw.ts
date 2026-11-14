@@ -4,7 +4,7 @@
  */
 import { DEPARTMENTS } from "@/lib/roster/data";
 import { POSE_PAD } from "@/lib/tycoon/render-support/poses";
-import { ARENA, DUCK_RADIUS, FOES, HERO_RADIUS, SERVER_ROOM, weaponNumbers } from "../sim/balance";
+import { ARENA, DUCK_RADIUS, HERO_RADIUS, SERVER_ROOM, weaponNumbers } from "../sim/balance";
 import type { Foe, Run } from "../sim/types";
 import type { HeroFrames } from "./heroes";
 
@@ -574,7 +574,7 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
 /** An arrow at the edge of the screen toward a boss out of view. */
 function drawBossPointers(ctx: CanvasRenderingContext2D, run: Run, view: View, camera: { x: number; y: number }): void {
   for (const foe of run.foes) {
-    if (!FOES[foe.kind].boss) continue;
+    if (!foe.boss) continue;
     const sx = (foe.x - camera.x) * view.scale;
     const sy = (foe.y - camera.y) * view.scale;
     if (sx >= 0 && sy >= 0 && sx <= view.width && sy <= view.height) continue;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { AUDIT_CLOSES, FOES, INTERVIEW, KITCHEN, MINI_BOSS_AT, PICKS_OFFERED, PING, SECOND_WIND, SERVER_ROOM, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, xpToNext } from "@/lib/hr/sim/balance";
-import { abandon, choose, createRun, step } from "@/lib/hr/sim/run";
+import { FOES, FLOOR_PLAN, INTERVIEW, KITCHEN, LAST_FLOOR, PICKS_OFFERED, PING, SECOND_WIND, SERVER_ROOM, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, floorStage, xpToNext } from "@/lib/hr/sim/balance";
+import { abandon, choose, createRun, descend, step } from "@/lib/hr/sim/run";
 import type { Input, Run } from "@/lib/hr/sim/types";
 import { starters } from "@/lib/roster/generate";
 import type { Coworker } from "@/lib/roster/types";
@@ -83,20 +83,22 @@ describe("step", () => {
     expect(Object.values(run.takenFrom).reduce((sum, damage) => sum + damage, 0)).toBeGreaterThanOrEqual(HERO_BASE.maxHp);
   });
 
-  it("is won when the auditor falls", () => {
+  it("is won when the audit's auditor falls on the last floor", () => {
     const run = createRun(plain, 4);
+    run.floor = LAST_FLOOR;
+    run.bossId = 999;
     step(run, { dx: 0, dy: 0 });
-    run.foes.push(foe({ id: 999, kind: "auditor", hp: 0, gold: FOES.auditor.gold, x: 100, y: 100 }));
+    run.foes.push(foe({ id: 999, kind: "auditor", boss: true, hp: 0, gold: FOES.auditor.gold, x: 100, y: 100 }));
     step(run, { dx: 0, dy: 0 });
     expect(run.status).toBe("won");
     expect(run.gold).toBeGreaterThanOrEqual(FOES.auditor.gold);
   });
 
-  it("is lost when the audit closes", () => {
+  it("is never lost to the clock: a day only ends on the floor", () => {
     const run = createRun(plain, 4);
-    run.time = AUDIT_CLOSES;
+    run.time = 10_000;
     step(run, { dx: 0, dy: 0 });
-    expect(run.status).toBe("lost");
+    expect(run.status).toBe("playing");
   });
 });
 
@@ -118,6 +120,81 @@ describe("level-ups", () => {
   });
 });
 
+describe("the floor plan", () => {
+  it("has thirteen floors, each a stage and a boss, and the audit last", () => {
+    expect(FLOOR_PLAN).toHaveLength(LAST_FLOOR);
+    expect(FLOOR_PLAN[LAST_FLOOR - 1].boss).toBe("auditor");
+    expect(floorStage(1)).toBe("openSpace");
+    expect(floorStage(5)).toBe("kitchen");
+    expect(floorStage(9)).toBe("serverRoom");
+    expect(floorStage(LAST_FLOOR)).toBe("openSpace");
+    for (let floor = 1; floor <= LAST_FLOOR; floor += 1) {
+      expect(floorStage(floor)).toBe(FLOOR_PLAN[floor - 1].stage);
+      expect(FLOOR_PLAN[floor - 1].bossHp).toBeGreaterThan(0);
+      expect(FLOOR_PLAN[floor - 1].horde).toBeGreaterThan(0);
+    }
+  });
+
+  it("walks floor 1's boss in after the horde, and reserves its kind for the boss", () => {
+    const run = createRun(plain, 11);
+    const plan = FLOOR_PLAN[0];
+    run.time = plan.horde - 1;
+    play(run, plan.horde + 1);
+    const boss = run.foes.find((foe) => foe.id === run.bossId);
+    expect(boss).toMatchObject({ kind: plan.boss, boss: true });
+    expect(boss?.maxHp).toBeCloseTo(plan.bossHp);
+    expect(run.foes.filter((foe) => foe.kind === plan.boss)).toHaveLength(1);
+  });
+
+  it("clears the floor when its boss falls: gems go to the hero, a pick is offered, the stairs wait", () => {
+    const run = createRun(plain, 12);
+    const plan = FLOOR_PLAN[0];
+    run.time = plan.horde - 1;
+    play(run, plan.horde + 1);
+    const boss = run.foes.find((foe) => foe.id === run.bossId)!;
+    // Only the boss on the field, and nothing it drops, so the vacuum's totals are exact.
+    run.foes = [boss];
+    boss.xp = 0;
+    boss.gold = 0;
+    // Exactly one level's worth minus what the hero already holds, plus 5, so the totals are exact.
+    const value = xpToNext(run.level) - run.xp + 5;
+    run.gems = [{ id: 900, x: run.hero.x, y: run.hero.y, value, pulled: false }];
+    const level = run.level;
+    boss.hp = 0;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.cleared).toBe(true);
+    expect(run.floorsCleared).toBe(1);
+    expect(run.picks).not.toBeNull();
+    // The fallen gem is a level and 5 xp; the hero's own numbers are plain, so nothing multiplies it.
+    expect(run.level).toBe(level + 1);
+    expect(run.xp).toBe(5);
+    expect(run.status).toBe("playing");
+    const time = run.time;
+    step(run, { dx: 1, dy: 0 });
+    expect(run.time).toBe(time);
+    choose(run, 0);
+    expect(descend(run)).toBe(true);
+    expect(run).toMatchObject({ floor: 2, cleared: false, bossId: null, bossDone: false });
+    expect(run.foes).toEqual([]);
+  });
+
+  it("wins the day on the last floor's boss and not before", () => {
+    const run = createRun(plain, 13);
+    run.floor = LAST_FLOOR - 1;
+    run.cleared = true;
+    descend(run);
+    expect(run).toMatchObject({ floor: LAST_FLOOR, stage: "openSpace" });
+    const plan = FLOOR_PLAN[LAST_FLOOR - 1];
+    run.time += plan.horde;
+    play(run, run.time + 2);
+    const boss = run.foes.find((foe) => foe.id === run.bossId)!;
+    boss.hp = 0;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("won");
+    expect(run.cleared).toBe(false);
+  });
+});
+
 describe("abandon", () => {
   it("ends the run as a fall", () => {
     const run = createRun(plain, 1);
@@ -131,6 +208,7 @@ function foe(fields: Partial<Run["foes"][number]>): Run["foes"][number] {
   return {
     id: 0,
     kind: "replyAll",
+    boss: false,
     x: 0,
     y: 0,
     hp: 1,
@@ -182,7 +260,6 @@ describe("an interview", () => {
     play(run, INTERVIEW.closesAt + 1);
     expect(run.status).toBe("lost");
     expect(run.time).toBeGreaterThanOrEqual(INTERVIEW.closesAt);
-    expect(run.time).toBeLessThan(AUDIT_CLOSES);
   });
 
   it("makes foes tougher with the difficulty, the boss included", () => {
@@ -196,10 +273,18 @@ describe("an interview", () => {
 });
 
 describe("the kitchen", () => {
-  const kitchen = () => createRun(plain, 3, 1, null, "kitchen");
+  /** Floor 5, reached by descending from a cleared floor 4. */
+  const kitchen = () => {
+    const run = createRun(plain, 3);
+    run.floor = 4;
+    run.cleared = true;
+    descend(run);
+    return run;
+  };
 
   it("is laid out from the seed: spills clear of the start, and microwaves in corners", () => {
     const run = kitchen();
+    expect(run).toMatchObject({ floor: 5, stage: "kitchen" });
     const spills = run.hazards.filter((hazard) => hazard.kind === "spill");
     expect(spills).toHaveLength(KITCHEN.spills);
     expect(run.hazards.filter((hazard) => hazard.kind === "microwave")).toHaveLength(KITCHEN.microwaves);
@@ -233,17 +318,29 @@ describe("the kitchen", () => {
     expect(run.hazards[0].timer).toBeGreaterThan(KITCHEN.microwaveEvery - 1);
   });
 
-  it("brings its own mini-boss and pays more gold", () => {
+  it("brings its own boss after the horde, and pays more gold", () => {
     const run = kitchen();
-    run.time = MINI_BOSS_AT - 1;
-    play(run, MINI_BOSS_AT + 1);
-    expect(run.foes.some((foe) => foe.kind === "lunchMonitor")).toBe(true);
+    run.time = FLOOR_PLAN[4].horde - 1;
+    play(run, FLOOR_PLAN[4].horde + 1);
+    const monitor = run.foes.find((foe) => foe.kind === "lunchMonitor");
+    expect(monitor?.boss).toBe(true);
+    expect(run.bossId).toBe(monitor?.id);
     expect(run.foes.some((foe) => foe.kind === "middleManager")).toBe(false);
     expect(STAGES.kitchen.gold).toBeGreaterThan(1);
   });
 
-  it("is never the place of an interview", () => {
-    expect(createRun(plain, 1, 1, { boss: "recruiter", candidateId: 4 }, "kitchen")).toMatchObject({ stage: "openSpace", hazards: [] });
+  it("is not where an interview is held", () => {
+    expect(createRun(plain, 1, 1, { boss: "recruiter", candidateId: 4 })).toMatchObject({ stage: "openSpace", floor: 1, hazards: [] });
+  });
+
+  it("is reached only by taking the stairs from a cleared floor", () => {
+    const run = createRun(plain, 3);
+    run.floor = 4;
+    expect(descend(run)).toBe(false);
+    run.cleared = true;
+    expect(descend(run)).toBe(true);
+    expect(run).toMatchObject({ floor: 5, stage: "kitchen", cleared: false, bossId: null, bossDone: false });
+    expect(run.foes).toEqual([]);
   });
 });
 
@@ -275,7 +372,7 @@ describe("perks in a run", () => {
     const run = withPerks("secondWind");
     run.hero.hp = 0.001;
     // A foe too tough for the hero's weapons to clear before it touches them.
-    run.foes.push({ id: 999, kind: "replyAll", x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, hurt: 0 });
+    run.foes.push({ id: 999, kind: "replyAll", boss: false, x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, hurt: 0 });
     step(run, { dx: 0, dy: 0 });
     expect(run.status).toBe("playing");
     expect(run.revive).toBe(false);
@@ -287,7 +384,14 @@ describe("perks in a run", () => {
 });
 
 describe("the server room", () => {
-  const room = () => createRun(plain, 4, 1, null, "serverRoom");
+  /** Floor 9, reached by descending from a cleared floor 8. */
+  const room = () => {
+    const run = createRun(plain, 4);
+    run.floor = 8;
+    run.cleared = true;
+    descend(run);
+    return run;
+  };
   const stand = (run: Run, vent: Run["hazards"][number]) => {
     run.hazards = [vent];
     run.hero.x = vent.x;
@@ -336,9 +440,13 @@ describe("the server room", () => {
   });
 
   it("brings the sysadmin, who sends fans of pings", () => {
+    // Floor 10 is the plan's second server-room floor, and its boss is the sysadmin.
     const run = room();
-    run.time = MINI_BOSS_AT - 1;
-    play(run, MINI_BOSS_AT + 1);
+    run.cleared = true;
+    descend(run);
+    expect(run).toMatchObject({ floor: 10, stage: "serverRoom" });
+    run.time = FLOOR_PLAN[9].horde - 1;
+    play(run, FLOOR_PLAN[9].horde + 1);
     const admin = run.foes.find((foe) => foe.kind === "sysadmin");
     expect(admin).toBeDefined();
     expect(run.foes.some((foe) => foe.kind === "middleManager" || foe.kind === "lunchMonitor")).toBe(false);

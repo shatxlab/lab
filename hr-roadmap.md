@@ -4,6 +4,10 @@ The single source of TODOs, design record and handoff notes for the office-cowor
 steps", then read "Guide for the next session" (at the end) before changing anything in `src/lib/roster/` or
 `src/lib/hr/`.
 
+The next gameplay direction — the floor-plan refactor (13 floors, a distinct boss per floor) — is planned in
+[`hr-floors-roadmap.md`](hr-floors-roadmap.md); until it ships, that document is the source of TODOs for it. This file
+keeps the handoff record for everything shipped so far.
+
 ## Current improvement batch
 
 Implemented the first HR tasks from `game-design-improvements.md`:

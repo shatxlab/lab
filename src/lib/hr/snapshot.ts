@@ -33,6 +33,9 @@ export function normalizeRun(raw: unknown): Run | null {
   const run = raw as Partial<Run>;
   if (run.version !== RUN_VERSION || run.status !== "playing") return null;
   if (![run.seed, run.rng, run.coworkerId, run.difficulty, run.time, run.level, run.xp, run.nextId].every(isNumber)) return null;
+  if (![run.floor, run.floorStart].every(isNumber)) return null;
+  if (run.bossId !== null && !isNumber(run.bossId)) return null;
+  if (run.cleared !== false && run.cleared !== true) return null;
   if (!run.hero || ![run.hero.x, run.hero.y, run.hero.hp].every(isNumber)) return null;
   if (!run.base || !run.numbers) return null;
   const lists = [run.weapons, run.foes, run.shots, run.drops, run.foeShots, run.gems, run.effects];

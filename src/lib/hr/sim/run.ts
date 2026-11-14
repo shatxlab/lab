@@ -3,10 +3,8 @@ import type { Coworker } from "@/lib/roster/types";
 import { random, randomBetween } from "@/lib/tower/sim/random";
 import {
   ARENA,
-  AUDIT_CLOSES,
   AUDITOR_SUMMON_EVERY,
   AUDITOR_SUMMONS,
-  BOSS_AT,
   BOSS_PUSH,
   CHARGE,
   DROP_REACH,
@@ -14,6 +12,7 @@ import {
   FAN_SPREAD,
   FOE_HURT_FLASH,
   FOES,
+  FLOOR_PLAN,
   GEM_PULL,
   GEM_RADIUS,
   GRID_CELL,
@@ -21,6 +20,7 @@ import {
   HURT_FLASH,
   INTERVIEW,
   KITCHEN,
+  LAST_FLOOR,
   PING,
   INVITE_SUMMONS,
   LEAD_CHARGE,
@@ -31,10 +31,8 @@ import {
   MAX_PRINTERS,
   MAX_SHOTS,
   MIN_COOLDOWN,
-  MINI_BOSS_AT,
   MIX,
   PRINTER_EVERY,
-  PRINTER_FROM,
   PRINTER_RANGE,
   PUSH_FADE,
   RECRUITER_CLONES,
@@ -45,6 +43,7 @@ import {
   STAGES,
   TONER,
   WEAPONS,
+  floorStage,
   hpScale,
   spawnRate,
   touchScale,
@@ -58,7 +57,7 @@ import type { Effect, Foe, FoeKind, Hazard, Input, Interview, OwnedWeapon, Run, 
 
 /** The fixed tick the page steps the sim with, so every device plays the same run. */
 export const STEP = 1 / 60;
-export const RUN_VERSION = 5;
+export const RUN_VERSION = 6;
 
 /** The biggest foe's radius, which every grid search is widened by. */
 const FOE_PAD = Math.max(...Object.values(FOES).map((foe) => foe.radius));
@@ -71,10 +70,10 @@ const byId = new Map<number, Foe>();
 
 /**
  * `difficulty` is 1 for a first-day coworker and grows with their career level (see `difficultyFor`). With an
- * `interview` the run is a fight against that boss alone, not a day at the office. A `stage` other than the open space
- * adds its hazards and its own mini-boss; an interview is always held in the open space.
+ * `interview` the run is a fight against that boss alone, not a day at the office. A day is a descent through the
+ * floor plan: thirteen floors, each its own stage's arena and ending in its own boss (see `FLOOR_PLAN`).
  */
-export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null, stage: Stage = "openSpace"): Run {
+export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null): Run {
   const base = baseNumbers(coworker);
   // Perks that start the run with a passive.
   const passives: Run["passives"] = {};
@@ -90,7 +89,12 @@ export function createRun(coworker: Coworker, seed: number, difficulty = 1, inte
     coworkerId: coworker.id,
     difficulty,
     interview,
-    stage: interview ? "openSpace" : stage,
+    floor: 1,
+    floorStart: 0,
+    bossId: null,
+    cleared: false,
+    floorsCleared: 0,
+    stage: "openSpace",
     hazards: [],
     extraPicks: coworker.perks.includes("cornerOffice") ? 1 : 0,
     revive: coworker.perks.includes("secondWind"),
@@ -108,7 +112,6 @@ export function createRun(coworker: Coworker, seed: number, difficulty = 1, inte
     queuedPicks: 0,
     spawnDebt: 0,
     printerIn: PRINTER_EVERY,
-    miniBossDone: false,
     bossDone: false,
     foes: [],
     shots: [],
@@ -205,7 +208,7 @@ function tickHazards(run: Run, dt: number): void {
 /** Advance the run by one `STEP`. While a pick is waiting, or once the run is over, only the effects fade. */
 export function step(run: Run, input: Input): void {
   fadeEffects(run, STEP);
-  if (run.status !== "playing" || run.picks) return;
+  if (run.status !== "playing" || run.picks || run.cleared) return;
   run.time += STEP;
   run.grace = Math.max(0, run.grace - STEP);
   moveHero(run, input, STEP);
@@ -231,7 +234,7 @@ export function step(run: Run, input: Input): void {
   if (run.hero.hp <= 0) {
     run.hero.hp = 0;
     run.status = "lost";
-  } else if (run.status === "playing" && run.time >= (run.interview ? INTERVIEW.closesAt : AUDIT_CLOSES)) {
+  } else if (run.status === "playing" && run.interview && run.time >= INTERVIEW.closesAt) {
     run.status = "lost";
   } else if (run.status === "playing" && run.queuedPicks > 0 && !run.picks) {
     run.queuedPicks -= 1;
@@ -257,6 +260,31 @@ export function abandon(run: Run): void {
   if (run.status !== "playing") return;
   run.status = "lost";
   run.abandoned = true;
+}
+
+/**
+ * Take the stairs after a cleared floor: the next one, its stage's hazards, and nothing on the field. The hero keeps
+ * everything they have picked up; their hp is theirs to look after.
+ */
+export function descend(run: Run): boolean {
+  if (run.status !== "playing" || !run.cleared) return false;
+  run.cleared = false;
+  run.picks = null;
+  run.floor += 1;
+  run.floorStart = run.time;
+  run.bossDone = false;
+  run.bossId = null;
+  run.spawnDebt = 0;
+  run.printerIn = PRINTER_EVERY;
+  run.foes = [];
+  run.shots = [];
+  run.drops = [];
+  run.foeShots = [];
+  run.gems = [];
+  run.effects = [];
+  run.stage = floorStage(run.floor);
+  run.hazards = run.stage === "kitchen" ? kitchenHazards(run) : run.stage === "serverRoom" ? serverRoomHazards(run) : [];
+  return true;
 }
 
 // ---- The hero ----------------------------------------------------------------------------------------------------
@@ -301,7 +329,7 @@ function touchHero(run: Run, dt: number): void {
   const { hero } = run;
   grid.near(hero.x, hero.y, HERO_RADIUS, FOE_PAD, (foe) => {
     if (foe.hp <= 0) return;
-    const scale = FOES[foe.kind].boss ? 1 : touchScale(run.time);
+    const scale = foe.boss ? 1 : touchScale(floorElapsed(run));
     hurtHero(run, foe.touch * scale * dt, foe.kind);
   });
 }
@@ -323,12 +351,14 @@ function index(run: Run): void {
   for (const foe of run.foes) byId.set(foe.id, foe);
 }
 
-function addFoe(run: Run, kind: FoeKind, x: number, y: number): Foe {
+function addFoe(run: Run, kind: FoeKind, x: number, y: number, overrides: { boss?: boolean; hp?: number } = {}): Foe {
   const def = FOES[kind];
-  const hp = (def.boss ? def.hp : def.hp * hpScale(run.time)) * run.difficulty;
+  const boss = overrides.boss ?? def.boss;
+  const hp = (overrides.hp ?? (boss ? def.hp : def.hp * hpScale(floorElapsed(run)))) * run.difficulty;
   const foe: Foe = {
     id: run.nextId++,
     kind,
+    boss,
     x: clampTo(x, def.radius, ARENA.width),
     y: clampTo(y, def.radius, ARENA.height),
     hp,
@@ -367,7 +397,9 @@ function pointAround(run: Run, min: number, max: number): { x: number; y: number
 }
 
 function drawKind(run: Run): FoeKind {
-  const open = MIX.filter((entry) => run.time >= entry.from);
+  // The floor's own boss kind is reserved for the boss, so a horde meeting-invite can never be mistaken for it.
+  const boss = run.interview ? run.interview.boss : FLOOR_PLAN[run.floor - 1].boss;
+  const open = MIX.filter((entry) => run.time >= entry.from && entry.kind !== boss);
   let roll = random(run) * open.reduce((sum, entry) => sum + entry.weight, 0);
   for (const entry of open) {
     roll -= entry.weight;
@@ -380,7 +412,7 @@ function spawnInterview(run: Run, interview: Interview, dt: number): void {
   if (!run.bossDone && run.time >= INTERVIEW.bossAt) {
     run.bossDone = true;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
-    addFoe(run, interview.boss, at.x, at.y);
+    run.bossId = addFoe(run, interview.boss, at.x, at.y).id;
   }
   const bossOut = run.foes.some((foe) => foe.kind === interview.boss);
   run.spawnDebt += INTERVIEW.spawnRate * (1 + (run.difficulty - 1) / 2) * (bossOut ? INTERVIEW.bossOutShare : 1) * dt;
@@ -397,31 +429,39 @@ function spawn(run: Run, dt: number): void {
     spawnInterview(run, run.interview, dt);
     return;
   }
-  if (!run.miniBossDone && run.time >= MINI_BOSS_AT) {
-    run.miniBossDone = true;
-    const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
-    addFoe(run, STAGES[run.stage].miniBoss, at.x, at.y);
-  }
-  if (!run.bossDone && run.time >= BOSS_AT) {
+  spawnFloor(run, dt);
+}
+
+/** One floor of the day: a horde for the plan's span, then its boss walks in and the horde thins. */
+function spawnFloor(run: Run, dt: number): void {
+  const plan = FLOOR_PLAN[run.floor - 1];
+  if (!run.bossDone && floorElapsed(run) >= plan.horde) {
     run.bossDone = true;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
-    addFoe(run, "auditor", at.x, at.y);
+    const boss = addFoe(run, plan.boss, at.x, at.y, { boss: true, hp: plan.bossHp });
+    run.bossId = boss.id;
   }
-  const auditorOut = run.foes.some((foe) => foe.kind === "auditor");
-  run.spawnDebt += spawnRate(run.time) * (1 + (run.difficulty - 1) / 2) * (auditorOut ? 0.5 : 1) * dt;
+  const bossOut = run.bossId !== null && run.foes.some((foe) => foe.id === run.bossId);
+  run.spawnDebt += spawnRate(floorElapsed(run)) * (1 + (run.difficulty - 1) / 2) * (bossOut ? INTERVIEW.bossOutShare : 1) * dt;
   while (run.spawnDebt >= 1) {
     run.spawnDebt -= 1;
     if (run.foes.length >= MAX_FOES) continue;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
     addFoe(run, drawKind(run), at.x, at.y);
   }
-  if (run.time < PRINTER_FROM) return;
+  // The office's blocking printers start turning up from the third floor on.
+  if (run.floor < 3) return;
   run.printerIn -= dt;
   if (run.printerIn > 0) return;
   run.printerIn = PRINTER_EVERY;
   if (run.foes.filter((foe) => foe.kind === "printerJam").length >= MAX_PRINTERS) return;
   const at = pointAround(run, 220, 360);
   addFoe(run, "printerJam", at.x, at.y);
+}
+
+/** Seconds since this floor began; a floor's ramp lives within itself, not across the whole day. */
+function floorElapsed(run: Run): number {
+  return run.interview ? run.time : run.time - run.floorStart;
 }
 
 function summon(run: Run, around: Foe, count: number): void {
@@ -490,7 +530,7 @@ function act(run: Run, foe: Foe, toHero: number, distance: number): void {
 
 /** Is this foe heavy enough that others should move around it rather than push it? */
 function anchored(foe: Foe): boolean {
-  return foe.kind === "printerJam" || FOES[foe.kind].boss;
+  return foe.kind === "printerJam" || foe.boss;
 }
 
 function moveFoes(run: Run, dt: number): void {
@@ -565,7 +605,7 @@ function knock(foe: Foe, fromX: number, fromY: number, speed: number): void {
   const dx = foe.x - fromX;
   const dy = foe.y - fromY;
   const distance = Math.hypot(dx, dy) || 1;
-  const scale = FOES[foe.kind].boss ? BOSS_PUSH : foe.kind === "printerJam" ? 0 : 1;
+  const scale = foe.boss ? BOSS_PUSH : foe.kind === "printerJam" ? 0 : 1;
   foe.pushX += (dx / distance) * speed * scale;
   foe.pushY += (dy / distance) * speed * scale;
 }
@@ -581,7 +621,20 @@ function reap(run: Run): void {
     run.gold += foe.gold * run.numbers.gold * STAGES[run.stage].gold;
     if (foe.xp > 0) run.gems.push({ id: run.nextId++, x: foe.x, y: foe.y, value: foe.xp, pulled: false });
     addEffect(run, "pop", foe.x, foe.y, foe.radius, 0.3);
-    if (foe.kind === (run.interview?.boss ?? "auditor")) run.status = "won";
+    if (foe.id === run.bossId) {
+      run.bossId = null;
+      if (run.interview || run.floor >= LAST_FLOOR) {
+        run.status = "won";
+      } else {
+        // The floor is cleared: its gems go straight to the hero, and the pick offer and the stairs wait.
+        run.floorsCleared = run.floor;
+        for (const gem of run.gems) gainXp(run, gem.value);
+        run.gems = [];
+        run.cleared = true;
+        // A pick offer of its own, unless a level-up already owes one: the cleared screen always shows.
+        if (!run.picks) run.picks = rollPicks(run);
+      }
+    }
   }
   run.foes = alive;
   while (run.gems.length > MAX_GEMS) {

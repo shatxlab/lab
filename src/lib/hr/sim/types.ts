@@ -90,6 +90,8 @@ export interface OwnedWeapon {
 export interface Foe {
   id: number;
   kind: FoeKind;
+  /** A floor boss or an interview boss: hp that does not scale, thin knockback, an anchored body. */
+  boss: boolean;
   x: number;
   y: number;
   hp: number;
@@ -197,6 +199,16 @@ export interface Run {
   difficulty: number;
   /** Set when the run is an interview: no review, no day, and the boss is the only goal. */
   interview: Interview | null;
+  /** Which floor of the floor plan the day is on, 1 to `LAST_FLOOR`; interviews ignore it. */
+  floor: number;
+  /** The run time this floor began at, so a floor's horde and its spawns ramp from their own start. */
+  floorStart: number;
+  /** The floor boss's foe id once it has walked in; null until then and after it falls. */
+  bossId: number | null;
+  /** The floor's boss is down: the pick offer and the stairs wait, the arena holds still. */
+  cleared: boolean;
+  /** Floors whose boss has fallen this day; the review pays for them (see `reviewXp`). */
+  floorsCleared: number;
   stage: Stage;
   hazards: Hazard[];
   /** Level-up offers show this many more picks (the corner office perk). */
@@ -225,7 +237,7 @@ export interface Run {
   spawnDebt: number;
   /** Seconds until the next printer jam may be placed. */
   printerIn: number;
-  miniBossDone: boolean;
+  /** Set once this floor's boss (or, in an interview, its boss) has walked in. */
   bossDone: boolean;
   foes: Foe[];
   shots: Shot[];

@@ -181,19 +181,19 @@ export interface FloorPlan {
  * one boss kind at a time; distinct skills and looks per floor are the next iterations.
  */
 export const FLOOR_PLAN: readonly FloorPlan[] = [
-  { stage: "openSpace", horde: 40, boss: "middleManager", bossHp: 500 },
-  { stage: "openSpace", horde: 42, boss: "meetingInvite", bossHp: 400 },
-  { stage: "openSpace", horde: 45, boss: "teamLead", bossHp: 900 },
-  { stage: "openSpace", horde: 48, boss: "hrManager", bossHp: 700 },
-  { stage: "kitchen", horde: 50, boss: "lunchMonitor", bossHp: 1200 },
-  { stage: "kitchen", horde: 52, boss: "hrManager", bossHp: 1000 },
-  { stage: "kitchen", horde: 55, boss: "sysadmin", bossHp: 1100 },
-  { stage: "kitchen", horde: 58, boss: "recruiter", bossHp: 1400 },
-  { stage: "serverRoom", horde: 60, boss: "recruiter", bossHp: 1700 },
-  { stage: "serverRoom", horde: 62, boss: "sysadmin", bossHp: 1600 },
-  { stage: "serverRoom", horde: 65, boss: "sysadmin", bossHp: 1900 },
-  { stage: "serverRoom", horde: 68, boss: "lunchMonitor", bossHp: 2200 },
-  { stage: "openSpace", horde: 70, boss: "auditor", bossHp: FOES.auditor.hp },
+  { stage: "openSpace", horde: 16, boss: "middleManager", bossHp: 300 },
+  { stage: "openSpace", horde: 18, boss: "meetingInvite", bossHp: 250 },
+  { stage: "openSpace", horde: 20, boss: "teamLead", bossHp: 420 },
+  { stage: "openSpace", horde: 22, boss: "hrManager", bossHp: 420 },
+  { stage: "kitchen", horde: 24, boss: "lunchMonitor", bossHp: 650 },
+  { stage: "kitchen", horde: 26, boss: "hrManager", bossHp: 550 },
+  { stage: "kitchen", horde: 28, boss: "sysadmin", bossHp: 600 },
+  { stage: "kitchen", horde: 30, boss: "recruiter", bossHp: 750 },
+  { stage: "serverRoom", horde: 32, boss: "recruiter", bossHp: 850 },
+  { stage: "serverRoom", horde: 34, boss: "sysadmin", bossHp: 800 },
+  { stage: "serverRoom", horde: 36, boss: "sysadmin", bossHp: 900 },
+  { stage: "serverRoom", horde: 38, boss: "lunchMonitor", bossHp: 950 },
+  { stage: "openSpace", horde: 40, boss: "auditor", bossHp: 3600 },
 ];
 
 // ---- Weapons -----------------------------------------------------------------------------------------------------

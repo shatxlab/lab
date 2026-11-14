@@ -47,10 +47,12 @@ What changes is the shape around the arena: one time-scaled 450-second session b
   (Microsoft Edge) checks at 360px, EN and RU, passed on the dev server and the production build via `astro preview`
   (`scripts/hr/floors-check.mjs` + `scripts/hr/craft-run.ts`: fresh-run HUD, walk-out, resuming a run saved exactly
   on a cleared floor, the cleared overlay, taking the stairs, floor 2's HUD; screenshots inspected).
-- First bot numbers (prototype, not tuned): level-1 starters over 3 seeds each won 8/9 full descents, runs ran
-  17–23 minutes — longer than the old 7.5-minute day; the plan's horde spans (665 s total) and boss hps are the
-  first tuning targets, with the server room's vents (up to 90% of damage taken on floors 9–12) and the auditor as
-  the notable killers. `scripts/hr/playthrough.ts` now reports floor reached and takes the stairs.
+- First bot numbers (tuned over three passes, still prototype, real-device feel pending): level-1 starters over
+  10 seeds each won 28/30 full descents, day 9–16 minutes (was 17–23 with the first schedule); deaths sit inside the
+  15% guideline (floor 11's sysadmin, floor 13's auditor). Career gradient: level 6 won 28/30, level 11 8/10 with
+  both losses on the auditor (the plan's `bossHp` scales with the run's difficulty, so the audit is the wall a
+  senior fight). `scripts/hr/playthrough.ts` reports floor reached and takes the stairs; the tests' `play` helper
+  descends too, since a boss can now die inside a test's window.
 - Not done (the next iterations, below): P1's thirteen distinct boss skills, P2's distinct looks and intro cards,
   and P3. Nothing committed yet.
 
@@ -194,10 +196,8 @@ Sim first, reusing existing bosses as stand-ins so the structure is testable bef
 
 ## Guide for the next session
 
-1. Tune P0 with the bot first (`npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm
-   --alias:@=./src --outfile=/tmp/hr.mjs && node /tmp/hr.mjs 20 all`): the day is 17–23 minutes at level 1, so start
-   with the horde spans in `FLOOR_PLAN` (a shorter, denser horde beats a long thin one) and boss hps; run 20–30
-   seeds per starter before claiming anything.
+1. Play the tuned P0 on a real device and decide the day's length by feel (bot says 9–16 min; the horde spans are
+   `FLOOR_PLAN`'s first column and the boss hps its last).
 2. Then P1, one mechanic at a time (risk order: slow zones 7, lobs 7/9, burst 4, shockwaves 12, blink 11, enrage
    13), each with its telegraph and controlled sim tests; bosses on floors 3/6/9 keep their interview identity.
 3. Then P2: furniture-frame bosses (2, 7, 9) via the existing cut/recolor pipeline, the shredder (4) drawn from

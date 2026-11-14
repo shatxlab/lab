@@ -11,10 +11,14 @@ const [intern, accountant] = starters();
 /** A plain coworker: every stat 10, no quirks, so the run plays on the base numbers. */
 const plain: Coworker = { ...intern, quirks: [], stats: { grit: 10, output: 10, hustle: 10, focus: 10, luck: 10 } };
 
-/** Walks a slow circle and always takes the first pick. */
+/** Walks a slow circle and always takes the first pick; a cleared floor is descended without fuss. */
 function play(run: Run, seconds: number): void {
   let tick = 0;
   while (run.status === "playing" && run.time < seconds) {
+    if (run.cleared) {
+      descend(run);
+      continue;
+    }
     if (run.picks) {
       choose(run, 0);
       continue;
@@ -60,7 +64,8 @@ describe("step", () => {
     const run = createRun(accountant, 5);
     let tick = 0;
     while (run.status === "playing" && run.time < 200) {
-      if (run.picks) choose(run, 0);
+      if (run.cleared) descend(run);
+      else if (run.picks) choose(run, 0);
       else {
         step(run, { dx: Math.cos(tick / 200), dy: Math.sin(tick / 200) });
         tick += 1;

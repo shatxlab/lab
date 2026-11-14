@@ -104,7 +104,7 @@ describe("HrApp", () => {
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Go to work")[0].click());
     expect(view.container.querySelector("canvas.tower-canvas")).toBeTruthy();
-    expect(view.container.textContent).toContain("Middle Manager in 0:40");
+    expect(view.container.textContent).toContain("Middle Manager in 0:16");
     expect(readRun()?.coworkerId).toBe(2);
     await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
     await act(async () => buttons(view.container, "Walk out")[0].click());

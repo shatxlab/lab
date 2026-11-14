@@ -26,35 +26,33 @@ What changes is the shape around the arena: one time-scaled 450-second session b
 
 ## Current state
 
-- **P0 (the floor skeleton) is implemented and verified.** A day at `/hr` is now the thirteen-floor descent:
-  `FLOOR_PLAN` in `sim/balance.ts` (13 entries: stage, horde length, boss kind, boss hp; prototype numbers),
-  `spawnFloor`/`floorElapsed` in `sim/run.ts` (the horde ramps within its own floor; the floor's boss walks in after
-  the horde and the horde thins to `bossOutShare`; the boss kind is reserved out of the horde mix), `descend` (the
-  stairs: next floor, fresh stage hazards, emptied field), floor clears (`cleared` state: gems go straight to the
-  hero, a pick offer appears, the arena holds), and the win on floor 13's auditor. `RUN_VERSION` is 6, so old
-  suspended runs are discarded; `lab:hr:v1` (career, roster) is untouched. Per-floor review XP: `reviewXp` gained
-  `floorsCleared * REVIEW.perFloor` (8, hypothesis).
-- Foes carry a `boss` flag now (floor bosses and interview bosses alike), used for hp scaling, knockback, anchoring
-  and the boss pointer/hp bar; `STAGES` lost its mini-boss field and the old `MINI_BOSS_AT`/`BOSS_AT`/`AUDIT_CLOSES`
-  timeline is gone (a day no longer ends on the clock; only interviews keep `closesAt`). The chosen stage now only
-  sets the day's difficulty (and the paid kitchen/server room); the descent's themes come from the plan.
-- UI: the HUD's clock line shows the current floor's boss countdown during a horde and the floor label once the boss
-  is out; the cleared floor shows one panel — floor number, "Floor cleared", the pick offer, the stairs button (EN/RU
-  copy together in `i18n.ts`). The result panel gained a floors-reached line.
-- Verification: `NODE_ENV=test npm test` passed 244 files / 3,551 tests (HR tests rewritten for floors: the plan's
-  shape, boss walk-in with a reserved kind, the clear/descend flow with exact gem→xp totals, floor 13 win, no clock
-  loss, old-flow tests replaced; interviews unchanged); `npm run typecheck` and `npm run build` passed. Chromium
-  (Microsoft Edge) checks at 360px, EN and RU, passed on the dev server and the production build via `astro preview`
-  (`scripts/hr/floors-check.mjs` + `scripts/hr/craft-run.ts`: fresh-run HUD, walk-out, resuming a run saved exactly
-  on a cleared floor, the cleared overlay, taking the stairs, floor 2's HUD; screenshots inspected).
-- First bot numbers (tuned over three passes, still prototype, real-device feel pending): level-1 starters over
-  10 seeds each won 28/30 full descents, day 9–16 minutes (was 17–23 with the first schedule); deaths sit inside the
-  15% guideline (floor 11's sysadmin, floor 13's auditor). Career gradient: level 6 won 28/30, level 11 8/10 with
-  both losses on the auditor (the plan's `bossHp` scales with the run's difficulty, so the audit is the wall a
-  senior fight). `scripts/hr/playthrough.ts` reports floor reached and takes the stairs; the tests' `play` helper
-  descends too, since a boss can now die inside a test's window.
-- Not done (the next iterations, below): P1's thirteen distinct boss skills, P2's distinct looks and intro cards,
-  and P3. Nothing committed yet.
+- **P0 (the floor skeleton) and P1 (the thirteen distinct boss skills) are implemented and verified.** See the P0
+  and P1 sections below for the details; P2 (distinct looks + intro cards) is next, then P3.
+- **P0, in brief:** a day at `/hr` is the thirteen-floor descent: `FLOOR_PLAN` in `sim/balance.ts` (stage, horde
+  length, boss kind, boss hp), `spawnFloor`/`floorElapsed` in `sim/run.ts` (the horde ramps within its own floor; the
+  floor's boss walks in after the horde and the horde thins to `bossOutShare`; the boss kind is reserved out of the
+  horde mix), `descend` (the stairs: next floor, fresh stage hazards, emptied field), floor clears (`cleared` state:
+  gems go straight to the hero, a pick offer appears, the arena holds), and the win on floor 13's auditor.
+  `RUN_VERSION` is 7; old suspended runs are discarded; `lab:hr:v1` (career, roster) is untouched. Per-floor review
+  XP: `reviewXp` gained `floorsCleared * REVIEW.perFloor` (8, hypothesis).
+- Foes carry a `boss` flag (floor and interview bosses alike); the old `MINI_BOSS_AT`/`BOSS_AT`/`AUDIT_CLOSES`
+  timeline is gone (a day no longer ends on the clock; only interviews keep `closesAt`). The chosen stage only sets
+  the day's difficulty; the descent's themes come from the plan.
+- **P1, in brief:** six new boss kinds with their own skills (meeting chair, shredder, coffee machine, vending
+  machine, printer prime, blob prime), the sysadmin's blink, the auditor's enrage, slow puddles, lobs, armed shots
+  and shockwaves — details in the P1 section. `RUN_VERSION` 7 covers the new foe/shot/hazard fields.
+- UI: the HUD's clock line shows the current floor's boss countdown during a horde and the floor label once the
+  boss is out; the cleared floor shows one panel — floor number, "Floor cleared", the pick offer, the stairs button
+  (EN/RU copy together in `i18n.ts`). The result panel gained a floors-reached line.
+- Verification: `NODE_ENV=test npm test` passed 244 files / 3,560 tests (HR tests rewritten for floors plus one
+  controlled scene per P1 mechanic); `npm run typecheck` and `npm run build` passed. Chromium (Microsoft Edge)
+  checks at 360px, EN and RU, passed on the dev server and the production build via `astro preview`
+  (`scripts/hr/floors-check.mjs` + `scripts/hr/craft-run.ts`); screenshots inspected.
+- Bot numbers (prototype, tuned over four passes, real-device feel pending): level 1 starters over 20 seeds each
+  won **54/60 descents (90%)**, deaths only on floors 11–13; day 10–14 minutes. Level 6: 30/30; level 11: 10/10 —
+  the audit is the wall, and a human playtest decides whether the early floors are now too easy.
+- Not done (next): P2's distinct looks and intro cards, P3 (endless floors, loot, floor-side unlocks). Nothing
+  beyond these batches committed.
 
 ## The shape of a run after the refactor
 
@@ -153,18 +151,27 @@ Sim first, reusing existing bosses as stand-ins so the structure is testable bef
 - Verify: `NODE_ENV=test npm test`, `npm run typecheck`, Chromium EN/RU at 360px/390px on dev and the
   production build via Astro preview; bot runs over seeds. No balance verdict from one seed.
 
-### P1 — thirteen skills (mechanics)
+## P1 — thirteen skills (mechanics) — done, see Current state
 
-- The new mechanics, in risk order: slow zones (7), boss-anchored lobs (7, 9), 360° burst (4), step
-  shockwaves (12), blink (11), enrage phase (13). Each lands with its telegraph drawn from the existing
-  telegraph/flash vocabulary (`HURT_FLASH`-style cues, charge wind-ups).
-- Interview bosses on floors 3/6/9 gain their floor-flavoured retunes (frequency, HP) without changing
-  the interview encounter itself.
-- Elite-free, modifier-free: one boss, one idea, readable.
-- Tests: each mechanic in a controlled sim scene (the duck-contact-test pattern), phase interplay, and
-  bot runs confirming no floor is a wall: no boss should end more than ~15% of seeded runs at its floor
-  once builds are sane.
-- Verify as P0, plus a screenshot pass of every boss phase.
+- Implemented: the six new boss kinds with their own skills — **meeting chair** (F2: immobile, blocks the way,
+  summons reply-alls), **shredder** (F4: immobile; sleeps outside a 300-unit wake, sweeps single fans alternating
+  sides, bursts a 10-shot ring every fourth fire; its shots arm after 60 units of flight, so hugging the machine is
+  safe and stepping out is not), **coffee machine** (F7: immobile; lobs a glob where the hero stands; the landing
+  hurts the splash and leaves a drying slow puddle), **vending machine** (F9: immobile tank; lobs cans in arcs where
+  the hero was — no puddle, more hurt), **printer prime** (F10: walks, spits 3-shot toner streams, coughs up paper
+  trails every fourth fire), **blob prime** (F12: slow tank whose timer sends an expanding shockwave ring that hurts
+  while the band passes). Plus **blink** for the sysadmin (F11: teleports away when the hero closes in, 5 s
+  cooldown) and the **enrage** for the auditor (F13: below half hp — 0.6× timer, 1.3× speed, doubled chains, red
+  eyes and a hot ring so it reads). Immobile bosses block the hero like printer jams; puddles are a new hazard
+  kind that dries (`Hazard.life`); lobs are foe shots with a `lob` payload (flight, splash, puddle radius).
+- The floor plan now reads: 1 middle manager, 2 meeting chair, 3 team lead, 4 shredder, 5 lunch monitor, 6 HR
+  manager, 7 coffee machine, 8 recruiter, 9 recruiter, 10 printer prime, 11 sysadmin, 12 blob prime, 13 auditor.
+- Tuned by the bot over four passes (20 seeds per starter at level 1): the shredder's first two designs were walls
+  (22/30 and 10/30 deaths on floor 4) until the wake + alternating single fans + arming distance; the auditor took
+  a 3600 → 3200 hp trim. Final: **54/60 descents won (90%)**, deaths only on floors 11–13 (the audit ~17% for the
+  spreadsheet starter); day 10–14 min. At career level 6 the bot won 30/30 and at level 11 10/10 — the bot's higher
+  levels carry the difficulty better than its level 1; a human playtest decides whether the early floors are now
+  too easy.
 
 ### P2 — thirteen looks (art + copy)
 

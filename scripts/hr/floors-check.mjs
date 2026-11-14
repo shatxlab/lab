@@ -80,7 +80,7 @@ for (const lang of ['en', 'ru']) {
     await sleep(1200)
     const hud2 = await page.evaluate(() => document.querySelector('.hr-hud-clock')?.textContent ?? '')
     // During a floor's horde the HUD counts down to its own boss; floor 2's is the meeting invite.
-    const floor2 = lang === 'en' ? ['Floor 2', 'Meeting Invite in'] : ['Этаж 2', 'Приглашение на встречу через']
+    const floor2 = lang === 'en' ? ['Floor 2', 'Meeting Chair in'] : ['Этаж 2', 'Кресло совещаний через']
     check(floor2.some((needle) => hud2.includes(needle)), `${lang}: after the stairs the HUD shows floor 2 (${hud2.trim()})`)
     await page.screenshot({ path: `/tmp/hr-floors-${lang}-floor2.png` })
   }

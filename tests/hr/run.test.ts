@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { FOES, FLOOR_PLAN, INTERVIEW, KITCHEN, LAST_FLOOR, PICKS_OFFERED, PING, SECOND_WIND, SERVER_ROOM, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, floorStage, xpToNext } from "@/lib/hr/sim/balance";
-import { abandon, choose, createRun, descend, step } from "@/lib/hr/sim/run";
-import type { Input, Run } from "@/lib/hr/sim/types";
+import { AUDITOR_ENRAGE, BLINK, COFFEE, FOES, FLOOR_PLAN, INTERVIEW, KITCHEN, LAST_FLOOR, PICKS_OFFERED, PING, PRIME_TONER, SECOND_WIND, SERVER_ROOM, SHOCK, SHREDDER, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, VENDING, floorStage, xpToNext } from "@/lib/hr/sim/balance";
+import { abandon, choose, createRun, descend, step, STEP } from "@/lib/hr/sim/run";
+import type { FoeKind, Input, Run } from "@/lib/hr/sim/types";
 import { starters } from "@/lib/roster/generate";
 import type { Coworker } from "@/lib/roster/types";
 
@@ -200,6 +200,180 @@ describe("the floor plan", () => {
   });
 });
 
+describe("the floor bosses' own tricks", () => {
+  /** A floor-N boss alone on the field, one tick after its timer first fires. */
+  function bossScene(kind: FoeKind, floor = 1): { run: Run; boss: Run["foes"][number] } {
+    const run = createRun(plain, 21);
+    run.floor = floor - 1;
+    run.stage = floorStage(floor);
+    run.cleared = true;
+    descend(run);
+    const plan = FLOOR_PLAN[floor - 1];
+    const boss = foe({ id: 500, kind, boss: true, x: 700, y: 700, hp: 1e9, maxHp: 1e9, speed: 0, touch: 0, timer: 0.01, radius: FOES[kind].radius });
+    run.foes = [boss];
+    run.bossId = boss.id;
+    run.bossDone = true;
+    run.time += plan.horde;
+    return { run, boss };
+  }
+
+  it("the meeting chair stands still, blocks the way and calls reply-alls", () => {
+    const { run, boss } = bossScene("meetingChair");
+    run.hero.x = boss.x - 60;
+    run.hero.y = boss.y;
+    const x = boss.x;
+    step(run, { dx: 1, dy: 0 });
+    expect(boss.x).toBe(x);
+    expect(run.foes.some((foe) => foe.kind === "replyAll" && foe.id !== boss.id)).toBe(true);
+  });
+
+  it("the shredder sleeps out of its wake, sweeps fans that alternate sides, and bursts every fourth", () => {
+    const { run, boss } = bossScene("shredder");
+    // Out of the wake the shredder does nothing at all.
+    run.hero.x = boss.x - SHREDDER.wake - 100;
+    run.hero.y = boss.y;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "shredder")).toHaveLength(0);
+    // At the wake's edge the fans fly, one side at a time.
+    run.hero.x = boss.x - SHREDDER.wake;
+    boss.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "shredder")).toHaveLength(SHREDDER.fan);
+    // Three more timer fires; the fourth is the burst, caught the tick it happens before it fades.
+    let cycles = boss.cycles;
+    for (let cycle = 0; cycle < SHREDDER.burstEvery - 1; cycle += 1) {
+      boss.timer = 0.01;
+      step(run, { dx: 0, dy: 0 });
+      cycles += 1;
+      if (cycles % SHREDDER.burstEvery === 0) {
+        // A ring: the burst is as many shots as the burst count, at every angle around the boss — but the one
+        // aimed straight at the hero reaches them and is spent, so its angle is missing from what is left flying.
+        const burst = run.foeShots.filter((shot) => shot.from === "shredder");
+        const angles = burst.map((shot) => Math.atan2(shot.vy, shot.vx).toFixed(2));
+        expect(new Set(angles).size).toBeGreaterThanOrEqual(SHREDDER.burst - 1);
+      }
+    }
+    expect(cycles).toBe(SHREDDER.burstEvery + 1);
+  });
+
+  it("the shredder's shots fly over a hero who hugs the machine, and arm out at a distance", () => {
+    const { run, boss } = bossScene("shredder");
+    // Point-blank: blocked against the machine, in the touch, but under the unarmed fans.
+    run.hero.x = boss.x + FOES.shredder.radius + 12;
+    run.hero.y = boss.y;
+    boss.touch = FOES.shredder.touch;
+    const maxHp = run.numbers.maxHp;
+    let ticks = 0;
+    boss.timer = 0.01;
+    for (ticks = 0; ticks < Math.ceil(FOES.shredder.every * 60); ticks += 1) step(run, { dx: 0, dy: 0 });
+    const lost = maxHp - run.hero.hp;
+    // Only the machine's touch got through; a fan shot would add its damage on top.
+    expect(lost).toBeLessThan(FOES.shredder.touch * (ticks / 60) + 1);
+    expect(lost).toBeGreaterThan(0);
+  });
+
+  it("the coffee machine lobs to where the hero stands, and the landing leaves a drying puddle", () => {
+    const { run, boss } = bossScene("coffeeMachine", 7);
+    run.hero.x = boss.x;
+    run.hero.y = boss.y - 300;
+    step(run, { dx: 0, dy: 0 });
+    const glob = run.foeShots.find((shot) => shot.lob)!;
+    expect(glob.lob?.puddle).toBe(COFFEE.puddle.radius);
+    // Stand in the splash, then wait out the flight.
+    for (let tick = 0; tick < Math.ceil(COFFEE.glob.flight * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    const puddle = run.hazards.find((hazard) => hazard.kind === "puddle");
+    expect(puddle).toBeDefined();
+    expect(run.lastHitBy).toBe("coffeeMachine");
+    run.hero.hp = run.numbers.maxHp;
+    const slowSpot = { x: puddle!.x, y: puddle!.y };
+    run.hero.x = slowSpot.x;
+    run.hero.y = slowSpot.y;
+    step(run, { dx: 1, dy: 0 });
+    const slowed = run.hero.x - slowSpot.x;
+    run.hero.x = 100;
+    step(run, { dx: 1, dy: 0 });
+    expect(slowed).toBeCloseTo((run.hero.x - 100) * (1 - COFFEE.puddle.slow), 5);
+    // And the puddle dries (the boss is silenced first, or it lobs a fresh one).
+    run.foes[0].timer = 1e9;
+    run.hero.x = 100;
+    for (let tick = 0; tick < Math.ceil(COFFEE.puddle.life * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(run.hazards.some((hazard) => hazard.kind === "puddle")).toBe(false);
+  });
+
+  it("the vending machine lobs a can where the hero was, without a puddle", () => {
+    const { run } = bossScene("vendingMachine", 9);
+    run.hero.x = 700;
+    run.hero.y = 400;
+    step(run, { dx: 0, dy: 0 });
+    const can = run.foeShots.find((shot) => shot.lob)!;
+    expect(can.lob?.puddle).toBeUndefined();
+    // Walk away: the can still lands where the hero was, and hurts only the splash there.
+    run.hero.x = 400;
+    run.hero.y = 400;
+    run.hero.hp = run.numbers.maxHp;
+    const before = run.hero.hp;
+    for (let tick = 0; tick < Math.ceil(VENDING.can.flight * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(run.hazards.some((hazard) => hazard.kind === "puddle")).toBe(false);
+    expect(run.hero.hp).toBe(before);
+  });
+
+  it("the printer prime spits quicker toner streams and coughs up paper trails", () => {
+    const { run } = bossScene("printerPrime", 10);
+    run.hero.x = 700;
+    run.hero.y = 400;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "printerPrime")).toHaveLength(PRIME_TONER.stream);
+    const before = run.foes.length;
+    const boss = run.foes[0];
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      boss.timer = 0.01;
+      for (let tick = 0; tick < Math.ceil(FOES.printerPrime.every * 60); tick += 1) step(run, { dx: 0, dy: 0 });
+    }
+    expect(run.foes.length).toBeGreaterThan(before);
+  });
+
+  it("the blob prime's shockwave expands and hurts the hero standing in the band", () => {
+    const { run, boss } = bossScene("blobPrime", 12);
+    run.hero.x = boss.x;
+    run.hero.y = boss.y - 80;
+    const before = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.shock).toBeGreaterThan(0);
+    let hurt = 0;
+    for (let tick = 0; tick < Math.ceil(SHOCK.seconds * 60) + 2; tick += 1) {
+      step(run, { dx: 0, dy: 0 });
+      hurt = before - run.hero.hp;
+    }
+    expect(hurt).toBeGreaterThan(0);
+    expect(boss.shock).toBe(0);
+  });
+
+  it("a sysadmin blinks away when the hero closes in, and not otherwise", () => {
+    const { run, boss } = bossScene("sysadmin", 11);
+    run.hero.x = boss.x - 80;
+    run.hero.y = boss.y;
+    const away = boss.x;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.x).not.toBe(away);
+    expect(boss.blinkCd).toBe(BLINK.every);
+    const again = boss.x;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.x).toBe(again);
+  });
+
+  it("the auditor rages below half hp: quicker rings, faster steps, doubled chains", () => {
+    const { run, boss } = bossScene("auditor", 13);
+    boss.hp = boss.maxHp / 2;
+    boss.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.enraged).toBe(true);
+    // The next timer's addition is the enrage scale of the auditor's every.
+    // The timer's first addition is the enrage scale of the auditor's every, less this tick's step.
+    const timerAfterFirst = boss.timer;
+    expect(timerAfterFirst).toBeCloseTo(FOES.auditor.every * AUDITOR_ENRAGE.timerScale, 1);
+  });
+});
+
 describe("abandon", () => {
   it("ends the run as a fall", () => {
     const run = createRun(plain, 1);
@@ -232,6 +406,9 @@ function foe(fields: Partial<Run["foes"][number]>): Run["foes"][number] {
     chargeX: 0,
     chargeY: 0,
     duckCooldown: 0,
+    blinkCd: 0,
+    shock: 0,
+    enraged: false,
     hurt: 0,
     ...fields,
   };
@@ -377,7 +554,7 @@ describe("perks in a run", () => {
     const run = withPerks("secondWind");
     run.hero.hp = 0.001;
     // A foe too tough for the hero's weapons to clear before it touches them.
-    run.foes.push({ id: 999, kind: "replyAll", boss: false, x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, hurt: 0 });
+    run.foes.push({ id: 999, kind: "replyAll", boss: false, x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, blinkCd: 0, shock: 0, enraged: false, hurt: 0 });
     step(run, { dx: 0, dy: 0 });
     expect(run.status).toBe("playing");
     expect(run.revive).toBe(false);
@@ -445,13 +622,15 @@ describe("the server room", () => {
   });
 
   it("brings the sysadmin, who sends fans of pings", () => {
-    // Floor 10 is the plan's second server-room floor, and its boss is the sysadmin.
+    // Floor 11 is the plan's sysadmin floor; the stairs from 8 go 9, 10, 11.
     const run = room();
     run.cleared = true;
     descend(run);
-    expect(run).toMatchObject({ floor: 10, stage: "serverRoom" });
-    run.time = FLOOR_PLAN[9].horde - 1;
-    play(run, FLOOR_PLAN[9].horde + 1);
+    run.cleared = true;
+    descend(run);
+    expect(run).toMatchObject({ floor: 11, stage: "serverRoom" });
+    run.time = FLOOR_PLAN[10].horde - 1;
+    play(run, FLOOR_PLAN[10].horde + 1);
     const admin = run.foes.find((foe) => foe.kind === "sysadmin");
     expect(admin).toBeDefined();
     expect(run.foes.some((foe) => foe.kind === "middleManager" || foe.kind === "lunchMonitor")).toBe(false);

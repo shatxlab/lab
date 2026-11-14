@@ -3,10 +3,14 @@ import type { Coworker } from "@/lib/roster/types";
 import { random, randomBetween } from "@/lib/tower/sim/random";
 import {
   ARENA,
+  AUDITOR_ENRAGE,
   AUDITOR_SUMMON_EVERY,
   AUDITOR_SUMMONS,
+  BLINK,
   BOSS_PUSH,
+  CHAIR_SUMMONS,
   CHARGE,
+  COFFEE,
   DROP_REACH,
   DUCK_RADIUS,
   FAN_SPREAD,
@@ -24,6 +28,8 @@ import {
   PING,
   INVITE_SUMMONS,
   LEAD_CHARGE,
+  BOSS_AIM_BIAS,
+  BOSS_WALK_IN,
   PAPERWORK,
   PERK_PASSIVE,
   MAX_FOES,
@@ -32,6 +38,7 @@ import {
   MAX_SHOTS,
   MIN_COOLDOWN,
   MIX,
+  PRIME_TONER,
   PRINTER_EVERY,
   PRINTER_RANGE,
   PUSH_FADE,
@@ -39,9 +46,13 @@ import {
   RED_TAPE,
   SECOND_WIND,
   SERVER_ROOM,
+  SHOCK,
+  SHOT_ARM,
+  SHREDDER,
   SPAWN_DISTANCE,
   STAGES,
   TONER,
+  VENDING,
   WEAPONS,
   floorStage,
   hpScale,
@@ -57,7 +68,7 @@ import type { Effect, Foe, FoeKind, Hazard, Input, Interview, OwnedWeapon, Run, 
 
 /** The fixed tick the page steps the sim with, so every device plays the same run. */
 export const STEP = 1 / 60;
-export const RUN_VERSION = 6;
+export const RUN_VERSION = 7;
 
 /** The biggest foe's radius, which every grid search is widened by. */
 const FOE_PAD = Math.max(...Object.values(FOES).map((foe) => foe.radius));
@@ -170,6 +181,10 @@ function serverRoomHazards(run: Run): Hazard[] {
 
 function tickHazards(run: Run, dt: number): void {
   for (const hazard of run.hazards) {
+    if (hazard.kind === "puddle") {
+      hazard.life = (hazard.life ?? 0) - dt;
+      continue;
+    }
     if (hazard.kind === "vent") {
       if (hazard.active > 0) {
         hazard.active = Math.max(0, hazard.active - dt);
@@ -203,6 +218,7 @@ function tickHazards(run: Run, dt: number): void {
       });
     }
   }
+  run.hazards = run.hazards.filter((hazard) => hazard.life === undefined || hazard.life > 0);
 }
 
 /** Advance the run by one `STEP`. While a pick is waiting, or once the run is over, only the effects fade. */
@@ -303,7 +319,9 @@ function moveHero(run: Run, input: Input, dt: number): void {
     dx /= length;
     dy /= length;
   }
-  const slowed = run.hazards.some((hazard) => hazard.kind === "spill" && Math.hypot(hero.x - hazard.x, hero.y - hazard.y) < hazard.radius);
+  const slowed = run.hazards.some(
+    (hazard) => (hazard.kind === "spill" || hazard.kind === "puddle") && Math.hypot(hero.x - hazard.x, hero.y - hazard.y) < hazard.radius,
+  );
   const speed = run.numbers.speed * (slowed ? 1 - KITCHEN.spillSlow : 1);
   hero.x = clampTo(hero.x + dx * speed * dt, HERO_RADIUS, ARENA.width);
   hero.y = clampTo(hero.y + dy * speed * dt, HERO_RADIUS, ARENA.height);
@@ -311,9 +329,9 @@ function moveHero(run: Run, input: Input, dt: number): void {
     hero.faceX = dx / Math.min(1, length);
     hero.faceY = dy / Math.min(1, length);
   }
-  // Printer jams block the way.
+  // Printer jams and the immobile bosses block the way.
   for (const foe of run.foes) {
-    if (foe.kind !== "printerJam") continue;
+    if (foe.speed !== 0) continue;
     const ox = hero.x - foe.x;
     const oy = hero.y - foe.y;
     const distance = Math.hypot(ox, oy);
@@ -377,11 +395,15 @@ function addFoe(run: Run, kind: FoeKind, x: number, y: number, overrides: { boss
     chargeX: 0,
     chargeY: 0,
     duckCooldown: 0,
+    blinkCd: 0,
+    shock: 0,
+    enraged: false,
     hurt: 0,
   };
   run.foes.push(foe);
   return foe;
 }
+
 
 /** A point between `min` and `max` from the hero, inside the arena and not right on top of them. */
 function pointAround(run: Run, min: number, max: number): { x: number; y: number } {
@@ -439,6 +461,8 @@ function spawnFloor(run: Run, dt: number): void {
     run.bossDone = true;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
     const boss = addFoe(run, plan.boss, at.x, at.y, { boss: true, hp: plan.bossHp });
+    // An immobile boss cannot come to the fight later, so it walks in first and plants itself near the hero.
+    if (FOES[plan.boss].speed === 0) boss.walkIn = true;
     run.bossId = boss.id;
   }
   const bossOut = run.bossId !== null && run.foes.some((foe) => foe.id === run.bossId);
@@ -471,7 +495,7 @@ function summon(run: Run, around: Foe, count: number): void {
   }
 }
 
-function shootAt(run: Run, from: Foe, angle: number, shot: { speed: number; radius: number; damage: number; life: number }): void {
+function shootAt(run: Run, from: Foe, angle: number, shot: { speed: number; radius: number; damage: number; life: number }, arm = 0): void {
   run.foeShots.push({
     id: run.nextId++,
     from: from.kind,
@@ -482,6 +506,7 @@ function shootAt(run: Run, from: Foe, angle: number, shot: { speed: number; radi
     radius: shot.radius,
     damage: shot.damage,
     life: shot.life,
+    ...(arm > 0 ? { arm, flown: 0 } : {}),
   });
 }
 
@@ -492,8 +517,32 @@ function act(run: Run, foe: Foe, toHero: number, distance: number): void {
     case "meetingInvite":
       summon(run, foe, INVITE_SUMMONS);
       break;
+    case "meetingChair":
+      summon(run, foe, CHAIR_SUMMONS);
+      break;
     case "printerJam":
       if (distance <= PRINTER_RANGE) shootAt(run, foe, toHero, TONER);
+      break;
+    case "printerPrime": {
+      for (let index = 0; index < PRIME_TONER.stream; index += 1) shootAt(run, foe, toHero + (index - (PRIME_TONER.stream - 1) / 2) * 0.12, PRIME_TONER);
+      if (foe.cycles % 4 === 0) summon(run, foe, 3);
+      break;
+    }
+    case "shredder":
+      if (distance > SHREDDER.wake) break;
+      if (foe.cycles % SHREDDER.burstEvery === 0) {
+        for (let index = 0; index < SHREDDER.burst; index += 1) shootAt(run, foe, toHero + (index / SHREDDER.burst) * Math.PI * 2, SHREDDER.shot, SHOT_ARM);
+      } else {
+        // Fans sweep alternately to either side of the hero, so standing in one is a choice.
+        const side = foe.cycles % 4 < 2 ? -1 : 1;
+        for (let index = 0; index < SHREDDER.fan; index += 1) shootAt(run, foe, toHero + side * (index - (SHREDDER.fan - 1) / 2) * SHREDDER.spread, SHREDDER.shot, SHOT_ARM);
+      }
+      break;
+    case "coffeeMachine":
+      lobAt(run, foe, run.hero.x, run.hero.y, COFFEE.glob, COFFEE.puddle);
+      break;
+    case "vendingMachine":
+      lobAt(run, foe, run.hero.x, run.hero.y, VENDING.can, null);
       break;
     case "middleManager":
     case "lunchMonitor":
@@ -519,13 +568,39 @@ function act(run: Run, foe: Foe, toHero: number, distance: number): void {
     case "recruiter":
       summon(run, foe, RECRUITER_CLONES);
       break;
+    case "blobPrime":
+      foe.shock = SHOCK.seconds;
+      break;
     case "auditor":
       for (let index = 0; index < RED_TAPE.count; index += 1) shootAt(run, foe, toHero + (index / RED_TAPE.count) * Math.PI * 2, RED_TAPE);
-      if (foe.cycles % AUDITOR_SUMMON_EVERY === 0) summon(run, foe, AUDITOR_SUMMONS);
+      if (foe.cycles % AUDITOR_SUMMON_EVERY === 0) summon(run, foe, foe.enraged ? AUDITOR_ENRAGE.summons : AUDITOR_SUMMONS);
       break;
     default:
       break;
   }
+}
+
+/** A lob: a shot that flies to the landing point, hurts everything close there, and may leave a puddle. */
+function lobAt(
+  run: Run,
+  from: Foe,
+  x: number,
+  y: number,
+  shot: { flight: number; radius: number; damage: number; splash: number },
+  puddle: { radius: number; life: number; slow: number } | null,
+): void {
+  run.foeShots.push({
+    id: run.nextId++,
+    from: from.kind,
+    x: from.x,
+    y: from.y,
+    vx: (x - from.x) / shot.flight,
+    vy: (y - from.y) / shot.flight,
+    radius: shot.radius,
+    damage: shot.damage,
+    life: shot.flight,
+    lob: { flight: shot.flight, splash: shot.splash, puddle: puddle ? puddle.radius : undefined },
+  });
 }
 
 /** Is this foe heavy enough that others should move around it rather than push it? */
@@ -539,20 +614,41 @@ function moveFoes(run: Run, dt: number): void {
   for (const foe of [...run.foes]) {
     foe.hurt = Math.max(0, foe.hurt - dt);
     foe.duckCooldown = Math.max(0, foe.duckCooldown - dt);
+    foe.blinkCd = Math.max(0, foe.blinkCd - dt);
+    if (foe.kind === "auditor" && !foe.enraged && foe.hp <= foe.maxHp / 2) {
+      foe.enraged = true;
+      addEffect(run, "pop", foe.x, foe.y, foe.radius + 8, 0.5);
+    }
+    const enraged = foe.enraged ? AUDITOR_ENRAGE.speed : 1;
     const dx = hero.x - foe.x;
     const dy = hero.y - foe.y;
     const distance = Math.hypot(dx, dy);
-    const toHero = Math.atan2(dy, dx);
+    // A sysadmin blinks away when the hero closes in, so the fight stays ranged.
+    if (foe.kind === "sysadmin" && foe.boss && foe.blinkCd <= 0 && distance < BLINK.range) {
+      addEffect(run, "pop", foe.x, foe.y, foe.radius, 0.3);
+      const at = pointAround(run, BLINK.min, BLINK.max);
+      foe.x = clampTo(at.x, foe.radius, ARENA.width);
+      foe.y = clampTo(at.y, foe.radius, ARENA.height);
+      foe.blinkCd = BLINK.every;
+    }
     const def = FOES[foe.kind];
     if (def.every > 0) {
       foe.timer -= dt;
       if (foe.timer <= 0) {
-        foe.timer += def.every;
-        act(run, foe, toHero, distance);
+        foe.timer += def.every * (foe.enraged ? AUDITOR_ENRAGE.timerScale : 1);
+        act(run, foe, toHeroOf(foe, hero), Math.hypot(hero.x - foe.x, hero.y - foe.y));
       }
     }
-    let speed = foe.speed * (1 - foe.slow);
+    let speed = foe.speed * (1 - foe.slow) * enraged;
     let [mx, my] = distance > 0 ? [dx / distance, dy / distance] : [0, 0];
+    // An immobile floor boss walks in first, then plants itself for good.
+    if (foe.walkIn) {
+      if (distance <= BOSS_WALK_IN.station) {
+        foe.walkIn = false;
+      } else {
+        speed = BOSS_WALK_IN.speed;
+      }
+    }
     if (foe.charge > 0) {
       foe.charge -= dt;
       speed *= foe.kind === "teamLead" ? LEAD_CHARGE.speed : CHARGE.speed;
@@ -566,8 +662,19 @@ function moveFoes(run: Run, dt: number): void {
     foe.pushX *= fade;
     foe.pushY *= fade;
     foe.slow = 0;
+    // A blob prime's shockwave expands from it, and the hero had better not stand in the band.
+    if (foe.shock > 0) {
+      foe.shock = Math.max(0, foe.shock - dt);
+      const radius = (SHOCK.seconds - foe.shock) * SHOCK.speed;
+      const at = Math.abs(distance - radius);
+      if (at <= SHOCK.band + HERO_RADIUS) hurtHero(run, SHOCK.dps * dt, foe.kind);
+    }
   }
   separate(run);
+}
+
+function toHeroOf(foe: Foe, hero: { x: number; y: number }): number {
+  return Math.atan2(hero.y - foe.y, hero.x - foe.x);
 }
 
 /** Foes that overlap shove apart, so the horde spreads instead of stacking on one spot. */
@@ -648,9 +755,10 @@ function reap(run: Run): void {
 function nearestFoes(run: Run, count: number, reach: number): Foe[] {
   const { hero } = run;
   return run.foes
-    .map((foe) => ({ foe, distance: Math.hypot(foe.x - hero.x, foe.y - hero.y) }))
+    .map((foe) => ({ foe, distance: Math.hypot(foe.x - hero.x, foe.y - hero.y) - (foe.boss ? BOSS_AIM_BIAS : 0) }))
     .filter((entry) => entry.distance <= reach && entry.foe.hp > 0)
-    .sort((a, b) => a.distance - b.distance)
+    // A boss is the point of its phase: aimed weapons pick it over the horde around it.
+    .sort((a, b) => (Number(b.foe.boss) - Number(a.foe.boss)) || (a.distance - b.distance))
     .slice(0, count)
     .map((entry) => entry.foe);
 }
@@ -801,9 +909,23 @@ function moveFoeShots(run: Run, dt: number): void {
     shot.x += shot.vx * dt;
     shot.y += shot.vy * dt;
     shot.life -= dt;
-    if (Math.hypot(shot.x - hero.x, shot.y - hero.y) <= shot.radius + HERO_RADIUS) {
-      hurtHero(run, shot.damage, shot.from);
+    if (shot.lob) {
+      // A lob lands where it arrives: it hurts everything close there, and a coffee glob leaves a puddle.
+      if (shot.life > 0) return true;
+      const lob = shot.lob;
+      addEffect(run, "blast", shot.x, shot.y, lob.splash, 0.35);
+      if (Math.hypot(shot.x - hero.x, shot.y - hero.y) <= lob.splash + HERO_RADIUS) hurtHero(run, shot.damage, shot.from);
+      if (lob.puddle) {
+        run.hazards.push({ kind: "puddle", x: shot.x, y: shot.y, radius: lob.puddle, timer: 0, active: 0, life: COFFEE.puddle.life });
+      }
       return false;
+    }
+    if (shot.arm !== undefined) shot.flown = (shot.flown ?? 0) + Math.hypot(shot.vx, shot.vy) * dt;
+    if ((shot.flown ?? shot.arm ?? 0) >= (shot.arm ?? 0)) {
+      if (Math.hypot(shot.x - hero.x, shot.y - hero.y) <= shot.radius + HERO_RADIUS) {
+        hurtHero(run, shot.damage, shot.from);
+        return false;
+      }
     }
     return shot.life > 0 && shot.x >= 0 && shot.y >= 0 && shot.x <= ARENA.width && shot.y <= ARENA.height;
   });

@@ -9,7 +9,7 @@ import type { WeaponId } from "@/lib/roster/types";
 
 export type { WeaponId };
 
-export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "lunchMonitor" | "sysadmin" | "auditor" | InterviewBoss;
+export type FoeKind = "replyAll" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "lunchMonitor" | "sysadmin" | "auditor" | InterviewBoss | "meetingChair" | "shredder" | "coffeeMachine" | "vendingMachine" | "printerPrime" | "blobPrime";
 
 /** What hurt the hero: a foe, or a hazard of the stage. */
 export type Source = FoeKind | "microwave" | "vent";
@@ -19,10 +19,10 @@ export type Stage = "openSpace" | "kitchen" | "serverRoom";
 
 /**
  * Something fixed to the floor of a stage: a coffee spill that slows the hero, a microwave that fires rings, a vent that
- * blasts heat in bursts.
+ * blasts heat in bursts — or a coffee puddle a lob leaves behind.
  */
 export interface Hazard {
-  kind: "spill" | "microwave" | "vent";
+  kind: "spill" | "microwave" | "vent" | "puddle";
   x: number;
   y: number;
   radius: number;
@@ -30,6 +30,8 @@ export interface Hazard {
   timer: number;
   /** Seconds left of a vent's blast; 0 while it is quiet. */
   active: number;
+  /** Seconds until a puddle dries; absent for the stage's permanent hazards. */
+  life?: number;
 }
 
 /** The monsters a new hire has to beat before they join: a charging lead, an HR manager, a recruiter. */
@@ -117,6 +119,14 @@ export interface Foe {
   chargeY: number;
   /** Seconds until a rubber duck may hit it again. */
   duckCooldown: number;
+  /** Seconds until a blinking sysadmin may blink away again. */
+  blinkCd: number;
+  /** Set on an immobile floor boss until it has walked in to its post. */
+  walkIn?: boolean;
+  /** Seconds left of a blob prime's expanding shockwave. */
+  shock: number;
+  /** Set when the auditor falls to half hp and gets angry. */
+  enraged: boolean;
   /** Seconds left on its hit flash. */
   hurt: number;
 }
@@ -150,7 +160,7 @@ export interface Drop {
   damage: number;
 }
 
-/** Toner from a printer jam or red tape from the auditor, flying at the hero. */
+/** Toner from a printer jam or red tape from the auditor, flying at the hero. A lob flies to where it will land. */
 export interface FoeShot {
   id: number;
   from: Source;
@@ -161,6 +171,12 @@ export interface FoeShot {
   radius: number;
   damage: number;
   life: number;
+  /** A lob hurts everything close on arrival and may leave a puddle. */
+  lob?: { flight: number; splash: number; puddle?: number };
+  /** A shot with an arm distance only hurts the hero once it has flown that far. */
+  arm?: number;
+  /** How far an armed shot has flown. */
+  flown?: number;
 }
 
 export interface Gem {

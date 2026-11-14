@@ -4,7 +4,7 @@
  */
 import { DEPARTMENTS } from "@/lib/roster/data";
 import { POSE_PAD } from "@/lib/tycoon/render-support/poses";
-import { ARENA, DUCK_RADIUS, HERO_RADIUS, SERVER_ROOM, weaponNumbers } from "../sim/balance";
+import { ARENA, COFFEE, DUCK_RADIUS, HERO_RADIUS, SERVER_ROOM, SHOCK, weaponNumbers } from "../sim/balance";
 import type { Foe, Run } from "../sim/types";
 import type { HeroFrames } from "./heroes";
 
@@ -105,7 +105,7 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, sce
   drawHero(ctx, run, scene, time);
   drawDucks(ctx, run);
   for (const shot of run.shots) drawShot(ctx, shot.weapon, shot.x, shot.y, shot.vx, shot.vy, shot.radius, time);
-  for (const shot of run.foeShots) drawFoeShot(ctx, shot.from, shot.x, shot.y, shot.vx, shot.vy, shot.radius);
+  for (const shot of run.foeShots) drawFoeShot(ctx, shot, time);
   for (const drop of run.drops) drawFallingRack(ctx, drop.x, drop.y, drop.delay);
   for (const effect of run.effects) drawEffect(ctx, effect.kind, effect.x, effect.y, effect.radius, effect.age / effect.life);
   ctx.restore();
@@ -197,6 +197,18 @@ function drawHazards(ctx: CanvasRenderingContext2D, run: Run): void {
       ctx.fillStyle = "rgba(140, 100, 66, 0.55)";
       ctx.beginPath();
       ctx.ellipse(hazard.x - hazard.radius * 0.2, hazard.y - hazard.radius * 0.15, hazard.radius * 0.45, hazard.radius * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      continue;
+    }
+    if (hazard.kind === "puddle") {
+      const fade = Math.min(1, (hazard.life ?? 0) / COFFEE.puddle.life);
+      ctx.fillStyle = `rgba(60, 36, 20, ${0.75 * fade})`;
+      ctx.beginPath();
+      ctx.ellipse(hazard.x, hazard.y, hazard.radius, hazard.radius * 0.72, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(190, 150, 110, ${0.4 * fade})`;
+      ctx.beginPath();
+      ctx.ellipse(hazard.x - hazard.radius * 0.2, hazard.y - hazard.radius * 0.15, hazard.radius * 0.4, hazard.radius * 0.22, 0, 0, Math.PI * 2);
       ctx.fill();
       continue;
     }
@@ -394,8 +406,27 @@ function drawShot(ctx: CanvasRenderingContext2D, weapon: string, x: number, y: n
   ctx.restore();
 }
 
-function drawFoeShot(ctx: CanvasRenderingContext2D, from: string, x: number, y: number, vx: number, vy: number, radius: number): void {
-  if (from === "printerJam") {
+function drawFoeShot(ctx: CanvasRenderingContext2D, shot: Run["foeShots"][number], time: number): void {
+  const { from, x, y, radius } = shot;
+  if (shot.lob) {
+    // A lob in the air: a growing shadow where it will land, and the can or glob itself overhead.
+    const left = Math.max(0, shot.life) / shot.lob.flight;
+    const splash = shot.lob.splash;
+    ctx.fillStyle = from === "coffeeMachine" ? "rgba(120, 70, 40, 0.35)" : "rgba(20, 24, 36, 0.3)";
+    ctx.beginPath();
+    ctx.ellipse(x, y, splash * (1 - left * 0.6), splash * 0.6 * (1 - left * 0.6), 0, 0, Math.PI * 2);
+    ctx.fill();
+    const height = Math.sin((1 - left) * Math.PI) * 30 + 6;
+    ctx.fillStyle = from === "coffeeMachine" ? "#7a4a2b" : "#e0483f";
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y - height, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    return;
+  }
+  if (from === "printerJam" || from === "printerPrime") {
     ctx.fillStyle = "#262838";
     ctx.strokeStyle = "#94b0c2";
     ctx.lineWidth = 1.5;
@@ -417,7 +448,7 @@ function drawFoeShot(ctx: CanvasRenderingContext2D, from: string, x: number, y: 
   }
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(Math.atan2(vy, vx));
+  ctx.rotate(Math.atan2(shot.vy, shot.vx));
   // Paperwork is a white sheet, a ping is blue; red tape is red.
   ctx.fillStyle = from === "hrManager" ? "#f4f4f4" : from === "sysadmin" ? "#41a6f6" : "#e0483f";
   ctx.strokeStyle = INK;
@@ -476,8 +507,7 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
   ctx.translate(x, y);
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1.5;
-  switch (foe.kind) {
-    case "replyAll": {
+  switch (foe.kind) {    case "replyAll": {
       const bob = Math.sin(time * 10 + foe.id) * 1.5;
       ctx.translate(0, bob);
       ctx.fillStyle = "#f4f4f4";
@@ -558,7 +588,110 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
         ctx.strokeRect(r * 0.07, -r * 0.85, r * 0.28, r * 0.18);
         ctx.fillStyle = "#a8744a";
         ctx.fillRect(r * 0.5, -r * 0.1, r * 0.5, r * 0.7);
+        if (foe.enraged) {
+          // Enraged: red eyes and a hot ring, so the change of pace is visible.
+          ctx.fillStyle = "#e0483f";
+          ctx.fillRect(-r * 0.35, -r * 0.8, r * 0.22, r * 0.12);
+          ctx.fillRect(r * 0.13, -r * 0.8, r * 0.22, r * 0.12);
+          ctx.strokeStyle = "rgba(224, 72, 63, 0.5)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
+      break;
+    }
+    case "meetingChair": {
+      // An office chair seen from above: the seat, the back, and a small head behind it.
+      ctx.fillStyle = "#8a9199";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.8, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#ffcd75";
+      ctx.beginPath();
+      ctx.arc(0, r * 0.35, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#5a6470";
+      ctx.fillRect(-r * 0.7, -r * 0.75, r * 1.4, r * 0.35);
+      ctx.strokeRect(-r * 0.7, -r * 0.75, r * 1.4, r * 0.35);
+      break;
+    }
+    case "shredder": {
+      // A shredder: a dark box, a paper slot with teeth, and a light that blinks as it works.
+      ctx.fillStyle = "#3a4256";
+      ctx.fillRect(-r, -r * 0.8, r * 2, r * 1.6);
+      ctx.strokeRect(-r, -r * 0.8, r * 2, r * 1.6);
+      ctx.fillStyle = "#f4f4f4";
+      ctx.fillRect(-r * 0.7, -r * 0.55, r * 1.4, r * 0.22);
+      ctx.fillStyle = INK;
+      for (let tooth = 0; tooth < 4; tooth += 1) ctx.fillRect(-r * 0.65 + tooth * r * 0.38, -r * 0.55, r * 0.1, r * 0.22);
+      ctx.fillStyle = Math.floor(time * 4) % 2 === 0 ? "#e0483f" : "#5d275d";
+      ctx.fillRect(r * 0.55, r * 0.25, r * 0.25, r * 0.25);
+      break;
+    }
+    case "coffeeMachine": {
+      // The coffee machine: a dark body, a carafe of coffee, and a spout.
+      ctx.fillStyle = "#3a4256";
+      ctx.fillRect(-r * 0.9, -r, r * 1.8, r * 2);
+      ctx.strokeRect(-r * 0.9, -r, r * 1.8, r * 2);
+      ctx.fillStyle = "#7a4a2b";
+      ctx.fillRect(-r * 0.55, r * 0.15, r * 1.1, r * 0.6);
+      ctx.strokeRect(-r * 0.55, r * 0.15, r * 1.1, r * 0.6);
+      ctx.fillStyle = "#94b0c2";
+      ctx.fillRect(-r * 0.25, -r * 0.85, r * 0.5, r * 0.4);
+      break;
+    }
+    case "vendingMachine": {
+      // The vending machine: a tall lit window of shelves and a coin slot.
+      ctx.fillStyle = "#b13e53";
+      ctx.fillRect(-r * 0.8, -r, r * 1.6, r * 2);
+      ctx.strokeRect(-r * 0.8, -r, r * 1.6, r * 2);
+      ctx.fillStyle = "#ffe28a";
+      ctx.fillRect(-r * 0.55, -r * 0.8, r * 0.9, r * 1.2);
+      ctx.fillStyle = INK;
+      for (let shelf = 0; shelf < 3; shelf += 1) ctx.fillRect(-r * 0.55, -r * 0.8 + shelf * r * 0.4, r * 0.9, r * 0.06);
+      ctx.fillStyle = "#ffcd75";
+      ctx.fillRect(r * 0.2, -r * 0.2, r * 0.35, r * 0.7);
+      break;
+    }
+    case "printerPrime": {
+      // The prime's printer: like the jammed one, but dark, bigger and angrier.
+      ctx.fillStyle = "#5d275d";
+      ctx.fillRect(-r * 1.1, -r * 0.7, r * 2.2, r * 1.5);
+      ctx.strokeRect(-r * 1.1, -r * 0.7, r * 2.2, r * 1.5);
+      ctx.fillStyle = "#f4f4f4";
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.6, -r * 0.7);
+      ctx.lineTo(-r * 0.4, -r * 1.4);
+      ctx.lineTo(r * 0.1, -r * 1.1);
+      ctx.lineTo(r * 0.6, -r * 1.5);
+      ctx.lineTo(r * 0.6, -r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = Math.floor(time * 6) % 2 === 0 ? "#e0483f" : "#ffcd75";
+      ctx.fillRect(r * 0.6, -r * 0.4, r * 0.3, r * 0.3);
+      break;
+    }
+    case "blobPrime": {
+      // The prime's blob: the monday blob, huge and with an open frown.
+      const squash = 1 + Math.sin(time * 3 + foe.id) * 0.06;
+      ctx.fillStyle = "#4a5a7e";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * squash, r / squash, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.fillRect(-r * 0.5, -r * 0.25, r * 0.3, r * 0.14);
+      ctx.fillRect(r * 0.2, -r * 0.25, r * 0.3, r * 0.14);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, r * 0.3, r * 0.25, Math.PI, Math.PI * 2);
+      ctx.stroke();
       break;
     }
   }
@@ -569,6 +702,15 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
     ctx.fill();
   }
   ctx.restore();
+  if (foe.shock > 0) {
+    // The expanding shockwave, drawn over the floor around the boss.
+    const radius = (SHOCK.seconds - foe.shock) * SHOCK.speed;
+    ctx.strokeStyle = "rgba(255, 190, 90, 0.8)";
+    ctx.lineWidth = SHOCK.band * 1.6;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
 
 /** An arrow at the edge of the screen toward a boss out of view. */

@@ -113,6 +113,18 @@ export const FOES: Readonly<Record<FoeKind, FoeDef>> = {
   hrManager: { hp: 600, radius: 24, speed: 55, touch: 25, xp: 0, gold: 0, every: 2.2, boss: true },
   /** Keeps calling in clones. */
   recruiter: { hp: 1700, radius: 20, speed: 50, touch: 20, xp: 0, gold: 0, every: 3.5, boss: true },
+  /** The floor-2 boss: an immobile chair that blocks the way and calls reply-alls into the meeting. */
+  meetingChair: { hp: 400, radius: 18, speed: 0, touch: 14, xp: 0, gold: 30, every: 9, boss: true },
+  /** The floor-4 boss: an immobile shredder that spits paperwork fans and bursts all around. */
+  shredder: { hp: 330, radius: 19, speed: 0, touch: 10, xp: 0, gold: 30, every: 3.8, boss: true },
+  /** The floor-7 boss: an immobile machine that lobs hot globs where the hero stands, leaving slow puddles. */
+  coffeeMachine: { hp: 600, radius: 18, speed: 0, touch: 10, xp: 0, gold: 30, every: 3.2, boss: true },
+  /** The floor-9 boss: an immobile tank that lobs cans in high arcs where the hero was. */
+  vendingMachine: { hp: 750, radius: 20, speed: 0, touch: 12, xp: 0, gold: 30, every: 3.4, boss: true },
+  /** The floor-10 boss: a slow walker that spits toner streams and coughs up paper trails. */
+  printerPrime: { hp: 800, radius: 20, speed: 24, touch: 16, xp: 0, gold: 30, every: 2.6, boss: true },
+  /** The floor-12 boss: a huge, slow tank whose steps send out expanding shockwaves. */
+  blobPrime: { hp: 950, radius: 26, speed: 26, touch: 22, xp: 0, gold: 30, every: 3.4, boss: true },
 };
 
 /** The interview: a short fight against one boss, with a thin horde around it. */
@@ -149,12 +161,46 @@ export const RED_TAPE = { count: 12, speed: 140, radius: 7, damage: 14, life: 5 
 /** Every this many rings, the auditor also cc's a chain of reply-alls. */
 export const AUDITOR_SUMMON_EVERY = 3;
 export const AUDITOR_SUMMONS = 6;
+/** Below half hp the auditor speeds up, fires more often and doubles its chains. */
+export const AUDITOR_ENRAGE = { timerScale: 0.6, speed: 1.3, summons: AUDITOR_SUMMONS * 2 } as const;
 /** Knockback speed fades by this fraction per second. */
 export const PUSH_FADE = 8;
 /** Bosses only take this share of knockback. */
 export const BOSS_PUSH = 0.15;
 
-// ---- The floor plan ---------------------------------------------------------------------------------------------
+// ---- The floor bosses' own tricks -------------------------------------------------------------------------------
+
+/** Reply-alls a meeting chair calls in at a time. */
+export const CHAIR_SUMMONS = 3;
+/** The shredder: quick double fans of paperwork, and every `burstEvery` timer a full burst around it. */
+export const SHREDDER = {
+  fan: 4,
+  spread: 0.3,
+  shot: { speed: 130, radius: 6, damage: 6, life: 2.2 },
+  burstEvery: 4,
+  burst: 10,
+  /** The shredder only wakes, and its fans and bursts only fly, while the hero is this close. */
+  wake: 300,
+} as const;
+/** The coffee machine: lobs a hot glob to where the hero stands; where it lands, a puddle slows the hero. */
+export const COFFEE = {
+  glob: { flight: 1.1, radius: 7, damage: 12, splash: 34 },
+  puddle: { radius: 34, life: 4, slow: 0.35 },
+} as const;
+/** The vending machine: lobs a can in a high arc to where the hero was; no puddle, more hurt. */
+export const VENDING = { can: { flight: 1.3, radius: 8, damage: 16, splash: 40 } } as const;
+/** The printer prime: a quicker toner than the jammed printer's, in short streams. */
+export const PRIME_TONER = { speed: 170, radius: 6, damage: 9, life: 3.5, stream: 3 } as const;
+/** A blob prime's shockwave: an expanding ring the hero had better not stand in. */
+export const SHOCK = { seconds: 1.1, speed: 130, band: 14, dps: 16 } as const;
+/** A sysadmin blinks away when the hero closes in, and only then. */
+export const BLINK = { range: 150, min: 300, max: 380, every: 5 } as const;
+/** An immobile boss walks in at this speed until it is this close to the hero, then plants itself. */
+export const BOSS_WALK_IN = { speed: 85, station: 170 } as const;
+/** A boss within this much extra reach counts as the nearest foe, so the horde cannot starve it of shots. */
+export const BOSS_AIM_BIAS = 150;
+/** The shredder's shots only arm after this far of flight, so hugging the machine is safe and stepping out is not. */
+export const SHOT_ARM = 60;
 
 // ---- The floor plan ---------------------------------------------------------------------------------------------
 
@@ -182,18 +228,18 @@ export interface FloorPlan {
  */
 export const FLOOR_PLAN: readonly FloorPlan[] = [
   { stage: "openSpace", horde: 16, boss: "middleManager", bossHp: 300 },
-  { stage: "openSpace", horde: 18, boss: "meetingInvite", bossHp: 250 },
+  { stage: "openSpace", horde: 18, boss: "meetingChair", bossHp: 250 },
   { stage: "openSpace", horde: 20, boss: "teamLead", bossHp: 420 },
-  { stage: "openSpace", horde: 22, boss: "hrManager", bossHp: 420 },
+  { stage: "openSpace", horde: 22, boss: "shredder", bossHp: 420 },
   { stage: "kitchen", horde: 24, boss: "lunchMonitor", bossHp: 650 },
   { stage: "kitchen", horde: 26, boss: "hrManager", bossHp: 550 },
-  { stage: "kitchen", horde: 28, boss: "sysadmin", bossHp: 600 },
+  { stage: "kitchen", horde: 28, boss: "coffeeMachine", bossHp: 600 },
   { stage: "kitchen", horde: 30, boss: "recruiter", bossHp: 750 },
   { stage: "serverRoom", horde: 32, boss: "recruiter", bossHp: 850 },
-  { stage: "serverRoom", horde: 34, boss: "sysadmin", bossHp: 800 },
+  { stage: "serverRoom", horde: 34, boss: "printerPrime", bossHp: 800 },
   { stage: "serverRoom", horde: 36, boss: "sysadmin", bossHp: 900 },
-  { stage: "serverRoom", horde: 38, boss: "lunchMonitor", bossHp: 950 },
-  { stage: "openSpace", horde: 40, boss: "auditor", bossHp: 3600 },
+  { stage: "serverRoom", horde: 38, boss: "blobPrime", bossHp: 950 },
+  { stage: "openSpace", horde: 40, boss: "auditor", bossHp: 3200 },
 ];
 
 // ---- Weapons -----------------------------------------------------------------------------------------------------

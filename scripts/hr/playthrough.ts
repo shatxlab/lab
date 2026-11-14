@@ -33,6 +33,10 @@ const DANGER_REACH = 220
 const MARGIN = 26
 const GEM_REACH = 260
 const GEM_WEIGHT = 0.6
+/** How hard the bot wants to close in on the floor's boss. */
+const BOSS_ATTRACT = 90
+/** The bot stops closing in once it is this close to the boss. */
+const BOSS_STOP = 140
 const WALL_MARGIN = 80
 const KEEP_HEADING = 0.35
 
@@ -79,6 +83,17 @@ function danger(run: Run, x: number, y: number): number {
     const distance = Math.max(1, Math.hypot(x - (shot.x + shot.vx * LOOK_AHEAD), y - (shot.y + shot.vy * LOOK_AHEAD)))
     total += (3 * MARGIN * MARGIN) / (distance * distance)
   }
+  // Floor hazards: a vent that is blasting or about to blast within the look-ahead, and a microwave about to
+  // ring. A sensible player keeps off a flashing vent.
+  for (const hazard of run.hazards) {
+    if (hazard.kind === 'vent') {
+      if (hazard.active <= 0 && hazard.timer > LOOK_AHEAD) continue
+    } else if (hazard.kind === 'microwave') {
+      if (hazard.timer > 0.6) continue
+    } else continue
+    const distance = Math.max(1, Math.hypot(x - hazard.x, y - hazard.y) - hazard.radius)
+    total += (6 * MARGIN * MARGIN) / (distance * distance)
+  }
   return total
 }
 
@@ -87,6 +102,13 @@ function gems(run: Run, x: number, y: number): number {
   for (const gem of run.gems) {
     const distance = Math.hypot(gem.x - x, gem.y - y)
     if (distance < GEM_REACH) total += gem.value / (1 + distance / 40)
+  }
+  // The floor's boss is the point of the phase, so the bot closes in on it like a player would — but stops short
+  // of its touch.
+  const boss = run.foes.find((foe) => foe.id === run.bossId)
+  if (boss) {
+    const distance = Math.hypot(boss.x - x, boss.y - y)
+    total += BOSS_ATTRACT * Math.max(0, Math.min(1, (distance - BOSS_STOP) / 120)) / (1 + distance / 60)
   }
   return total
 }

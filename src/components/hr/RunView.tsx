@@ -3,8 +3,9 @@ import { Pause } from "lucide-react";
 
 import { clock, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, type HeroFrames, type Sheet } from "@/lib/hr/render/heroes";
+import { bakeBosses, type BossFrames } from "@/lib/hr/render/bosses";
 import { drawRun, fitView, stickInput, type Stick, type View } from "@/lib/hr/render/draw";
-import { FLOOR_PLAN, FOES, INTERVIEW, xpToNext } from "@/lib/hr/sim/balance";
+import { FLOOR_PLAN, FOES, INTERVIEW, floorStage, xpToNext } from "@/lib/hr/sim/balance";
 import { abandon, choose, descend, step, STEP } from "@/lib/hr/sim/run";
 import type { FoeKind, Pick, Run } from "@/lib/hr/sim/types";
 import { writeRun } from "@/lib/hr/snapshot";
@@ -99,9 +100,15 @@ export function RunView({
   const frames = useMemo<HeroFrames | null>(() => (sheet ? bakeHero(sheet, coworker.id, coworker.department) : null), [sheet, coworker]);
   const framesRef = useRef(frames);
   framesRef.current = frames;
+  const bosses = useMemo<BossFrames | null>(() => (sheet ? bakeBosses(sheet) : null), [sheet]);
+  const bossesRef = useRef(bosses);
+  bossesRef.current = bosses;
 
   const lastPicksRef = useRef("");
   const lastClearedRef = useRef(false);
+  const lastBossRef = useRef<string>("");
+  /** The boss-intro card: set as the boss walks in, cleared by its own timer. */
+  const [intro, setIntro] = useState<FoeKind | null>(null);
 
   const refresh = useCallback(() => {
     const next = snapshot(run);
@@ -109,6 +116,13 @@ export function RunView({
     if ((next.picks && next.picks !== lastPicksRef.current) || (next.cleared && !lastClearedRef.current)) writeRun(run);
     lastPicksRef.current = next.picks;
     lastClearedRef.current = next.cleared;
+    // The boss walked in: show its intro card once, for a few seconds.
+    const bossKey = next.boss ?? "";
+    if (bossKey && bossKey !== lastBossRef.current && next.status === "playing" && !run.interview) {
+      setIntro(next.boss);
+      window.setTimeout(() => setIntro(null), 3200);
+    }
+    lastBossRef.current = bossKey;
     setHud((current) => (sameHud(current, next) ? current : next));
     if (run.status !== "playing" && !overRef.current) {
       overRef.current = true;
@@ -163,7 +177,7 @@ export function RunView({
         const ratio = canvas.width / Math.max(1, viewRef.current.width);
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         const moving = Math.hypot(run.hero.x - fromX, run.hero.y - fromY) > 0.01;
-        drawRun(ctx, run, viewRef.current, { frames: framesRef.current, department: coworker.department, moving, stick: stickRef.current }, now / 1000);
+        drawRun(ctx, run, viewRef.current, { frames: framesRef.current, department: coworker.department, moving, stick: stickRef.current, bosses: bossesRef.current }, now / 1000);
       }
       refresh();
       frame = requestAnimationFrame(tick);
@@ -344,6 +358,7 @@ export function RunView({
               {hud.cleared && (
                 <>
                   <p className="tower-tagline">{text.floorClearedHint}</p>
+                  <p className="tower-tagline hr-next-floor">{text.nextFloor(run.floor + 1, text.stages[floorStage(run.floor + 1)].name)}</p>
                   <div className="tower-actions">
                     <button type="button" className="tower-button" onClick={takeStairs} autoFocus>
                       {text.descend}
@@ -352,6 +367,14 @@ export function RunView({
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {intro && hud.status === "playing" && (
+          <div className="hr-intro" role="status" key={intro}>
+            <p className="tower-kicker">{text.floor(hud.floor)}</p>
+            <h2>{text.foes[intro]}</h2>
+            <p className="tower-tagline">{text.bossHints[intro]}</p>
           </div>
         )}
 

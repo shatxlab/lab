@@ -235,7 +235,7 @@ export const FLOOR_PLAN: readonly FloorPlan[] = [
   { stage: "kitchen", horde: 26, boss: "hrManager", bossHp: 550 },
   { stage: "kitchen", horde: 28, boss: "coffeeMachine", bossHp: 600 },
   { stage: "kitchen", horde: 30, boss: "recruiter", bossHp: 750 },
-  { stage: "serverRoom", horde: 32, boss: "recruiter", bossHp: 850 },
+  { stage: "serverRoom", horde: 32, boss: "vendingMachine", bossHp: 850 },
   { stage: "serverRoom", horde: 34, boss: "printerPrime", bossHp: 800 },
   { stage: "serverRoom", horde: 36, boss: "sysadmin", bossHp: 900 },
   { stage: "serverRoom", horde: 38, boss: "blobPrime", bossHp: 950 },

@@ -81,6 +81,10 @@ export interface HrText {
   /** The panel after a floor's boss falls. */
   floorCleared: string;
   floorClearedHint: string;
+  /** What the stairs lead to, e.g. "Next: floor 5, the Kitchen". */
+  nextFloor: (floor: number, stage: string) => string;
+  /** One line per boss, shown as it walks in; the horde kinds need none. */
+  bossHints: Partial<Record<FoeKind, string>>;
   descend: string;
   pause: string;
   paused: string;
@@ -108,7 +112,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     howTo: [
       "Drag anywhere to move; your coworker attacks on their own.",
       "Pick up the gems to level up, then choose an upgrade.",
-      "The Middle Manager turns up at 2:30 and the Auditor at 5:00. Beat the Auditor before the audit closes at 7:30.",
+      "The day is thirteen floors down, each ending in its own boss. Beat floor 13's Auditor and the day is yours.",
     ],
     home: "← All apps",
     whoGoesIn: "Who goes in today?",
@@ -256,6 +260,21 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     floor: (floor) => `Floor ${floor}`,
     floorCleared: "Floor cleared",
     floorClearedHint: "Take a pick, then take the stairs.",
+    nextFloor: (floor, stage) => `Next: floor ${floor}, the ${stage}`,
+    bossHints: {
+      middleManager: "It charges at where you were. Keep moving.",
+      meetingChair: "It never moves, but the meeting keeps growing. Clear the room.",
+      teamLead: "Fast charges, little wind-up. Dodge early.",
+      shredder: "Its shreddings fly over you at point blank. Step out between the fans.",
+      lunchMonitor: "It charges, dropping lunch thieves as it goes. Punish the charge.",
+      hrManager: "Fans of paperwork, and every third a ring. Watch the gaps.",
+      coffeeMachine: "It lobs where you stand, and its puddles slow you. Keep moving.",
+      recruiter: "Copies, copies everywhere. Find the real one.",
+      printerPrime: "It walks and spits toner. Outrange it, or circle behind.",
+      sysadmin: "Pings in fans — and it blinks away when you close in.",
+      blobPrime: "Its steps send shockwaves. Stay outside the ring.",
+      auditor: "Rings of red tape and chains of reply-alls. At half hp it gets angry.",
+    },
     descend: "Descend",
     pause: "Pause",
     paused: "Paused",
@@ -281,7 +300,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     howTo: [
       "Тяните в любом месте, чтобы идти; сотрудник атакует сам.",
       "Собирайте кристаллы, чтобы расти в уровне и выбирать улучшения.",
-      "Менеджер среднего звена приходит в 2:30, аудитор в 5:00. Одолейте аудитора, пока аудит не закрылся в 7:30.",
+      "День — это тринадцать этажей вниз, и на каждом свой босс. Одолей Аудитора на тринадцатом — и день твой.",
     ],
     home: "← Все приложения",
     whoGoesIn: "Кто идёт сегодня?",
@@ -429,6 +448,21 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     floor: (floor) => `Этаж ${floor}`,
     floorCleared: "Этаж зачищен",
     floorClearedHint: "Забери улучшение и спускайся ниже.",
+    nextFloor: (floor, stage) => `Дальше: этаж ${floor}, ${stage}`,
+    bossHints: {
+      middleManager: "Делает рывок туда, где ты был. Не стой на месте.",
+      meetingChair: "Стоит на месте, но совещание растёт. Расчисти зал.",
+      teamLead: "Быстрые рывки почти без замаха. Уходи заранее.",
+      shredder: "Вплотную обрезки летят поверху. Выходи между веерами.",
+      lunchMonitor: "Рывок — и прихватки с собой. Накажи его в момент рывка.",
+      hrManager: "Вееры бумаг, а каждый третий — кольцо. Ищи щели.",
+      coffeeMachine: "Льёт туда, где ты стоишь, а лужи тормозят. Двигайся.",
+      recruiter: "Копий — хоть отбавляй. Найди настоящую.",
+      printerPrime: "Ходит и плюётся тонером. Бей издали или зайди сзади.",
+      sysadmin: "Пинги веерами — и телепорт, если подойти вплотную.",
+      blobPrime: "От его шагов идёт ударная волна. Держись вне кольца.",
+      auditor: "Кольца красной ленты и цепочки ответов-всем. На половине здоровья придёт в ярость.",
+    },
     descend: "Спуститься",
     pause: "Пауза",
     paused: "Пауза",

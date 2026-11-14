@@ -269,3 +269,48 @@
   margin-top: 0.4rem;
   line-height: 1.4;
 }
+
+/* The boss-intro card: over the field, out of the thumb's way, gone on its own. */
+.hr-intro {
+  position: absolute;
+  top: 0.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(19rem, calc(100% - 1.8rem));
+  padding: 0.7rem 1rem;
+  border-radius: 0.8rem;
+  background: rgba(16, 20, 32, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  text-align: center;
+  pointer-events: none;
+  animation: hr-intro-in 320ms ease-out, hr-intro-out 400ms ease-in 2800ms forwards;
+}
+
+.hr-intro h2 {
+  margin: 0.15rem 0;
+  font-size: 1rem;
+}
+
+.hr-intro .tower-kicker {
+  color: #ffcd75;
+}
+
+@keyframes hr-intro-in {
+  from {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+}
+
+@keyframes hr-intro-out {
+  to {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hr-intro {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@ import { DEPARTMENTS } from "@/lib/roster/data";
 import { POSE_PAD } from "@/lib/tycoon/render-support/poses";
 import { ARENA, COFFEE, DUCK_RADIUS, HERO_RADIUS, SERVER_ROOM, SHOCK, weaponNumbers } from "../sim/balance";
 import type { Foe, Run } from "../sim/types";
+import { BOSS_PIXEL, type BossFrames } from "./bosses";
 import type { HeroFrames } from "./heroes";
 
 export interface View {
@@ -85,6 +86,8 @@ export interface Scene {
   /** Whether the hero moved this frame, for the walk cycle. */
   moving: boolean;
   stick: Stick | null;
+  /** The furniture bosses cut from the sheet; null draws their shape stand-ins. */
+  bosses?: BossFrames | null;
 }
 
 export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, scene: Scene, time: number): void {
@@ -101,7 +104,7 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, sce
   for (const gem of run.gems) drawGem(ctx, gem.x, gem.y, gem.value);
   for (const drop of run.drops) drawDropShadow(ctx, run, drop);
   const foes = [...run.foes].sort((a, b) => a.y - b.y);
-  for (const foe of foes) drawFoe(ctx, foe, time);
+  for (const foe of foes) drawFoe(ctx, foe, time, scene.bosses);
   drawHero(ctx, run, scene, time);
   drawDucks(ctx, run);
   for (const shot of run.shots) drawShot(ctx, shot.weapon, shot.x, shot.y, shot.vx, shot.vy, shot.radius, time);
@@ -500,8 +503,28 @@ function drawEffect(ctx: CanvasRenderingContext2D, kind: string, x: number, y: n
 
 // ---- Foes --------------------------------------------------------------------------------------------------------
 
-function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number): void {
+function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number, bosses?: BossFrames | null): void {
   const { x, y, radius: r } = foe;
+  // The furniture bosses wear the pack's own sprites when the sheet loaded; otherwise their shape stand-ins.
+  const frame = bosses && foe.kind in bosses ? bosses[foe.kind as keyof BossFrames] : null;
+  if (frame) {
+    ellipseShadow(ctx, x, y, r);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.imageSmoothingEnabled = false;
+    const pixel = BOSS_PIXEL[foe.kind as keyof typeof BOSS_PIXEL];
+    const width = frame.width * pixel;
+    const height = frame.height * pixel;
+    ctx.drawImage(frame, -width / 2, r * 0.55 - height, width, height);
+    if (foe.hurt > 0) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
   ellipseShadow(ctx, x, y, r);
   ctx.save();
   ctx.translate(x, y);

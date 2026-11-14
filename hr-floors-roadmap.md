@@ -173,14 +173,28 @@ Sim first, reusing existing bosses as stand-ins so the structure is testable bef
   levels carry the difficulty better than its level 1; a human playtest decides whether the early floors are now
   too easy.
 
-### P2 — thirteen looks (art + copy)
+## P2 — thirteen looks (art + copy) — done, see Current state
 
-- Furniture-frame bosses (2, 7, 9) cut from `PixelOfficeAssets.png` via the existing cut/recolor/scale
-  pipeline (`heroPixels` machinery); shredder (4) drawn from shapes like HR's foes; recolours+scales for
-  10 and 12.
-- Boss intro card per floor (name + one line, EN/RU in `i18n.ts` together), shown as the boss walks in.
-- The floor-clear screen gets its identity: floor number, theme, next-floor preview.
-- aXe checks on the new screens in both languages and themes.
+- The furniture bosses wear the pack's own sprites: `render/bosses.ts` cuts the meeting chair, the coffee machine
+  and the vending machine out of `PixelOfficeAssets.png` (the sheet is already loaded for the hero's frames), and
+  `drawFoe` draws them scaled (`BOSS_PIXEL`) with the shape stand-ins as fallback when the sheet fails. The other
+  bosses stay drawn from shapes, each distinct: the shredder dark with teeth and a blinking light, the printer
+  prime dark purple, the blob prime huge with a frown, the auditor with red eyes and a hot ring once enraged.
+- **Intro cards**: as a floor's boss walks in, a small non-blocking card shows the floor, the boss's name and one
+  line of how to fight it (`bossHints`, EN/RU together in `i18n.ts`); it fades itself out, and
+  `prefers-reduced-motion` gets a static card. The cleared floor's panel gained the next-floor line
+  (`nextFloor`), and the menu's how-to now describes the descent instead of the old audit clock.
+- Every boss phase screenshotted: `scripts/hr/craft-boss-runs.ts` crafts a run JSON per floor sitting exactly in
+  the boss phase, and `scripts/hr/boss-shots.mjs` resumes each one, pauses over the phase (a parked hero would be
+  eaten by the swarm) and shoots all thirteen — inspected, both the sprites and the intro cards read well.
+- While checking the shots against the plan's table, the vending machine turned out to have been dropped from the
+  floor plan during tuning (floors 8 and 9 were both recruiters); floor 9 is the vending machine again
+  (`bossHp` 850), and the bot re-run kept the descent inside the guideline: 51/60 at level 1 over 20 seeds per
+  starter, deaths on floors 4, 10, 11 and mostly 13.
+- Verification: `NODE_ENV=test npm test` 244 files / 3,560 tests, `npm run typecheck`, `npm run build`, and the
+  EN/RU Chromium checks on the production preview (floors-check ALL OK) all passed.
+
+### P2 (historical plan) — see the record above for what landed and how it was verified.
 
 ### P3 — after the descent (separate, decide later)
 

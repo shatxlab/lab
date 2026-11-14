@@ -26,8 +26,9 @@ What changes is the shape around the arena: one time-scaled 450-second session b
 
 ## Current state
 
-- **P0 (the floor skeleton) and P1 (the thirteen distinct boss skills) are implemented and verified.** See the P0
-  and P1 sections below for the details; P2 (distinct looks + intro cards) is next, then P3.
+- **P0 (the floor skeleton), P1 (the thirteen distinct boss skills) and P2 (their looks, intro cards and the
+  screenshot rigs) are implemented and verified** — see the sections below; next is the phone playtest, then P3
+  (endless floors, loot) is decided against it.
 - **P0, in brief:** a day at `/hr` is the thirteen-floor descent: `FLOOR_PLAN` in `sim/balance.ts` (stage, horde
   length, boss kind, boss hp), `spawnFloor`/`floorElapsed` in `sim/run.ts` (the horde ramps within its own floor; the
   floor's boss walks in after the horde and the horde thins to `bossOutShare`; the boss kind is reserved out of the
@@ -49,10 +50,17 @@ What changes is the shape around the arena: one time-scaled 450-second session b
   checks at 360px, EN and RU, passed on the dev server and the production build via `astro preview`
   (`scripts/hr/floors-check.mjs` + `scripts/hr/craft-run.ts`); screenshots inspected.
 - Bot numbers (prototype, tuned over four passes, real-device feel pending): level 1 starters over 20 seeds each
-  won **54/60 descents (90%)**, deaths only on floors 11–13; day 10–14 minutes. Level 6: 30/30; level 11: 10/10 —
-  the audit is the wall, and a human playtest decides whether the early floors are now too easy.
-- Not done (next): P2's distinct looks and intro cards, P3 (endless floors, loot, floor-side unlocks). Nothing
-  beyond these batches committed.
+  won **54/60 descents (90%)** before the career-curve change (below), deaths only on floors 11–13; day 10–14
+  minutes.
+- **Career curve check (done):** with the old `REVIEW.difficultyPerLevel` (0.06) the bot's win rate *rose* with the
+  career — 96% at level 1, 100% at levels 6, 9 and 12 (15 seeds × 3 starters per level) — the climb made the bot's
+  days easier, and the auditor became nearly the only threat (30% → ~50% of all damage taken). Raised to **0.14**:
+  level 1 stays 96%, level 6 96%, level 12 91% — the veteran's day is slightly tighter than the first one, deaths
+  spread over the descent, and the audit stays the wall. 0.18 was tried and rejected (87% with swarm deaths — too
+  squeezed for the bot, likely too hard for humans); interviews at level 12 lose ~2 wins out of 18 per boss
+  (baseline was already mixed: 1/6 and 2/6 starters existed at the old curve). Day length still grows gently with
+  the level (≈9.5 → 11 min).
+- Not done: P3 (endless floors, loot, floor-side unlocks), decided against the phone playtest.
 
 ## The shape of a run after the refactor
 

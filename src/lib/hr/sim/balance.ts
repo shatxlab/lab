@@ -380,7 +380,7 @@ export const REVIEW = {
   /** A promotion lets the player pick one of this many perks (see `PERK_IDS`). */
   perksOffered: 3,
   /** Foes' hp (bosses too) grows by this fraction per career level past the first; spawns by half of it. */
-  difficultyPerLevel: 0.06,
+  difficultyPerLevel: 0.14,
 } as const;
 
 /**

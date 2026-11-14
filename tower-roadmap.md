@@ -158,7 +158,7 @@ After the active-skill vertical slice is coherent:
 Avoid turning Lone Tower into an idle game by default. Auto-fire is an accessibility/comfort option, not a substitute
 for interesting target selection.
 
-### Implementation record — clarity and comfort batch (local, uncommitted)
+### Implementation record — clarity and comfort batch (shipped in `877cb25`)
 
 - **Next-wave preview:** the between-wave picker (and the head-start picker) lists the next wave's exact enemy names and
   counts with a one-line trait each, read from `waveRoster` through `src/lib/tower/wave-intel.ts` — never a second
@@ -259,7 +259,7 @@ situations, and can predict the result. Numerical targets are set from baseline 
    perk/upgrade mapping, checkpoint migration and focused regression tests. This is the next implementation batch.
    *(Done locally, uncommitted — see the implementation record above; harness included.)*
 3. **Clarity and comfort:** next-wave preview, remaining count, telegraphs, optional auto-fire and contextual tutorial.
-   *(Done locally, uncommitted — see the clarity record below.)*
+   *(Shipped in `877cb25` — see the clarity record below. Deployment to be verified separately.)*
 4. **Build iteration:** reroll, build panel and one bounded capstone/tradeoff experiment; add richer run results.
 5. **Encounter iteration:** healer vertical slice, then shieldbearer, then one new boss behavior; human test each.
 6. **Goals/progression:** wave-15 milestone and one bow sidegrade prototype; defer seeded challenges until later.

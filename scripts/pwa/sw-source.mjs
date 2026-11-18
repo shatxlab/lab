@@ -7,9 +7,9 @@
  *   - Every page, script and stylesheet is precached under a versioned cache,
  *     so the whole app works offline after the first visit and every page of one
  *     version is always served together with that version's assets.
- *   - A new deploy installs a new worker in the background; it only takes over
- *     when the visitor accepts the "new version" prompt (message SKIP_WAITING),
- *     so a page is never half old / half new.
+ *   - A new deploy installs a new worker in the background; it takes over
+ *     automatically (message SKIP_WAITING) and the page reloads at once, so a
+ *     page is never half old / half new.
  *   - Large optional data (PDF.js fonts, CMaps, WASM) is cached on first use.
  */
 

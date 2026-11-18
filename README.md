@@ -30,8 +30,8 @@ locally, your files stay on your device, and no accounts or telemetry are involv
   *merge* (imported values win) or *replace*.
 - **Installable and offline** — a manifest and a service worker precache every
   page and script, so the whole site works offline after the first visit.
-  Updates are downloaded in the background and applied when you accept the
-  "new version" prompt.
+  Updates are downloaded in the background and applied automatically — the
+  page reloads itself once the new version is ready.
 - **Accessible** — skip link, visible focus rings, `prefers-reduced-motion`,
   labelled controls and live regions; AA colour contrast is checked in the
   light and dark themes.

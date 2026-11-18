@@ -86,23 +86,45 @@ describe("PwaRegister", () => {
     view.unmount();
   });
 
-  it("offers a reload when a new version is waiting, and reloads only after the visitor agrees", async () => {
+  it("applies a waiting update automatically: skip waiting, then reload on takeover", async () => {
     const reload = vi.fn();
     Object.defineProperty(window, "location", { value: { ...window.location, reload }, writable: true });
     const env = setup({ controller: true });
     const view = await mount(<PwaRegister />);
     await waitFor(() => expect(env.serviceWorker.register).toHaveBeenCalled());
-    await act(async () => env.foundWorker());
-    expect(document.querySelector(".lab-toast")?.textContent).toContain("new version");
 
     // A controller change nobody asked for must not yank the page away.
     await act(async () => env.controllerChange());
     expect(reload).not.toHaveBeenCalled();
 
-    await click(document.querySelector(".lab-toast-primary"));
+    await act(async () => env.foundWorker());
+    // No toast anymore: the update is applied the moment it has downloaded.
+    expect(document.querySelector(".lab-toast")).toBeNull();
     expect(env.installing.postMessage).toHaveBeenCalledWith("SKIP_WAITING");
+
     await act(async () => env.controllerChange());
     expect(reload).toHaveBeenCalledTimes(1);
+    view.unmount();
+  });
+
+  it("reloads on its own if the new worker never fires controllerchange", async () => {
+    const reload = vi.fn();
+    Object.defineProperty(window, "location", { value: { ...window.location, reload }, writable: true });
+    const env = setup({ controller: true });
+    const view = await mount(<PwaRegister />);
+    await waitFor(() => expect(env.serviceWorker.register).toHaveBeenCalled());
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => env.foundWorker());
+      expect(env.installing.postMessage).toHaveBeenCalledWith("SKIP_WAITING");
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(reload).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
     view.unmount();
   });
 

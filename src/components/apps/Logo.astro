@@ -1,0 +1,32 @@
+---
+// The Local Lab mark: a flask on a flat emerald tile. Kept in sync with
+// assets/favicon.svg (the favicon and app icons are generated from that file).
+interface Props {
+  size?: number;
+}
+const { size = 28 } = Astro.props;
+---
+
+<svg
+  class="lab-logo"
+  viewBox="0 0 64 64"
+  width={size}
+  height={size}
+  aria-hidden="true"
+  focusable="false"
+>
+  <defs>
+    <clipPath id="lab-logo-flask">
+      <path d="M26 12h12v14.5l11.4 20.6c1.6 2.9-.5 6.4-3.8 6.4H18.4c-3.3 0-5.4-3.5-3.8-6.4L26 26.5z"></path>
+    </clipPath>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#059669"></rect>
+  <rect x="0" y="38" width="64" height="26" fill="#fff" clip-path="url(#lab-logo-flask)"></rect>
+  <path
+    d="M26 12h12v14.5l11.4 20.6c1.6 2.9-.5 6.4-3.8 6.4H18.4c-3.3 0-5.4-3.5-3.8-6.4L26 26.5z"
+    fill="none"
+    stroke="#fff"
+    stroke-width="3.6"
+    stroke-linejoin="round"></path>
+  <path d="M23 12h18" stroke="#fff" stroke-width="3.6" stroke-linecap="round"></path>
+</svg>

@@ -1,0 +1,747 @@
+import type { CareerProfile } from './career-profile'
+import type { PeopleManagement } from './people-management'
+import type { FloorAssignment } from './operating-contract'
+/** The two markets: where an office sits, where a rival is at home, and where a product's users live. */
+export type Region = 'us' | 'eu'
+export const REGIONS: readonly Region[] = ['us', 'eu']
+
+export type Discipline = 'design' | 'engineering' | 'qa'
+export const DISCIPLINES: readonly Discipline[] = ['design', 'engineering', 'qa']
+
+export type Skills = Record<Discipline, number>
+
+/** The three who build things; analysts and product managers study the market and steer the products instead. */
+export type BuilderRole = 'designer' | 'developer' | 'tester'
+export type Role = BuilderRole | 'analyst' | 'pm'
+
+/** True for the people who add points to projects. */
+export const isBuilder = (employee: { role: Role }): boolean => employee.role !== 'analyst' && employee.role !== 'pm'
+
+export interface Employee {
+  /** Specialist experience and explicit profession appointment; introduced on moving out of the garage. */
+  career?: CareerProfile
+  id: number
+  name: string
+  /** Stable visual identity, independent of world IDs reassigned between chapters. Older saves use id. */
+  appearanceSeed?: number
+  role: Role
+  skills: Skills
+  /** Monthly salary; paid daily as salary / DAYS_PER_MONTH. */
+  salary: number
+  /** Id of the person's quirk; see `data/traits.ts`. */
+  trait: string
+  /** 0-100. Around 75 is a normal day's work; see `moraleSpeed`. */
+  morale: number
+  /** While training, the person does no project work. */
+  training: { discipline: Discipline; finishDay: number } | null
+  /** Where they work; 0 for a candidate who hasn't been hired yet. */
+  officeId: number
+  /** Legacy LEVELS/PM-table index (0–3); career.grade owns managed specialist seniority. */
+  level: number
+  /** The day they reached their level (or were hired at it). */
+  levelDay: number
+  /** The day they joined; for candidates, the day they were found. */
+  hiredDay: number
+  /** The day they became ready for their next promotion, or null if they aren't. */
+  readySince: number | null
+  /** One of the two people who started the studio: they never leave and draw less than market pay. */
+  founder?: boolean
+  /** The founders' titles once the company is big: you are CEO and your friend CTO (`changeOfGuard`). */
+  title?: 'CEO' | 'CTO'
+  /** The day a counter-offer last kept them; a rival leaves them alone for a while after. */
+  keptDay?: number
+  /** The region they were hired in: sets the wages they draw. Absent means the US. */
+  region?: Region
+  /** Skill at reading users and markets: analysts and product managers have it, and do no project work. */
+  analysis?: number
+  /** The office whose project they work on, when it is not the one they sit in. Absent means their own. */
+  teamId?: number
+  /** What they have learned by doing the work: days spent on each product type and on each product. Absent until they have worked. */
+  knowledge?: Knowledge
+}
+
+/** Days of hands-on work, by product type id and by product id (as a string): what a person brings to the next job. */
+export interface Knowledge {
+  types: Record<string, number>
+  products: Record<string, number>
+}
+
+export interface ProductType {
+  id: string
+  name: string
+  /** Reputation needed before this type can be started. */
+  unlockReputation: number
+  /** Research id that must be finished before this type can be started. */
+  requiresResearch?: string
+  /** The era (index into ERAS) from which there is a market for it at all; 0 when there always is. */
+  era: number
+  /** How much each discipline matters for quality; sums to 1. */
+  weights: Skills
+  /** Points required before any features are added (times WORK_SCALE). */
+  baseTarget: Skills
+  /** Users a perfect (quality 100) Small product with no features reaches in a normal market. */
+  audience: number
+  /** What each user pays per month. */
+  revenuePerUser: number
+  /** What its users are called: players, subscribers... */
+  userNoun: string
+}
+
+export interface Feature {
+  id: string
+  name: string
+  /** Extra points required to build this feature. */
+  cost: Skills
+  /** Research id that must be finished before this feature can be chosen. */
+  requiresResearch?: string
+  /** Revenue weight; also weights this feature's fit in the quality score. */
+  value: number
+  /** Product type ids this feature belongs in. Others get a fit penalty. */
+  suits: string[]
+}
+
+/** Who a product is for. Picked when it is started; what they value is hidden until feedback shows it. */
+export interface Audience {
+  id: string
+  productTypeId: string
+  name: string
+  /** A hint about what they care about, without naming features. */
+  blurb: string
+  /** Multiplies the users the type can reach: wide audiences are big... */
+  reach: number
+  /** ...and multiplies what each pays: ...and niche ones pay more. */
+  pay: number
+  /** How much this audience values a feature, by feature id; unlisted features count 1. */
+  likes: Record<string, number>
+}
+
+/** How big a product (or an update to it) is; see PROJECT_SIZES in balance.ts. */
+export type ProjectSize = 'small' | 'medium' | 'large' | 'flagship'
+export const PROJECT_SIZE_IDS: readonly ProjectSize[] = ['small', 'medium', 'large', 'flagship']
+
+/** Campaign and promotion sizes. */
+export type Tier = 'small' | 'medium' | 'large'
+export const TIERS: readonly Tier[] = ['small', 'medium', 'large']
+
+export interface Project {
+  id: number
+  name: string
+  /** A new product, an update to the live product `parentId`, or work for a client. */
+  kind: 'new' | 'update' | 'contract'
+  parentId: number | null
+  productTypeId: string
+  /** Who it is for (an update has its product's); absent means the type's first audience. */
+  audienceId?: string
+  /** An update is always the size of the product it updates. */
+  size: ProjectSize
+  featureIds: string[]
+  target: Skills
+  progress: Skills
+  startDay: number
+  /** True once the `projectReady` event has fired, so it fires only once. */
+  readyNotified: boolean
+  /** Reach multiplier from choices made during development; 1 when nothing happened. */
+  hype: number
+  /** True once the halfway alpha checkpoint has been offered, so it comes up once per project. */
+  alphaOffered: boolean
+  /** Multiplier on the bugs a release ships with, from choices made during development; 1 when nothing happened. */
+  bugRisk: number
+  /** Growing a product: the bigger size it becomes when this update ships. */
+  grows?: ProjectSize
+  /** Localising a product: opens the European market when this update ships. */
+  localises?: boolean
+  /** A roadmap item (`data/workstreams.ts`) this release builds; it counts as built for the product when it ships. */
+  itemId?: string
+  /** A pivot: the product is for this audience once the release ships. */
+  pivotsTo?: string
+  /** A polishing release: it fixes most of the open bugs and ships fewer new ones. */
+  polishes?: boolean
+  /** A release the product's own team started (`sim/teams.ts`): it ships by itself when every bar is full. */
+  byTeam?: boolean
+  /** What a team release really adds, in points: bugs come from this, not from the extra work of a bigger company. */
+  scope?: number
+  /** The spec a floor's product manager wrote for this release (`sim/cycle.ts`); it names the version and sets how much rework the build needs. */
+  spec?: ReleaseSpec
+  /** Client work: who it is for, what it pays on delivery, and when it is due. Null for everything else. */
+  contract: ContractTerms | null
+}
+
+/** Which part of a version number a release moves: a patch for upkeep, a minor for a feature or item, a major for something big. */
+export type Bump = 'major' | 'minor' | 'patch'
+
+/** What a finished spec says about the release being built from it. */
+export interface ReleaseSpec {
+  /** The requirement being built, e.g. "Multiplayer". */
+  title: string
+  bump: Bump
+  /** How clear the spec was, 0..100: it sets the rework and the bugs of the build, and a little of the reach it wins. */
+  clarity: number
+  /** What the card said it would do, to show while it is built. */
+  promise?: string
+}
+
+/** A card in the company's plan: a release, or something for your own hands. `id` is a feature id, a roadmap item id, a step or a kind of deep work. */
+export interface Proposal {
+  kind: 'feature' | 'item' | 'polish' | 'compliance' | 'localise' | 'deep' | 'strike'
+  id: string
+  /** Why the analysts think so, in a sentence, from the product's own numbers. */
+  why: string
+}
+
+/** What the company does next: the cards on the table. The clock stops until the player picks one (`sim/cycle.ts`). */
+export interface Plan {
+  clarity: number
+  /** Empty while the analysts research. */
+  cards: Proposal[]
+  /** The player sent the analysts back to the numbers: the clock runs until this day, then new cards are dealt. */
+  researchUntil?: number
+}
+
+/** A line in a product's release history. */
+export interface ReleaseNote {
+  version: string
+  /** The requirement, or "" for upkeep. */
+  title: string
+  day: number
+  /** Floor name, for the log. */
+  by: string
+  clarity?: number
+  reachBefore: number
+  reachAfter: number
+  fitBefore: number
+  fitAfter: number
+  qualityBefore: number
+  qualityAfter: number
+  bugsShipped: number
+}
+
+export interface ContractTerms {
+  client: string
+  pay: number
+  dueDay: number
+  /** What the client advanced when the job was taken; it comes off the final payment. Absent in older saves. */
+  deposit?: number
+  /** An enterprise contract: the live product the client wants customised. Delivering it counts as a release of that product. */
+  productId?: number
+}
+
+/** A job a client is offering: build this for that much, in about that long. */
+export interface ContractOffer {
+  id: number
+  client: string
+  /** What they want, e.g. "a booking site". */
+  title: string
+  target: Skills
+  pay: number
+  /** Days from accepting to the deadline. */
+  days: number
+  /** The last day it is on the board; absent in older saves, where it does not run out. */
+  expiresDay?: number
+  /** An enterprise contract: the live product the client wants customised. */
+  productId?: number
+}
+
+export interface ProductUpdate {
+  day: number
+}
+
+export interface Product {
+  id: number
+  name: string
+  productTypeId: string
+  /** Who it is for; absent means the type's first audience. */
+  audienceId?: string
+  /** Sets how long users stay interested, how many bugs it can carry, and the size of its updates. */
+  size: ProjectSize
+  /** Every feature shipped so far, including through updates. */
+  featureIds: string[]
+  quality: number
+  releaseDay: number
+  /** Users it would have while fresh and bug-free. Set at launch, raised by updates. */
+  reach: number
+  /** Users right now; they drift toward the reach that interest, bugs and promotions allow. */
+  users: number
+  /** The share of its reach that is in Europe, 0 until it is localised. Its users there are `euUsers`, part of `users`. */
+  euShare?: number
+  euUsers?: number
+  /** Open bugs. Fractional while users are still finding the next one. */
+  bugs: number
+  /** Bugs an update shipped that users have not found yet; they come to light over the next weeks. */
+  pendingBugs: number
+  /** True once it has taken off (see `sim/fit.ts`): it reaches far more people than it otherwise would. */
+  hit: boolean
+  /** Its product–market fit as of its last release, 0..100; absent in older saves, where it is worked out when needed. */
+  fit?: number
+  /** The fit its last release earned: what a hit's fit sags from and recovers towards (`sim/fit.ts`). Absent means `fit`. */
+  peakFit?: number
+  /** True once it has pivoted to another audience: a product does that once. */
+  pivoted?: boolean
+  /** A hit's pull on the world, a multiplier on its reach that grows while it is healthy and its servers have room (`sim/scale.ts`). Absent means 1. */
+  world?: number
+  /** The roadmap: ranked ids of the workstream items still to build (`data/workstreams.ts`); the floors take from the top. */
+  roadmap?: string[]
+  /** The workstream items built so far; their effects stack (`itemEffects`). */
+  built?: string[]
+  /** A side product (kept from the garage at move-out) earns what it earns; a Reach or Keep companion makes the hit bigger. Each takes one of the second-product slots. */
+  role?: 'side' | 'reach' | 'keep'
+  /** Which companion this is (`data/companions.ts`), for a product launched as one. */
+  companionId?: string
+  totalRevenue: number
+  updates: ProductUpdate[]
+  /** A promotion (or launch campaign) runs while `day < boostUntil`, bringing in `boostUsers` new users a day. */
+  boostUntil: number
+  boostUsers: number
+  /** Semantic version of the last release: 1.0.0 at launch; absent in older saves, which start there. */
+  version?: [number, number, number]
+  /** The last releases, newest last (`sim/releases.ts`). */
+  releases?: ReleaseNote[]
+  /** Features queued for the next release by the team that looks after it. Absent when none are. */
+  nextFeatures?: string[]
+  /** Users earlier promotions won over for good, slowly drifting away; part of what the product heads toward. Absent in older saves. */
+  loyalUsers?: number
+  /** Once Marketing automation is researched: promote this product by itself at this tier whenever the bank allows. */
+  autoPromote?: Tier | null
+  /** A Flagship licensed to other companies (needs the Licensing programme): it pays a fee on top, for as long as it is kept in shape. */
+  licensed?: boolean
+}
+
+/** A bug-fixing job: a developer and a tester, from any office, working through a product's bugs together. */
+export interface Fix {
+  id: number
+  productId: number
+  developerId: number
+  testerId: number
+  /** Points the job needs: engineering from the developer, QA from the tester. */
+  target: Skills
+  progress: Skills
+  /** How many bugs the job set out to fix, and how many are fixed so far. */
+  bugs: number
+  bugsFixed: number
+  startDay: number
+  /** True when Incident management started it on its own. */
+  auto: boolean
+}
+
+/** The standing pair that Incident management sends to the buggiest product on its own. */
+export interface OnCall {
+  developerId: number
+  testerId: number
+}
+
+/** A product that left the portfolio: switched off, or sold to a rival. */
+export interface RetiredProduct {
+  id: number
+  name: string
+  productTypeId: string
+  size: ProjectSize
+  hit: boolean
+  releaseDay: number
+  endDay: number
+  /** Users it had when it left. */
+  users: number
+  totalRevenue: number
+  outcome: 'retired' | 'sold'
+  /** What a sale paid; 0 for a plain retirement. */
+  price: number
+  /** The rival that bought it, or null for a retirement (or a sale with no rival left to buy it). */
+  buyer: string | null
+}
+
+/** One monthly sample for the stats charts. Money is the balance; income and burn are per day. */
+export interface HistoryPoint {
+  day: number
+  money: number
+  income: number
+  burn: number
+}
+
+export interface DayWork {
+  employeeId: number
+  /** Points actually added to the project this day. */
+  points: Skills
+  /** True when the work went into a bug-fixing sprint. */
+  fixing: boolean
+}
+
+/** Things a modifier or a research effect can scale. */
+export const STATS = [
+  'workSpeed',
+  'designSpeed',
+  'engineeringSpeed',
+  'qaSpeed',
+  'revenue',
+  'quality',
+  'wage',
+  'candidateSkill',
+  'skillGain',
+] as const
+export type Stat = (typeof STATS)[number]
+
+/** A temporary multiplier, e.g. "revenue x0.6 for 10 days". Active while `day < expiresDay`. */
+export interface Modifier {
+  id: number
+  /** Who added it, so the same source can be detected (e.g. an active investor deal). */
+  source: string
+  stat: Stat
+  mult: number
+  expiresDay: number
+}
+
+export interface ResearchState {
+  /** Learned non-repeatable research, including inactive company-practice blueprints; survives all endings. */
+  known: string[]
+  /** Completed active research in this company (not an archive of inactive practices). */
+  done: string[]
+  /** What is being researched now; one thing at a time. */
+  /** `target` is what a repeatable study is about (an audience id). */
+  active: { id: string; finishDay: number; remainingWork?: number; target?: string } | null
+}
+
+/** A random event waiting for the player's choice. `data` is whatever the event picked at roll time. */
+export interface PendingEvent {
+  id: string
+  data: Record<string, number>
+}
+
+/** Sounds the simulation may ask for; the UI maps them onto its own. */
+export type NoticeSound = 'milestone' | 'research' | 'ship' | 'deal'
+
+export type SimEvent =
+  | { type: 'projectReady'; officeId: number }
+  /** `reach` is the users the product can now reach; `bugs` how many this release shipped with. */
+  | { type: 'shipped'; productId: number; update: boolean; reach: number; bugs: number; quality: number }
+  | { type: 'bankrupt' }
+  /** A launch broke out: it reaches far more people than planned. */
+  | { type: 'breakout'; productId: number }
+  /** The studio reached a new stage of its journey (an index into STAGES). */
+  | { type: 'stage'; stage: number }
+  /** A new era began (an index into ERAS). */
+  | { type: 'era'; era: number }
+  | { type: 'randomEvent' }
+  /** A bigger company offered to buy the studio (see `GameState.exit`). */
+  | { type: 'offer' }
+  /** The hit's team shipped a release: time to show what it did. */
+  | { type: 'released'; productId: number }
+  /** Passive news for a toast; `sound` asks the UI to play a jingle with it. */
+  | { type: 'notice'; text: string; sound?: NoticeSound }
+
+/** A garage at first; a real office after the move. More offices can open later. */
+/** Where the studio works: a café table at first, then the garage, then rented floors. */
+export type OfficeKind = 'cafe' | 'garage' | 'office'
+
+/** One place of work: its own team (the employees with its id) and its own project. */
+export interface Office {
+  id: number
+  kind: OfficeKind
+  /** Colour scheme of the room, so offices tell apart at a glance. */
+  theme: number
+  /** Where it is: the café, the garage and the first office are in the US. Absent in older saves, which are all US. */
+  region?: Region
+  project: Project | null
+  /** Explicit post-hit capacity reservation (v8). */
+  assignment?: FloorAssignment
+  /** The product this floor's team looks after, releasing it as its `workstream` says (`sim/teams.ts`). */
+  productId?: number
+  workstream?: Workstream
+  /** The day the team ran out of work, to give the player a few days before the next release starts by itself. */
+  idleSince?: number
+}
+
+/**
+ * What a floor works on for the product it looks after: its queued features, quality (bugs and speed), scale
+ * (the users the servers hold), growth, monetisation, or Europe; or on the studio's internal tools, or the companion
+ * products that make the hit bigger. Items for all but features come from the product's roadmap.
+ */
+export type Workstream = 'features' | 'quality' | 'scale' | 'growth' | 'monetisation' | 'europe' | 'tools' | 'companions'
+export const WORKSTREAMS: readonly Workstream[] = ['features', 'quality', 'scale', 'growth', 'monetisation', 'europe', 'tools', 'companions']
+
+/** A competing studio. Its products live in `GameState.rivalProducts`. */
+export interface Rival {
+  id: number
+  name: string
+  /** The quality it ships at, roughly; it creeps up over the years. */
+  skill: number
+  reputation: number
+  /** Product types it likes to build. */
+  focus: string[]
+  /** Where it is at home: its products compete there in full and abroad only a little. Absent means the US. */
+  region?: Region
+  /** The biggest projects it takes on now; it grows into bigger ones as its name does. */
+  size: ProjectSize
+  nextLaunchDay: number
+  /** Income per day from business outside the shared markets; it grows every month. */
+  business: number
+  /** Yearly growth of that business, up to its cap. */
+  growth: number
+  businessCap: number
+  /** For a nemesis: what it earns against you (1 is level). Its income is this times yours, not its own products'. */
+  ratio?: number
+}
+
+/** A rival's product: the same user model as yours, kept simpler (no bugs, no promotions). */
+export interface RivalProduct {
+  id: number
+  rivalId: number
+  name: string
+  productTypeId: string
+  size: ProjectSize
+  quality: number
+  releaseDay: number
+  /** Its last update; rivals keep their best products fresh, the rest fade. */
+  updatedDay: number
+  reach: number
+  users: number
+  hit: boolean
+}
+
+/** Compact, chapter-local measurements at a decision or its completion boundary. */
+export interface BusinessSnapshot {
+  day: number
+  cash: number
+  revenue: number
+  net: number
+  users: number
+  fit: number
+  bugs: number
+  reach: number
+  capacity: number
+}
+
+export interface BusinessDecision {
+  productId: number
+  projectId?: number
+  title: string
+  kind: 'release' | 'deep' | 'strike'
+  before: BusinessSnapshot
+  after?: BusinessSnapshot
+}
+
+export interface GameState {
+  /** Paid next-company provenance. Absent in initial/legacy companies; enabled only through v12 founding. */
+  founding?: {
+    ambition: import('./founder-finance').VentureAmbition
+    focus: string
+    /** Conditions already true at founding, not earned milestones and never paid out for this start. */
+    excludedMilestones: string[]
+  }
+  /** Company review policy/reporting, reset for the next venture. Absent before the operating company. */
+  peopleManagement?: PeopleManagement
+  /** Last 24 decisions in this company; absent in older saves. Measurements, not attribution. */
+  businessDecisions?: BusinessDecision[]
+  version: number
+  /** Seeded RNG state (mulberry32); mutated by `rand`. */
+  rng: number
+  /** Days elapsed since the start; day 0 is the first day. */
+  day: number
+  money: number
+  reputation: number
+  nextId: number
+  employees: Employee[]
+  /** Never empty: the studio starts with its garage. */
+  offices: Office[]
+  /** How far along its journey the studio is: an index into STAGES. */
+  stage: number
+  products: Product[]
+  /** Hire pool, regenerated every CANDIDATE_REFRESH_DAYS. */
+  candidates: Employee[]
+  /** Client work on offer: new jobs turn up every few days and old ones expire. */
+  contracts: ContractOffer[]
+  /** The day the next job may join the board; absent in older saves. */
+  nextOfferDay?: number
+  /** The day the next enterprise contract may be offered; absent until Enterprise sales is researched. */
+  nextEnterpriseDay?: number
+  /** Contracts delivered, ever. */
+  contractsDone: number
+  rivals: Rival[]
+  rivalProducts: RivalProduct[]
+  /** Days counted at the top of the industry ranking as a leader; a day below costs a few of them. */
+  daysAtTop: number
+  /** Studios the company has absorbed: they do not move into the market again when their year comes. Absent means none. */
+  absorbedNames?: string[]
+  /** Days in a row the company has made a profit; goes public with the Global stage (`sim/exit.ts`). Absent means 0. */
+  profitDays?: number
+  /** The day each product type's demand last made the news; absent in older saves. */
+  marketNews?: Record<string, number>
+  /** Every product name ever given out, yours and the rivals', lower case, so none comes back; absent in older saves. */
+  usedNames?: string[]
+  /** Income per day, averaged over the last couple of months (`trailingIncome`); absent in older saves. */
+  incomeAverage?: number
+  /** Income per day from the businesses of rivals you bought, beyond their products. */
+  acquiredIncome: number
+  lifetimeRevenue: number
+  shippedCount: number
+  /** Bug-fixing jobs in progress, each with its two people. */
+  fixes: Fix[]
+  /** The Incident management pair, once that research is done and the player has picked them. */
+  onCall: OnCall | null
+  /** Products that were retired or sold, oldest first. */
+  retired: RetiredProduct[]
+  /** Insight analysts have gathered and not spent yet; see `sim/insight.ts`. */
+  insight: number
+  /** Audiences the studio has studied: what they like is shown in full. */
+  surveyed: string[]
+  /** Bugs fixed by fixing jobs, ever. */
+  bugsFixed: number
+  /** The studio's first hit, which it becomes known for; null until it has one. */
+  signatureId: number | null
+  /** What the studio is called, chosen at the start; absent in older saves. */
+  studioName?: string
+  /** The rival that has made you its business, if there is one; see `sim/nemesis.ts`. */
+  nemesis?: Nemesis
+  /** How many nemeses you have beaten. */
+  nemesesBeaten?: number
+  /** The piece of deep work you are on, if any; see `sim/deepwork.ts`. */
+  deepWork?: DeepWork
+  /** The last piece of deep work you took on, so the next plan offers something else. */
+  lastDeepWork?: string
+  /** What the company does next, while that is up to the player; see `sim/cycle.ts`. */
+  plan?: Plan
+  /** Your oldest friend and what became of them; see `sim/friend.ts`. */
+  friendArc?: FriendArc
+  /** Months in a row the company has doubted you, and whether you have rallied it once; see `sim/crisis.ts`. */
+  doubtMonths?: number
+  rallied?: boolean
+  /** The day the next one comes, after one is beaten. */
+  nextNemesisDay?: number
+  /** The day the studio's first hit took off. */
+  hitDay?: number
+  /** Which company of your career this is (1 for the first); absent in older saves. See `sim/chapters.ts`. */
+  chapter?: number
+  /** The companies you have ended before this one, oldest first. */
+  legacy?: LegacyEntry[]
+  /** The day this chapter began; absent in the first. */
+  chapterStartDay?: number
+  /** True from the start of a new chapter until you have named the new studio. */
+  freshChapter?: boolean
+  /** Consecutive days with negative money. */
+  debtDays: number
+  /** Demand multiplier per product type id, around 1.0; applied when a product ships. */
+  market: Record<string, number>
+  modifiers: Modifier[]
+  pendingEvent: PendingEvent | null
+  research: ResearchState
+  /** Day the last random event was offered or resolved, for the cooldown. */
+  lastEventDay: number
+  /** Ids of the latest random events, newest last, so the same one does not come round again at once. Absent in older saves. */
+  recentEvents?: string[]
+  /** Investor deals taken so far. The investor is a one-time last chance, not a recurring bailout. */
+  investorDeals: number
+  /** Day of the last team outing, for its cooldown. */
+  lastOutingDay: number
+  /** Ids of the milestones reached so far. */
+  milestones: string[]
+  /** Monthly samples for the stats charts, oldest first, capped. */
+  history: HistoryPoint[]
+  /** The day the last new product was started (client work doesn't count), for the pace limit. */
+  lastNewProductDay: number
+  gameOver: boolean
+  /** How the run ended, once `gameOver`; null while it goes on. */
+  ending: Ending | null
+  /** Offers to buy the studio: only made in the garage, and gone for good once the studio moves out. */
+  exit: ExitState
+  /** Everything the player decided and everything that happened, oldest first: exported to review a run. */
+  journal: JournalEntry[]
+  /** Contributions from the most recent day, for the renderer's popups. */
+  dayWork: DayWork[]
+  /** Pending events for the UI; drained with `drainEvents`. */
+  events: SimEvent[]
+}
+
+/** The founder's own hands-on work on the hit. */
+export interface DeepWork {
+  kind: string
+  startDay: number
+  days: number
+  /** Set at the halfway checkpoint. */
+  checkpointDone?: boolean
+  bold?: boolean
+  /** A contractor or your friend lends a hand. */
+  helped?: boolean
+}
+
+/** The story of your friend, the other founder. */
+export interface FriendArc {
+  stage: 'together' | 'restless' | 'courted' | 'gone' | 'returned'
+  /** 0 to 100. */
+  bond: number
+  /** Whether they have told you about their own idea. */
+  ideaTold?: boolean
+  /** Who they were when they left, to come back as. */
+  left?: Employee
+  /** The nemeses beaten when they left: they write again once another falls. */
+  beatenAtLeave?: number
+}
+
+/** A named rival who came for the hit. Their income lives on the rival (`Rival.ratio`). */
+export interface Nemesis {
+  rivalId: number
+  /** The person who runs it, and why it is personal. */
+  founder: string
+  story: string
+  since: number
+  /** Days in a row you have out-earned them by the margin. */
+  leadDays: number
+  nextMoveDay: number
+  /** How many roadmap items the hit had built when last counted, to see what you finished this month. */
+  builtSeen: number
+  /** How many releases the hit had when last counted. */
+  updatesSeen?: number
+  /** The day you last struck back. */
+  struckDay?: number
+}
+
+/** A company of your career that has ended. */
+export interface LegacyEntry {
+  studio: string
+  ending: Ending['kind']
+  worth: number
+  years: number
+}
+
+export interface Ending {
+  kind: 'bankrupt' | 'ousted' | 'sold' | 'retired' | 'ipo'
+  day: number
+  /** What a sale paid. */
+  price?: number
+  bidder?: string
+  /** What the studio was worth at the end: cash plus what a buyer would pay for what it earns. */
+  worth: number
+}
+
+export interface ExitState {
+  /** The IPO eligibility celebration was dismissed in this company. Absent means not yet acknowledged. */
+  ipoAcknowledged?: boolean
+  /** Offers turned down so far; each makes the next one better. */
+  declined: number
+  /** No offer before this day. */
+  nextDay: number
+  /** The offer waiting for an answer, if any. */
+  pending: { price: number; bidder: string } | null
+  /** The day of the first offer; buyers lose interest `EXIT_WINDOW_DAYS` after it. Null before any offer. */
+  firstDay: number | null
+  /** True once buyers have lost interest for good. */
+  closed: boolean
+}
+
+/** One line of the run's log: a decision the player made, or something that happened to the studio. */
+export interface JournalEntry {
+  day: number
+  /** Dotted category, e.g. `project.start`, `hire`, `month`. */
+  kind: string
+  text: string
+  /** Money in the bank at the time, so a decision can be read against what the player could afford. */
+  cash: number
+  data?: Record<string, string | number | boolean | string[]>
+}
+
+export type Result = { ok: true } | { ok: false; reason: string }
+
+export const OK: Result = { ok: true }
+
+export function fail(reason: string): Result {
+  return { ok: false, reason }
+}
+
+export function emptySkills(): Skills {
+  return { design: 0, engineering: 0, qa: 0 }
+}

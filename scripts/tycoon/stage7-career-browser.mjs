@@ -1,0 +1,101 @@
+// Played career acceptance in the actual production island. Run stage7-acceptance.ts and bundle the adapter first.
+// Browser performs every ending/funding write. Bot advances exported active companies through real costs/work/events;
+// the resulting supported backup is imported through the real Menu, never directly patched into the running Store.
+import assert from 'node:assert/strict'
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright')
+const dir = '/tmp/tycoon-stage7-played-career'; mkdirSync(dir, { recursive: true })
+const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
+const context = await browser.newContext({ viewport: { width: 1280, height: 900 } }), errors = []
+await context.addInitScript((source) => {
+  window.__csp = []; document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective}: ${e.blockedURI}`))
+  if (!localStorage.getItem('__played_career')) { localStorage.setItem('lab:tycoon:save', source); localStorage.setItem('lab:tycoon:muted', 'true'); localStorage.setItem('__played_career', 'yes') }
+}, readFileSync('/tmp/tycoon-stage7-earned-ready.json', 'utf8'))
+const page = await context.newPage(); page.on('pageerror', (e) => errors.push(e.message))
+const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('lab:tycoon:save')))
+const ready = () => page.locator('.scene-host[data-render-ready="true"] canvas').waitFor()
+const chapter = () => page.getByRole('dialog', { name: 'Your next chapter', exact: true })
+const nav = () => page.waitForEvent('framenavigated', (f) => f === page.mainFrame())
+async function reloadSame() { const before = await saved(); await page.reload(); await ready(); assert.deepEqual((await saved()).finance, before.finance) }
+async function found(name) {
+  await chapter().getByLabel('Company name', { exact: true }).fill(name)
+  await chapter().getByLabel('Ambition', { exact: true }).selectOption('venture')
+  const navigation = nav(); await page.getByRole('button', { name: 'Confirm investment and found company', exact: true }).click()
+  await navigation; await ready(); await reloadSame()
+}
+async function operate(mode) {
+  const input = await saved(), output = `${dir}/${mode}.json`
+  writeFileSync(`${dir}/${mode}-input.json`, JSON.stringify(input))
+  console.log(execFileSync(process.execPath, ['/tmp/tycoon-stage7-career-adapter.mjs', `${dir}/${mode}-input.json`, output, mode], { encoding: 'utf8', timeout: 180000 }).trim())
+  const simulated = JSON.parse(readFileSync(output, 'utf8'))
+  assert.deepEqual(simulated.finance, input.finance, 'simulation must not write financial history')
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  const navigation = nav(); await page.locator('input[type=file]').setInputFiles(output); await navigation; await ready()
+  assert.deepEqual((await saved()).finance, input.finance)
+}
+try {
+  await page.goto(process.env.BASE_URL ?? 'http://127.0.0.1:4322/tycoon/'); await ready()
+  const initial = await saved(), careerId = initial.finance.careerId
+  assert.ok(initial.game.day > 3000); assert.equal(initial.game.gameOver, false)
+  await page.getByRole('dialog', { name: 'Ready to ring the bell', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Take the company public…', exact: true }).click()
+  await page.getByRole('button', { name: 'Confirm IPO and end this chapter', exact: true }).click()
+  await chapter().waitFor(); await reloadSame(); await chapter().waitFor()
+  const ipo = await saved(); assert.equal(ipo.game.ending.kind, 'ipo')
+  assert.equal(ipo.finance.records.filter((r) => r.kind === 'settlement').length, 1)
+  await page.screenshot({ path: `${dir}/earned-ipo.png` })
+  await found('Earned Venture Two'); const second = await saved()
+  assert.equal(second.game.chapter, 2); assert.equal(second.game.products.length, 0)
+  const founders = second.game.employees.filter((e) => e.founder).map((e) => e.name)
+  await operate('offer')
+  const offered = await saved(); assert.ok(offered.game.exit.pending)
+  await page.getByRole('dialog', { name: 'An offer for the studio', exact: true }).waitFor()
+  await page.getByRole('button', { name: /^Sell for / }).click()
+  await page.getByRole('button', { name: /^Sure\? This ends the run at / }).click()
+  await chapter().waitFor(); const sold = await saved()
+  assert.equal(sold.game.ending.kind, 'sold')
+  assert.equal(sold.game.money, offered.game.money + offered.game.exit.pending.price)
+  assert.equal(sold.finance.records.at(-1).distribution.liquid, Math.floor(Math.max(0, sold.game.money) * .5))
+  assert.deepEqual(sold.finance.records.slice(0, second.finance.records.length), second.finance.records)
+  await reloadSame(); await chapter().waitFor(); await page.screenshot({ path: `${dir}/earned-sale.png` })
+  await found('Earned Venture Three'); await operate('operate')
+  const beforeRetire = await saved(); assert.ok(beforeRetire.game.day >= sold.game.day + 90)
+  const offer = page.getByRole('dialog', { name: 'An offer for the studio', exact: true })
+  if (await offer.count()) await offer.getByRole('button', { name: 'Not yet', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.getByRole('button', { name: 'Retire and see your legacy', exact: true }).click()
+  await page.getByRole('button', { name: 'Really retire and end the run?', exact: true }).click()
+  await chapter().waitFor(); await reloadSame(); await chapter().waitFor()
+  const final = await saved(); assert.equal(final.finance.careerId, careerId)
+  assert.equal(final.game.ending.kind, 'retired'); assert.equal(final.finance.records.at(-1).distribution.liquid, Math.floor(Math.max(0, final.game.money) * .5))
+  assert.deepEqual(final.game.employees.filter((e) => e.founder).map((e) => e.name), founders)
+  assert.deepEqual(final.finance.records.filter((r) => r.kind === 'settlement').map((r) => r.facts.kind), ['ipo', 'sold', 'retired'])
+  assert.equal(final.finance.records.filter((r) => r.kind === 'investment').length, 2)
+  assert.equal(final.game.legacy.length, 2)
+  assert.deepEqual(await page.evaluate(() => window.__csp), []); assert.deepEqual(errors, [])
+  writeFileSync(`${dir}/final-career.json`, JSON.stringify(final, null, 2))
+  await page.screenshot({ path: `${dir}/earned-retirement.png` })
+  console.log(`PASS played production career: earned IPO d${ipo.game.day} → paid Venture → genuine sale d${sold.game.day} → paid Venture → retirement d${final.game.day}; reloads, same identity, immutable ledger and no grants`)
+  // Independent, genuinely earned paid professional-company IPO: every charter and non-traffic IPO gate applies.
+  const paidContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  await paidContext.addInitScript((source) => { if (!localStorage.getItem('__paid_ipo')) { localStorage.setItem('lab:tycoon:save', source); localStorage.setItem('lab:tycoon:muted', 'true'); localStorage.setItem('__paid_ipo', 'yes') } }, readFileSync('/tmp/tycoon-stage7-earned-paid-ready.json', 'utf8'))
+  const paidPage = await paidContext.newPage(); paidPage.on('pageerror', (e) => errors.push(e.message))
+  await paidPage.goto(process.env.BASE_URL ?? 'http://127.0.0.1:4322/tycoon/')
+  await paidPage.getByRole('dialog', { name: 'Ready to ring the bell', exact: true }).waitFor()
+  await paidPage.getByRole('button', { name: 'Take the company public…', exact: true }).click()
+  await paidPage.getByRole('button', { name: 'Confirm IPO and end this chapter', exact: true }).click()
+  await paidPage.getByRole('dialog', { name: 'Your next chapter', exact: true }).waitFor()
+  const paid = await paidPage.evaluate(() => JSON.parse(localStorage.getItem('lab:tycoon:save')))
+  assert.equal(paid.game.ending.kind, 'ipo')
+  assert.equal(paid.game.products.find((p) => p.id === paid.game.signatureId).size, 'flagship')
+  assert.equal(paid.finance.records.filter((r) => r.kind === 'settlement').length, 2)
+  assert.equal(paid.finance.records.filter((r) => r.kind === 'charter-fulfilled').length, 1)
+  await paidPage.reload(); await paidPage.getByRole('dialog', { name: 'Your next chapter', exact: true }).waitFor()
+  assert.deepEqual((await paidPage.evaluate(() => JSON.parse(localStorage.getItem('lab:tycoon:save')))).finance, paid.finance)
+  assert.deepEqual(errors, [])
+  await paidPage.screenshot({ path: `${dir}/earned-paid-professional-ipo-phone.png` })
+  writeFileSync(`${dir}/paid-ipo-career.json`, JSON.stringify(paid, null, 2))
+  console.log(`PASS earned paid Venture IPO: d${paid.game.day}; Flagship, healthy delivery/care, Europe, rival victory, original $1B/profit gates, family-scale traffic, once-only charter/settlement and phone reload`)
+  await paidContext.close()
+} finally { await browser.close() }

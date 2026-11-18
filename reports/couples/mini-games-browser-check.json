@@ -1,0 +1,75 @@
+{
+  "checks": [
+    {
+      "port": 4322,
+      "lang": "en",
+      "width": 360,
+      "height": 640,
+      "result": "passed"
+    },
+    {
+      "audit": "pattern study",
+      "violations": []
+    },
+    {
+      "audit": "pattern study",
+      "violations": []
+    },
+    {
+      "audit": "four-colour builder en",
+      "violations": []
+    },
+    {
+      "port": 4322,
+      "lang": "en",
+      "width": 390,
+      "height": 780,
+      "result": "passed"
+    },
+    {
+      "audit": "pattern builder",
+      "violations": []
+    },
+    {
+      "port": 4322,
+      "lang": "ru",
+      "width": 360,
+      "height": 640,
+      "result": "passed"
+    },
+    {
+      "audit": "four-colour builder ru",
+      "violations": []
+    },
+    {
+      "port": 4322,
+      "lang": "ru",
+      "width": 390,
+      "height": 780,
+      "result": "passed"
+    },
+    {
+      "audit": "dark pattern 1280×800",
+      "violations": []
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "theme": "dark",
+      "reducedMotion": true,
+      "result": "passed"
+    },
+    {
+      "audit": "dark pattern 640×360",
+      "violations": []
+    },
+    {
+      "width": 640,
+      "height": 360,
+      "theme": "dark",
+      "reducedMotion": true,
+      "result": "passed"
+    }
+  ],
+  "errors": []
+}

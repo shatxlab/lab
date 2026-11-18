@@ -1,0 +1,14 @@
+{
+  "baselineCommit": "542ae08a9690e6a937678b4212600d2b222d5df2",
+  "inputs": {
+    "src/lib/kingsroad/sim/balance.ts": "f37055674fe4777a9f16ad53cd88e4fa2ea85d7c64b12c57b1d667008fff2360",
+    "src/lib/kingsroad/sim/game.ts": "bd2eeb94e7aeac46ef499fde8cb45aadf106087304ce5971588f39450737ac93",
+    "src/lib/kingsroad/sim/maps.ts": "d5233b4c753178c0ded03ea8d5016b779af7645cb7eac2b5c148680fe515570f",
+    "src/lib/kingsroad/sim/path.ts": "bbae2b338991e0002b9340774e2c630bec1cf7f1cf8241cc08f5b9dfabcff6a8",
+    "src/lib/kingsroad/sim/types.ts": "b420c5dcc3e1e6006e133815247d0c380b04979d27a0247c419986077b0a3c88",
+    "src/lib/kingsroad/sim/waves.ts": "08f9bd14d24d2ef182060f8bf532cada0028b4c0fd8dba3d5f0bec3de4ca4a1f",
+    "src/lib/tower/sim/balance.ts": "bd2040b42ab8ed27500144cb24f24e9fbf04627fb1be5e47f982c015256aff20",
+    "src/lib/tower/sim/random.ts": "f1b602447c4192cc5eb66ea3b618335d0f0e3091d392df52afd000a6d8b63824"
+  },
+  "notes": "Shipping simulation unchanged. Deterministic bots, not human playtests. Terminal-state hashes include full RNG/combat state. Raw JSONL can be regenerated using matrix policies/maps/seeds in summary.json."
+}

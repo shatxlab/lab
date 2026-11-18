@@ -1,0 +1,458 @@
+import { operatingRivalResponse } from './operating-policy.ts'
+import { PROFESSIONS, professionOf } from '../../src/lib/tycoon/sim/career-profile.ts'
+import { appointProfessionLead, appointmentBlocker, appointmentIssue, respondCareerConcern } from '../../src/lib/tycoon/sim/people-management.ts'
+import { assignOperation, operationChoices, operationPreview } from '../../src/lib/tycoon/sim/operations.ts'
+import { productService, serviceOutput } from '../../src/lib/tycoon/sim/services.ts'
+// A scripted playthrough of the whole one-product game: the café, the garage hunt, the move out with the hit, then
+// the workstreams, Europe, companions, tools, Absorb and the IPO. Prints a timeline so pacing can be judged.
+//
+//   npx esbuild scripts/tycoon/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/playthrough.mjs
+//   node /tmp/playthrough.mjs [seed] [years] [quiet]
+//
+// OPERATING_GROWTH=1 also prioritises affordable scope expansion after server/Europe work.
+// The default policy stays unchanged for before/after comparison.
+// RIVAL_RESPONSE=1 explicitly opts the parallel bot into paid rivalry campaigns; default policy is unchanged.
+// BOT_RESUME=<path> resumes a validated synthetic save; [years] then means additional years.
+// DIAGNOSTICS=1 prints the outstanding stage goals and live operating constraints at the end.
+// FINAL_SAVE=<path> writes the final synthetic bot state for diagnosis/replay (never a player journal).
+// SAVE_DIR=<dir> also writes the game as it enters each stage (stage-N.json), to load into the real UI.
+// Default is an optimistic lower-bound benchmark. BOT_POLICY=observed buys surveys, uses loved/feedback tags
+// and the exact approximate FitMeter range available to players; no hidden true-fit or taste ranking decisions.
+// BOT_POLISH=1 waits for visible quality 90 before shipping garage products (and permits polish-only updates).
+// BOT_EXIT=sold accepts the first genuine engine-generated offer; no fabricated exits or earnings.
+
+import { readFileSync, writeFileSync } from 'node:fs'
+import process from 'node:process'
+import { deserialize, serialize } from '../../src/lib/tycoon/sim/state.ts'
+import { audiencesOf } from '../../src/lib/tycoon/data/audiences.ts'
+import { FEATURES } from '../../src/lib/tycoon/data/features.ts'
+import { ALL_ITEMS } from '../../src/lib/tycoon/data/workstreams.ts'
+import { formatCount, formatMoney } from '../../src/lib/tycoon/format.ts'
+import { DAYS_PER_MONTH, GARAGE_PRODUCT_LIMIT } from '../../src/lib/tycoon/sim/balance.ts'
+import { promote, promotionBlocker as careerBlocker } from '../../src/lib/tycoon/sim/careers.ts'
+import { companionBlocker, companionsOf } from '../../src/lib/tycoon/sim/companions.ts'
+import { COMPANIONS } from '../../src/lib/tycoon/data/companions.ts'
+import { acceptContract, contractBlocker } from '../../src/lib/tycoon/sim/contracts.ts'
+import { dailyIncome, monthlyBurn } from '../../src/lib/tycoon/sim/economy.ts'
+import { describePendingEvent, resolveRandomEvent } from '../../src/lib/tycoon/sim/events.ts'
+import { ipoBlocker, goPublic, acceptBuyout, declineBuyout } from '../../src/lib/tycoon/sim/exit.ts'
+import { NOT_FIT_YET, releaseFit, takeoffBlocker, fitRange, fitOf, releaseKey } from '../../src/lib/tycoon/sim/fit.ts'
+import { availableFixers, fixBlocker, startFix } from '../../src/lib/tycoon/sim/fixes.ts'
+import { RESEARCH } from '../../src/lib/tycoon/data/research.ts'
+import { researchBlocker, startResearch } from '../../src/lib/tycoon/sim/research.ts'
+import { foundStudio } from '../../src/lib/tycoon/sim/founding.ts'
+import { hire, hireCost, ROLE_DISCIPLINE } from '../../src/lib/tycoon/sim/hiring.ts'
+import { newProductBlocker, updateBlocker, localiseBlocker } from '../../src/lib/tycoon/sim/lifecycle.ts'
+import { freeDesks, moveOut, moveOutBlocker, moveToGarage, moveToGarageBlocker, newOfficeCost, openOffice, openOfficeBlocker, officesIn, staffOf } from '../../src/lib/tycoon/sim/offices.ts'
+import { nextItem, setRoadmap } from '../../src/lib/tycoon/sim/roadmap.ts'
+import { projectQuality, shipProject, startProject, startUpdate, unlockedProductTypes } from '../../src/lib/tycoon/sim/project.ts'
+import { absorbDesks, acquire, acquisitionBlocker, acquisitionPrice, rivalProductsOf } from '../../src/lib/tycoon/sim/rivals.ts'
+import { capacityOf, loadOf } from '../../src/lib/tycoon/sim/scale.ts'
+import { createInitialState } from '../../src/lib/tycoon/sim/state.ts'
+import { sunsetBlocker, sunsetProduct } from '../../src/lib/tycoon/sim/sunset.ts'
+import { awaitingChoice, canResearch, chooseCard, researchPlan, researchPlanBlocker } from '../../src/lib/tycoon/sim/cycle.ts'
+import { setWorkstream } from '../../src/lib/tycoon/sim/teams.ts'
+import { nemesisRival, strikeBack, strikeBackBlocker, strikeBackCost } from '../../src/lib/tycoon/sim/nemesis.ts'
+import { advanceDay, drainEvents } from '../../src/lib/tycoon/sim/tick.ts'
+import { surveyAudience, isSurveyed, feedbackFor } from '../../src/lib/tycoon/sim/insight.ts'
+import { isReady, LOVED_AT } from '../../src/lib/tycoon/sim/scoring.ts'
+import { featureLock } from '../../src/lib/tycoon/sim/unlocks.ts'
+import { estimateDays, teamRate, estimateDaysAt, subjectOf } from '../../src/lib/tycoon/sim/work.ts'
+import { isBuilder, type BuilderRole, type GameState, type Office, type Product, type Workstream } from '../../src/lib/tycoon/sim/types.ts'
+import { marketDemand } from '../../src/lib/tycoon/sim/market.ts'
+import { MARKET_COLD, TAKEOFF_MAX_CROWDING } from '../../src/lib/tycoon/sim/balance.ts'
+import { interest, marketCrowding, missingFeatures, targetUsers } from '../../src/lib/tycoon/sim/products.ts'
+import { stageProgress } from '../../src/lib/tycoon/sim/stages.ts'
+import { DISCIPLINES } from '../../src/lib/tycoon/sim/types.ts'
+import { companionEffects } from '../../src/lib/tycoon/sim/companions.ts'
+import { businessOverview } from '../../src/lib/tycoon/sim/business.ts'
+import { STAGES } from '../../src/lib/tycoon/data/stages.ts'
+
+const seed = Number(process.argv[2] ?? 1)
+const years = Number(process.argv[3] ?? 12)
+const quiet = process.argv[4] === 'quiet'
+const state: GameState = (() => {
+  const loaded = process.env.BOT_RESUME ? deserialize(readFileSync(process.env.BOT_RESUME, 'utf8')) : createInitialState(seed)
+  if (!loaded) throw new Error('Invalid synthetic bot resume state')
+  return loaded
+})()
+const log: string[] = []
+const say = (text: string) => {
+  const line = `Y${(state.day / 360 + 1).toFixed(2)} d${state.day} ${text}`
+  log.push(line)
+  if (!quiet) console.log(line)
+}
+
+if (!process.env.BOT_RESUME) foundStudio(state, 'Bot', 'Botworks')
+const observed = process.env.BOT_POLICY === 'observed'
+let acceptanceStop = false
+// This adapter exposes only the same approximate range shown by FitMeter, not its hidden true value.
+const observedFit = (p: Product) => { const r = fitRange(state, fitOf(state, p), releaseKey(p)); return (r.low + r.high) / 2 }
+const readFit = (p: Product) => observed ? observedFit(p) : (p.fit ?? 0)
+const hit = () => state.products.find((p) => p.id === state.signatureId)
+
+let lastPeopleDecision = -Infinity
+function managePeople(): void {
+  if (!state.peopleManagement || state.day - lastPeopleDecision < 30) return
+  lastPeopleDecision = state.day
+  // Explicit optimistic bot policy, not a game-side appointment/conversation default.
+  for (const e of state.employees) if (e.career?.appointment && appointmentIssue(state, e)) appointProfessionLead(state, e.id, null)
+  let appointments = 0
+  for (const profession of PROFESSIONS) {
+    for (const scope of ['company' as const, ...state.offices.map((o) => o.id)]) {
+      const candidates = state.employees.filter((e) => professionOf(e) === profession && !e.career?.appointment && (e.career?.grade ?? 0) >= 2)
+        .sort((a, b) => Number(b.career!.ambition === 'leadership') - Number(a.career!.ambition === 'leadership') || b.career!.management - a.career!.management || a.id - b.id)
+      const candidate = candidates.find((e) => appointmentBlocker(state, e, scope) === null)
+      if (candidate && appointProfessionLead(state, candidate.id, scope).ok) appointments++
+    }
+  }
+  for (const e of state.employees) if (e.career?.concern) {
+    // This policy readily agrees an IC alternative; human acceptance/neglect policies still need Stage 7 testing.
+    if (e.career.concern.kind === 'leadership') respondCareerConcern(state, e.id, 'specialist')
+    else if (!e.career.concern.discussed) respondCareerConcern(state, e.id, 'discuss')
+  }
+  const review = state.peopleManagement.reports.at(-1)
+  if (review) say(`people: ${review.reviewed} reviewed, ${review.promoted} promoted, ${review.deferred} budget/policy deferrals; ${appointments} appointments`)
+}
+
+function answerEvent(): void {
+  const view = describePendingEvent(state)
+  if (!view) return
+  const open = view.choices.map((c, i) => (c.disabled ? -1 : i)).filter((i) => i >= 0)
+  if (open.length) resolveRandomEvent(state, open[0])
+}
+
+/** The best-paying job the office can do in time. */
+function takeJob(office: Office): boolean {
+  if (contractBlocker(state, office)) return false
+  const doable = state.contracts
+    .map((offer) => ({ offer, days: estimateDays(state, offer.target, office) }))
+    .filter(({ offer, days }) => days <= offer.days)
+    .sort((a, b) => b.offer.pay / b.days - a.offer.pay / a.days)[0]
+  return doable ? acceptContract(state, doable.offer.id, office.id).ok : false
+}
+
+/** Optimistic benchmark uses true fit. Observed policy buys surveys and ranks public loved tags/value only. */
+function bestLaunch(): { type: string; audience: string; features: string[]; fit: number } | null {
+  let best: { type: string; audience: string; features: string[]; fit: number } | null = null
+  for (const type of unlockedProductTypes(state)) {
+    // Somewhere with room: a warm market that few others are in, and nothing of ours there already.
+    if (marketCrowding(state, type.id) >= TAKEOFF_MAX_CROWDING * 0.7 || marketDemand(state, type.id) <= MARKET_COLD * 1.1 || state.products.some((p) => p.productTypeId === type.id)) continue
+    const open = FEATURES.filter((f) => f.suits.includes(type.id) && featureLock(state, f) === null)
+    for (const audience of audiencesOf(type.id)) {
+      if (observed) surveyAudience(state, audience.id)
+      const studied = isSurveyed(state, audience.id)
+      const ranked = open.map((f) => ({ f, love: observed ? (!studied || (audience.likes[f.id] ?? 1) >= LOVED_AT ? 1 : 0) : (audience.likes[f.id] ?? 1) - 1 })).filter((x) => x.love > 0).sort((a, b) => b.love * b.f.value - a.love * a.f.value)
+      const features = ranked.slice(0, 5).map((x) => x.f.id)
+      if (features.length === 0) continue
+      const fit = observed ? ranked.slice(0, 5).reduce((sum, x) => sum + x.f.value, 0) : releaseFit(state, type.id, audience.id, features, 80).fit
+      if (!best || fit > best.fit) best = { type: type.id, audience: audience.id, features, fit }
+    }
+  }
+  return best
+}
+
+function huntStep(office: Office): void {
+  if (office.project) return
+  const staff = staffOf(state, office).length
+  if (staff === 0) return
+  const lowMoney = state.money < 4 * monthlyBurn(state) + 500
+  if (lowMoney && takeJob(office)) return
+  // Improve a product that has not taken off: add what its audience loves.
+  const blocked = (p: Product) => {
+    const why = takeoffBlocker(state, p)
+    return why !== null && why !== NOT_FIT_YET && !why.includes('stale') && state.day - p.releaseDay > 60
+  }
+  const stuck = state.products.find((p) => !p.hit && sunsetBlocker(state, p) === null && ((p.updates.length >= 2 && readFit(p) < 60) || blocked(p)))
+  if (stuck && sunsetBlocker(state, stuck) === null) {
+    say(`kills ${stuck.name} (reading ${Math.round(readFit(stuck))})`)
+    sunsetProduct(state, stuck.id)
+  }
+  const target = state.products.filter((p) => !p.hit && updateBlocker(state, office, p) === null).sort((a, b) => readFit(b) - readFit(a))[0]
+  if (target && readFit(target) >= 40) {
+    const audience = audiencesOf(target.productTypeId).find((a) => a.id === (target.audienceId ?? audiencesOf(target.productTypeId)[0].id))!
+    const missed = observed ? feedbackFor(state, target).missed : []
+    const more = FEATURES.filter((f) => f.suits.includes(target.productTypeId) && featureLock(state, f) === null && !target.featureIds.includes(f.id) && (observed ? missed.includes(f.name) : (audience.likes[f.id] ?? 1) > 1))
+      .sort((a, b) => observed ? b.value - a.value : (audience.likes[b.id] ?? 1) * b.value - (audience.likes[a.id] ?? 1) * a.value)
+      .slice(0, 2)
+      .map((f) => f.id)
+    if ((more.length || (process.env.BOT_POLISH === '1' && target.quality < 90)) && startUpdate(state, target.id, more, office.id).ok) return
+  }
+  if (newProductBlocker(state) === null && state.money > 2 * monthlyBurn(state)) {
+    const launch = bestLaunch()
+    if (launch) {
+      const r = startProject(state, launch.type, launch.features, 'small', office.id, launch.audience)
+      if (r.ok) say(`starts ${launch.type} for ${launch.audience} (${observed ? 'public value score' : 'fit'} ${Math.round(launch.fit)})`)
+      return
+    }
+  }
+  takeJob(office)
+}
+
+/** Sends a developer and a tester after the bugs of any product that has more than a few. */
+function dispatchFixers(): void {
+  for (const product of state.products) {
+    if (product.bugs < 6 || fixBlocker(state, product) !== null) continue
+    const dev = availableFixers(state, 'developer').sort((a, b) => b.skills.engineering - a.skills.engineering)[0]
+    const tester = availableFixers(state, 'tester').sort((a, b) => b.skills.qa - a.skills.qa)[0]
+    if (dev && tester) startFix(state, product.id, dev.id, tester.id)
+  }
+}
+
+function hireTo(office: Office, limit: number): void {
+  while (staffOf(state, office).length < limit && freeDesks(state, office) > 0) {
+    const builders = staffOf(state, office).filter(isBuilder)
+    const counts = { design: 0, engineering: 0, qa: 0 } as Record<string, number>
+    for (const e of builders) counts[ROLE_DISCIPLINE[e.role as BuilderRole]] += 1
+    const want = Object.entries(counts).sort((a, b) => a[1] - b[1])[0][0]
+    const pick = state.candidates.find((c) => isBuilder(c) && ROLE_DISCIPLINE[c.role as BuilderRole] === want && (c.region ?? 'us') === (office.region ?? 'us')) ?? state.candidates.find((c) => isBuilder(c) && (c.region ?? 'us') === (office.region ?? 'us'))
+    if (!pick || state.money < hireCost(pick) + 3 * monthlyBurn(state)) return
+    hire(state, pick.id, office.id)
+  }
+}
+
+/** The roadmap: a sensible order for the hit, rebuilt when it runs low. */
+const ROADMAP_ORDER = ['load_balancer', 'onboarding_flow', 'paid_plans', 'test_automation', 'db_sharding', 'referrals', 'business_tier', 'analytics_pipeline', 'cdn', 'performance_marketing', 'eu_payments', 'enterprise_deals', 'multi_cluster', 'partnerships', 'global_edge', 'ci_pipeline', 'observability', 'perf_pass', 'admin_panel', 'eu_datacentre']
+function planRoadmap(h: Product): void {
+  const wanted = ROADMAP_ORDER.filter((id) => !(h.built ?? []).includes(id)).slice(0, 12)
+  for (const c of COMPANIONS) {
+    const id = `companion:${c.id}`
+    if (companionBlocker(state, c) === null && ALL_ITEMS.some((i) => i.id === id) && wanted.length < 12) wanted.splice(3, 0, id)
+  }
+  if ((h.roadmap ?? []).join() !== wanted.join()) setRoadmap(state, h.id, wanted.slice(0, 12))
+}
+
+/** One floor per stream, in order of need. */
+const STREAMS: Workstream[] = ['features', 'scale', 'growth', 'monetisation', 'quality', 'europe', 'tools', 'companions']
+
+function act2(h: Product): void {
+  if (!state.offices.some((o) => o.assignment)) planRoadmap(h)
+  const floors = state.offices.filter((o) => o.kind === 'office')
+  const available = (w: Workstream) => nextItem(state, h, w) !== undefined
+  const wanted: Workstream[] = []
+  if (loadOf(h) > 0.6 && available('scale')) wanted.push('scale')
+  if (available('growth')) wanted.push('growth')
+  if (available('monetisation')) wanted.push('monetisation')
+  if (h.bugs > 15) wanted.push('quality')
+  if (available('scale') && !wanted.includes('scale')) wanted.push('scale')
+  if (available('companions')) wanted.push('companions')
+  if (available('tools')) wanted.push('tools')
+  wanted.push('quality')
+  let next = 0
+  let europeTaken = false
+  floors.forEach((floor, i) => {
+    let stream: Workstream
+    if (floors.length === 1) {
+      // One floor does what the hit needs most right now.
+      stream = loadOf(h) > 0.8 && available('scale') ? 'scale' : h.bugs > 20 ? 'quality' : available('monetisation') && state.day % 90 < 30 ? 'monetisation' : (wanted[0] ?? 'features')
+      if (stream === 'quality' && h.bugs <= 20) stream = 'features'
+    } else if (i === 0) stream = 'features'
+    else if ((floor.region ?? 'us') === 'eu' && !europeTaken) {
+      stream = 'europe'
+      europeTaken = true
+    } else stream = wanted[Math.min(next++, wanted.length - 1)]
+    if (!floor.assignment && floor.workstream !== stream) setWorkstream(state, floor.id, stream)
+    floor.productId ??= h.id
+    hireTo(floor, 12)
+  })
+  const reserve = 6 * monthlyBurn(state)
+  if (process.env.BOT_EXIT !== 'sold' && openOfficeBlocker(state) === null && state.money > newOfficeCost(state) + reserve && floors.every((f) => freeDesks(state, f) <= 3)) {
+    const region = state.stage >= 5 && officesIn(state, 'eu').length === 0 ? 'eu' : officesIn(state, 'us').length < 5 ? 'us' : undefined
+    const r = openOffice(state, region)
+    if (r.ok) say(`opens a floor (${state.offices.length} offices)`)
+  }
+  // Europe: localise once an office is there (the Europe stream does it by itself).
+  const target = state.rivals.find((r) => acquisitionBlocker(state, r) === null && state.money > acquisitionPrice(state, r) + reserve * 2)
+  if (target) {
+    const desks = absorbDesks(state, target)
+    if (acquire(state, target.id, []).ok) say(`absorbs ${target.name} (${desks} desks free)`)
+  }
+}
+
+/** Explicit operations policy: research uses the analyst floor, one team covers reliability, others build. */
+function parallel(h: Product): void {
+  const response = process.env.RIVAL_RESPONSE === '1' ? operatingRivalResponse(state) : null
+  if (response && strikeBack(state).ok) say(`strikes back at ${response.name}: ${formatMoney(response.cost)}, ratio ${response.ratio.toFixed(2)} -> ${response.after.toFixed(2)}`)
+  const researchNode = RESEARCH.filter((n) => !n.repeatable && !state.research.done.includes(n.id) && state.money > n.cost + monthlyBurn(state) * 3)
+    .find((n) => n.requires.every((id) => state.research.done.includes(id)))
+  for (const [i, floor] of state.offices.entries()) {
+    const a = floor.assignment
+    if (!a || floor.project) continue
+    if (i === 0 && (state.research.active || researchNode) && serviceOutput(state, floor, 'research') > 0) {
+      if (a.kind !== 'standing' || a.service !== 'research') assignOperation(state, floor.id, { kind: 'standing', productId: h.id, service: 'research' }, true)
+      research()
+      if (state.research.active) continue
+    }
+    if (i === 1 && h.bugs > 5 && serviceOutput(state, floor, 'reliability') > 0) {
+      if (a.kind !== 'standing' || a.service !== 'reliability') assignOperation(state, floor.id, { kind: 'standing', productId: h.id, service: 'reliability' }, true)
+      continue
+    }
+    const options = operationChoices(state, h, floor)
+    const card = options.find((c) => c.kind === 'item' && ALL_ITEMS.find((item) => item.id === c.id)?.workstream === 'scale' && loadOf(h) > 0.6)
+      ?? options.find((c) => c.kind === 'compliance' || c.kind === 'localise')
+      ?? (process.env.OPERATING_GROWTH === '1' ? options.find((c) => c.kind === 'grow' && operationPreview(state, floor, h, c).blocker === null && state.money > operationPreview(state, floor, h, c).cash + monthlyBurn(state) * 6) : undefined)
+      ?? options.find((c) => c.kind === 'feature')
+      ?? options.find((c) => c.kind === 'item') ?? options[0]
+    if (card) assignOperation(state, floor.id, { kind: 'initiative', productId: h.id, proposal: { kind: card.kind, id: card.id } }, true)
+  }
+}
+
+/** The company's plan: researches a vague one once, then hits back, scales full servers, fixes a buggy product, and otherwise takes the first release. */
+function plan(h: Product): void {
+  if (!awaitingChoice(state)) return
+  const cards = state.plan!.cards
+  if (state.plan!.clarity < 60 && researchPlanBlocker(state) === null) {
+    researchPlan(state)
+    return
+  }
+  const release = cards.findIndex((c) => c.kind !== 'deep' && c.kind !== 'strike')
+  const strike = cards.findIndex((c) => c.kind === 'strike')
+  const scale = cards.findIndex((c) => c.kind === 'item' && ALL_ITEMS.find((i) => i.id === c.id)?.workstream === 'scale')
+  const polish = cards.findIndex((c) => c.kind === 'polish')
+  const pick = strike >= 0 && state.money > 4 * strikeBackCost(state) ? strike : scale >= 0 && loadOf(h) > 0.6 ? scale : polish >= 0 && h.bugs > 20 ? polish : release
+  // Hitting back takes no time: the plan is still on the table.
+  if (chooseCard(state, pick).ok && awaitingChoice(state)) plan(h)
+}
+
+function research(): void {
+  if (state.research.active) return
+  const reserve = 6 * monthlyBurn(state)
+  const next = RESEARCH.filter((n) => researchBlocker(state, n) === null && state.money > n.cost + reserve).sort((a, b) => a.cost - b.cost)[0]
+  if (next) startResearch(state, next.id)
+}
+
+/** Companions need a free slot: retire a side product once the hit is big enough to launch one. */
+function freeASlot(h: Product): void {
+  if (h.users < 300_000 || state.products.every((p) => p.role !== 'side') || companionsOf(state).length >= 2) return
+  const side = state.products.find((p) => p.role === 'side' && sunsetBlocker(state, p) === null)
+  if (side) {
+    say(`retires side product ${side.name}`)
+    sunsetProduct(state, side.id)
+  }
+}
+
+function botStep(): void {
+  if (state.pendingEvent) answerEvent()
+  for (const event of drainEvents(state)) {
+    if (event.type === 'projectReady') {
+      const office = state.offices.find((o) => o.id === event.officeId)
+      if (process.env.BOT_POLISH === '1' && office?.kind === 'garage' && office.project && office.project.kind !== 'contract') continue
+      if (office?.project?.kind === 'new' || office?.project?.kind === 'contract' || (office?.project?.kind === 'update' && !office.project.byTeam)) shipProject(state, undefined, office.id)
+    }
+    if (event.type === 'breakout') say(`HIT: ${state.products.find((p) => p.id === event.productId)?.name}`)
+    if (event.type === 'stage') {
+      say(`stage -> ${STAGES[event.stage]?.name}`)
+      // SAVE_DIR=/tmp/saves writes the game at each stage, to load into the real UI.
+      if (process.env.SAVE_DIR) writeFileSync(`${process.env.SAVE_DIR}/stage-${event.stage}.json`, serialize(state))
+    }
+    if (event.type === 'offer') {
+      // Turn down every offer: the point of the run is the hit.
+      if (state.exit.pending) {
+        if (process.env.BOT_STOP_AT_OFFER === '1') acceptanceStop = true
+        else if (process.env.BOT_EXIT === 'sold') acceptBuyout(state)
+        else if (observed) declineBuyout(state)
+        else state.exit.pending = null // Historical optimistic benchmark only.
+      }
+    }
+  }
+  if (process.env.BOT_POLISH === '1') {
+    for (const office of state.offices) {
+      const project = office.project
+      if (office.kind === 'garage' && project && (project.kind === 'new' || project.kind === 'update') && !project.byTeam && isReady(project) && projectQuality(state, project) >= 90) shipProject(state, undefined, office.id)
+    }
+  }
+  if (state.gameOver || acceptanceStop) return
+  dispatchFixers()
+  managePeople()
+  if (!state.peopleManagement) for (const e of state.employees) if (careerBlocker(state, e) === null) promote(state, e.id)
+
+  if (state.offices.some((o) => o.kind === 'cafe')) {
+    for (const office of state.offices) if (!office.project) takeJob(office)
+    if (moveToGarageBlocker(state) === null) {
+      moveToGarage(state)
+      say('moves into the garage')
+      for (const office of state.offices) hireTo(office, 3)
+    }
+    return
+  }
+  const garage = state.offices.find((o) => o.kind === 'garage')
+  if (garage) {
+    hireTo(garage, state.signatureId === null ? 3 : 4)
+    huntStep(garage)
+    if (moveOutBlocker(state) === null && state.money > 40_000 + 4 * monthlyBurn(state)) {
+      const chosen = state.products.filter((p) => p.hit).sort((a, b) => b.users - a.users)[0]
+      if (moveOut(state, chosen?.id).ok) say(`moves out of the garage with ${chosen.name}`)
+    }
+    return
+  }
+  const h = hit()
+  if (!h) { for (const floor of state.offices) { hireTo(floor, 4); huntStep(floor) }; return }
+  if (process.env.BOT_EXIT === 'sold') {
+    // An intentional sale policy leaves the signature's release date alone for the genuine buyer grace period.
+    // It keeps paying staff and fixing bugs, but cannot fabricate an offer or rush a fresh release forever.
+    for (const floor of state.offices) if (floor.assignment && !floor.project && serviceOutput(state, floor, 'reliability') > 0 &&
+      (floor.assignment.kind !== 'standing' || floor.assignment.service !== 'reliability')) assignOperation(state, floor.id, { kind: 'standing', productId: h.id, service: 'reliability' }, true)
+    return
+  }
+  research()
+  if (h) freeASlot(h)
+  if (h) act2(h)
+  if (h && !canResearch(state)) {
+    const reader = state.candidates.find((c) => !isBuilder(c) && (c.region ?? 'us') === 'us')
+    const floor = state.offices.find((o) => (o.region ?? 'us') === 'us' && freeDesks(state, o) > 0)
+    if (reader && floor && state.money > hireCost(reader) + 3 * monthlyBurn(state)) hire(state, reader.id, floor.id)
+  }
+  if (h) { if (state.offices.some((o) => o.assignment)) parallel(h); else plan(h) }
+  if (h && ipoBlocker(state) === null) {
+    say(`goes public: ${formatMoney(state.money)} cash`)
+    if (process.env.BOT_STOP_AT_IPO === '1') acceptanceStop = true
+    else goPublic(state)
+  }
+}
+
+const measurements: unknown[] = []
+function measure() {
+  if (!process.env.METRICS_SAVE || state.day % 30 !== 0) return
+  measurements.push({ day: state.day, companyDays: state.day - (state.chapterStartDay ?? 0), business: businessOverview(state),
+    companions: companionEffects(state), staff: state.employees.length,
+    floors: state.offices.map((o) => {
+      const p = o.project, rate = teamRate(state, o, p ? subjectOf(p) : null)
+      const remaining = p ? Object.fromEntries(DISCIPLINES.map((d) => [d, Math.max(0, p.target[d] - p.progress[d])])) as typeof rate : null
+      const total = DISCIPLINES.reduce((n, d) => n + rate[d], 0)
+      const required = remaining ? DISCIPLINES.reduce((n, d) => n + Math.min(rate[d], remaining[d]), 0) : 0
+      return { id: o.id, assignment: o.assignment?.kind ?? 'legacy', project: p?.kind ?? null, rate,
+        estimatedRequiredWorkShare: p && total ? required / total : null,
+        remainingDays: remaining ? estimateDaysAt(remaining, rate) : null,
+        bottleneck: remaining ? [...DISCIPLINES].sort((a,b) => remaining[b] / Math.max(.0001, rate[b]) - remaining[a] / Math.max(.0001, rate[a]))[0] : null }
+    }) })
+}
+let nextReport = 0
+for (let i = 0; i < years * 360 && !state.gameOver; i++) {
+  botStep()
+  measure()
+  if (acceptanceStop) break
+  advanceDay(state)
+  if (state.day >= nextReport) {
+    nextReport = state.day + 180
+    const h = hit()
+    const line = `[${STAGES[state.stage].name}] money ${formatMoney(state.money)} income ${formatMoney(dailyIncome(state))}/day staff ${state.employees.length} offices ${state.offices.length}${h ? ` | ${h.name}: ${formatCount(h.users)} users, fit ${Math.round(h.fit ?? 0)}, servers ${Math.round(loadOf(h) * 100)}% of ${formatCount(capacityOf(h))}, built ${(h.built ?? []).length}, companions ${companionsOf(state).length}, reach ${formatCount(h.reach)}, world ${(h.world ?? 1).toFixed(2)}, target ${formatCount(targetUsers(state, h))}, interest ${interest(h, state.day).toFixed(2)}, bugs ${Math.round(h.bugs)}, missing ${missingFeatures(h, state.day).length}, peak ${Math.round(h.peakFit ?? 0)}, floor ${state.offices.map((o) => o.workstream ?? '-').join('/')}, burn ${formatMoney(monthlyBurn(state) / 30)}/day` : ` | products ${state.products.length}, shipped ${state.shippedCount}, jobs ${state.contractsDone}`}`
+    say(line)
+  }
+}
+console.log(`\nEnded day ${state.day} (${(state.day / 360).toFixed(1)} years): ${state.gameOver ? JSON.stringify(state.ending) : 'still running'}; stage ${STAGES[state.stage].name}; money ${formatMoney(state.money)}; lifetime ${formatMoney(state.lifetimeRevenue)}`)
+if (process.env.DIAGNOSTICS === '1') {
+  const h = hit()
+  console.log(JSON.stringify({ stage: STAGES[state.stage].name, goals: stageProgress(state),
+    ipo: ipoBlocker(state), offices: state.offices.map((o) => ({ id: o.id, region: o.region, staff: staffOf(state, o).length, assignment: o.assignment, project: o.project?.name })),
+    product: h && { type: h.productTypeId, users: h.users, fit: h.fit, size: h.size, built: h.built, bugs: h.bugs, interest: interest(h, state.day), capacity: capacityOf(h), reliability: productService(state, h, 'reliability') },
+    nemesis: nemesisRival(state)?.name, ratio: nemesisRival(state)?.ratio, leadDays: state.nemesis?.leadDays, beaten: state.nemesesBeaten }, null, 2))
+}
+if (process.env.FINAL_SAVE) writeFileSync(process.env.FINAL_SAVE, serialize(state))
+if (process.env.METRICS_SAVE) writeFileSync(process.env.METRICS_SAVE, JSON.stringify({ samples: measurements, decisions: state.businessDecisions,
+  journal: state.journal, reviews: state.peopleManagement?.reports ?? [], finalDay: state.day, companyDays: state.day - (state.chapterStartDay ?? 0) }))
+const notes = hit()?.releases ?? []
+if (notes.length > 1) console.log(`Last ${notes.length} releases: one every ${Math.round((notes.at(-1)!.day - notes[0].day) / (notes.length - 1))} days (1 day is 1.5 s at 1x)`)
+void DAYS_PER_MONTH
+void GARAGE_PRODUCT_LIMIT
+void localiseBlocker
+void rivalProductsOf

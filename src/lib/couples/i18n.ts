@@ -1,0 +1,312 @@
+import type { Lang } from "./types";
+
+export const LANGS: readonly Lang[] = ["en", "ru"];
+
+export const LANG_LABELS: Record<Lang, string> = {
+  en: "English",
+  ru: "Русский",
+};
+
+export const LANG_SHORT: Record<Lang, string> = {
+  en: "EN",
+  ru: "RU",
+};
+
+type StringKey =
+  | "appName"
+  | "tagline"
+  | "language"
+  // Menu
+  | "menuTitle"
+  | "menuSubtitle"
+  | "cardNew"
+  | "open"
+  | "statsLine"
+  | "statsLineUnscored"
+  // Setup
+  | "setupTitle"
+  | "names"
+  | "namesHint"
+  | "nameOne"
+  | "nameTwo"
+  | "mode"
+  | "modeMatch"
+  | "modeTogether"
+  | "modeMatchHint"
+  | "modeTogetherHint"
+  | "theme"
+  | "themeAll"
+  | "themes"
+  | "themeHint"
+  | "count"
+  | "cards"
+  | "countHint"
+  | "sound"
+  | "soundOn"
+  | "soundOff"
+  | "startGame"
+  | "back"
+  | "deckCount"
+  // Play
+  | "turn"
+  | "passTitle"
+  | "passBody"
+  | "passButton"
+  | "question"
+  | "chipNorm"
+  | "chipCringe"
+  | "followUpLabel"
+  | "exit"
+  | "confirmExit"
+  | "confirmExitBody"
+  | "confirm"
+  | "cancel"
+  | "close"
+  | "keyboardHint"
+  | "skipCard"
+  | "skipHint"
+  | "hiddenSkipHint"
+  | "hideCard"
+  | "hiddenCard"
+  | "hiddenCount"
+  | "restoreHidden"
+  | "mute"
+  | "unmute"
+  // Summary
+  | "summaryMatchTitle"
+  | "summaryTogetherTitle"
+  | "summaryMatchPerfect"
+  | "summaryMatchGreat"
+  | "summaryMatchOkay"
+  | "summaryMatchLow"
+  | "summaryMatched"
+  | "summaryDiscuss"
+  | "summaryCards"
+  | "summarySkipped"
+  | "summaryNoAnswers"
+  | "summaryTopChoice"
+  | "summaryPlayAgain"
+  | "summarySettings"
+  | "summaryMenu"
+  | "summaryNewQuestions"
+  | "summaryChose";
+
+const STRINGS: Record<Lang, Record<StringKey, string>> = {
+  en: {
+    appName: "Games for Couples",
+    tagline: "Two players. A little discovery, a little mischief.",
+    language: "Language",
+
+    // Menu
+    menuTitle: "Pick a game",
+    menuSubtitle:
+      "One phone. Compare answers, rebuild secret patterns, or share stories in Never Have I Ever.",
+    cardNew: "New game",
+    open: "Play",
+    statsLine: "Question games: {games} · Cards: {cards} · Matches: {percent}%",
+    statsLineUnscored: "Question games: {games} · No scored answers yet",
+
+    // Setup
+    setupTitle: "Set up the game",
+    names: "What are your names?",
+    namesHint: "Names are needed for “Who of Us” and for whose turn it is.",
+    nameOne: "First name",
+    nameTwo: "Second name",
+    mode: "How to play",
+    modeMatch: "On score",
+    modeTogether: "Together",
+    modeMatchHint: "Each of you answers all the cards in secret: first one, then the other. At the end — one page with both answers and your match percentage.",
+    modeTogetherHint: "Discuss out loud and pick one shared answer.",
+    theme: "Theme",
+    themeAll: "All themes",
+    themes: "themes",
+    themeHint: "Each theme has its own deck of questions.",
+    count: "How many cards",
+    cards: "cards",
+    countHint: "Enough for one evening. You can always start over with new questions.",
+    sound: "Sound",
+    soundOn: "On",
+    soundOff: "Off",
+    startGame: "Start game",
+    back: "Back",
+    deckCount: "{count} questions in the deck",
+
+    // Play
+    turn: "Answering",
+    passTitle: "Pass the phone",
+    passBody: "Now {name} answers the remaining cards. The other player should look away.",
+    passButton: "I'm {name}, show it",
+    question: "Question",
+    chipNorm: "Normal",
+    chipCringe: "Nah",
+    followUpLabel: "Talk it over",
+    exit: "Exit",
+    confirmExit: "Leave the game?",
+    confirmExitBody: "The current progress will be lost.",
+    confirm: "Leave",
+    cancel: "Cancel",
+    close: "Close",
+    keyboardHint: "Keyboard: 1 and 2 — pick an answer",
+    skipCard: "Skip this time",
+    skipHint: "Either of you can skip. Neither answer is revealed or scored; the card can return in a future game.",
+    hiddenSkipHint: "Hidden for future games. You can still skip now to discard both answers without scoring.",
+    hideCard: "Hide forever",
+    hiddenCard: "Hidden for good",
+    hiddenCount: "Hidden cards: {count}",
+    restoreHidden: "Bring them back",
+    mute: "Mute sound",
+    unmute: "Unmute sound",
+
+    // Summary
+    summaryMatchTitle: "Your match percentage",
+    summaryTogetherTitle: "Your results",
+    summaryMatchPerfect: "You read each other like an open book!",
+    summaryMatchGreat: "A great match — you know each other well.",
+    summaryMatchOkay: "There is plenty to argue about and discuss.",
+    summaryMatchLow: "Looks like you complement each other perfectly.",
+    summaryMatched: "Matches",
+    summaryCards: "Answered cards",
+    summarySkipped: "Skipped: {count} · Not included in results or scores",
+    summaryNoAnswers: "No cards answered together this time. Nothing to score — you can start again whenever you like.",
+    summaryTopChoice: "Most often you picked",
+    summaryPlayAgain: "Again with new questions",
+    summarySettings: "Change settings",
+    summaryMenu: "To the menu",
+    summaryNewQuestions: "New questions",
+    summaryChose: "You picked",
+    summaryDiscuss: "Talk through the cards where you answered differently.",
+  },
+  ru: {
+    appName: "Игры для пар",
+    tagline: "Двое игроков. Узнавайте, играйте, удивляйтесь.",
+    language: "Язык",
+
+    // Menu
+    menuTitle: "Выберите игру",
+    menuSubtitle: "Один телефон. Сравнивайте ответы, собирайте тайные узоры или делитесь историями в «Я никогда не».",
+    cardNew: "Новая игра",
+    open: "Играть",
+    statsLine: "Игр с вопросами: {games} · Карточек: {cards} · Совпадений: {percent}%",
+    statsLineUnscored: "Игр с вопросами: {games} · Ответов на счёт пока нет",
+
+    // Setup
+    setupTitle: "Настройте игру",
+    names: "Как вас зовут?",
+    namesHint: "Имена нужны для игры «Кто из нас» и для хода игроков.",
+    nameOne: "Имя первого",
+    nameTwo: "Имя второго",
+    mode: "Как играем",
+    modeMatch: "На счёт",
+    modeTogether: "Вместе",
+    modeMatchHint: "Каждый отвечает на все карточки тайно: сначала один, потом другой. В конце — одна страница с ответами обоих и процентом совпадений.",
+    modeTogetherHint: "Обсуждаете вслух и выбираете один общий ответ.",
+    theme: "Тема",
+    themeAll: "Все темы",
+    themes: "темы",
+    themeHint: "У каждой темы своя колода вопросов.",
+    count: "Сколько карточек",
+    cards: "карточек",
+    countHint: "Хватит на один вечер. Можно начать заново с новыми вопросами.",
+    sound: "Звук",
+    soundOn: "Вкл",
+    soundOff: "Выкл",
+    startGame: "Начать игру",
+    back: "Назад",
+    deckCount: "{count} вопросов в колоде",
+
+    // Play
+    turn: "Отвечает",
+    passTitle: "Передайте телефон",
+    passBody: "Теперь {name} отвечает на оставшиеся карточки. Второй игрок пусть отвернётся.",
+    passButton: "Я {name}, показать",
+    question: "Вопрос",
+    chipNorm: "Норм",
+    chipCringe: "Стрём",
+    followUpLabel: "Обсудите",
+    exit: "Выйти",
+    confirmExit: "Выйти из игры?",
+    confirmExitBody: "Текущий прогресс не сохранится.",
+    confirm: "Выйти",
+    cancel: "Отмена",
+    close: "Закрыть",
+    keyboardHint: "Клавиши: 1 и 2 — выбрать ответ",
+    skipCard: "Пропустить сейчас",
+    skipHint: "Любой из вас может пропустить. Оба ответа не раскрываются и не учитываются; карточка может вернуться в будущей игре.",
+    hiddenSkipHint: "Скрыта для будущих игр. Можно пропустить сейчас: оба ответа не раскроются и не повлияют на счёт.",
+    hideCard: "Скрыть навсегда",
+    hiddenCard: "Скрыта насовсем",
+    hiddenCount: "Скрытых карточек: {count}",
+    restoreHidden: "Вернуть их",
+    mute: "Выключить звук",
+    unmute: "Включить звук",
+
+    // Summary
+    summaryMatchTitle: "Ваш процент совпадений",
+    summaryTogetherTitle: "Ваши итоги",
+    summaryMatchPerfect: "Вы читаете друг друга как открытую книгу!",
+    summaryMatchGreat: "Отличное совпадение — вы хорошо знаете друг друга.",
+    summaryMatchOkay: "Есть о чём поспорить и что обсудить.",
+    summaryMatchLow: "Похоже, вы отлично дополняете друг друга.",
+    summaryMatched: "Совпадений",
+    summaryCards: "Карточек с ответом",
+    summarySkipped: "Пропущено: {count} · Не учитываются в итогах и счёте",
+    summaryNoAnswers: "В этот раз нет карточек с ответами обоих. Считать нечего — можно начать заново, когда захотите.",
+    summaryTopChoice: "Чаще всего выбирали",
+    summaryPlayAgain: "Ещё раз с новыми вопросами",
+    summarySettings: "Изменить настройки",
+    summaryMenu: "К меню",
+    summaryNewQuestions: "Новые вопросы",
+    summaryChose: "Выбрали",
+    summaryDiscuss: "Обсудите карточки, где вы ответили по-разному.",
+  },
+};
+
+export type TranslationKey = StringKey;
+
+export type TXT = Record<StringKey, string>;
+
+/** All UI strings for one language, for `TXT[lang].key` access. */
+export function stringsFor(lang: Lang): TXT {
+  return STRINGS[lang];
+}
+
+/** Translate a key, interpolating `{placeholders}` from `vars`. */
+export function t(lang: Lang, key: StringKey, vars?: Record<string, string | number>): string {
+  const template = STRINGS[lang][key] ?? STRINGS.en[key] ?? key;
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in vars ? String(vars[name]) : match,
+  );
+}
+
+export function turnLabel(lang: Lang, name: string): string {
+  return `${STRINGS[lang].turn}: ${name}`;
+}
+
+export function passBody(lang: Lang, name: string): string {
+  return t(lang, "passBody", { name });
+}
+
+export function passButton(lang: Lang, name: string): string {
+  return t(lang, "passButton", { name });
+}
+
+export function cardCounter(index: number, total: number): string {
+  return `${index} / ${total}`;
+}
+
+export function matchScore(matched: number, total: number): string {
+  return `${matched} / ${total}`;
+}
+
+export function percentText(percent: number): string {
+  return `${percent}%`;
+}
+
+/** A friendly verdict based on the match ratio (0–1). */
+export function verdictFor(lang: Lang, ratio: number): string {
+  if (ratio >= 0.9) return STRINGS[lang].summaryMatchPerfect;
+  if (ratio >= 0.65) return STRINGS[lang].summaryMatchGreat;
+  if (ratio >= 0.4) return STRINGS[lang].summaryMatchOkay;
+  return STRINGS[lang].summaryMatchLow;
+}

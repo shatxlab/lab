@@ -1,0 +1,10 @@
+---
+import ToolsLayout from "@/layouts/ToolsLayout.astro";
+import TowerApp from "@/components/tower/TowerApp";
+import "@/styles/tower.css";
+---
+
+<ToolsLayout tool="tower" immersive>
+  {/* client:only: the game reads localStorage and draws on a canvas, nothing to prerender. */}
+  <TowerApp client:only="react" />
+</ToolsLayout>

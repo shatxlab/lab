@@ -1,0 +1,539 @@
+import { afterEach, describe, expect, it } from "vitest";
+
+import { ARCHER_BRANCHES, ARMOR_FLOOR, FIREPROOF_HIT, FOES, FROST_SECONDS, GATE, MARK, START_LIVES, TOWERS, VOLLEY, WAVE_GAP, hpScale, starsFor } from "@/lib/kingsroad/sim/balance";
+import {
+  atFork,
+  build,
+  callWave,
+  castVolley,
+  createGame,
+  earlyBonus,
+  giveUp,
+  levelOf,
+  refundFor,
+  routeLength,
+  sell,
+  step,
+  STEP,
+  towerOn,
+  upgrade,
+  upgradeCost,
+} from "@/lib/kingsroad/sim/game";
+import { mapById, MAPS } from "@/lib/kingsroad/sim/maps";
+import { poseAt } from "@/lib/kingsroad/sim/path";
+import { buildSpawns, isBossWave, waveRoster } from "@/lib/kingsroad/sim/waves";
+import type { FoeKind as EnemyKind, Foe, Game, Route } from "@/lib/kingsroad/sim/types";
+
+const MEADOW = mapById("meadow");
+
+/** A game already on its first wave with nothing left to come out of the woods, so foes can be placed by hand. */
+function quietGame(gold = 10_000): Game {
+  const game = createGame("meadow", 1);
+  game.gold = gold;
+  callWave(game);
+  game.spawns = [];
+  // Hold the next wave back so it doesn't march in on its own mid-test.
+  game.nextWaveIn = 999;
+  return game;
+}
+
+/** Put a foe on the meadow road, `distance` along it, in the middle of the road. */
+function foeAt(game: Game, distance: number, kind: EnemyKind = "grunt", overrides: Partial<Foe> = {}): Foe {
+  const def = FOES[kind];
+  const route: Route = def.flying ? { air: { fromX: GATE.x } } : { road: 0 };
+  const pose = poseAt(MEADOW.roads[0], distance);
+  const foe: Foe = {
+    id: game.nextId++,
+    kind,
+    route,
+    distance,
+    lane: 0,
+    facing: pose.angle,
+    x: pose.x,
+    y: pose.y,
+    radius: def.radius,
+    speed: def.speed,
+    flying: def.flying,
+    hp: def.hp,
+    maxHp: def.hp,
+    slowLeft: 0,
+    slow: 0,
+    burnLeft: 0,
+    markLeft: 0,
+    flash: 0,
+    phase: 0,
+    summonTimer: 99,
+    ...overrides,
+  };
+  game.foes.push(foe);
+  return foe;
+}
+
+function runFor(game: Game, seconds: number): void {
+  for (let tick = 0; tick < seconds / STEP; tick += 1) step(game, STEP);
+}
+
+/** The distance along the meadow road nearest to a plot. */
+function besidePlot(plot: number): number {
+  const { x, y } = MEADOW.plots[plot];
+  let best = 0;
+  for (let along = 0; along < MEADOW.roads[0].length; along += 1) {
+    const here = poseAt(MEADOW.roads[0], along);
+    const there = poseAt(MEADOW.roads[0], best);
+    if (Math.hypot(here.x - x, here.y - y) < Math.hypot(there.x - x, there.y - y)) best = along;
+  }
+  return best;
+}
+
+describe("a new game", () => {
+  it("waits for the first wave with the map's gold and a full gate", () => {
+    const game = createGame("meadow", 5);
+    expect(game).toMatchObject({ status: "ready", wave: 0, gold: MEADOW.startGold, lives: START_LIVES });
+    runFor(game, 5);
+    expect(game.foes).toHaveLength(0);
+    expect(game.wave).toBe(0);
+  });
+
+  it("starts marching when the first wave is called", () => {
+    const game = createGame("meadow", 5);
+    expect(callWave(game)).toBe(true);
+    expect(game).toMatchObject({ status: "playing", wave: 1 });
+    runFor(game, 1);
+    expect(game.foes.length).toBeGreaterThan(0);
+  });
+
+  it("replays exactly from the same seed", () => {
+    const play = () => {
+      const game = createGame("ford", 99);
+      build(game, 3, "archer");
+      build(game, 6, "catapult");
+      callWave(game);
+      runFor(game, 40);
+      return JSON.stringify(game);
+    };
+    expect(play()).toBe(play());
+  });
+});
+
+describe("building", () => {
+  it("builds on an empty plot for the tower's price", () => {
+    const game = createGame("meadow", 1);
+    expect(build(game, 0, "archer")).toBe(true);
+    expect(game.gold).toBe(MEADOW.startGold - TOWERS.archer.levels[0].cost);
+    expect(towerOn(game, 0)).toMatchObject({ kind: "archer", level: 1 });
+  });
+
+  it("won't build on a taken plot, a plot that isn't there, or without the gold", () => {
+    const game = createGame("meadow", 1);
+    build(game, 0, "archer");
+    expect(build(game, 0, "frost")).toBe(false);
+    expect(build(game, MEADOW.plots.length, "frost")).toBe(false);
+    game.gold = TOWERS.ballista.levels[0].cost - 1;
+    expect(build(game, 1, "ballista")).toBe(false);
+  });
+
+  it("upgrades a tower to the top level and no further", () => {
+    const game = quietGame();
+    build(game, 0, "catapult");
+    const tower = towerOn(game, 0)!;
+    expect(upgradeCost(tower)).toBe(TOWERS.catapult.levels[1].cost);
+    expect(upgrade(game, 0)).toBe(true);
+    expect(upgrade(game, 0)).toBe(true);
+    expect(tower.level).toBe(3);
+    expect(upgradeCost(tower)).toBeNull();
+    expect(upgrade(game, 0)).toBe(false);
+    expect(tower.spent).toBe(TOWERS.catapult.levels.reduce((sum, level) => sum + level.cost, 0));
+  });
+
+  it("gives everything back for a tower sold before the first wave, and part of it after", () => {
+    const early = createGame("meadow", 1);
+    build(early, 0, "archer");
+    expect(sell(early, 0)).toBe(true);
+    expect(early.gold).toBe(MEADOW.startGold);
+
+    const late = quietGame(500);
+    build(late, 0, "archer");
+    upgrade(late, 0);
+    const tower = towerOn(late, 0)!;
+    expect(refundFor(late, tower)).toBe(Math.floor((70 + 60) * 0.6));
+    sell(late, 0);
+    expect(late.gold).toBe(500 - 130 + 78);
+    expect(towerOn(late, 0)).toBeUndefined();
+  });
+});
+
+describe("waves", () => {
+  it("waits for the last of a wave to leave the woods before the next can be called", () => {
+    const game = createGame("meadow", 3);
+    callWave(game);
+    expect(callWave(game)).toBe(false);
+    while (game.spawns.length > 0) step(game, STEP);
+    step(game, STEP);
+    expect(game.nextWaveIn).toBeCloseTo(WAVE_GAP, 1);
+  });
+
+  it("pays for every second skipped by calling the next wave early", () => {
+    const game = quietGame(0);
+    game.nextWaveIn = 9.6;
+    expect(earlyBonus(game)).toBe(9);
+    expect(callWave(game)).toBe(true);
+    expect(game).toMatchObject({ wave: 2, gold: 9, nextWaveIn: null });
+  });
+
+  it("sends the next wave on its own when the wait runs out", () => {
+    const game = quietGame();
+    game.nextWaveIn = 0.5;
+    runFor(game, 0.6);
+    expect(game.wave).toBe(2);
+  });
+
+  it("grows the horde: runners from wave 2, bats every third wave, brutes from wave 4, the warlord last", () => {
+    expect(waveRoster(1, MEADOW)).toMatchObject({ runner: 0, bat: 0, brute: 0, boss: 0 });
+    expect(waveRoster(2, MEADOW).runner).toBeGreaterThan(0);
+    expect(waveRoster(3, MEADOW).bat).toBeGreaterThan(0);
+    expect(waveRoster(4, MEADOW).bat).toBe(0);
+    expect(waveRoster(4, MEADOW).brute).toBeGreaterThan(0);
+    expect(isBossWave(MEADOW.waves, MEADOW)).toBe(true);
+    expect(isBossWave(10, mapById("crossroads"))).toBe(true);
+    expect(waveRoster(MEADOW.waves - 1, MEADOW).boss).toBe(0);
+    expect(hpScale(10)).toBeGreaterThan(hpScale(5) * 1.5);
+  });
+
+  it("marches shieldbearers only on maps that list them, from wave 8", () => {
+    const harvest = mapById("harvest"), kings = mapById("kings");
+    expect(waveRoster(7, harvest).bulwark).toBe(0);
+    expect(waveRoster(8, harvest).bulwark).toBe(1);
+    expect(waveRoster(20, kings).bulwark).toBe(3);
+    expect(waveRoster(28, MEADOW).bulwark).toBe(0);
+    const spawns = buildSpawns(8, harvest, { rng: 1 });
+    const shieldbearers = spawns.filter((spawn) => spawn.kind === "bulwark");
+    expect(shieldbearers).toHaveLength(1);
+  });
+
+  it("schedules a wave in time order, every walker on one of the map's roads", () => {
+    for (const map of MAPS) {
+      const spawns = buildSpawns(map.waves, map, { rng: 4 });
+      const roster = waveRoster(map.waves, map);
+      expect(spawns).toHaveLength(Object.values(roster).reduce((sum, count) => sum + count, 0));
+      for (const [index, spawn] of spawns.entries()) {
+        if (index > 0) expect(spawn.at).toBeGreaterThanOrEqual(spawns[index - 1].at);
+        expect(spawn.road).toBeGreaterThanOrEqual(0);
+        expect(spawn.road).toBeLessThan(map.roads.length);
+      }
+      expect(spawns[spawns.length - 1].kind).toBe("boss");
+    }
+  });
+
+  it("sends both of the crossroads' roads", () => {
+    const crossroads = mapById("crossroads");
+    const roads = new Set<number>();
+    for (let wave = 1; wave <= crossroads.waves; wave += 1) for (const spawn of buildSpawns(wave, crossroads, { rng: wave })) roads.add(spawn.road);
+    expect(roads).toEqual(new Set([0, 1]));
+  });
+});
+
+describe("the horde", () => {
+  it("walks the road and costs lives at the gate, paying nothing", () => {
+    const game = quietGame(0);
+    const length = MEADOW.roads[0].length;
+    foeAt(game, length - 5, "grunt");
+    foeAt(game, length - 5, "brute");
+    runFor(game, 1);
+    expect(game.foes).toHaveLength(0);
+    expect(game.lives).toBe(START_LIVES - FOES.grunt.leak - FOES.brute.leak);
+    expect(game.gold).toBe(0);
+  });
+
+  it("follows the road's corners", () => {
+    const game = quietGame();
+    const foe = foeAt(game, 160);
+    runFor(game, 1);
+    expect(foe.distance).toBeCloseTo(160 + FOES.grunt.speed, 0);
+    // The first corner is 174 along: by now it has turned right along the top bend.
+    expect(foe.y).toBeCloseTo(150, 0);
+    expect(foe.x).toBeGreaterThan(70);
+  });
+
+  it("flies bats straight at the gate", () => {
+    const game = quietGame();
+    const bat = foeAt(game, 0, "bat");
+    expect(routeLength(MEADOW, bat)).toBeCloseTo(GATE.y + 10, 0);
+    runFor(game, 2);
+    // Weaving a little either side of the straight line.
+    expect(Math.abs(bat.x - GATE.x)).toBeLessThanOrEqual(10);
+    expect(bat.y).toBeGreaterThan(FOES.bat.speed);
+  });
+
+  it("brings in footmen around a marching warlord", () => {
+    const game = quietGame();
+    foeAt(game, 300, "boss", { summonTimer: 0.5 });
+    runFor(game, 0.6);
+    expect(game.foes.filter((foe) => foe.kind === "grunt")).toHaveLength(2);
+  });
+
+  it("ends the game when the lives run out", () => {
+    const game = quietGame();
+    game.lives = 1;
+    foeAt(game, MEADOW.roads[0].length - 1);
+    runFor(game, 0.2);
+    expect(game).toMatchObject({ status: "lost", lives: 0 });
+  });
+
+  it("is beaten once the last wave is cleared", () => {
+    const game = quietGame();
+    game.wave = MEADOW.waves;
+    game.nextWaveIn = null;
+    step(game, STEP);
+    expect(game.status).toBe("won");
+    expect(starsFor(START_LIVES)).toBe(3);
+    expect(starsFor(10)).toBe(2);
+    expect(starsFor(1)).toBe(1);
+  });
+
+  it("lets the player give up", () => {
+    const game = quietGame();
+    giveUp(game);
+    expect(game.status).toBe("lost");
+    expect(build(game, 0, "archer")).toBe(false);
+  });
+});
+
+describe("towers", () => {
+  it("archers shoot the foe in range and the kill pays", () => {
+    const game = quietGame(0);
+    game.towers.push({ id: 900, plot: 1, kind: "archer", level: 1, aim: 0, reloadLeft: 0, sinceShot: 99, spent: 70 });
+    const foe = foeAt(game, besidePlot(1), "grunt", { speed: 0, hp: 5 });
+    runFor(game, 1);
+    expect(foe.hp).toBeLessThanOrEqual(0);
+    expect(game.kills).toBe(1);
+    expect(game.gold).toBe(FOES.grunt.gold);
+  });
+
+  it("ignores foes out of range", () => {
+    const game = quietGame();
+    build(game, 0, "archer");
+    const far = foeAt(game, MEADOW.roads[0].length - 20, "grunt", { speed: 0 });
+    runFor(game, 2);
+    expect(far.hp).toBe(far.maxHp);
+    expect(game.shots).toHaveLength(0);
+  });
+
+  it("aims the stone at the foe the catapult can reach, never at a bat", () => {
+    const game = quietGame();
+    build(game, 4, "catapult");
+    // Hovering right over the catapult: the bats' line from the woods to the gate runs straight through its plot.
+    const bat = foeAt(game, MEADOW.plots[4].y + 10, "bat", { speed: 0 });
+    runFor(game, 3);
+    expect(bat.hp).toBe(bat.maxHp);
+
+    const walker = foeAt(game, besidePlot(4), "brute", { speed: 0 });
+    runFor(game, 3);
+    expect(walker.hp).toBeLessThan(walker.maxHp);
+  });
+
+  it("frost slows the target and the foes around it", () => {
+    const game = quietGame();
+    build(game, 1, "frost");
+    const along = besidePlot(1);
+    const first = foeAt(game, along, "brute", { speed: 0 });
+    const second = foeAt(game, along - 10, "brute", { speed: 0 });
+    runFor(game, 1.2);
+    for (const foe of [first, second]) {
+      expect(foe.slow).toBe(TOWERS.frost.levels[0].slow);
+      expect(foe.slowLeft).toBeGreaterThan(FROST_SECONDS - 1.2);
+    }
+  });
+
+  it("caps any single hit on a shieldbearer, whoever fires it", () => {
+    const game = quietGame();
+    build(game, 1, "ballista");
+    const along = besidePlot(1);
+    const shieldbearer = foeAt(game, along + 60, "bulwark", { speed: 0, hp: 500, maxHp: 500 });
+    const neighbour = foeAt(game, along + 84, "grunt", { speed: 0, hp: 500, maxHp: 500 });
+    runFor(game, 1);
+    // The bolt deals its full damage to the grunt and only the shield's bound to the shieldbearer.
+    expect(500 - shieldbearer.hp).toBe(FOES.bulwark.hitCap);
+    expect(500 - neighbour.hp).toBe(TOWERS.ballista.levels[0].damage);
+  });
+
+  it("lets under-cap shots and slows through the shieldbearer's shield untouched", () => {
+    const game = quietGame();
+    build(game, 1, "frost");
+    const shieldbearer = foeAt(game, besidePlot(1) + 60, "bulwark", { speed: 0 });
+    runFor(game, 2);
+    expect(shieldbearer.hp).toBeLessThan(FOES.bulwark.hp);
+    expect(shieldbearer.slow).toBe(TOWERS.frost.levels[0].slow);
+  });
+
+  it("sends a ballista bolt through everything in its line", () => {
+    const game = quietGame();
+    build(game, 1, "ballista");
+    const along = besidePlot(1);
+    // A column along the road, the bolt fired down its length.
+    const column = [0, 12, 24].map((gap) => foeAt(game, along + 60 + gap, "brute", { speed: 0 }));
+    runFor(game, 1);
+    expect(column.filter((foe) => foe.hp < foe.maxHp).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("the volley", () => {
+  it("rains on a spot, then reloads", () => {
+    const game = quietGame();
+    const foe = foeAt(game, 300, "brute", { speed: 0 });
+    expect(castVolley(game, foe.x, foe.y)).toBe(true);
+    expect(game.volleys).toHaveLength(VOLLEY.arrows);
+    expect(castVolley(game, foe.x, foe.y)).toBe(false);
+    runFor(game, 2);
+    expect(foe.hp).toBeLessThan(foe.maxHp);
+    expect(game.volleyLeft).toBeGreaterThan(VOLLEY.cooldown - 3);
+  });
+
+  it("can't be cast before the first wave", () => {
+    expect(castVolley(createGame("meadow", 1), 100, 100)).toBe(false);
+  });
+
+  describe("archer branches", () => {
+    function branching(): Game {
+      MEADOW.archerBranches = true;
+      const game = quietGame();
+      build(game, 0, "archer");
+      upgrade(game, 0);
+      return game;
+    }
+
+    afterEach(() => {
+      MEADOW.archerBranches = false;
+    });
+
+    it("asks for a branch at the fork on a map that has them, and only there", () => {
+      const game = branching();
+      const tower = towerOn(game, 0)!;
+      expect(atFork(game, tower)).toBe(true);
+      expect(upgrade(game, 0)).toBe(false);
+      expect(upgrade(game, 0, "fire")).toBe(true);
+      expect(tower.branch).toBe("fire");
+      expect(levelOf(tower)).toBe(ARCHER_BRANCHES.fire);
+      build(game, 1, "catapult");
+      expect(upgrade(game, 1, "fire")).toBe(false);
+    });
+
+    it("keeps the plain longbow on maps without branches", () => {
+      MEADOW.archerBranches = false;
+      const game = quietGame();
+      build(game, 0, "archer");
+      upgrade(game, 0);
+      expect(upgrade(game, 0, "lune")).toBe(false);
+      expect(upgrade(game, 0)).toBe(true);
+      expect(levelOf(towerOn(game, 0)!)).toMatchObject(TOWERS.archer.levels[2]);
+    });
+
+    it("sets a foe burning, and the fire keeps hurting after the hit", () => {
+      const game = branching();
+      upgrade(game, 0, "fire");
+      const plot = MEADOW.plots[0];
+      const foe = foeAt(game, 60, "brute");
+      foe.x = plot.x + 20;
+      foe.y = plot.y;
+      for (let tick = 0; tick < 90 && foe.burnLeft <= 0; tick += 1) step(game, STEP);
+      expect(foe.burnLeft).toBeGreaterThan(0);
+      const before = foe.hp;
+      game.towers = [];
+      game.shots = [];
+      for (let tick = 0; tick < 30; tick += 1) step(game, STEP);
+      expect(foe.hp).toBeLessThan(before);
+    });
+
+    it("makes a marked foe take more damage", () => {
+      const firstHit = (markLeft: number) => {
+        const game = quietGame();
+        build(game, 0, "archer");
+        const foe = foeAt(game, 60, "brute", { markLeft });
+        foe.x = MEADOW.plots[0].x + 20;
+        foe.y = MEADOW.plots[0].y;
+        for (let tick = 0; tick < 120 && foe.hp === foe.maxHp; tick += 1) step(game, STEP);
+        return foe.maxHp - foe.hp;
+      };
+      expect(firstHit(2)).toBeCloseTo(firstHit(0) * (1 + MARK.bonus), 5);
+    });
+  });
+
+  describe("new foes", () => {
+    const ALL = ["knight", "imp", "healer", "scamp", "gargoyle"] as const;
+
+    afterEach(() => {
+      MEADOW.foes = [];
+    });
+
+    it("sends none of them unless the map lists them", () => {
+      for (let wave = 1; wave <= MEADOW.waves; wave += 1) {
+        const roster = waveRoster(wave, MEADOW);
+        for (const kind of ALL) expect(roster[kind]).toBe(0);
+      }
+      MEADOW.foes = [...ALL];
+      const seen = new Set<string>();
+      for (let wave = 1; wave <= 28; wave += 1) {
+        const roster = waveRoster(wave, MEADOW);
+        for (const kind of ALL) if (roster[kind] > 0) seen.add(kind);
+      }
+      expect([...seen].sort()).toEqual([...ALL].sort());
+    });
+
+    it("slips each healer into the grunts' column", () => {
+      MEADOW.foes = ["healer"];
+      const spawns = buildSpawns(9, MEADOW, { rng: 3 });
+      const healers = spawns.filter((spawn) => spawn.kind === "healer");
+      expect(healers).toHaveLength(waveRoster(9, MEADOW).healer);
+      const grunts = spawns.filter((spawn) => spawn.kind === "grunt");
+      for (const healer of healers) expect(grunts.some((grunt) => grunt.road === healer.road && Math.abs(grunt.at - healer.at) < 1)).toBe(true);
+      expect(spawns.map((spawn) => spawn.at)).toEqual([...spawns.map((spawn) => spawn.at)].sort((a, b) => a - b));
+    });
+
+    function firstHit(kind: EnemyKind, branch?: "fire"): { dealt: number; burning: boolean } {
+      MEADOW.archerBranches = branch !== undefined;
+      const game = quietGame();
+      build(game, 0, "archer");
+      if (branch) {
+        upgrade(game, 0);
+        upgrade(game, 0, branch);
+      }
+      const foe = foeAt(game, 60, kind);
+      foe.x = MEADOW.plots[0].x + 20;
+      foe.y = MEADOW.plots[0].y;
+      for (let tick = 0; tick < 120 && foe.hp === foe.maxHp; tick += 1) step(game, STEP);
+      MEADOW.archerBranches = false;
+      return { dealt: foe.maxHp - foe.hp, burning: foe.burnLeft > 0 };
+    }
+
+    it("turns small hits aside on a knight, but never below the floor", () => {
+      const grunt = firstHit("grunt").dealt;
+      expect(grunt).toBe(TOWERS.archer.levels[0].damage);
+      expect(firstHit("knight").dealt).toBeCloseTo(Math.max(grunt * ARMOR_FLOOR, grunt - FOES.knight.armor));
+    });
+
+    it("bounds a fire arrow's hit on a shieldbearer but lets it burn", () => {
+      const shieldbearer = firstHit("bulwark", "fire");
+      expect(shieldbearer.dealt).toBe(FOES.bulwark.hitCap);
+      expect(shieldbearer.burning).toBe(true);
+    });
+
+    it("lets fire arrows burn a grunt but not an imp, and weakens their own hit", () => {
+      const grunt = firstHit("grunt", "fire");
+      const imp = firstHit("imp", "fire");
+      expect(grunt.burning).toBe(true);
+      expect(imp.burning).toBe(false);
+      expect(imp.dealt).toBeCloseTo(ARCHER_BRANCHES.fire.damage * FIREPROOF_HIT);
+    });
+
+    it("has a healer mend its neighbours", () => {
+      const game = quietGame();
+      const healer = foeAt(game, 100, "healer");
+      const near = foeAt(game, 104, "grunt");
+      const far = foeAt(game, 260, "grunt");
+      near.hp = far.hp = 5;
+      for (let tick = 0; tick < 60; tick += 1) step(game, STEP);
+      expect(near.hp).toBeGreaterThan(5);
+      expect(far.hp).toBe(5);
+      expect(healer.hp).toBe(healer.maxHp);
+    });
+  });
+});

@@ -1,0 +1,6 @@
+{
+  "hashes": {
+    "src/lib/tower/sim/balance.ts": "4ebfc25ff9c99d04d67bd58e6ba6f0fefdfc950b7061a9063541a21402b81231"
+  },
+  "reason": "Lone Tower's volley was replaced by targeted Catapult/Frost Field skills: BASE.volley* and MIN_VOLLEY_COOLDOWN became SKILLS/LEGACY_VOLLEY_SPLASH/MIN_SKILL_COOLDOWN, and UPGRADE_MAX keys volleySize/volleyCooldown became skillSize/skillCooldown. KingsRoad imports only ENEMIES from this file, which is unchanged, so study semantics are unaffected. Any further edit must add a new record knowingly."
+}

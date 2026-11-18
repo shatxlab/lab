@@ -1,0 +1,110 @@
+import { getProductType } from '@/lib/tycoon/data/productTypes'
+import { formatCount, formatMoney } from '@/lib/tycoon/format'
+import { DAYS_PER_MONTH } from '@/lib/tycoon/sim/balance'
+import { fitPressure, retention, totalPressure } from '@/lib/tycoon/sim/fit'
+import { inGarage, officeName } from '@/lib/tycoon/sim/offices'
+import { floorCycle } from '@/lib/tycoon/sim/cycle'
+import { formatVersion, versionOf } from '@/lib/tycoon/sim/releases'
+import { productIncome } from '@/lib/tycoon/sim/economy'
+import { companionEffects, companionsOf, freeSlots } from '@/lib/tycoon/sim/companions'
+import { operating } from '@/lib/tycoon/sim/services'
+import { usersIn } from '@/lib/tycoon/sim/products'
+import { capacityOf, hostingCost, loadOf } from '@/lib/tycoon/sim/scale'
+import { releaseKey } from '@/lib/tycoon/sim/fit'
+import { statMultiplier } from '@/lib/tycoon/sim/modifiers'
+import { nemesisRival, nemesisStanding } from '@/lib/tycoon/sim/nemesis'
+import { NEMESIS_BEAT_DAYS } from '@/lib/tycoon/sim/balance'
+import { useGame, useStore } from './context'
+import { FitMeter } from './FitMeter'
+
+const CAUSES = { stale: 'it has gone stale', bugs: 'open bugs', rivals: 'rivals in its market', missing: 'features users now expect', companions: 'a companion nobody looks after' } as const
+
+/** The hit in numbers: its users, fit, servers and income, what presses on it, and the people and rivals around it. */
+export function CompanyTab() {
+  const store = useStore()
+  const state = useGame()
+  const hit = state.products.find((p) => p.id === state.signatureId)
+  if (!hit || inGarage(state)) return null
+
+  const income = productIncome(state, hit) * statMultiplier(state, 'revenue')
+  const load = loadOf(hit)
+  const pressure = fitPressure(state, hit)
+  const worst = (Object.keys(CAUSES) as (keyof typeof CAUSES)[]).reduce((a, b) => (pressure[b] > pressure[a] ? b : a))
+  const kept = Math.round(retention(hit, companionEffects(state).retention) * 100)
+  const eu = usersIn(hit, 'eu')
+  const latest = hit.releases?.at(-1)
+  const loadTone = load >= 1 ? 'bad' : load >= 0.8 ? 'warn' : 'good'
+
+  return (
+    <section className="hit-dash" aria-label={`${hit.name} at a glance`}>
+      <div className="hit-dash-head">
+        <strong>{hit.name}</strong>
+        <span className="muted">
+          {getProductType(hit.productTypeId).name} · {formatCount(hit.users)} {getProductType(hit.productTypeId).userNoun}
+          {eu > 0 && ` (${formatCount(eu)} in Europe)`}
+        </span>
+        <button onClick={() => store.openDialog({ kind: 'releases', productId: hit.id })}>{formatVersion(versionOf(hit))} · Releases…</button>
+      </div>
+      <div className="hit-dash-grid">
+        <div>
+          <small className="muted">Income</small>
+          <strong>{formatMoney(income)}/day</strong>
+          <small className="muted">
+            ${((income * DAYS_PER_MONTH) / Math.max(1, hit.users)).toFixed(2)} a user a month · servers {formatMoney(hostingCost(state))}/day
+          </small>
+        </div>
+        <div>
+          <small className="muted">Servers</small>
+          <strong className={loadTone}>{Math.round(load * 100)}% full</strong>
+          <small className="muted">holds {formatCount(capacityOf(hit))}{load >= 0.92 ? operating(state) ? ' · outages likely: assign a server initiative in Operations' : ' · outages likely: plan server capacity' : ''}</small>
+        </div>
+        <div>
+          <FitMeter fit={hit.fit ?? 0} rangeKey={releaseKey(hit)} taken />
+          <small className="muted">
+            {totalPressure(pressure) > 0.02 ? `Sagging: ${CAUSES[worst]}` : 'Holding'} · keeps {kept}% of users
+          </small>
+        </div>
+      </div>
+      {state.nemesis && nemesisRival(state) && nemesisStanding(state) && (
+        <div className="hit-dash-rival">
+          <strong>{nemesisRival(state)!.name}</strong>{' '}
+          <span className="muted">
+            {state.nemesis.founder} earns {formatMoney(nemesisStanding(state)!.theirs)}/day against your {formatMoney(nemesisStanding(state)!.yours)}.{' '}
+            {state.nemesis.leadDays > 0 ? `You have been ahead ${state.nemesis.leadDays} of ${NEMESIS_BEAT_DAYS} days.` : 'Ship releases and keep fit high to pull ahead.'}
+          </span>
+          <small className="muted"> {state.nemesis.story}</small>
+        </div>
+      )}
+      {state.friendArc && (
+        <small className="muted">
+          {state.friendArc.stage === 'gone'
+            ? `${state.friendArc.left?.name ?? 'Your friend'} left to join your rival. They might write one day.`
+            : `${state.employees.find((e) => e.founder && e.title === 'CTO')?.name ?? 'Your friend'}: ${state.friendArc.bond >= 70 ? 'closer than ever' : state.friendArc.bond >= 40 ? 'still with you' : 'drifting'}.`}
+        </small>
+      )}
+      <div className="hit-dash-floors">
+        {latest && (
+          <small>
+            <span className="muted">Last release:</span> <strong>{latest.version}{latest.title && ` ${latest.title}`}</strong>{' '}
+            <span className={latest.reachAfter >= latest.reachBefore ? 'good' : 'bad'}>
+              reach {Math.round((latest.reachAfter / Math.max(1, latest.reachBefore) - 1) * 100) >= 0 ? '+' : ''}
+              {Math.round((latest.reachAfter / Math.max(1, latest.reachBefore) - 1) * 100)}%
+            </span>
+          </small>
+        )}
+        {state.offices
+          .filter((o) => o.kind === 'office' && o.productId === hit.id)
+          .map((office) => (
+            <small key={office.id} className="muted">
+              {officeName(state, office)}: {floorCycle(state, office)}
+            </small>
+          ))}
+      </div>
+      <small className="muted">
+        {companionsOf(state).length === 0
+          ? operating(state) ? 'No companion products yet. No fixed companion-count limit; review effective shared care in Company operations.' : `No companion products yet (${freeSlots(state)} slot${freeSlots(state) === 1 ? '' : 's'} free).`
+          : `Companions: ${companionsOf(state).map((p) => `${p.name} (${p.role})`).join(', ')}.`}
+      </small>
+    </section>
+  )
+}

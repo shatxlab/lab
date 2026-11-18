@@ -1,0 +1,220 @@
+import { ManagedCareer } from './PeopleManagementPanel'
+import { careerGradeName } from '@/lib/tycoon/sim/career-profile'
+import { useState } from 'react'
+import { getTrait } from '@/lib/tycoon/data/traits'
+import { ANALYST_MAX_LEVEL, LEVELS, MORALE_UNHAPPY, PROMOTION_PATIENCE_DAYS, SURVEY_COST, TRAINING_DAYS } from '@/lib/tycoon/sim/balance'
+import { pmEffectText } from '@/lib/tycoon/sim/direction'
+import { getOffice, officeName } from '@/lib/tycoon/sim/offices'
+import { pmBlocker, primarySkillName, promotionBlocker, title } from '@/lib/tycoon/sim/careers'
+import { insightOf } from '@/lib/tycoon/sim/insight'
+import { salaryFor } from '@/lib/tycoon/sim/hiring'
+import { moraleSpeed } from '@/lib/tycoon/sim/morale'
+import { getProductType } from '@/lib/tycoon/data/productTypes'
+import { KNOWLEDGE_PRODUCT_MAX, KNOWLEDGE_TYPE_MAX } from '@/lib/tycoon/sim/balance'
+import { knowledgeSpeed, topExpertise } from '@/lib/tycoon/sim/knowledge'
+import { moraleTarget, trainingBlocker, trainingCost, trainingGain } from '@/lib/tycoon/sim/staff'
+import { DISCIPLINES, isBuilder } from '@/lib/tycoon/sim/types'
+import { DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '@/lib/tycoon/theme'
+import { useGame, useStore } from './context'
+import { formatAge, formatMoney } from '@/lib/tycoon/format'
+import { Modal } from './Modal'
+import { cssVars } from './style'
+import { MoraleBar } from './TeamDialog'
+
+/** One person: skills (with training), their trait, and how they are feeling. */
+export function EmployeeDialog({ id }: { id: number }) {
+  const store = useStore()
+  const state = useGame()
+  const [confirmFire, setConfirmFire] = useState(false)
+  const [message, setMessage] = useState('')
+  const person = state.employees.find((e) => e.id === id)
+
+  if (!person) {
+    return (
+      <Modal title="Gone" onClose={() => store.closeDialog()}>
+        <p className="muted">This person no longer works here.</p>
+        <div className="actions">
+          <button onClick={() => store.closeDialog()}>Close</button>
+        </div>
+      </Modal>
+    )
+  }
+
+  const trait = getTrait(person.trait)
+  const target = Math.round(moraleTarget(state, person))
+  const daysLeft = person.training ? Math.max(0, person.training.finishDay - state.day) : null
+  const topAnalyst = person.role === 'analyst' && person.level >= ANALYST_MAX_LEVEL
+  const next = topAnalyst ? undefined : LEVELS[person.level + 1]
+  const promotion = promotionBlocker(state, person)
+  const waiting = person.readySince === null ? 0 : state.day - person.readySince
+
+  const fire = () => {
+    if (!confirmFire) {
+      setConfirmFire(true)
+      return
+    }
+    store.fire(person.id)
+    store.openDialog({ kind: 'team' })
+  }
+
+  return (
+    <Modal title={person.name} onClose={() => store.closeDialog()}>
+      <p className="muted">
+        {title(person)} · {formatMoney(person.salary)}/mo · with you {formatAge(state.day - person.hiredDay)}
+      </p>
+      {person.founder && (
+        <p>
+          <strong>★ Founder.</strong> <span className="muted">They started this studio with you: they never leave, cannot be fired or poached, and draw half the market rate, in every era.</span>
+        </p>
+      )}
+
+      <section className="section">
+        <div className="section-head">
+          <h3>Career</h3>
+          <span className="muted">
+            {careerGradeName(person)} for {formatAge(state.day - (person.career?.gradeDay ?? person.levelDay))}
+          </span>
+        </div>
+        {person.career ? <ManagedCareer employee={person} /> : next ? (
+          promotion === null ? (
+            <div className="upgrade">
+              <span className={waiting > PROMOTION_PATIENCE_DAYS ? 'bad' : ''}>
+                Ready to be a {next.name.toLowerCase()}
+                {waiting > PROMOTION_PATIENCE_DAYS ? ', and unhappy to be kept waiting' : ''}. New salary{' '}
+                {formatMoney(salaryFor(person.skills, person.trait, person.level + 1, state.day, 1, person.analysis ?? 0))}/mo.
+              </span>
+              <button className="primary" onClick={() => setMessage(store.promoteEmployee(person.id).ok ? '' : 'Could not promote them.')}>
+                Promote
+              </button>
+            </div>
+          ) : (
+            <p className="muted">
+              Next: {next.name.toLowerCase()}. {promotion}.
+            </p>
+          )
+        ) : (
+          <p className="muted">
+            {topAnalyst
+              ? 'A senior analyst: the next step is product manager.'
+              : person.role === 'pm'
+                ? 'A Lead product manager: the products of their office reach the furthest and break out the most.'
+                : 'A Lead: their office works faster and happier for having them.'}
+          </p>
+        )}
+        {person.role === 'analyst' && pmBlocker(state, person) === null && (
+          <div className="upgrade">
+            <span>Ready to take over the direction of their office's products as a product manager {person.career ? "(specialist grade retained)" : "(back at Mid level)"}.</span>
+            <button className="primary" onClick={() => setMessage(store.becomePm(person.id).ok ? '' : 'Could not make them a product manager.')}>
+              Make product manager
+            </button>
+          </div>
+        )}
+        {topAnalyst && pmBlocker(state, person) !== null && <p className="muted">Product manager: {pmBlocker(state, person)}.</p>}
+        {person.role === 'pm' && (
+          <p className="good">
+            Steers {officeName(state, getOffice(state, person.officeId)!)}: every product launched or grown there gets {pmEffectText(state, getOffice(state, person.officeId))}. It grows with their level and their analysis.
+          </p>
+        )}
+        {person.role === 'analyst' && (
+          <p className="muted">
+            Their insight pays for studying an audience ({SURVEY_COST} insight, from the New project dialog): the feature list then shows what those people love, and puts it first.
+          </p>
+        )}
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h3>{trait.name}</h3>
+        </div>
+        {trait.description && <p className="muted">{trait.description}</p>}
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h3>Mood</h3>
+          <span className="muted">
+            works at {Math.round(moraleSpeed(person.morale) * 100)}% pace · settling around {target}
+          </span>
+        </div>
+        <MoraleBar morale={person.morale} />
+        {person.morale < MORALE_UNHAPPY && <p className="bad">Unhappy: a team outing or a good release would help. Left too long, they may quit.</p>}
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h3>Experience</h3>
+          <span className="muted">Days of hands-on work. It makes them faster on that kind of product (up to +{Math.round(KNOWLEDGE_TYPE_MAX * 100)}%) and on that very product (up to +{Math.round(KNOWLEDGE_PRODUCT_MAX * 100)}%).</span>
+        </div>
+        {topExpertise(state, person).length === 0 ? (
+          <p className="muted">Nothing yet: it builds up as they work on products.</p>
+        ) : (
+          topExpertise(state, person).map((e) => (
+            <div key={`${e.kind}-${e.id}`} className="skill-row">
+              <span className="skill-name">{e.kind === 'type' ? getProductType(e.id).name : e.name}</span>
+              <strong className="skill-value">{e.days} days</strong>
+              <span className="muted">{e.kind === 'type' ? 'this kind of product' : `+${Math.round((knowledgeSpeed(person, { typeId: '', productId: Number(e.id) }) - 1) * 100)}% on it`}</span>
+            </div>
+          ))
+        )}
+      </section>
+
+      {!isBuilder(person) && (
+        <section className="section">
+          <div className="section-head">
+            <h3>Analysis</h3>
+            <span className="muted">
+              {person.role === 'pm' ? 'Gathers some insight between steering the products' : 'Gathers insight about users'}: +{insightOf(person).toFixed(1)} a day
+            </span>
+          </div>
+          <div className="skill-row" style={cssVars({ '--c': DISCIPLINE_COLORS.design })}>
+            <span className="skill-name">{primarySkillName(person)}</span>
+            <div className="track">
+              <div className="fill" style={{ width: `${person.analysis ?? 0}%` }} />
+            </div>
+            <strong className="skill-value">{Math.round(person.analysis ?? 0)}</strong>
+          </div>
+          <p className="muted">It grows a little with every day of work. They do no project work.</p>
+        </section>
+      )}
+
+      {isBuilder(person) && (
+      <section className="section">
+        <div className="section-head">
+          <h3>Skills</h3>
+          <span className="muted">Training takes {TRAINING_DAYS} days away from the project.</span>
+        </div>
+        {daysLeft !== null && person.training && (
+          <p className="good">
+            Training {DISCIPLINE_LABELS[person.training.discipline]}: {daysLeft} day{daysLeft === 1 ? '' : 's'} left
+          </p>
+        )}
+        {DISCIPLINES.map((d) => {
+          const blocker = trainingBlocker(state, person, d)
+          return (
+            <div key={d} className="skill-row" style={cssVars({ '--c': DISCIPLINE_COLORS[d] })}>
+              <span className="skill-name">{DISCIPLINE_LABELS[d]}</span>
+              <div className="track">
+                <div className="fill" style={{ width: `${person.skills[d]}%` }} />
+              </div>
+              <strong className="skill-value">{Math.round(person.skills[d])}</strong>
+              <button disabled={blocker !== null} onClick={() => setMessage(store.train(person.id, d).ok ? '' : 'Could not start that course.')}>
+                {blocker ?? `Train · ${formatMoney(trainingCost(person, d))} · +${trainingGain(person, d).toFixed(1)}`}
+              </button>
+            </div>
+          )
+        })}
+      </section>
+      )}
+
+      <div className="actions">
+        {message && <p className="bad action-note">{message}</p>}
+        <button onClick={() => store.openDialog({ kind: 'team' })}>Back to team</button>
+        {!person.founder && (
+          <button className={confirmFire ? 'danger' : ''} onClick={fire} onBlur={() => setConfirmFire(false)}>
+            {confirmFire ? 'Confirm' : 'Fire'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  )
+}

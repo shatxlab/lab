@@ -1,0 +1,23 @@
+---
+// Pre-paint theme resolution for ToolsLayout.
+// Inlined on purpose: a tiny inline snippet resolves the theme before first
+// paint so there is no flash of the wrong theme (FOUC). Astro hashes this
+// script for the Content-Security-Policy at build time.
+// Mirrors src/lib/apps/theme.ts (resolveTheme + applyTheme).
+---
+
+<script is:inline>
+  (function () {
+    var theme = null;
+    try {
+      theme = localStorage.getItem("lab:theme:v1");
+    } catch (e) {}
+    if (theme !== "light" && theme !== "dark") {
+      theme =
+        window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+    }
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>

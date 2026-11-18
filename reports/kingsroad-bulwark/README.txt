@@ -1,0 +1,1 @@
+Two predeclared doses of the shielded-foe prototype, forced onto all 20 maps (a stress test, harsher than any shipping plan). The offline variant and its wrapper were retired once the foe shipped; to reproduce these exact runs, checkout commit be016a8 and follow kingsroad-bulwark-experiment.md.

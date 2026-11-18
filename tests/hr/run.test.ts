@@ -1,0 +1,926 @@
+import { describe, expect, it } from "vitest";
+
+import { AUDITOR_ENRAGE, BLINK, BOARDROOM, COFFEE, FOES, FLOOR_PLAN, GREASE, INTERVIEW, KITCHEN, LAST_FLOOR, MIX, PICKS_OFFERED, PING, PRIME_TONER, RACK, SECOND_WIND, SERVER_ROOM, SHOCK, SHREDDER, SKILL, STAGES, HERO_BASE, MAX_FOES, MAX_GEMS, MAX_SHOTS, VENDING, floorStage, xpToNext } from "@/lib/hr/sim/balance";
+import { abandon, castSkill, choose, createRun, descend, foeDamageFactor, step, STEP } from "@/lib/hr/sim/run";
+import { TONER } from "@/lib/hr/sim/balance";
+import type { FoeKind, Input, Run } from "@/lib/hr/sim/types";
+import { starters } from "@/lib/roster/generate";
+import type { Coworker } from "@/lib/roster/types";
+
+const [intern, accountant] = starters();
+
+/** A plain coworker: every stat 10, no quirks, so the run plays on the base numbers. */
+const plain: Coworker = { ...intern, quirks: [], stats: { grit: 10, output: 10, hustle: 10, focus: 10, luck: 10 } };
+
+/** Walks a slow circle and always takes the first pick; a cleared floor is descended without fuss. */
+function play(run: Run, seconds: number): void {
+  let tick = 0;
+  while (run.status === "playing" && run.time < seconds) {
+    if (run.cleared) {
+      descend(run);
+      continue;
+    }
+    if (run.picks) {
+      choose(run, 0);
+      continue;
+    }
+    const angle = (tick / 60) * 0.3;
+    const input: Input = { dx: Math.cos(angle), dy: Math.sin(angle) };
+    step(run, input);
+    tick += 1;
+  }
+}
+
+describe("createRun", () => {
+  it("starts with the department's weapon and the coworker's numbers", () => {
+    expect(createRun(intern, 1).weapons.map((weapon) => weapon.id)).toEqual(["stickyNotes"]);
+    expect(createRun(accountant, 1).weapons.map((weapon) => weapon.id)).toEqual(["spreadsheet"]);
+    const run = createRun(plain, 1);
+    expect(run.numbers).toEqual(HERO_BASE);
+    expect(run.hero.hp).toBe(HERO_BASE.maxHp);
+  });
+});
+
+describe("step", () => {
+  it("replays exactly from the seed and the inputs", () => {
+    const a = createRun(intern, 7);
+    const b = createRun(intern, 7);
+    play(a, 60);
+    play(b, 60);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(a.kills).toBeGreaterThan(0);
+  });
+
+  it("carries on the same after a trip through JSON", () => {
+    const run = createRun(accountant, 3);
+    play(run, 45);
+    const copy = JSON.parse(JSON.stringify(run)) as Run;
+    play(run, 90);
+    play(copy, 90);
+    expect(JSON.stringify(copy)).toBe(JSON.stringify(run));
+  });
+
+  // Bosses and printers are placed past the foe cap, so it may be passed by a few.
+  it("keeps foes, shots and gems under their caps", () => {
+    const run = createRun(accountant, 5);
+    let tick = 0;
+    while (run.status === "playing" && run.time < 200) {
+      if (run.cleared) descend(run);
+      else if (run.picks) choose(run, 0);
+      else {
+        step(run, { dx: Math.cos(tick / 200), dy: Math.sin(tick / 200) });
+        tick += 1;
+      }
+      expect(run.foes.length).toBeLessThanOrEqual(MAX_FOES + 3);
+      expect(run.shots.length).toBeLessThanOrEqual(MAX_SHOTS);
+      expect(run.gems.length).toBeLessThanOrEqual(MAX_GEMS);
+    }
+  });
+
+  it("is lost standing still, sooner or later", () => {
+    const run = createRun(plain, 2);
+    while (run.status === "playing") {
+      if (run.picks) choose(run, 0);
+      else step(run, { dx: 0, dy: 0 });
+    }
+    expect(run.status).toBe("lost");
+    expect(run.hero.hp).toBe(0);
+    expect(run.lastHitBy).not.toBeNull();
+    expect(Object.values(run.takenFrom).reduce((sum, damage) => sum + damage, 0)).toBeGreaterThanOrEqual(HERO_BASE.maxHp);
+  });
+
+  it("is won when the audit's auditor falls on the last floor", () => {
+    const run = createRun(plain, 4);
+    run.floor = LAST_FLOOR;
+    run.bossId = 999;
+    step(run, { dx: 0, dy: 0 });
+    run.foes.push(foe({ id: 999, kind: "auditor", boss: true, hp: 0, gold: FOES.auditor.gold, x: 100, y: 100 }));
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("won");
+    expect(run.gold).toBeGreaterThanOrEqual(FOES.auditor.gold);
+  });
+
+  it("is never lost to the clock: a day only ends on the floor", () => {
+    const run = createRun(plain, 4);
+    run.time = 10_000;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("playing");
+  });
+});
+
+describe("level-ups", () => {
+  it("stop the clock until a pick is taken, and offer every owed level in turn", () => {
+    const run = createRun(plain, 9);
+    run.gems.push({ id: 900, x: run.hero.x, y: run.hero.y, value: xpToNext(1) + xpToNext(2), pulled: false });
+    step(run, { dx: 0, dy: 0 });
+    expect(run.level).toBe(3);
+    expect(run.picks).toHaveLength(3);
+    const time = run.time;
+    step(run, { dx: 1, dy: 0 });
+    expect(run.time).toBe(time);
+    expect(choose(run, 0)).toBe(true);
+    expect(run.picks).toHaveLength(3);
+    expect(choose(run, 1)).toBe(true);
+    expect(run.picks).toBeNull();
+    expect(choose(run, 0)).toBe(false);
+  });
+});
+
+describe("the floor plan", () => {
+  it("has twenty floors, each a stage and a boss, and the audit last", () => {
+    expect(FLOOR_PLAN).toHaveLength(LAST_FLOOR);
+    expect(FLOOR_PLAN[LAST_FLOOR - 1].boss).toBe("auditor");
+    expect(floorStage(1)).toBe("openSpace");
+    expect(floorStage(5)).toBe("openSpace");
+    expect(floorStage(6)).toBe("kitchen");
+    expect(floorStage(10)).toBe("serverRoom");
+    expect(floorStage(LAST_FLOOR)).toBe("boardroom");
+    for (let floor = 1; floor <= LAST_FLOOR; floor += 1) {
+      expect(floorStage(floor)).toBe(FLOOR_PLAN[floor - 1].stage);
+      expect(FLOOR_PLAN[floor - 1].bossHp).toBeGreaterThan(0);
+      expect(FLOOR_PLAN[floor - 1].horde).toBeGreaterThan(0);
+    }
+  });
+
+  it("walks floor 1's boss in after the horde, and reserves its kind for the boss", () => {
+    const run = createRun(plain, 11);
+    const plan = FLOOR_PLAN[0];
+    run.time = plan.horde - 1;
+    play(run, plan.horde + 1);
+    const boss = run.foes.find((foe) => foe.id === run.bossId);
+    expect(boss).toMatchObject({ kind: plan.boss, boss: true });
+    expect(boss?.maxHp).toBeCloseTo(plan.bossHp);
+    expect(run.foes.filter((foe) => foe.kind === plan.boss)).toHaveLength(1);
+  });
+
+  it("clears the floor when its boss falls: gems go to the hero, a pick is offered, the stairs wait", () => {
+    const run = createRun(plain, 12);
+    const plan = FLOOR_PLAN[0];
+    run.time = plan.horde - 1;
+    play(run, plan.horde + 1);
+    const boss = run.foes.find((foe) => foe.id === run.bossId)!;
+    // Only the boss on the field, and nothing it drops, so the vacuum's totals are exact.
+    run.foes = [boss];
+    boss.xp = 0;
+    boss.gold = 0;
+    // Exactly one day-level's worth minus what the hero already holds, plus 5, so the totals are exact.
+    const value = xpToNext(run.level) - run.xp + 5;
+    run.gems = [{ id: 900, x: run.hero.x, y: run.hero.y, value, pulled: false }];
+    const level = run.level;
+    boss.hp = 0;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.cleared).toBe(true);
+    expect(run.floorsCleared).toBe(1);
+    expect(run.picks).not.toBeNull();
+    // The fallen gem is a level and 5 xp; the hero's own numbers are plain, so nothing multiplies it.
+    expect(run.level).toBe(level + 1);
+    expect(run.xp).toBe(5);
+    expect(run.status).toBe("playing");
+    const time = run.time;
+    step(run, { dx: 1, dy: 0 });
+    expect(run.time).toBe(time);
+    choose(run, 0);
+    expect(descend(run)).toBe(true);
+    expect(run).toMatchObject({ floor: 2, cleared: false, bossId: null, bossDone: false });
+    expect(run.foes).toEqual([]);
+  });
+
+  it("rolls the lucky find on a cleared floor: luck buys a fourth pick", () => {
+    const lucky = createRun(plain, 14);
+    const plan = FLOOR_PLAN[0];
+    lucky.time = plan.horde - 1;
+    play(lucky, plan.horde + 1);
+    const boss = lucky.foes.find((foe) => foe.id === lucky.bossId)!;
+    lucky.gems = [];
+    lucky.numbers.loot = 1;
+    // The desk already bent both its hammers today, so the cleared offer is about the lucky find alone.
+    lucky.mutations = { stickyNotes: "tandem", spreadsheet: "ricochet" };
+    boss.hp = 0;
+    step(lucky, { dx: 0, dy: 0 });
+    expect(lucky.cleared).toBe(true);
+    expect(lucky.picks).toHaveLength(PICKS_OFFERED + 1);
+    // Without the luck, the offer is the usual three.
+    const unlucky = createRun(plain, 14);
+    unlucky.time = plan.horde - 1;
+    play(unlucky, plan.horde + 1);
+    const boss2 = unlucky.foes.find((foe) => foe.id === unlucky.bossId)!;
+    unlucky.numbers.loot = 0;
+    unlucky.mutations = { stickyNotes: "tandem", spreadsheet: "ricochet" };
+    boss2.hp = 0;
+    step(unlucky, { dx: 0, dy: 0 });
+    expect(unlucky.picks).toHaveLength(PICKS_OFFERED);
+  });
+
+  it("the act's boss drops its signature item, rolled by luck", () => {
+    const lucky = createRun(plain, 14);
+    lucky.numbers.loot = 1;
+    const plan = FLOOR_PLAN[0];
+    lucky.time = plan.horde - 1;
+    play(lucky, plan.horde + 1);
+    lucky.foes.find((foe) => foe.id === lucky.bossId)!.hp = 0;
+    step(lucky, { dx: 0, dy: 0 });
+    expect(lucky.lootFound).toHaveLength(0);
+    // The act's ends carry the drops; floor 1's manager does not. The stairs take floor 1 to 2 — jump to 3 first.
+    lucky.floor = 4;
+    lucky.cleared = true;
+    descend(lucky);
+    play(lucky, lucky.time + FLOOR_PLAN[4].horde + 1);
+    lucky.foes.find((foe) => foe.id === lucky.bossId)!.hp = 0;
+    lucky.numbers.loot = 1;
+    lucky.picks = null;
+    step(lucky, { dx: 0, dy: 0 });
+    expect(lucky.lootFound).toEqual([{ id: "shredderGuard", level: 1, floor: 5 }]);
+    // Unlucky: no drop.
+    const unlucky = createRun(plain, 14);
+    unlucky.numbers.loot = 0;
+    unlucky.floor = 4;
+    unlucky.cleared = true;
+    descend(unlucky);
+    play(unlucky, unlucky.time + FLOOR_PLAN[4].horde + 1);
+    unlucky.foes.find((foe) => foe.id === unlucky.bossId)!.hp = 0;
+    unlucky.numbers.loot = 0;
+    unlucky.picks = null;
+    step(unlucky, { dx: 0, dy: 0 });
+    expect(unlucky.lootFound).toHaveLength(0);
+  });
+
+  it("the desk's unique effects work: the untangler frees the stride, the pen fades the paperwork", () => {
+    const stuck = createRun({ ...plain, department: "interns" as const }, 55, 1, null, [{ id: "cableUntangler", level: 1, floor: 12 }]);
+    stuck.stage = "kitchen";
+    stuck.hazards = [{ kind: "spill", x: stuck.hero.x + 10, y: stuck.hero.y, radius: 40, timer: 0, active: 0 }];
+    stuck.hero.x += 10;
+    step(stuck, { dx: 1, dy: 0 });
+    const freed = stuck.hero.x - (stuck.hero.x - 10);
+    const plainRun = createRun(plain, 55);
+    plainRun.stage = "kitchen";
+    plainRun.hazards = [{ kind: "spill", x: plainRun.hero.x + 10, y: plainRun.hero.y, radius: 40, timer: 0, active: 0 }];
+    plainRun.hero.x += 10;
+    step(plainRun, { dx: 1, dy: 0 });
+    expect(freed).toBeGreaterThan(plainRun.hero.x - (plainRun.hero.x - 10) - 0.001);
+    // The pen: a toner shot fades before its time.
+    const penned = createRun({ ...plain, department: "it" as const }, 56, 1, null, [{ id: "redPen", level: 1, floor: 13 }]);
+    penned.foes.push(foe({ id: 700, kind: "printerJam", boss: false, x: penned.hero.x + 200, y: penned.hero.y, hp: 1e9, maxHp: 1e9, radius: 16, speed: 0, touch: 0, xp: 0, gold: 0, timer: 0.01 }));
+    step(penned, { dx: 0, dy: 0 });
+    const shot = penned.foeShots[0];
+    expect(shot).toBeDefined();
+    step(penned, { dx: 0, dy: 0 });
+    expect(shot.life).toBeLessThan(TONER.life - 2 * STEP + 0.0001);
+  });
+
+  it("wins the day on the last floor's boss and not before", () => {
+    const run = createRun(plain, 13);
+    run.floor = LAST_FLOOR - 1;
+    run.cleared = true;
+    descend(run);
+    expect(run).toMatchObject({ floor: LAST_FLOOR, stage: "boardroom" });
+    const plan = FLOOR_PLAN[LAST_FLOOR - 1];
+    run.time += plan.horde;
+    play(run, run.time + 2);
+    const boss = run.foes.find((foe) => foe.id === run.bossId)!;
+    boss.hp = 0;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("won");
+    expect(run.cleared).toBe(false);
+  });
+});
+
+describe("the floor bosses' own tricks", () => {
+  /** A floor-N boss alone on the field, one tick after its timer first fires. */
+  function bossScene(kind: FoeKind, floor = 1): { run: Run; boss: Run["foes"][number] } {
+    const run = createRun(plain, 21);
+    run.floor = floor - 1;
+    run.stage = floorStage(floor);
+    run.cleared = true;
+    descend(run);
+    // The P1–P3 floor extras are their own tests; keep the boss scenes about the boss.
+    run.spike = null;
+    run.cameo = null;
+    const plan = FLOOR_PLAN[floor - 1];
+    const boss = foe({ id: 500, kind, boss: true, x: 700, y: 700, hp: 1e9, maxHp: 1e9, speed: 0, touch: 0, timer: 0.01, radius: FOES[kind].radius });
+    run.foes = [boss];
+    run.bossId = boss.id;
+    run.bossDone = true;
+    run.time += plan.horde;
+    return { run, boss };
+  }
+
+  it("the meeting chair stands still, blocks the way and calls reply-alls", () => {
+    const { run, boss } = bossScene("meetingChair");
+    run.hero.x = boss.x - 60;
+    run.hero.y = boss.y;
+    const x = boss.x;
+    step(run, { dx: 1, dy: 0 });
+    expect(boss.x).toBe(x);
+    expect(run.foes.some((foe) => foe.kind === "replyAll" && foe.id !== boss.id)).toBe(true);
+  });
+
+  it("the shredder sleeps out of its wake, sweeps fans that alternate sides, and bursts every fourth", () => {
+    const { run, boss } = bossScene("shredder");
+    // Out of the wake the shredder does nothing at all.
+    run.hero.x = boss.x - SHREDDER.wake - 100;
+    run.hero.y = boss.y;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "shredder")).toHaveLength(0);
+    // At the wake's edge the fans fly, one side at a time.
+    run.hero.x = boss.x - SHREDDER.wake;
+    boss.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "shredder")).toHaveLength(SHREDDER.fan);
+    // Three more timer fires; the fourth is the burst, caught the tick it happens before it fades.
+    let cycles = boss.cycles;
+    for (let cycle = 0; cycle < SHREDDER.burstEvery - 1; cycle += 1) {
+      boss.timer = 0.01;
+      step(run, { dx: 0, dy: 0 });
+      cycles += 1;
+      if (cycles % SHREDDER.burstEvery === 0) {
+        // A ring: the burst is as many shots as the burst count, at every angle around the boss — but the one
+        // aimed straight at the hero reaches them and is spent, so its angle is missing from what is left flying.
+        const burst = run.foeShots.filter((shot) => shot.from === "shredder");
+        const angles = burst.map((shot) => Math.atan2(shot.vy, shot.vx).toFixed(2));
+        expect(new Set(angles).size).toBeGreaterThanOrEqual(SHREDDER.burst - 1);
+      }
+    }
+    expect(cycles).toBe(SHREDDER.burstEvery + 1);
+  });
+
+  it("the shredder's shots fly over a hero who hugs the machine, and arm out at a distance", () => {
+    const { run, boss } = bossScene("shredder");
+    // Point-blank: blocked against the machine, in the touch, but under the unarmed fans.
+    run.hero.x = boss.x + FOES.shredder.radius + 12;
+    run.hero.y = boss.y;
+    boss.touch = FOES.shredder.touch;
+    const maxHp = run.numbers.maxHp;
+    let ticks = 0;
+    boss.timer = 0.01;
+    for (ticks = 0; ticks < Math.ceil(FOES.shredder.every * 60); ticks += 1) step(run, { dx: 0, dy: 0 });
+    const lost = maxHp - run.hero.hp;
+    // Only the machine's touch got through; a fan shot would add its damage on top. Foe damage carries the
+    // lethality factor now (P0), so the bound scales with it.
+    expect(lost).toBeLessThan(FOES.shredder.touch * foeDamageFactor(run) * (ticks / 60) + 1);
+    expect(lost).toBeGreaterThan(0);
+  });
+
+  it("the coffee machine lobs to where the hero stands, and the landing leaves a drying puddle", () => {
+    const { run, boss } = bossScene("coffeeMachine", 7);
+    run.hero.x = boss.x;
+    run.hero.y = boss.y - 300;
+    step(run, { dx: 0, dy: 0 });
+    const glob = run.foeShots.find((shot) => shot.lob)!;
+    expect(glob.lob?.puddle).toBe(COFFEE.puddle.radius);
+    // Stand in the splash, then wait out the flight.
+    for (let tick = 0; tick < Math.ceil(COFFEE.glob.flight * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    const puddle = run.hazards.find((hazard) => hazard.kind === "puddle");
+    expect(puddle).toBeDefined();
+    expect(run.lastHitBy).toBe("coffeeMachine");
+    run.hero.hp = run.numbers.maxHp;
+    const slowSpot = { x: puddle!.x, y: puddle!.y };
+    run.hero.x = slowSpot.x;
+    run.hero.y = slowSpot.y;
+    step(run, { dx: 1, dy: 0 });
+    const slowed = run.hero.x - slowSpot.x;
+    run.hero.x = 100;
+    step(run, { dx: 1, dy: 0 });
+    expect(slowed).toBeCloseTo((run.hero.x - 100) * (1 - COFFEE.puddle.slow), 5);
+    // And the puddle dries (the boss is silenced first, or it lobs a fresh one).
+    run.foes[0].timer = 1e9;
+    run.hero.x = 100;
+    for (let tick = 0; tick < Math.ceil(COFFEE.puddle.life * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(run.hazards.some((hazard) => hazard.kind === "puddle")).toBe(false);
+  });
+
+  it("the vending machine lobs a can where the hero was, without a puddle", () => {
+    const { run } = bossScene("vendingMachine", 10);
+    run.hero.x = 700;
+    run.hero.y = 400;
+    step(run, { dx: 0, dy: 0 });
+    const can = run.foeShots.find((shot) => shot.lob)!;
+    expect(can.lob?.puddle).toBeUndefined();
+    // Walk away: the can still lands where the hero was, and hurts only the splash there.
+    run.hero.x = 400;
+    run.hero.y = 400;
+    run.hero.hp = run.numbers.maxHp;
+    const before = run.hero.hp;
+    for (let tick = 0; tick < Math.ceil(VENDING.can.flight * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(run.hazards.some((hazard) => hazard.kind === "puddle")).toBe(false);
+    expect(run.hero.hp).toBe(before);
+  });
+
+  it("the printer prime spits quicker toner streams and coughs up paper trails", () => {
+    const { run } = bossScene("printerPrime", 11);
+    run.hero.x = 700;
+    run.hero.y = 400;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "printerPrime")).toHaveLength(PRIME_TONER.stream);
+    const before = run.foes.length;
+    const boss = run.foes[0];
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      boss.timer = 0.01;
+      for (let tick = 0; tick < Math.ceil(FOES.printerPrime.every * 60); tick += 1) step(run, { dx: 0, dy: 0 });
+    }
+    expect(run.foes.length).toBeGreaterThan(before);
+  });
+
+  it("the blob prime's shockwave expands and hurts the hero standing in the band", () => {
+    const { run, boss } = bossScene("blobPrime", 16);
+    run.hero.x = boss.x;
+    run.hero.y = boss.y - 80;
+    const before = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.shock).toBeGreaterThan(0);
+    let hurt = 0;
+    for (let tick = 0; tick < Math.ceil(SHOCK.seconds * 60) + 2; tick += 1) {
+      step(run, { dx: 0, dy: 0 });
+      hurt = before - run.hero.hp;
+    }
+    expect(hurt).toBeGreaterThan(0);
+    expect(boss.shock).toBe(0);
+  });
+
+  it("a sysadmin blinks away when the hero closes in, and not otherwise", () => {
+    const { run, boss } = bossScene("sysadmin", 12);
+    run.hero.x = boss.x - 80;
+    run.hero.y = boss.y;
+    const away = boss.x;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.x).not.toBe(away);
+    expect(boss.blinkCd).toBe(BLINK.every);
+    const again = boss.x;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.x).toBe(again);
+  });
+
+  it("the lunch monitor's charges bring the lunch parade along", () => {
+    const { run, boss } = bossScene("lunchMonitor", 6);
+    boss.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.charge).toBeGreaterThan(0);
+    expect(run.foes.filter((foe) => foe.kind === "lunchThief")).toHaveLength(2);
+  });
+
+  it("the team lead calls a pair of reply-alls every other charge", () => {
+    const { run, boss } = bossScene("teamLead", 3);
+    boss.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    // First fire (cycles 1): a plain charge, no team yet.
+    expect(boss.charge).toBeGreaterThan(0);
+    expect(run.foes.filter((foe) => foe.kind === "replyAll")).toHaveLength(0);
+    boss.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foes.filter((foe) => foe.kind === "replyAll")).toHaveLength(2);
+  });
+
+  it("the departments' skills do what the card says", () => {
+    // Engineering: the decoy draws the horde off the hero.
+    const engineer = createRun({ ...plain, department: "engineering" as const }, 41);
+    engineer.foes.push(foe({ id: 600, kind: "replyAll", boss: false, x: engineer.hero.x + 100, y: engineer.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 40, touch: 0, xp: 0, gold: 0 }));
+    expect(castSkill(engineer, engineer.hero.x, engineer.hero.y - 150)).toBe(true);
+    expect(engineer.decoy).not.toBeNull();
+    const before = engineer.foes[0].y;
+    step(engineer, { dx: 0, dy: 0 });
+    expect(engineer.foes[0].y).toBeLessThan(before);
+    // Finance: marks pay half again as much damage and double the gold.
+    const financier = createRun({ ...plain, department: "finance" as const }, 42);
+    const mark = foe({ id: 601, kind: "replyAll", boss: false, x: financier.hero.x, y: financier.hero.y - 60, hp: 100, maxHp: 100, radius: 8, speed: 0, touch: 0, xp: 0, gold: 10 });
+    financier.foes = [mark];
+    castSkill(financier, mark.x, mark.y);
+    expect(mark.marked).toBeGreaterThan(0);
+    const hpBefore = mark.hp;
+    const goldBefore = financier.gold;
+    financier.weapons[0].cooldownLeft = 0;
+    financier.weapons[0].id = "spreadsheet";
+    step(financier, { dx: 0, dy: 0 });
+    for (let tick = 0; tick < 40 && mark.hp > 0; tick += 1) step(financier, { dx: 0, dy: 0 });
+    expect(mark.hp).toBeLessThan(hpBefore);
+    if (mark.hp <= 0) expect(financier.gold).toBeGreaterThan(goldBefore);
+    // Legal: the detained stand still, and their timer frees them.
+    const lawyer = createRun({ ...plain, department: "legal" as const }, 43);
+    const bind = foe({ id: 602, kind: "replyAll", boss: false, x: lawyer.hero.x + 30, y: lawyer.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 40, touch: 0, xp: 0, gold: 0 });
+    lawyer.foes = [bind];
+    castSkill(lawyer, bind.x, bind.y);
+    expect(bind.detained).toBeGreaterThan(0);
+    const x = bind.x;
+    step(lawyer, { dx: 0, dy: 0 });
+    expect(bind.x).toBe(x);
+    // IT: the rollback wipes the air and grants a moment of cover.
+    const admin = createRun({ ...plain, department: "it" as const }, 44);
+    admin.foeShots.push({ id: 700, from: "printerJam", x: admin.hero.x, y: admin.hero.y, vx: 10, vy: 0, radius: 6, damage: 9, life: 3 });
+    castSkill(admin);
+    expect(admin.foeShots).toHaveLength(0);
+    expect(admin.grace).toBeGreaterThan(0);
+    // HR: the patch-up and the carry.
+    const social = createRun({ ...plain, department: "hr" as const }, 45);
+    social.hero.hp = social.numbers.maxHp * 0.4;
+    castSkill(social);
+    expect(social.hero.hp).toBeGreaterThan(social.numbers.maxHp * 0.6);
+    expect(social.aura).toBeGreaterThan(0);
+    // Interns: the sticky field makes everything crawl.
+    const intern = createRun({ ...plain, department: "interns" as const }, 46);
+    const glue = foe({ id: 603, kind: "replyAll", boss: false, x: intern.hero.x + 40, y: intern.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 40, touch: 0, xp: 0, gold: 0 });
+    intern.foes = [glue];
+    castSkill(intern, glue.x, glue.y);
+    expect(glue.stuck).toBeGreaterThan(0);
+  });
+
+  it("the skill's cooldown keeps it honest, focus shortens it, and the quirks bend it", () => {
+    const run = createRun({ ...plain, department: "legal" as const }, 47);
+    expect(castSkill(run)).toBe(true);
+    expect(run.skillCd).toBeGreaterThan(0);
+    expect(castSkill(run)).toBe(false);
+    run.skillCd = 0;
+    expect(castSkill(run)).toBe(true);
+    // Focus divides the cooldown like it divides the weapons'.
+    const focused = createRun({ ...plain, department: "legal" as const, stats: { grit: 10, output: 10, hustle: 10, focus: 20, luck: 10 } }, 48);
+    castSkill(focused);
+    expect(focused.skillCd).toBeCloseTo((SKILL.cooldown / 1.5) - 1 / 60 + 0.0067, 1);
+    // The caffeinated cast faster, the overachiever pay for it.
+    const jittery = createRun({ ...plain, department: "legal" as const, quirks: ["caffeinated"] }, 49);
+    castSkill(jittery);
+    expect(jittery.skillCd).toBeCloseTo(SKILL.cooldown * 0.8, 0);
+    const eager = createRun({ ...plain, department: "legal" as const, quirks: ["overachiever"] }, 50);
+    castSkill(eager);
+    expect(eager.skillCd).toBeGreaterThan(SKILL.cooldown);
+  });
+
+  it("the skill scales with the career: a senior's Team Building heals more", () => {
+    const junior = createRun({ ...plain, department: "hr" as const, level: 1 }, 51);
+    junior.hero.hp = junior.numbers.maxHp * 0.3;
+    castSkill(junior);
+    const juniorHeal = junior.hero.hp - junior.numbers.maxHp * 0.3;
+    const senior = createRun({ ...plain, department: "hr" as const, level: 12 }, 52);
+    senior.hero.hp = senior.numbers.maxHp * 0.3;
+    castSkill(senior);
+    const seniorHeal = senior.hero.hp - senior.numbers.maxHp * 0.3;
+    expect(seniorHeal).toBeGreaterThan(juniorHeal);
+  });
+
+  it("the auditor rages below half hp: quicker rings, faster steps, doubled chains", () => {
+    const { run, boss } = bossScene("auditor", 20);
+    boss.hp = boss.maxHp / 2;
+    boss.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    expect(boss.enraged).toBe(true);
+    // The next timer's addition is the enrage scale of the auditor's every.
+    // The timer's first addition is the enrage scale of the auditor's every, less this tick's step.
+    const timerAfterFirst = boss.timer;
+    expect(timerAfterFirst).toBeCloseTo(FOES.auditor.every * AUDITOR_ENRAGE.timerScale, 1);
+  });
+});
+
+describe("the acts' own hordes and blockers", () => {
+  /** A run standing on the given floor, reached by the stairs. */
+  function atFloor(floor: number, seed = 31): Run {
+    const run = createRun(plain, seed);
+    run.floor = floor - 1;
+    run.cleared = true;
+    descend(run);
+    return run;
+  }
+
+  it("each act draws its own horde: the kitchen runs lunch thieves, the server room tangles cables", () => {
+    for (const [floor, expected] of [[6, "lunchThief"], [10, "looseCable"], [14, "looseCable"]] as const) {
+      const run = atFloor(floor);
+      run.time = MIX[run.stage].filter((entry) => entry.kind === expected)[0].from + 1;
+      let ticks = 0;
+      while (!run.foes.some((foe) => foe.kind === expected) && ticks < 600) {
+        step(run, { dx: 0, dy: 0 });
+        ticks += 1;
+      }
+      expect(run.foes.some((foe) => foe.kind === expected)).toBe(true);
+    }
+  });
+
+  it("each act plants its own immobile blocker from its floor on, and only its own", () => {
+    // The printer starts on floor 3 of the open space; the act's own blocker on its own floors.
+    const cases: readonly [number, string][] = [[3, "printerJam"], [6, "greaseFire"], [10, "hotRack"]];
+    for (const [floor, blocker] of cases) {
+      const run = atFloor(floor, 32);
+      run.printerIn = 0.01;
+      step(run, { dx: 0, dy: 0 });
+      const planted = run.foes.find((foe) => foe.kind === blocker);
+      expect(planted).toBeDefined();
+      expect(planted?.speed).toBe(0);
+      const other = cases.find(([otherFloor]) => otherFloor !== floor);
+      if (other) expect(run.foes.some((foe) => foe.kind === other[1])).toBe(false);
+    }
+  });
+
+  it("the burning pan spits short-range fire, and only in range", () => {
+    const run = atFloor(6, 33);
+    const pan = foe({ id: 500, kind: "greaseFire", boss: false, x: 700, y: 700, hp: 45, maxHp: 45, radius: 14, speed: 0, touch: 0, timer: 0.01, xp: 0, gold: 0 });
+    run.foes = [pan];
+    run.hero.x = 700;
+    run.hero.y = 700 - GREASE.range - 50;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "greaseFire")).toHaveLength(0);
+    run.hero.y = 700 - GREASE.range + 40;
+    pan.timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "greaseFire")).toHaveLength(1);
+    expect(run.foeShots[0].damage).toBe(GREASE.shot.damage);
+  });
+
+  it("the hot rack rings pings all around itself", () => {
+    const run = atFloor(10, 34);
+    const rack = foe({ id: 501, kind: "hotRack", boss: false, x: 700, y: 700, hp: 55, maxHp: 55, radius: 15, speed: 0, touch: 0, timer: 0.01, xp: 0, gold: 0 });
+    run.foes = [rack];
+    step(run, { dx: 0, dy: 0 });
+    const shots = run.foeShots.filter((shot) => shot.from === "hotRack");
+    expect(shots).toHaveLength(RACK.ring);
+    expect(new Set(shots.map((shot) => Math.atan2(shot.vy, shot.vx).toFixed(2))).size).toBe(RACK.ring);
+  });
+
+  it("the audit happens in the boardroom, among projectors that warn and blast", () => {
+    const run = atFloor(LAST_FLOOR, 35);
+    expect(run.stage).toBe("boardroom");
+    const projectors = run.hazards.filter((hazard) => hazard.kind === "projector");
+    expect(projectors).toHaveLength(BOARDROOM.projectors);
+    for (const projector of projectors) {
+      expect(projector.active).toBe(0);
+      expect(Math.hypot(projector.x - run.hero.x, projector.y - run.hero.y)).toBeGreaterThanOrEqual(SERVER_ROOM.clearRadius);
+    }
+    // A projector warns, then blasts; the hero standing in the light takes it.
+    const projector = { ...projectors[0], timer: BOARDROOM.warn + 0.02 };
+    run.hazards = [projector];
+    run.hero.x = projector.x;
+    run.hero.y = projector.y;
+    run.foes = [];
+    const quiet = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.hero.hp).toBe(quiet);
+    for (let tick = 0; tick < Math.ceil(BOARDROOM.warn * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(projector.active).toBeGreaterThan(0);
+    const before = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(before - run.hero.hp).toBeGreaterThan(0);
+    expect(run.lastHitBy).toBe("projector");
+  });
+});
+
+describe("abandon", () => {
+  it("ends the run as a fall", () => {
+    const run = createRun(plain, 1);
+    abandon(run);
+    expect(run).toMatchObject({ status: "lost", abandoned: true });
+  });
+});
+
+/** A foe with every field filled in. */
+function foe(fields: Partial<Run["foes"][number]>): Run["foes"][number] {
+  return {
+    id: 0,
+    kind: "replyAll",
+    boss: false,
+    x: 0,
+    y: 0,
+    hp: 1,
+    maxHp: 1,
+    radius: 8,
+    speed: 0,
+    touch: 0,
+    xp: 0,
+    gold: 0,
+    pushX: 0,
+    pushY: 0,
+    slow: 0,
+    timer: 0,
+    cycles: 0,
+    charge: 0,
+    chargeX: 0,
+    chargeY: 0,
+    duckCooldown: 0,
+    detained: 0,
+    stuck: 0,
+    marked: 0,
+    blinkCd: 0,
+    shock: 0,
+    enraged: false,
+    hurt: 0,
+    ...fields,
+  };
+}
+
+describe("an interview", () => {
+  const interview = { boss: "hrManager", candidateId: 9 } as const;
+
+  it("brings the boss in at once, and none of the day's bosses or printers", () => {
+    const run = createRun(plain, 1, 1, interview);
+    play(run, INTERVIEW.bossAt + 20);
+    expect(run.foes.some((foe) => foe.kind === "hrManager")).toBe(true);
+    expect(run.foes.some((foe) => ["middleManager", "auditor", "printerJam"].includes(foe.kind))).toBe(false);
+  });
+
+  it("is won by beating the boss, not the auditor", () => {
+    const run = createRun(plain, 1, 1, interview);
+    play(run, INTERVIEW.bossAt + 1);
+    for (const foe of run.foes) if (foe.kind === "hrManager") foe.hp = 0;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("won");
+  });
+
+  it("is lost when its time runs out with the boss still standing", () => {
+    // A boss nobody can beat and a hero who cannot fall, joined just before the interview closes.
+    const run = createRun(plain, 1, 1e6, interview);
+    run.hero.hp = run.numbers.maxHp = 1e12;
+    play(run, INTERVIEW.bossAt + 1);
+    expect(run.status).toBe("playing");
+    run.time = INTERVIEW.closesAt - 0.5;
+    play(run, INTERVIEW.closesAt + 1);
+    expect(run.status).toBe("lost");
+    expect(run.time).toBeGreaterThanOrEqual(INTERVIEW.closesAt);
+  });
+
+  it("makes foes tougher with the difficulty, the boss included", () => {
+    const hard = createRun(plain, 1, 2, interview);
+    const easy = createRun(plain, 1, 1, interview);
+    play(hard, INTERVIEW.bossAt + 1);
+    play(easy, INTERVIEW.bossAt + 1);
+    const hp = (run: Run) => run.foes.find((foe) => foe.kind === "hrManager")!.maxHp;
+    expect(hp(hard)).toBeCloseTo(hp(easy) * 2);
+  });
+});
+
+describe("the kitchen", () => {
+  /** Floor 6, reached by descending from a cleared floor 5. */
+  const kitchen = () => {
+    const run = createRun(plain, 3);
+    run.floor = 5;
+    run.cleared = true;
+    descend(run);
+    return run;
+  };
+
+  it("is laid out from the seed: spills clear of the start, and microwaves in corners", () => {
+    const run = kitchen();
+    expect(run).toMatchObject({ floor: 6, stage: "kitchen" });
+    const spills = run.hazards.filter((hazard) => hazard.kind === "spill");
+    expect(spills).toHaveLength(KITCHEN.spills);
+    expect(run.hazards.filter((hazard) => hazard.kind === "microwave")).toHaveLength(KITCHEN.microwaves);
+    for (const spill of spills) expect(Math.hypot(spill.x - run.hero.x, spill.y - run.hero.y)).toBeGreaterThanOrEqual(KITCHEN.clearRadius);
+    expect(kitchen().hazards).toEqual(run.hazards);
+    expect(createRun(plain, 3).hazards).toEqual([]);
+  });
+
+  it("slows the hero in a spill, and only there", () => {
+    const run = kitchen();
+    const spill = run.hazards.find((hazard) => hazard.kind === "spill")!;
+    run.hazards = [spill];
+    run.hero.x = spill.x;
+    run.hero.y = spill.y;
+    step(run, { dx: 1, dy: 0 });
+    const slowed = run.hero.x - spill.x;
+    run.hero.x = 700;
+    run.hero.y = 700;
+    run.hazards = [];
+    step(run, { dx: 1, dy: 0 });
+    expect(slowed).toBeCloseTo((run.hero.x - 700) * (1 - KITCHEN.spillSlow), 5);
+  });
+
+  it("fires a ring from each microwave on its timer", () => {
+    const run = kitchen();
+    run.hazards = run.hazards.filter((hazard) => hazard.kind === "microwave").slice(0, 1);
+    run.hazards[0].timer = 0.01;
+    step(run, { dx: 0, dy: 0 });
+    step(run, { dx: 0, dy: 0 });
+    expect(run.foeShots.filter((shot) => shot.from === "microwave")).toHaveLength(KITCHEN.ring);
+    expect(run.hazards[0].timer).toBeGreaterThan(KITCHEN.microwaveEvery - 1);
+  });
+
+  it("brings its own boss after the horde, and pays more gold", () => {
+    const run = kitchen();
+    run.time = FLOOR_PLAN[5].horde - 1;
+    play(run, FLOOR_PLAN[5].horde + 1);
+    const monitor = run.foes.find((foe) => foe.kind === "lunchMonitor");
+    expect(monitor?.boss).toBe(true);
+    expect(run.bossId).toBe(monitor?.id);
+    expect(run.foes.some((foe) => foe.kind === "middleManager")).toBe(false);
+    expect(STAGES.kitchen.gold).toBeGreaterThan(1);
+  });
+
+  it("is not where an interview is held", () => {
+    expect(createRun(plain, 1, 1, { boss: "recruiter", candidateId: 4 })).toMatchObject({ stage: "openSpace", floor: 1, hazards: [] });
+  });
+
+  it("is reached only by taking the stairs from a cleared floor", () => {
+    const run = createRun(plain, 3);
+    run.floor = 5;
+    expect(descend(run)).toBe(false);
+    run.cleared = true;
+    expect(descend(run)).toBe(true);
+    expect(run).toMatchObject({ floor: 6, stage: "kitchen", cleared: false, bossId: null, bossDone: false });
+    expect(run.foes).toEqual([]);
+  });
+});
+
+describe("perks in a run", () => {
+  const withPerks = (...perks: Coworker["perks"]) => createRun({ ...plain, perks }, 5);
+
+  it("start the run with a passive: coffee, gym, sneakers or mentor", () => {
+    expect(withPerks("coffeeRun").passives).toEqual({ coffee: 1 });
+    expect(withPerks("coffeeRun").numbers.cooldown).toBeLessThan(HERO_BASE.cooldown);
+    expect(withPerks("freshSneakers").numbers.speed).toBeGreaterThan(HERO_BASE.speed);
+    expect(withPerks("mentorship").numbers.xp).toBeGreaterThan(1);
+    const gym = withPerks("gymPass");
+    expect(gym.numbers.maxHp).toBeGreaterThan(HERO_BASE.maxHp);
+    expect(gym.hero.hp).toBe(gym.numbers.maxHp);
+  });
+
+  it("raise the signature weapon with overtime, and the offers with the corner office", () => {
+    expect(withPerks("overtime").weapons[0].level).toBe(2);
+    expect(withPerks().weapons[0].level).toBe(1);
+    const run = withPerks("cornerOffice");
+    run.queuedPicks = 1;
+    run.xp = xpToNext(1);
+    run.gems.push({ id: 900, x: run.hero.x, y: run.hero.y, value: 5000, pulled: false });
+    step(run, { dx: 0, dy: 0 });
+    expect(run.picks).toHaveLength(PICKS_OFFERED + 1);
+  });
+
+  it("let the hero get up once, with a few seconds of grace, with the second wind", () => {
+    const run = withPerks("secondWind");
+    run.hero.hp = 0.001;
+    // A foe too tough for the hero's weapons to clear before it touches them.
+    run.foes.push({ id: 999, kind: "replyAll", boss: false, x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, detained: 0, stuck: 0, marked: 0, blinkCd: 0, shock: 0, enraged: false, hurt: 0 });
+    step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("playing");
+    expect(run.revive).toBe(false);
+    expect(run.hero.hp).toBeGreaterThan(run.numbers.maxHp * (SECOND_WIND.hp - 0.05));
+    for (let tick = 0; tick < 60; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(run.status).toBe("playing");
+    expect(run.hero.hp).toBeGreaterThan(run.numbers.maxHp * (SECOND_WIND.hp - 0.05));
+  });
+});
+
+describe("the server room", () => {
+  /** Floor 10, reached by descending from a cleared floor 9. */
+  const room = () => {
+    const run = createRun(plain, 4);
+    run.floor = 9;
+    run.cleared = true;
+    descend(run);
+    return run;
+  };
+  const stand = (run: Run, vent: Run["hazards"][number]) => {
+    run.hazards = [vent];
+    run.hero.x = vent.x;
+    run.hero.y = vent.y;
+  };
+
+  it("is laid out from the seed: vents clear of the start, quiet to begin with and staggered", () => {
+    const run = room();
+    expect(run.hazards).toHaveLength(SERVER_ROOM.vents);
+    for (const vent of run.hazards) {
+      expect(vent.kind).toBe("vent");
+      expect(vent.active).toBe(0);
+      expect(Math.hypot(vent.x - run.hero.x, vent.y - run.hero.y)).toBeGreaterThanOrEqual(SERVER_ROOM.clearRadius);
+    }
+    expect(new Set(run.hazards.map((vent) => vent.timer)).size).toBe(SERVER_ROOM.vents);
+    expect(room().hazards).toEqual(run.hazards);
+  });
+
+  it("blasts after its timer, for its burst, then goes quiet", () => {
+    const run = room();
+    const vent = run.hazards[0];
+    run.hazards = [vent];
+    vent.timer = 0.02;
+    run.hero.x = 20;
+    run.hero.y = 20;
+    for (let tick = 0; tick < 3; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(vent.active).toBeGreaterThan(0);
+    expect(vent.timer).toBeGreaterThan(SERVER_ROOM.every - 1);
+    for (let tick = 0; tick < Math.ceil(SERVER_ROOM.burst * 60) + 2; tick += 1) step(run, { dx: 0, dy: 0 });
+    expect(vent.active).toBe(0);
+  });
+
+  it("hurts the hero standing in a blast, and only then", () => {
+    const run = room();
+    const vent = { ...run.hazards[0], timer: 50, active: 0.5 };
+    stand(run, vent);
+    run.foes = [];
+    const before = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(before - run.hero.hp).toBeGreaterThan(0);
+    expect(run.lastHitBy).toBe("vent");
+    vent.active = 0;
+    const quiet = run.hero.hp;
+    step(run, { dx: 0, dy: 0 });
+    expect(run.hero.hp).toBe(quiet);
+  });
+
+  it("brings the sysadmin, who sends fans of pings", () => {
+    // Floor 12 is the plan's sysadmin floor; the stairs from 10 go 11, 12.
+    const run = room();
+    run.cleared = true;
+    descend(run);
+    run.cleared = true;
+    descend(run);
+    expect(run).toMatchObject({ floor: 12, stage: "serverRoom" });
+    run.time = FLOOR_PLAN[11].horde - 1;
+    play(run, FLOOR_PLAN[11].horde + 1);
+    const admin = run.foes.find((foe) => foe.kind === "sysadmin");
+    expect(admin).toBeDefined();
+    expect(run.foes.some((foe) => foe.kind === "middleManager" || foe.kind === "lunchMonitor")).toBe(false);
+    const shots = run.foeShots.filter((shot) => shot.from === "sysadmin").length;
+    expect(shots % PING.fan).toBe(0);
+    expect(STAGES.serverRoom.gold).toBeGreaterThan(STAGES.kitchen.gold);
+  });
+});

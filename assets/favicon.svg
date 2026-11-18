@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <clipPath id="ll-flask"><path d="M26 12h12v14.5l11.4 20.6c1.6 2.9-.5 6.4-3.8 6.4H18.4c-3.3 0-5.4-3.5-3.8-6.4L26 26.5z"/></clipPath>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#059669"/>
+  <rect x="0" y="38" width="64" height="26" fill="#fff" clip-path="url(#ll-flask)"/>
+  <path d="M26 12h12v14.5l11.4 20.6c1.6 2.9-.5 6.4-3.8 6.4H18.4c-3.3 0-5.4-3.5-3.8-6.4L26 26.5z" fill="none" stroke="#fff" stroke-width="3.6" stroke-linejoin="round"/>
+  <path d="M23 12h18" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+</svg>

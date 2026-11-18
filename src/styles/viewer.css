@@ -1,0 +1,186 @@
+/*
+ * Viewer content styles.
+ *
+ * The viewer is themed by the apps-suite tokens defined in `apps.css`
+ * (--bg --fg --surface --border --accent --muted-fg --success --warning);
+ * this file only carries content-scoped rules, so nothing here leaks onto
+ * other pages.
+ */
+
+/*
+ * `.doc-prose` styles the sanitized HTML that comes out of both marked and
+ * mammoth. Sharing one scope is what keeps a Markdown heading and a Word
+ * heading looking like the same document.
+ */
+@layer components {
+  .doc-prose {
+    @apply text-[1.0625rem] leading-[1.75] text-(--fg);
+  }
+
+  .doc-prose > :first-child {
+    @apply mt-0;
+  }
+
+  .doc-prose h1 {
+    @apply mt-8 mb-4 text-3xl font-semibold tracking-tight text-balance;
+  }
+
+  .doc-prose h1.doc-title {
+    @apply mt-0 mb-3 text-4xl;
+  }
+
+  .doc-prose .doc-subtitle {
+    @apply mt-0 mb-6 text-lg text-(--muted-fg);
+  }
+
+  .doc-prose .doc-caption {
+    @apply mt-2 mb-4 text-sm text-(--muted-fg);
+  }
+
+  .doc-prose h2 {
+    @apply mt-8 mb-3 border-b border-(--border) pb-2 text-2xl font-semibold tracking-tight;
+  }
+
+  .doc-prose h3 {
+    @apply mt-6 mb-2 text-xl font-semibold;
+  }
+
+  .doc-prose :is(h4, h5, h6) {
+    @apply mt-5 mb-2 text-base font-semibold;
+  }
+
+  .doc-prose p {
+    @apply my-5 text-pretty;
+  }
+
+  .doc-prose :is(ul, ol) {
+    @apply my-5 space-y-2 pl-6;
+  }
+
+  .doc-prose ul {
+    @apply list-disc;
+  }
+
+  .doc-prose ol {
+    @apply list-decimal;
+  }
+
+  .doc-prose :is(ul, ol) :is(ul, ol) {
+    @apply my-1.5;
+  }
+
+  .doc-prose li::marker {
+    @apply text-(--muted-fg);
+  }
+
+  .doc-prose a {
+    @apply text-(--accent) underline decoration-(--accent)/40 underline-offset-2 transition-colors hover:decoration-(--accent);
+  }
+
+  .doc-prose strong {
+    @apply font-semibold text-(--fg);
+  }
+
+  .doc-prose blockquote {
+    @apply my-4 border-l-2 border-(--accent)/50 pl-4 text-(--muted-fg) italic;
+  }
+
+  .doc-prose code {
+    @apply rounded bg-(--surface) px-1.5 py-0.5 font-mono text-[0.85em];
+  }
+
+  .doc-prose pre {
+    @apply my-4 overflow-x-auto rounded-lg border border-(--border) bg-(--surface) p-4;
+  }
+
+  .doc-prose pre code {
+    @apply bg-transparent p-0 text-sm;
+  }
+
+  .doc-prose pre code .hljs-comment,
+  .doc-prose pre code .hljs-quote {
+    @apply text-(--muted-fg) italic;
+  }
+
+  .doc-prose pre code .hljs-keyword,
+  .doc-prose pre code .hljs-selector-tag,
+  .doc-prose pre code .hljs-addition {
+    @apply text-(--accent);
+  }
+
+  /* Syntax colours for strings/numbers/etc. stay literal: they are content
+     accents, not theme surfaces, and read fine on both light and dark. */
+  .doc-prose pre code .hljs-string,
+  .doc-prose pre code .hljs-meta .hljs-string,
+  .doc-prose pre code .hljs-attr {
+    color: oklch(0.78 0.08 130);
+  }
+
+  .doc-prose pre code .hljs-number,
+  .doc-prose pre code .hljs-literal {
+    color: oklch(0.78 0.08 55);
+  }
+
+  .doc-prose pre code .hljs-title,
+  .doc-prose pre code .hljs-section,
+  .doc-prose pre code .hljs-selector-id {
+    color: oklch(0.82 0.06 220);
+  }
+
+  .doc-prose pre code .hljs-built_in,
+  .doc-prose pre code .hljs-type {
+    color: oklch(0.80 0.07 300);
+  }
+
+  .doc-prose hr {
+    @apply my-8 border-(--border);
+  }
+
+  .doc-prose img {
+    @apply my-4 max-w-full rounded-lg;
+  }
+
+  .doc-prose table {
+    @apply my-5 block w-max max-w-full border-collapse overflow-x-auto text-sm;
+  }
+
+  .doc-prose :is(th, td) {
+    @apply border border-(--border) px-3 py-2 text-left align-top;
+  }
+
+  .doc-prose th {
+    @apply bg-(--surface) font-semibold;
+  }
+
+  /* Word tracks changes and comments as superscript refs; they add noise here. */
+  .doc-prose sup a {
+    @apply no-underline;
+  }
+
+  /* JsonView syntax colors, contrast-verified on --bg in both themes
+     (accent 5.1:1 light / 8.8:1 dark, warning 4.8:1 / 9.6:1). Keys are the
+     theme accent; values split by kind so a key can never be mistaken for
+     its string value: strings blue (5.3:1 light, 9.4:1 dark), numbers and
+     booleans the amber warning token. */
+  .json-view .hljs-attr {
+    @apply text-(--accent);
+  }
+
+  .json-view .hljs-string {
+    color: oklch(0.52 0.12 250);
+  }
+
+  [data-theme="dark"] .json-view .hljs-string {
+    color: oklch(0.82 0.11 245);
+  }
+
+  .json-view .hljs-number,
+  .json-view .hljs-literal {
+    @apply text-(--warning);
+  }
+}
+
+/* Keep the file input reachable by a label click without showing the OS widget. */
+.sr-file-input {
+  @apply sr-only;
+}

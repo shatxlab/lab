@@ -1,0 +1,135 @@
+{
+  "checks": [
+    {
+      "audit": "en 360 light 10 words",
+      "violations": []
+    },
+    {
+      "audit": "en 360 light 50 words",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 360,
+      "height": 640,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "en 390 light 10 words",
+      "violations": []
+    },
+    {
+      "audit": "en 390 light 50 words",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 390,
+      "height": 780,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "en 1280 dark 10 words",
+      "violations": []
+    },
+    {
+      "audit": "en 1280 dark 50 words",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 1280,
+      "height": 800,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "audit": "en 640 dark 10 words",
+      "violations": []
+    },
+    {
+      "audit": "en 640 dark 50 words",
+      "violations": []
+    },
+    {
+      "lang": "en",
+      "width": 640,
+      "height": 360,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "audit": "ru 360 light 10 words",
+      "violations": []
+    },
+    {
+      "audit": "ru 360 light 50 words",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 360,
+      "height": 640,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "ru 390 light 10 words",
+      "violations": []
+    },
+    {
+      "audit": "ru 390 light 50 words",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 390,
+      "height": 780,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "audit": "ru 1280 dark 10 words",
+      "violations": []
+    },
+    {
+      "audit": "ru 1280 dark 50 words",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 1280,
+      "height": 800,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "audit": "ru 640 dark 10 words",
+      "violations": []
+    },
+    {
+      "audit": "ru 640 dark 50 words",
+      "violations": []
+    },
+    {
+      "lang": "ru",
+      "width": 640,
+      "height": 360,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "lang": "en",
+      "completion50": true,
+      "result": "passed"
+    },
+    {
+      "lang": "ru",
+      "completion50": true,
+      "result": "passed"
+    }
+  ],
+  "errors": []
+}

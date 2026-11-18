@@ -1,0 +1,255 @@
+import type { AppLang } from "@/lib/apps/lang";
+import { withBase } from "@/lib/apps/paths";
+
+/**
+ * The single source of truth for every tool on the site.
+ *
+ * The landing grid, the command palette and (later) the PWA manifest
+ * shortcuts all read this list, so adding a tool means adding one entry here.
+ */
+export type ToolCategory = "files" | "productivity" | "games";
+
+export type Localized = Record<AppLang, string>;
+
+export interface ToolEntry {
+  id: string;
+  /** Path relative to the site base, e.g. "/tools". */
+  path: string;
+  category: ToolCategory;
+  title: Localized;
+  /** Short line shown under the title on the landing grid. */
+  description: Localized;
+  /** What it opens / which languages — the small caption on the card. */
+  files: Localized;
+  /** Extra words the command palette matches on (both languages). */
+  keywords: string;
+  /** What search results and link previews show (English; the brand is appended to the title). */
+  seo: { title: string; description: string };
+}
+
+export const CATEGORY_ORDER: readonly ToolCategory[] = ["files", "productivity", "games"];
+
+export const CATEGORY_TITLES: Record<ToolCategory, Localized> = {
+  files: { en: "Files", ru: "Файлы" },
+  productivity: { en: "Study & focus", ru: "Учёба и фокус" },
+  games: { en: "Games", ru: "Игры" },
+};
+
+export const TOOLS: readonly ToolEntry[] = [
+  {
+    id: "potions",
+    path: "/potions",
+    category: "games",
+    files: { en: "You vs bots · 2–7 alchemists · offline", ru: "Вы против ботов · 2–7 алхимиков · офлайн" },
+    title: { en: "Potion panic", ru: "Переполох в котле" },
+    description: {
+      en: "Spot three matching numbers, race bots for ingredients, and bank cards whose sum is a multiple of ten. A quick-thinking potion card game.",
+      ru: "Заметьте три одинаковых числа, опередите ботов и соберите ингредиенты на круглую сумму. Карточная игра на реакцию и счёт.",
+    },
+    keywords: "potions alchemy cards bots brew reaction polyjuice зелье алхимия карты боты оборотное реакция",
+    seo: {
+      title: "Potion panic — alchemy card game",
+      description: "Race bot alchemists for potion ingredients, spot triples and make multiples of ten. An original-looking browser card game, free and offline.",
+    },
+  },
+  {
+    id: "tools",
+    path: "/tools",
+    category: "files",
+    files: {
+      en: ".pdf · .docx · .xlsx · .epub · .json · .md · images · QR",
+      ru: ".pdf · .docx · .xlsx · .epub · .json · .md · картинки · QR",
+    },
+    title: { en: "Workbench", ru: "Рабочая область" },
+    description: {
+      en: "One page for every file: open and edit documents, read EPUBs, merge, split and sign PDFs, convert images, compare files and make QR codes.",
+      ru: "Одна страница для любых файлов: просмотр и правка документов, чтение EPUB, склейка, разделение и подпись PDF, конвертация картинок, сравнение файлов и QR-коды.",
+    },
+    keywords:
+      "workbench tools file document viewer editor pdf merge split sign word docx excel xlsx csv json yaml toml markdown html epub ebook book reader image photo convert resize compress exif qr code generator text diff compare инструменты файл документ просмотр правка склеить разделить подписать книга читалка картинка сжать конвертировать сравнить",
+    seo: {
+      title: "PDF, Word, Excel, EPUB & image tools",
+      description:
+        "View PDF, Word, Excel and images, read EPUBs, merge, split and sign PDFs, convert data and make QR codes — free, private, in your browser.",
+    },
+  },
+  {
+    id: "focus",
+    path: "/focus",
+    category: "productivity",
+    files: { en: "Pomodoro timer · a tiny office · lo-fi music · works offline", ru: "Таймер Помодоро · маленький офис · лоуфай · работает офлайн" },
+    title: { en: "Focus office", ru: "Офис фокуса" },
+    description: {
+      en: "A Pomodoro timer with stakes and lo-fi to work to: open a small pixel office, press Start and follow the 25/5/15 flow; give a Pomodoro up and someone packs their box.",
+      ru: "Таймер Помодоро со ставкой и лоуфай для работы: откройте маленький пиксельный офис, нажмите «Старт» и держите поток 25/5/15; бросите помодоро — кто-то соберёт коробку.",
+    },
+    keywords: "focus pomodoro timer office productivity work deep work study pixel помодоро таймер фокус офис продуктивность работа учёба",
+    seo: {
+      title: "Pomodoro timer with a tiny office",
+      description:
+        "A Pomodoro focus timer with lo-fi music where every Pomodoro you give up costs a pixel office worker their job. Opens ready to go — free, private and offline.",
+    },
+  },
+  {
+    id: "board",
+    path: "/board",
+    category: "productivity",
+    files: { en: "Rectangles · arrows · text · PNG export", ru: "Прямоугольники · стрелки · текст · экспорт PNG" },
+    title: { en: "Whiteboard", ru: "Доска" },
+    description: {
+      en: "A small whiteboard for quick sketches: rectangles, arrows and text, with undo and a PNG download.",
+      ru: "Небольшая доска для быстрых набросков: прямоугольники, стрелки и текст, отмена и скачивание PNG.",
+    },
+    keywords: "whiteboard draw sketch diagram boxes arrows notes доска рисовать набросок схема стрелки заметки",
+    seo: {
+      title: "Online whiteboard and sketchpad",
+      description: "A free, private whiteboard in your browser: draw rectangles, arrows and text, and download a PNG. Works offline.",
+    },
+  },
+  {
+    id: "alias",
+    path: "/alias",
+    category: "games",
+    files: { en: "English · Русский · 10 themes", ru: "English · Русский · 10 тем" },
+    title: { en: "Alias word game", ru: "Алиас" },
+    description: {
+      en: "The party word-guessing game: one player explains, the team guesses. Ten themed decks with 1000+ words each and sound feedback.",
+      ru: "Компания угадывает слова: один объясняет, команда угадывает. Десять тематических колод по 1000+ слов со звуковыми подсказками.",
+    },
+    keywords: "alias party word game team guess алиас игра слова компания",
+    seo: {
+      title: "Alias — the party word-guessing game",
+      description:
+        "Play Alias with friends: explain words, the team guesses. Ten themed decks with over 1000 words each, in English and Russian. Free and offline.",
+    },
+  },
+  {
+    id: "crossword",
+    path: "/crossword",
+    category: "games",
+    files: { en: "English · Русский · 100 crosswords", ru: "Русский · English · 100 кроссвордов" },
+    title: { en: "Crossword", ru: "Кроссворд" },
+    description: {
+      en: "English and Russian crosswords: 10–50 words, a zoomable grid, your phone’s keyboard, hints and saved progress.",
+      ru: "Кроссворды на русском и английском: от 10 до 50 слов, масштабируемая сетка, клавиатура телефона, подсказки и сохранение.",
+    },
+    keywords: "crossword puzzle clues кроссворд головоломка",
+    seo: {
+      title: "Free crosswords in English & Russian",
+      description:
+        "Solve 100 English and Russian crosswords with 10–50 words each. Zoom and pan the grid, type with your native keyboard, get hints and save progress offline.",
+    },
+  },
+  {
+    id: "couples",
+    path: "/couples",
+    category: "games",
+    files: {
+      en: "English · Русский · 5 games · one phone",
+      ru: "Русский · English · 5 игр · один телефон",
+    },
+    title: { en: "Games for couples", ru: "Игры для пар" },
+    description: {
+      en: "Five games for two: compare answers, rebuild secret patterns, or share stories in Never Have I Ever. One phone, no account.",
+      ru: "Пять игр для двоих: сравнивайте ответы, собирайте тайные узоры и делитесь историями в «Я никогда не». Один телефон, без регистрации.",
+    },
+    keywords: "couples pairs two players this or that normal or nah who of us secret pattern пары двоих илито норм стрём тайный узор я никогда не never have i ever",
+    seo: {
+      title: "Games for couples: This or That & more",
+      description:
+        "Five one-phone games for couples: Normal or Nah, This or That, Who of Us, Secret Pattern and Never Have I Ever. Play in English or Russian.",
+    },
+  },
+  {
+    id: "tycoon",
+    path: "/tycoon",
+    category: "games",
+    files: {
+      en: "single-player · autosaves locally",
+      ru: "одиночная · автосохранение локально",
+    },
+    title: { en: "Software Tycoon", ru: "Империя софта" },
+    description: {
+      en: "Run a small software studio: hire a team, pick a product and its features, ship it, and grow from a garage to a company.",
+      ru: "Управляйте небольшой студией: нанимайте команду, выбирайте продукт и его возможности, выпускайте и растите от гаража до компании.",
+    },
+    keywords:
+      "tycoon management sim game software studio developer gamedev hire team ship products offices rivals career игра симулятор студия разработка менеджмент тайкун",
+    seo: {
+      title: "Software Tycoon — run a software studio",
+      description:
+        "Hire a team, build products, ship, and grow a studio — a free management sim that runs and saves entirely in your browser.",
+    },
+  },
+  {
+    id: "tower",
+    path: "/tower",
+    category: "games",
+    files: {
+      en: "single-player · made for phones · saves locally",
+      ru: "одиночная · для телефона · сохраняется локально",
+    },
+    title: { en: "Lone Tower", ru: "Одинокая башня" },
+    description: {
+      en: "Hold the castle from its archer tower as waves march out of the woods: aim and shoot with your finger, rain volleys, pick an upgrade after each wave, and buy perks with the gold.",
+      ru: "Защитите замок с башни лучника от волн врагов из леса: цельтесь и стреляйте пальцем, обрушивайте залпы, выбирайте улучшение после каждой волны и покупайте бонусы за золото.",
+    },
+    keywords:
+      "tower defense archer arrows waves roguelike upgrades casual arcade башня лучник стрелы волны защита улучшения аркада",
+    seo: {
+      title: "Lone Tower — a casual archer tower defense",
+      description:
+        "Defend the castle from its archer tower against endless waves: aim and shoot, rain volleys of arrows, pick upgrades, beat your best wave. Free, offline, made for phones.",
+    },
+  },
+  {
+    id: "kingsroad",
+    path: "/kingsroad",
+    category: "games",
+    files: {
+      en: "single-player · made for phones · saves locally",
+      ru: "одиночная · для телефона · сохраняется локально",
+    },
+    title: { en: "Kingsroad", ru: "Королевский тракт" },
+    description: {
+      en: "Lone Tower's horde marches down a winding road to the castle gate: build archers, catapults, frost mages and ballistas beside it, upgrade them, and win stars on three roads.",
+      ru: "Орда из «Одинокой башни» идёт по извилистой дороге к воротам замка: стройте вдоль неё лучников, катапульты, ледяных магов и баллисты, улучшайте их и зарабатывайте звёзды на трёх дорогах.",
+    },
+    keywords:
+      "tower defense defence td build towers road path waves archer catapult ballista mage strategy casual башни защита дорога волны лучники катапульта баллиста маг стратегия",
+    seo: {
+      title: "Kingsroad — a tower defence game for phones",
+      description:
+        "Build towers along the king's road and hold the gate: archers, catapults, frost mages and ballistas against a marching horde. Free, offline, made for phones.",
+    },
+  },
+  {
+    id: "hr",
+    path: "/hr",
+    category: "games",
+    files: {
+      en: "single-player · made for phones · saves locally",
+      ru: "одиночная · для телефона · сохраняется локально",
+    },
+    title: { en: "HR Department", ru: "Отдел кадров" },
+    description: {
+      en: "Send a coworker into the office horde: steer while they fight on their own with sticky notes, spreadsheets and server racks, level up, and beat the Auditor before the audit closes.",
+      ru: "Отправьте сотрудника против офисной орды: ведите его, пока он сам отбивается стикерами, таблицами и серверными стойками, растите в уровне и одолейте аудитора, пока аудит не закрылся.",
+    },
+    keywords:
+      "hr office survivors roguelike auto battler horde coworker hero level up upgrades arcade casual кадры офис сотрудник орда выживание рогалик уровни улучшения аркада",
+    seo: {
+      title: "HR Department — an office survivors game for phones",
+      description:
+        "Steer a coworker through waves of reply-alls, Monday blobs and printer jams while they fight on their own; level up and beat the Auditor. Free, offline, made for phones.",
+    },
+  },
+];
+
+export function toolHref(tool: ToolEntry): string {
+  return withBase(tool.path);
+}
+
+export function toolsByCategory(category: ToolCategory): ToolEntry[] {
+  return TOOLS.filter((tool) => tool.category === category);
+}

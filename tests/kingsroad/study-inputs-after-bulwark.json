@@ -1,0 +1,10 @@
+{
+  "hashes": {
+    "src/lib/kingsroad/sim/balance.ts": "4a5b16396bdaab70c5c9d9be083293a4d2598edbed313ba71664914753f46770",
+    "src/lib/kingsroad/sim/game.ts": "632c431ef1ad0ee41c591689e89b882297681610c73649411923499f954c66fa",
+    "src/lib/kingsroad/sim/maps.ts": "ba089df2c11fdd79dd86646d9cf2b241eb4f3a1cea7efa3a5828e801364f6351",
+    "src/lib/kingsroad/sim/types.ts": "bc42b3acb28506d8eb66ec15b407b438c4ac49d71acc6ae67f715fc7cd60b9e8",
+    "src/lib/kingsroad/sim/waves.ts": "eee26d60a05811b5adbe74dabf7de800e57f80a35cc01a6df162f67e095031e9"
+  },
+  "reason": "These five sim inputs changed deliberately when the bulwark foe shipped (harvest+kings, hitCap 12). Any further edit must update this file knowingly."
+}

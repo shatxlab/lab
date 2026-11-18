@@ -1,0 +1,8 @@
+---
+import ToolsLayout from '@/layouts/ToolsLayout.astro';
+import PotionsGame from '@/components/potions/PotionsGame';
+import '@/styles/potions.css';
+---
+<ToolsLayout tool="potions">
+  <PotionsGame client:load />
+</ToolsLayout>

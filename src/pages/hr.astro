@@ -1,0 +1,11 @@
+---
+import ToolsLayout from "@/layouts/ToolsLayout.astro";
+import HrApp from "@/components/hr/HrApp";
+import "@/styles/tower.css";
+import "@/styles/hr.css";
+---
+
+<ToolsLayout tool="hr" immersive>
+  {/* client:only: the game reads localStorage and draws on a canvas, nothing to prerender. */}
+  <HrApp client:only="react" />
+</ToolsLayout>

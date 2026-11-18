@@ -1,0 +1,347 @@
+import { describe, expect, it } from "vitest";
+
+import { BASE, ENEMIES, MIN_SKILL_COOLDOWN, SKILLS, TOWER, WALL_HP, WALL_Y } from "@/lib/tower/sim/balance";
+import { aimAt, castSkill, chooseUpgrade, createRun, giveUp, holdFire, stats, step, STEP } from "@/lib/tower/sim/run";
+import { towerStats } from "@/lib/tower/sim/stats";
+import { emptyPerks, emptyUpgrades } from "@/lib/tower/sim/upgrades";
+import type { Enemy, EnemyKind, Run, UpgradeId } from "@/lib/tower/sim/types";
+
+function enemyAt(run: Run, x: number, y: number, kind: EnemyKind = "grunt", overrides: Partial<Enemy> = {}): Enemy {
+  const def = ENEMIES[kind];
+  const enemy: Enemy = {
+    id: run.nextId++,
+    kind,
+    x,
+    y,
+    targetX: x,
+    hp: def.hp,
+    maxHp: def.hp,
+    radius: def.radius,
+    speed: def.speed,
+    flying: def.flying,
+    damage: def.damage,
+    attackEvery: def.attackEvery,
+    attackTimer: def.attackEvery / 2,
+    burnLeft: 0,
+    burnDps: 0,
+    slowLeft: 0,
+    slow: 0,
+    freezeLeft: 0,
+    summonTimer: 99,
+    flash: 0,
+    phase: 0,
+    ...overrides,
+  };
+  run.enemies.push(enemy);
+  return enemy;
+}
+
+function runFor(run: Run, seconds: number): void {
+  for (let tick = 0; tick < seconds / STEP; tick += 1) step(run, STEP);
+}
+
+/** A run with the first wave's schedule emptied, so a test controls every enemy. */
+function quietRun(seed = 1): Run {
+  const run = createRun(seed);
+  run.spawns = [];
+  return run;
+}
+
+/** Get `run` to the upgrade picker offering `id`. */
+function offer(run: Run, id: UpgradeId): void {
+  run.phase = "choosing";
+  run.picksLeft = 1;
+  run.choices = [id];
+}
+
+describe("createRun", () => {
+  it("starts wave 1 at full health", () => {
+    const run = createRun(5);
+    expect(run.phase).toBe("playing");
+    expect(run.wave).toBe(1);
+    expect(run.hp).toBe(BASE.maxHp);
+    expect(run.spawns.length).toBeGreaterThan(0);
+  });
+
+  it("opens on the upgrade picker with a head start", () => {
+    const run = createRun(5, { ...emptyPerks(), headStart: 2 });
+    expect(run.phase).toBe("choosing");
+    expect(run.wave).toBe(0);
+    expect(run.picksLeft).toBe(2);
+    expect(new Set(run.choices).size).toBe(3);
+    chooseUpgrade(run, run.choices[0]);
+    expect(run.phase).toBe("choosing");
+    chooseUpgrade(run, run.choices[0]);
+    expect(run.phase).toBe("playing");
+    expect(run.wave).toBe(1);
+  });
+});
+
+describe("step", () => {
+  it("shoots down an enemy it's aimed at, clears the wave and offers upgrades", () => {
+    const run = quietRun();
+    enemyAt(run, TOWER.x, TOWER.y - 120);
+    aimAt(run, TOWER.x, TOWER.y - 50);
+    runFor(run, 5);
+    expect(run.kills).toBe(1);
+    expect(run.phase).toBe("choosing");
+    expect(run.choices).toHaveLength(3);
+    expect(run.gold).toBe(ENEMIES.grunt.gold + 2);
+  });
+
+  it("only shoots while the player holds, and only as far as the bow reaches", () => {
+    const run = quietRun();
+    const far = enemyAt(run, TOWER.x, TOWER.y - 500, "grunt", { speed: 0 });
+    runFor(run, 1);
+    expect(run.arrows).toHaveLength(0);
+    aimAt(run, far.x, far.y);
+    runFor(run, 2);
+    expect(run.arrows.length).toBeGreaterThan(0);
+    expect(far.hp).toBe(far.maxHp);
+    holdFire(run);
+    runFor(run, 1);
+    expect(run.arrows).toHaveLength(0);
+  });
+
+  it("shoots along the aim and fans multishot out around it", () => {
+    const run = quietRun();
+    enemyAt(run, TOWER.x, 10, "grunt", { speed: 0 });
+    run.upgrades.multishot = 2;
+    aimAt(run, TOWER.x, TOWER.y - 100);
+    step(run, STEP);
+    const angles = run.arrows.map((arrow) => Math.atan2(arrow.vy, arrow.vx)).sort((a, b) => a - b);
+    expect(angles).toHaveLength(3);
+    expect(angles[1]).toBeCloseTo(-Math.PI / 2);
+    expect(angles[2] - angles[1]).toBeCloseTo(angles[1] - angles[0]);
+  });
+
+  it("never turns the archer back over the castle", () => {
+    const run = quietRun();
+    aimAt(run, TOWER.x + 100, TOWER.y + 50);
+    expect(run.aim).toBeLessThan(0);
+    expect(run.aim).toBeGreaterThan(-Math.PI / 2);
+    aimAt(run, TOWER.x - 100, TOWER.y + 50);
+    expect(run.aim).toBeLessThan(-Math.PI / 2);
+  });
+
+  it("marches enemies down to their spot on the wall", () => {
+    const run = quietRun();
+    run.reloadLeft = Infinity;
+    const grunt = enemyAt(run, 40, 0, "grunt", { targetX: 80 });
+    runFor(run, 30);
+    expect(grunt.x).toBeCloseTo(80);
+    expect(grunt.y + grunt.radius).toBeCloseTo(WALL_Y);
+    expect(run.hp).toBeLessThan(BASE.maxHp);
+  });
+
+  it("lets enemies at the wall wear it down until the run ends", () => {
+    const run = quietRun();
+    run.reloadLeft = Infinity;
+    enemyAt(run, TOWER.x + 60, TOWER.y, "brute");
+    runFor(run, 4);
+    expect(run.hp).toBeLessThan(BASE.maxHp);
+    runFor(run, 60);
+    expect(run.phase).toBe("over");
+    expect(run.hp).toBe(0);
+    const frozen = JSON.stringify(run);
+    step(run, STEP);
+    expect(JSON.stringify(run)).toBe(frozen);
+  });
+
+  it("repairs the wall with masons", () => {
+    const run = quietRun();
+    run.upgrades.regen = 2;
+    run.hp = 50;
+    enemyAt(run, TOWER.x, TOWER.y - 300, "grunt", { speed: 0 });
+    runFor(run, 1);
+    expect(run.hp).toBeCloseTo(52, 1);
+  });
+
+  it("sets enemies burning and slows them with frost", () => {
+    const run = quietRun();
+    run.upgrades.fire = 1;
+    run.upgrades.frost = 1;
+    const brute = enemyAt(run, TOWER.x, TOWER.y - 100, "brute", { speed: 0 });
+    aimAt(run, brute.x, brute.y);
+    runFor(run, 0.5);
+    expect(brute.burnLeft).toBeGreaterThan(0);
+    expect(brute.slow).toBeCloseTo(0.15);
+  });
+
+  it("lets a boss call in grunts", () => {
+    const run = quietRun();
+    run.reloadLeft = Infinity;
+    enemyAt(run, TOWER.x, 20, "boss", { summonTimer: 0.1 });
+    runFor(run, 0.2);
+    expect(run.enemies.filter((enemy) => enemy.kind === "grunt")).toHaveLength(2);
+  });
+});
+
+describe("active skills", () => {
+  it("casts one deterministic Catapult impact, burns once and reloads", () => {
+    const run = quietRun();
+    run.reloadLeft = Infinity;
+    const target = enemyAt(run, 60, 120, "brute", { speed: 0, hp: 200, maxHp: 200 });
+    const rng = run.rng;
+    expect(castSkill(run, 60, 120)).toBe(true);
+    expect(run.rng).toBe(rng);
+    expect(run.skillCasts).toHaveLength(1);
+    expect(run.volleys).toHaveLength(0);
+    expect(castSkill(run, 60, 120)).toBe(false);
+    runFor(run, 1);
+    expect(run.skillCasts).toHaveLength(0);
+    expect(200 - target.hp).toBeGreaterThan(SKILLS.catapult.damage);
+    expect(200 - target.hp).toBeLessThan(SKILLS.catapult.damage + SKILLS.catapult.burnDps * 0.4);
+    expect(target.burnDps).toBe(SKILLS.catapult.burnDps);
+    runFor(run, SKILLS.catapult.cooldown);
+    expect(castSkill(run, 60, 120)).toBe(true);
+  });
+
+  it("hits ground and air throughout the marked circle, including its edge, without caltrops", () => {
+    const run = quietRun();
+    run.upgrades.caltrops = 3;
+    const center = enemyAt(run, 60, 120, "grunt", { speed: 0, hp: 100, maxHp: 100 });
+    const edge = enemyAt(run, 60 + SKILLS.catapult.radius, 120, "bat", { speed: 0, hp: 100, maxHp: 100 });
+    const outside = enemyAt(run, 150, 120, "grunt", { speed: 0, hp: 100, maxHp: 100 });
+    castSkill(run, 60, 120);
+    runFor(run, 0.7);
+    expect(center.hp).toBeLessThan(100 - SKILLS.catapult.damage);
+    expect(edge.hp).toBeLessThan(100 - SKILLS.catapult.damage);
+    expect(outside.hp).toBe(100);
+    expect(run.caltrops).toHaveLength(0);
+  });
+
+  it("freezes ordinary movement while burn continues, then applies the follow-up slow", () => {
+    const run = createRun(5, emptyPerks(), "frostField");
+    run.spawns = [];
+    const target = enemyAt(run, 100, 100, "grunt", { speed: 20, targetX: 100, burnLeft: 3, burnDps: 4 });
+    const start = { x: target.x, y: target.y, hp: target.hp };
+    castSkill(run, 100, 100);
+    runFor(run, 0.3);
+    const frozen = { x: target.x, y: target.y };
+    runFor(run, 0.7);
+    expect(target.freezeLeft).toBeGreaterThan(0);
+    expect(target.x).toBe(frozen.x);
+    expect(target.y).toBe(frozen.y);
+    expect(target.hp).toBeLessThan(start.hp);
+    runFor(run, 0.5);
+    expect(target.freezeLeft).toBe(0);
+    expect(target.slow).toBe(SKILLS.frostField.slow);
+    expect(target.y).toBe(frozen.y);
+    runFor(run, 0.5);
+    expect(target.y).toBeGreaterThan(frozen.y);
+  });
+
+  it("pauses attacks during freeze without a catch-up blow", () => {
+    const run = createRun(5, emptyPerks(), "frostField");
+    run.spawns = [];
+    const enemy = enemyAt(run, 60, WALL_Y - 9, "grunt", { attackTimer: 1 });
+    castSkill(run, 60, enemy.y);
+    runFor(run, 1.3);
+    expect(enemy.attackTimer).toBeCloseTo(0.75, 4);
+    expect(run.hp).toBe(BASE.maxHp);
+    runFor(run, 0.6);
+    expect(enemy.attackTimer).toBeGreaterThan(0);
+    expect(enemy.attackTimer).toBeLessThan(0.75);
+    expect(run.hp).toBe(BASE.maxHp);
+    runFor(run, 0.5);
+    expect(run.hp).toBeLessThan(BASE.maxHp);
+  });
+
+  it("slows rather than hard-freezes bosses", () => {
+    const run = createRun(5, emptyPerks(), "frostField");
+    run.spawns = [];
+    const boss = enemyAt(run, 100, 100, "boss", { speed: 20, targetX: 100 });
+    castSkill(run, 100, 100);
+    runFor(run, 0.5);
+    expect(boss.freezeLeft).toBe(0);
+    expect(boss.slow).toBe(SKILLS.frostField.slow);
+    expect(boss.y).toBeCloseTo(100 + 20 * 0.25 + 20 * 0.65 * 0.25, 4);
+  });
+
+  it("does nothing outside a wave", () => {
+    const run = quietRun();
+    giveUp(run);
+    expect(castSkill(run, 100, 100)).toBe(false);
+  });
+
+  it("slows walkers crossing caltrops but not bats", () => {
+    const run = quietRun();
+    run.reloadLeft = Infinity;
+    run.upgrades.caltrops = 3;
+    const walker = enemyAt(run, 40, 100, "grunt");
+    const bat = enemyAt(run, 40, 100, "bat", { speed: ENEMIES.grunt.speed });
+    run.caltrops.push({ id: run.nextId++, x: 40, y: 100, angle: 0, life: 10 });
+    const start = { x: walker.x, y: walker.y };
+    step(run, STEP);
+    const walked = Math.hypot(walker.x - start.x, walker.y - start.y);
+    expect(walked).toBeCloseTo(walker.speed * STEP * (1 - stats(run).caltropSlow), 5);
+    expect(Math.hypot(bat.x - start.x, bat.y - start.y)).toBeGreaterThan(walked);
+  });
+});
+
+describe("chooseUpgrade", () => {
+  it("levels the upgrade and starts the next wave", () => {
+    const run = quietRun();
+    offer(run, "multishot");
+    expect(chooseUpgrade(run, "reload")).toBe(false);
+    expect(chooseUpgrade(run, "multishot")).toBe(true);
+    expect(run.upgrades.multishot).toBe(1);
+    expect(run.phase).toBe("playing");
+    expect(run.wave).toBe(2);
+  });
+
+  it("repairs the wall when it's raised", () => {
+    const run = quietRun();
+    run.hp = 40;
+    offer(run, "wall");
+    chooseUpgrade(run, "wall");
+    expect(stats(run).maxHp).toBe(BASE.maxHp + WALL_HP);
+    expect(run.hp).toBe(40 + WALL_HP);
+  });
+
+  it("skips the picker once every upgrade is maxed", () => {
+    const run = quietRun();
+    for (const id of Object.keys(run.upgrades) as UpgradeId[]) run.upgrades[id] = 99;
+    run.upgrades.damage = 0;
+    offer(run, "damage");
+    chooseUpgrade(run, "damage");
+    expect(run.phase).toBe("playing");
+    run.spawns = [];
+    run.enemies = [];
+    run.upgrades.damage = 99;
+    step(run, STEP);
+    expect(run.phase).toBe("playing");
+    expect(run.wave).toBe(3);
+  });
+});
+
+describe("towerStats", () => {
+  it("stacks upgrades and perks", () => {
+    const upgrades = { ...emptyUpgrades(), damage: 2, reload: 1, multishot: 2, skillCooldown: 3 };
+    const perks = { ...emptyPerks(), fletching: 1, fortify: 2, quickDraw: 2, tactics: 4 };
+    const tower = towerStats(upgrades, perks);
+    expect(tower.damage).toBeCloseTo(BASE.damage * 1.5 * 1.08);
+    expect(tower.reload).toBeCloseTo((BASE.reload * 0.88) / 1.1);
+    expect(tower.multishot).toBe(3);
+    expect(tower.maxHp).toBe(BASE.maxHp + 30);
+    expect(tower.skillCooldown).toBeCloseTo(SKILLS.catapult.cooldown - 3.6 - 2);
+    expect(towerStats({ ...upgrades, skillCooldown: 10 }, perks).skillCooldown).toBe(MIN_SKILL_COOLDOWN);
+  });
+});
+
+describe("determinism", () => {
+  it("plays the same run twice from the same seed and inputs", () => {
+    const play = () => {
+      const run = createRun(1234);
+      for (let tick = 0; tick < 60 * 90 && run.phase !== "over"; tick += 1) {
+        if (run.phase === "choosing") chooseUpgrade(run, run.choices[0]);
+        if (tick % 10 === 0 && run.enemies[0]) aimAt(run, run.enemies[0].x, run.enemies[0].y);
+        if (tick % 200 === 0 && run.enemies[0]) castSkill(run, run.enemies[0].x, run.enemies[0].y);
+        step(run, STEP);
+      }
+      return JSON.stringify(run);
+    };
+    expect(play()).toBe(play());
+  });
+});

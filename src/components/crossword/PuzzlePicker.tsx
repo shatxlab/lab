@@ -1,0 +1,107 @@
+import { Check, Play } from "lucide-react";
+import type { CSSProperties } from "react";
+
+import { solvedEntryIds } from "@/lib/crossword/game";
+import { difficultyLabel, progressText, stringsFor } from "@/lib/crossword/i18n";
+import { hasSavedProgress, type StoredPuzzleProgress } from "@/lib/crossword/storage";
+import type { BuiltPuzzle, CrosswordPuzzle, Lang } from "@/lib/crossword/types";
+
+export interface PickerItem {
+  puzzle: CrosswordPuzzle;
+  built: BuiltPuzzle;
+  progress: StoredPuzzleProgress | undefined;
+  legacy?: boolean;
+}
+
+interface PuzzlePickerProps {
+  items: PickerItem[];
+  lang: Lang;
+  onOpen(id: string): void;
+}
+
+/** Tiny non-interactive preview of a board's shape. */
+function MiniGrid({ built }: { built: BuiltPuzzle }) {
+  return (
+    <div
+      className="cw-mini"
+      aria-hidden="true"
+      style={{ "--cw-cols": built.cols, "--cw-rows": built.rows } as CSSProperties}
+    >
+      {built.cells.map((cell) => (
+        <span key={`${cell.row}-${cell.col}`} className={cell.isBlack ? "is-black" : "is-white"} />
+      ))}
+    </div>
+  );
+}
+
+function statusOf(item: PickerItem) {
+  const total = item.built.entries.length;
+  const solved = item.progress ? solvedEntryIds(item.built, item.progress.values).size : 0;
+  const completed = item.progress?.completed === true || solved === total;
+  const TXT = stringsFor(item.puzzle.lang);
+  const label = completed ? TXT.solvedBadge : hasSavedProgress(item.progress) ? TXT.progressBadge : TXT.newBadge;
+  return { solved, total, completed, label };
+}
+
+export function PuzzlePicker({ items, lang, onOpen }: PuzzlePickerProps) {
+  const TXT = stringsFor(lang);
+  return (
+    <div className="cw-picker">
+      <header className="cw-picker-hero">
+        <p className="cw-eyebrow">{TXT.appName}</p>
+        <h1>{TXT.pickTitle}</h1>
+        <p className="cw-picker-note">{TXT.pickSubtitle}</p>
+        <p className="cw-picker-note">{TXT.editionNotice}</p>
+
+      </header>
+      <div className="cw-card-grid">
+        {items.map((item) => {
+          const status = statusOf(item);
+          const percent = Math.round((status.solved / status.total) * 100);
+          return (
+            <button
+              key={item.puzzle.id}
+              type="button"
+              className="cw-card"
+              data-completed={status.completed ? "true" : "false"}
+              data-puzzle-id={item.puzzle.id}
+              data-words={item.built.entries.length}
+              onClick={() => onOpen(item.puzzle.id)}
+            >
+              <span className="cw-card-top">
+                <MiniGrid built={item.built} />
+                <span className="cw-card-info">
+                  <span className="cw-card-badges">
+                    {item.legacy && (
+                      <span className="cw-badge" data-tone="ghost">{TXT.legacyEdition}</span>
+                    )}
+                    <span className="cw-badge" data-tone={status.completed ? "success" : "muted"}>
+                      {status.label}
+                    </span>
+                    <span className="cw-badge" data-tone="ghost">
+                      {difficultyLabel(item.puzzle.lang, item.puzzle.difficulty)}
+                    </span>
+                  </span>
+                  <span className="cw-card-title">{item.puzzle.title}</span>
+                  <span className="cw-card-subtitle">{item.puzzle.subtitle}</span>
+                  <span className="cw-card-meta">
+                    {item.built.rows}×{item.built.cols} · {item.built.entries.length} {TXT.wordsSuffix}
+                  </span>
+                </span>
+              </span>
+              <span className="cw-card-progress">
+                <span className="cw-card-bar" aria-hidden="true">
+                  <span className="cw-card-bar-fill" style={{ width: `${percent}%` }} />
+                </span>
+                <span className="cw-card-progress-label">
+                  {status.completed ? <Check aria-hidden="true" /> : <Play aria-hidden="true" />}
+                  {progressText(status.solved, status.total)}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

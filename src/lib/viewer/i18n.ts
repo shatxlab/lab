@@ -30,6 +30,15 @@ type StringKey =
   | "ascending"
   | "descending"
   | "showingFirstRows"
+  | "filterColumn"
+  | "filterSearchValues"
+  | "filterSelectAll"
+  | "filterBlanks"
+  | "filterNoValues"
+  | "filterApply"
+  | "filterClear"
+  | "filterCancel"
+  | "filteredRowsShown"
   | "formattingNotes"
   | "export"
   | "exportCsv"
@@ -84,6 +93,15 @@ const STRINGS: Record<AppLang, Record<StringKey, string>> = {
     ascending: "ascending",
     descending: "descending",
     showingFirstRows: "showing the first {count} rows",
+    filterColumn: "Filter column {column}",
+    filterSearchValues: "Search values",
+    filterSelectAll: "(Select all)",
+    filterBlanks: "(Blanks)",
+    filterNoValues: "No values",
+    filterApply: "Apply",
+    filterClear: "Clear filter",
+    filterCancel: "Cancel",
+    filteredRowsShown: "showing {shown} of {total} rows",
     formattingNotes: "{count} formatting {notesPlural}",
     export: "Export",
     exportCsv: "CSV — this sheet",
@@ -137,6 +155,15 @@ const STRINGS: Record<AppLang, Record<StringKey, string>> = {
     ascending: "по возрастанию",
     descending: "по убыванию",
     showingFirstRows: "показаны первые {count} строк",
+    filterColumn: "Фильтр по столбцу {column}",
+    filterSearchValues: "Поиск значений",
+    filterSelectAll: "(Выделить всё)",
+    filterBlanks: "(Пустые)",
+    filterNoValues: "Нет значений",
+    filterApply: "Применить",
+    filterClear: "Сбросить фильтр",
+    filterCancel: "Отмена",
+    filteredRowsShown: "показано строк: {shown} из {total}",
     formattingNotes: "Замечаний по форматированию: {count}",
     export: "Экспорт",
     exportCsv: "CSV — этот лист",

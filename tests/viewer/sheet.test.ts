@@ -9,7 +9,10 @@ import {
   MAX_RENDERED_ROWS,
   orderedSheetRows,
   parseWorkbook,
+  sheetFilterValues,
   workbookToSheets,
+  type SheetData,
+  type SheetFilters,
 } from "@/lib/viewer/sheet";
 
 describe("columnLabel", () => {
@@ -92,6 +95,76 @@ describe("orderedSheetRows", () => {
 
   it("returns the original order when no sort is set", () => {
     expect(orderedSheetRows(rows, null).map((row) => row.sourceRow)).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe("sheetFilterValues", () => {
+  const sheet: SheetData = {
+    name: "Cities",
+    rows: [
+      ["city", "count"],
+      ["Berlin", "10"],
+      ["Москва", "10"],
+      ["Ankara", "2"],
+      ["", "2"],
+    ],
+    totalRows: 5,
+    columnCount: 2,
+    truncated: false,
+  };
+
+  it("lists each distinct body value once, sorted, blanks last", () => {
+    expect(sheetFilterValues(sheet, 0)).toEqual(["Ankara", "Berlin", "Москва", ""]);
+    expect(sheetFilterValues(sheet, 1)).toEqual(["2", "10"]);
+  });
+
+  it("treats whitespace-only cells as blank", () => {
+    const padded: SheetData = { ...sheet, rows: [["v"], ["  "], ["x"]] };
+    expect(sheetFilterValues(padded, 0)).toEqual(["x", ""]);
+  });
+});
+
+describe("orderedSheetRows with filters", () => {
+  const rows = [
+    ["city", "count"],
+    ["Berlin", "10"],
+    ["Ankara", "2"],
+    ["Москва", "10"],
+  ];
+
+  const only = (column: number, values: readonly string[]) =>
+    new Map([[column, new Set(values)]]) as SheetFilters;
+
+  it("keeps the header and the rows whose column value is allowed", () => {
+    const filtered = orderedSheetRows(rows, null, only(0, ["Berlin", "Москва"]));
+
+    expect(filtered.map((row) => row.cells[0])).toEqual(["city", "Berlin", "Москва"]);
+    expect(filtered.map((row) => row.sourceRow)).toEqual([0, 1, 3]);
+  });
+
+  it("combines filters from several columns", () => {
+    const filtered = orderedSheetRows(rows, null, new Map([
+      [0, new Set(["Москва", "Berlin"])],
+      [1, new Set(["2"])],
+    ]) as SheetFilters);
+
+    expect(filtered.map((row) => row.cells[0])).toEqual(["city"]);
+  });
+
+  it("sorts the rows that survive the filter", () => {
+    const filtered = orderedSheetRows(rows, { column: 1, direction: "desc" }, only(1, ["10"]));
+
+    expect(filtered.map((row) => row.cells[0])).toEqual(["city", "Berlin", "Москва"]);
+  });
+
+  it("matches a missing cell as blank rather than dropping the row", () => {
+    const sparse = [
+      ["name", "note"],
+      ["a"],
+      ["b", "hi"],
+    ];
+
+    expect(orderedSheetRows(sparse, null, only(1, [""])).map((row) => row.cells[0])).toEqual(["name", "a"]);
   });
 });
 

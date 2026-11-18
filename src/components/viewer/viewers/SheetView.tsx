@@ -1,11 +1,14 @@
 import * as React from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ListFilter } from "lucide-react";
 
 import { SheetFindBar } from "@/components/viewer/viewers/SheetFindBar";
+import { SheetFilterMenu } from "@/components/viewer/viewers/SheetFilterMenu";
 import {
   columnLabel,
   orderedSheetRows,
+  sheetFilterValues,
   type SheetData,
+  type SheetFilters,
   type SheetSort,
 } from "@/lib/viewer/sheet";
 import { findSheetMatches, splitHighlighted, type SheetMatch } from "@/lib/viewer/sheet-find";
@@ -49,6 +52,8 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
     const [activeIndex, setActiveIndex] = React.useState(0);
     const [visibleRows, setVisibleRows] = React.useState(ROW_CHUNK);
     const [sort, setSort] = React.useState<SheetSort | null>(null);
+    const [filters, setFilters] = React.useState<SheetFilters>(new Map());
+    const [filterMenu, setFilterMenu] = React.useState<{ column: number; anchor: HTMLElement } | null>(null);
     const [query, setQuery] = React.useState("");
     const [matchIndex, setMatchIndex] = React.useState(0);
     const [editing, setEditing] = React.useState<EditTarget | null>(null);
@@ -79,6 +84,8 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
       scrollSnapshot.current = null;
       setActiveIndex(0);
       setSort(null);
+      setFilters(new Map());
+      setFilterMenu(null);
       setVisibleRows(ROW_CHUNK);
       setQuery("");
       setMatchIndex(0);
@@ -88,6 +95,9 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
 
     React.useEffect(() => {
       scrollSnapshot.current = null;
+      setSort(null);
+      setFilters(new Map());
+      setFilterMenu(null);
       setVisibleRows(ROW_CHUNK);
       setMatchIndex(0);
       resetScroll(scrollRef.current);
@@ -106,8 +116,8 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
     }, [sort]);
 
     const orderedRows = React.useMemo(
-      () => (active ? orderedSheetRows(active.rows, sort) : []),
-      [active, sort],
+      () => (active ? orderedSheetRows(active.rows, sort, filters) : []),
+      [active, sort, filters],
     );
     const headerRow = orderedRows[0];
     const bodyRows = orderedRows.slice(1);
@@ -168,6 +178,20 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
         return null;
       });
     }, []);
+
+    /** Applies (or removes) one column's filter, leaving the others untouched. */
+    const applyFilter = React.useCallback(
+      (column: number, allowed: ReadonlySet<string> | null) => {
+        setFilters((current) => {
+          const next = new Map(current);
+          if (allowed === null) next.delete(column);
+          else next.set(column, allowed);
+          return next;
+        });
+        setVisibleRows(ROW_CHUNK);
+      },
+      [],
+    );
 
     const goToMatch = React.useCallback(
       (nextIndex: number) => {
@@ -294,6 +318,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
         ) : (
           <div
             ref={scrollRef}
+            onScroll={filterMenu ? () => setFilterMenu(null) : undefined}
             className="min-h-0 flex-1 overflow-auto [overflow-anchor:none]"
             data-sheet-scroller=""
           >
@@ -311,6 +336,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                       aria-sort={ariaSort(sort, column)}
                       className="border-r border-b border-(--border) bg-(--surface) p-0 text-xs font-medium text-(--muted-fg)"
                     >
+                    <div className="flex w-full items-stretch">
                       <button
                         type="button"
                         onMouseDown={suppressStickyHeaderFocusScroll}
@@ -318,7 +344,7 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                         title={`Sort by column ${columnLabel(column)}`}
                         aria-label={sortButtonLabel(column, sort)}
                         className={cn(
-                          "inline-flex w-full cursor-pointer items-center justify-center gap-1 px-3 py-1.5 hover:bg-(--surface) hover:text-(--fg)",
+                          "inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 px-3 py-1.5 hover:bg-(--surface) hover:text-(--fg)",
                           sort?.column === column && "text-(--accent)",
                         )}
                       >
@@ -330,7 +356,30 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                             <ArrowDown className="size-3" aria-hidden="true" />
                           ))}
                       </button>
-                    </th>
+                      {active.rows.length > 1 && (
+                        <button
+                          type="button"
+                          onMouseDown={suppressStickyHeaderFocusScroll}
+                          onClick={(event) =>
+                            setFilterMenu(
+                              filterMenu?.column === column
+                                ? null
+                                : { column, anchor: event.currentTarget },
+                            )
+                          }
+                          aria-label={t(lang, "filterColumn", { column: columnLabel(column) })}
+                          aria-expanded={filterMenu?.column === column}
+                          title={t(lang, "filterColumn", { column: columnLabel(column) })}
+                          className={cn(
+                            "inline-flex w-7 shrink-0 cursor-pointer items-center justify-center border-l border-(--border) hover:bg-(--surface) hover:text-(--fg)",
+                            filters.has(column) ? "text-(--accent)" : "text-(--muted-fg)/60",
+                          )}
+                        >
+                          <ListFilter className="size-3" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  </th>
                   ))}
                 </tr>
                 {headerRow && (
@@ -440,6 +489,16 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
                 })}
               </>
             )}
+            {filters.size > 0 && (
+              <>
+                {" "}
+                &middot;{" "}
+                {t(lang, "filteredRowsShown", {
+                  shown: rowCount.toLocaleString("en-US"),
+                  total: Math.max(active.totalRows - 1, 0).toLocaleString("en-US"),
+                })}
+              </>
+            )}
             {active.truncated && (
               <span className="text-(--accent)">
                 {" "}
@@ -448,6 +507,18 @@ export const SheetView = React.forwardRef<SheetViewHandle, SheetViewProps>(
             )}
           </p>
         </div>
+
+        {filterMenu && active && (
+          <SheetFilterMenu
+            lang={lang}
+            column={filterMenu.column}
+            values={sheetFilterValues(active, filterMenu.column)}
+            selected={filters.get(filterMenu.column)}
+            anchor={filterMenu.anchor}
+            onApply={(allowed) => applyFilter(filterMenu.column, allowed)}
+            onClose={() => setFilterMenu(null)}
+          />
+        )}
       </div>
     );
   },

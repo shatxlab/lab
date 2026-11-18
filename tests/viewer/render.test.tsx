@@ -121,6 +121,94 @@ describe("SheetView", () => {
     expect(markup).toContain("count");
   });
 
+  it("offers a filter per column once there is a body to filter", async () => {
+    const several = await parseWorkbook({
+      buffer: xlsxBuffer({ Cities: [["city"], ["Berlin"], ["Ankara"]] }),
+      extension: "xlsx",
+    });
+    const oneRow = await parseWorkbook({
+      buffer: xlsxBuffer({ Header: [["city"]] }),
+      extension: "xlsx",
+    });
+
+    const markup = renderToStaticMarkup(<SheetView lang="en" sheets={several.sheets} />);
+    expect(markup).toContain('aria-label="Filter column A"');
+    expect(markup).toContain('title="Filter column A"');
+
+    const bare = renderToStaticMarkup(<SheetView lang="en" sheets={oneRow.sheets} />);
+    expect(bare).not.toContain('aria-label="Filter column A"');
+  });
+
+  it("filters rows through a column's value menu, and Clear brings them all back", async () => {
+    const sheet: SheetData = {
+      name: "Cities",
+      rows: [
+        ["city", "count"],
+        ["Berlin", "10"],
+        ["Ankara", "2"],
+        ["Москва", "10"],
+      ],
+      totalRows: 4,
+      columnCount: 2,
+      truncated: false,
+    };
+
+    const { container, unmount } = await mount(<SheetView lang="en" sheets={[sheet]} />);
+
+    try {
+      const openFilter = container.querySelector('button[aria-label="Filter column A"]');
+      expect(openFilter).toBeTruthy();
+
+      await act(async () => {
+        openFilter!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+
+      const dialog = container.querySelector('[role="dialog"]');
+      expect(dialog).toBeTruthy();
+      // Every distinct body value of the column, blanks label included on demand.
+      const labels = [...dialog!.querySelectorAll("label")].map((label) => label.textContent?.trim());
+      expect(labels).toContain("(Select all)");
+      expect(labels).toContain("Berlin");
+      expect(labels).not.toContain("city");
+
+      const berlin = [...dialog!.querySelectorAll("label")].find((label) => label.textContent?.trim() === "Berlin");
+      await act(async () => {
+        berlin!.querySelector("input")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      await act(async () => {
+        [...dialog!.querySelectorAll("button")]
+          .find((button) => button.textContent?.trim() === "Apply")!
+          .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+
+      expect([...container.querySelectorAll("tbody tr td:first-of-type")].map((cell) => cell.textContent)).toEqual([
+        "Ankara",
+        "Москва",
+      ]);
+      // The header row stays, and the status line reports the filtered count.
+      expect(container.querySelector("thead tr:last-child td")?.textContent).toBe("city");
+      expect(container.textContent).toContain("showing 2 of 3 rows");
+
+      await act(async () => {
+        openFilter!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      await act(async () => {
+        [...container.querySelectorAll('[role="dialog"] button')]
+          .find((button) => button.textContent?.trim() === "Clear filter")!
+          .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+
+      expect([...container.querySelectorAll("tbody tr td:first-of-type")].map((cell) => cell.textContent)).toEqual([
+        "Berlin",
+        "Ankara",
+        "Москва",
+      ]);
+      expect(container.textContent).not.toContain("showing 2 of 3 rows");
+    } finally {
+      unmount();
+    }
+  });
+
   it("mounts only the first chunk of rows but reports the real total", () => {
     const sheet: SheetData = {
       name: "Big",

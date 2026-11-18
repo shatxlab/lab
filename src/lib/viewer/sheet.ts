@@ -361,6 +361,32 @@ export type SheetSort = {
   direction: SheetSortDirection;
 };
 
+/**
+ * Active column filters: the allowed cell texts per column, like Excel's
+ * AutoFilter checkboxes. An absent column passes everything.
+ */
+export type SheetFilters = ReadonlyMap<number, ReadonlySet<string>>;
+
+/**
+ * The distinct values a column's filter menu offers: the body's cell texts,
+ * number-aware sorted, one `(Blanks)` entry for empty cells.
+ */
+export function sheetFilterValues(sheet: SheetData, column: number): string[] {
+  const values = new Set<string>();
+  for (const row of sheet.rows.slice(1)) {
+    values.add((row[column] ?? "").trim());
+  }
+  return [...values].sort(compareSheetCells);
+}
+
+/** Whether a body row survives the active filters (blanks match only themselves). */
+function rowPassesFilters(cells: string[], filters: SheetFilters): boolean {
+  for (const [column, allowed] of filters) {
+    if (!allowed.has((cells[column] ?? "").trim())) return false;
+  }
+  return true;
+}
+
 export type DisplayRow = {
   cells: string[];
   /** Zero-based index in the parsed sheet, so row numbers still match the file. */
@@ -396,17 +422,24 @@ function parseSheetNumber(text: string): number | null {
 }
 
 /**
- * Reorders the sheet for display. Row 1 stays put (the usual header) and empty
+ * Reorders the sheet for display. Row 1 stays put (the usual header), empty
  * cells stay at the bottom in both directions, so a sparse column does not bury
- * the values under blanks.
+ * the values under blanks, and column filters drop body rows before sorting.
  */
-export function orderedSheetRows(rows: string[][], sort: SheetSort | null): DisplayRow[] {
+export function orderedSheetRows(
+  rows: string[][],
+  sort: SheetSort | null,
+  filters: SheetFilters | null = null,
+): DisplayRow[] {
   if (rows.length === 0) return [];
 
   const indexed = rows.map((cells, sourceRow) => ({ cells, sourceRow }));
-  if (!sort || rows.length === 1) return indexed;
+  if (rows.length === 1) return indexed;
 
-  const [header, ...body] = indexed;
+  const [header, ...rest] = indexed;
+  const body =
+    filters && filters.size > 0 ? rest.filter((row) => rowPassesFilters(row.cells, filters)) : rest;
+  if (!sort) return [header!, ...body];
   const direction = sort.direction === "desc" ? -1 : 1;
 
   body.sort((left, right) => {

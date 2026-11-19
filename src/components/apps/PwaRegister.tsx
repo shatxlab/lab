@@ -7,9 +7,6 @@ import { useAppLang } from "@/lib/apps/use-app-lang";
 /** How often an open tab asks the server whether a newer worker exists. */
 const UPDATE_CHECK_MS = 60 * 60 * 1000;
 
-/** If `controllerchange` never arrives after `skipWaiting`, reload anyway. */
-const RELOAD_FALLBACK_MS = 3000;
-
 /**
  * Registers the service worker (production only). The first install is
  * announced as offline-ready; after that a new deploy is applied the moment
@@ -20,7 +17,6 @@ export default function PwaRegister() {
   const lang = useAppLang();
   const [notice, setNotice] = React.useState<boolean>(false);
   const refreshing = React.useRef(false);
-  const reloadTimer = React.useRef<number | undefined>(undefined);
 
   React.useEffect(() => {
     if (!import.meta.env.PROD || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
@@ -28,19 +24,19 @@ export default function PwaRegister() {
     let registration: ServiceWorkerRegistration | undefined;
     let timer: number | undefined;
 
+    // No timer-based reload here on purpose: if the waiting worker never takes
+    // over, a reload would load the same page and post SKIP_WAITING again, which
+    // reloads again, every few seconds. Reloading only on `controllerchange`
+    // means a takeover really happened, and the next page has no waiting worker.
     const applyUpdate = (worker: ServiceWorker) => {
       if (refreshing.current) return;
       refreshing.current = true;
       worker.postMessage("SKIP_WAITING");
-      // A slow or broken worker must not leave the tab stranded on the old version.
-      reloadTimer.current = window.setTimeout(() => window.location.reload(), RELOAD_FALLBACK_MS);
     };
 
     const onControllerChange = () => {
       // Only reload for an update we started, not the first-install claim.
-      if (!refreshing.current) return;
-      if (reloadTimer.current !== undefined) window.clearTimeout(reloadTimer.current);
-      window.location.reload();
+      if (refreshing.current) window.location.reload();
     };
     container.addEventListener("controllerchange", onControllerChange);
 
@@ -74,7 +70,6 @@ export default function PwaRegister() {
     return () => {
       container.removeEventListener("controllerchange", onControllerChange);
       document.removeEventListener("visibilitychange", onVisible);
-      if (reloadTimer.current !== undefined) window.clearTimeout(reloadTimer.current);
       if (timer) window.clearInterval(timer);
     };
   }, []);

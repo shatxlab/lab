@@ -107,25 +107,45 @@ describe("PwaRegister", () => {
     view.unmount();
   });
 
-  it("reloads on its own if the new worker never fires controllerchange", async () => {
+  it("never reloads on a timer while the waiting worker has not taken over", async () => {
     const reload = vi.fn();
     Object.defineProperty(window, "location", { value: { ...window.location, reload }, writable: true });
     const env = setup({ controller: true });
-    const view = await mount(<PwaRegister />);
-    await waitFor(() => expect(env.serviceWorker.register).toHaveBeenCalled());
-
-    vi.useFakeTimers();
+    env.registration.waiting = env.installing;
+    vi.useFakeTimers({ shouldAdvanceTime: false });
     try {
-      await act(async () => env.foundWorker());
-      expect(env.installing.postMessage).toHaveBeenCalledWith("SKIP_WAITING");
+      const view = await mount(<PwaRegister />);
       await act(async () => {
-        vi.advanceTimersByTime(3000);
+        await vi.advanceTimersByTimeAsync(10_000);
       });
-      expect(reload).toHaveBeenCalledTimes(1);
+      expect(env.installing.postMessage).toHaveBeenCalledWith("SKIP_WAITING");
+      expect(reload).not.toHaveBeenCalled();
+      view.unmount();
     } finally {
       vi.useRealTimers();
     }
-    view.unmount();
+  });
+
+  it("does not loop when every page load finds the same worker still waiting", async () => {
+    const reload = vi.fn();
+    Object.defineProperty(window, "location", { value: { ...window.location, reload }, writable: true });
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    try {
+      // Three page loads in a row, each a fresh page with the same stuck worker.
+      for (let load = 0; load < 3; load++) {
+        const env = setup({ controller: true });
+        env.registration.waiting = env.installing;
+        const view = await mount(<PwaRegister />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000);
+        });
+        expect(env.installing.postMessage).toHaveBeenCalledWith("SKIP_WAITING");
+        view.unmount();
+      }
+      expect(reload).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps working when service workers are unavailable", async () => {

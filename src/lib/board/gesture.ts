@@ -110,7 +110,7 @@ function worthKeeping(el: RectElement, zoom: number): boolean {
 
 export interface Finished {
   elements: BoardElement[];
-  /** A new box, or a click (no drag) on a box or text: the id whose text to edit. */
+  /** The id of a new box whose label is ready to edit. */
   edit?: string;
 }
 
@@ -123,11 +123,8 @@ export function finish(gesture: Gesture, elements: readonly BoardElement[], view
       const box = snap(newBox(gesture.start, gesture.id), elements, SNAP / view.zoom);
       return { elements: [...elements, box], edit: box.id };
     }
-    case "move": {
-      if (gesture.moved) return { elements: preview(gesture, elements) };
-      const clicked = elements.find((el) => el.id === gesture.id);
-      return { elements: elements as BoardElement[], edit: clicked?.type === "text" || clicked?.type === "rect" ? clicked.id : undefined };
-    }
+    case "move":
+      return { elements: preview(gesture, elements) };
     default:
       return { elements: elements as BoardElement[] };
   }

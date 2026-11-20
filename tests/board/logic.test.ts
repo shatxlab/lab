@@ -6,7 +6,7 @@ import { canRedo, canUndo, commit, createHistory, redo, undo } from "@/lib/board
 import { BOX_H, BOX_W, INK, SURFACE, type BoardElement, type RectElement } from "@/lib/board/model";
 import { BOARD_STORAGE_KEY, cleanElements, emptyBoard, readBoard, writeBoard, type BoardStorage } from "@/lib/board/storage";
 import { boardSvg, describeElement, serializeNode } from "@/lib/board/svg";
-import { clampZoom, toScreen, toWorld, zoomAt } from "@/lib/board/viewport";
+import { clampZoom, fitView, toScreen, toWorld, zoomAt } from "@/lib/board/viewport";
 
 const view = { x: 0, y: 0, zoom: 1 };
 const rect: BoardElement = { id: "r", type: "rect", x: 10, y: 10, w: 100, h: 60, text: "" };
@@ -139,16 +139,16 @@ describe("gestures", () => {
     expect(next.y).toBeGreaterThan(300);
   });
 
-  it("previews and commits a move, and treats a click on text as an edit", () => {
+  it("previews and commits a move, and leaves content alone on click", () => {
     let g = begin({ ...input, tool: null, world: { x: 10, y: 40 }, screen: { x: 10, y: 40 } });
     g = update(g, { x: 30, y: 60 }, view);
     expect(preview(g, input.elements).find((el) => el.id === "r")).toMatchObject({ x: 30, y: 30 });
     expect(finish(g, input.elements, view).elements.find((el) => el.id === "r")).toMatchObject({ x: 30, y: 30 });
 
     const onText = begin({ elements: [note], view, reach: 6, tool: null, world: { x: 305, y: 305 }, screen: { x: 305, y: 305 } });
-    expect(finish(onText, [note], view)).toMatchObject({ edit: "t" });
+    expect(finish(onText, [note], view)).toEqual({ elements: [note] });
     const onBox = begin({ ...input, tool: null, world: { x: 10, y: 40 }, screen: { x: 10, y: 40 } });
-    expect(finish(onBox, input.elements, view).edit).toBe("r");
+    expect(finish(onBox, input.elements, view)).toEqual({ elements: input.elements });
     const onArrow = begin({ ...input, tool: null, world: { x: 50, y: 200 }, screen: { x: 50, y: 200 } });
     expect(finish(onArrow, input.elements, view).edit).toBeUndefined();
   });
@@ -165,6 +165,13 @@ describe("gestures", () => {
 });
 
 describe("viewport", () => {
+  it("centers wide content with padding and resets an empty board", () => {
+    const fitted = fitView({ x: 100, y: 50, w: 1000, h: 100 }, 400, 300);
+    expect(fitted.zoom).toBeCloseTo(0.288);
+    expect(toScreen(fitted, { x: 100, y: 100 }).x).toBeCloseTo(56);
+    expect(toScreen(fitted, { x: 600, y: 100 }).y).toBeCloseTo(150);
+    expect(fitView(null, 400, 300)).toEqual(emptyBoard().view);
+  });
   it("keeps the point under the cursor fixed while zooming, within limits", () => {
     const zoomed = zoomAt(view, 200, 100, 2);
     expect(toWorld(zoomed, 200, 100)).toEqual({ x: 200, y: 100 });

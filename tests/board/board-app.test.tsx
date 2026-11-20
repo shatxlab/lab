@@ -65,13 +65,12 @@ const savedElements = async (count: number) => {
 };
 
 describe("Whiteboard", () => {
-  it("is one board with only the essentials: two tools, undo, redo, clear, one download", async () => {
+  it("shows labeled creation tools on a blank canvas, with clear tucked away", async () => {
     const view = await open();
-    expect(text()).toContain(tb("en", "hint"));
-    expect(document.querySelector("select")).toBeNull();
-    expect([...document.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual(
-      ["Box", "Text", "Undo", "Redo", "Clear the board", "Download PNG"],
-    );
+    expect(byLabel("Box").textContent).toBe("Box");
+    expect(byLabel("Text").textContent).toBe("Text");
+    expect(byLabel("Fit board").textContent).toBe("Fit");
+    expect(document.querySelector("details")?.open).toBe(false);
     expect(text()).not.toMatch(/\d+%/);
     expect(await axeViolations()).toEqual([]);
     view.unmount();
@@ -90,7 +89,7 @@ describe("Whiteboard", () => {
     view.unmount();
   });
 
-  it("drops a box with a click, takes its label, and adds the next one on any side but the top, linked by an arrow", async () => {
+  it("drops a box with a click, takes its label, and adds the next one right or below, linked by an arrow", async () => {
     const view = await open();
     await click(byLabel("Box"));
     await pointer("pointerdown", 300, 200);
@@ -98,9 +97,9 @@ describe("Whiteboard", () => {
     await type(box(), "Client");
     await act(async () => box().blur());
     expect(items()).toEqual(["Box: Client"]);
-    for (const side of ["right", "to the left", "below", "below to the left", "below to the right"]) {
-      expect(byLabel(`Add a box ${side === "right" ? "to the right" : side}`)).toBeTruthy();
-    }
+    expect([...frame().querySelectorAll('button[aria-label^="Add a box"]')].map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Add a box to the right", "Add a box below",
+    ]);
 
     await click(byLabel("Add a box to the right"));
     await type(box(), "Server");
@@ -153,6 +152,8 @@ describe("Whiteboard", () => {
 
     await pointer("pointerdown", 45, 45);
     await pointer("pointerup", 45, 45);
+    expect(box()).toBeNull();
+    await press(frame(), "Enter");
     await press(box(), "Tab", { shiftKey: true });
     await type(box(), "Under");
     await act(async () => box().blur());
@@ -181,7 +182,7 @@ describe("Whiteboard", () => {
     view.unmount();
   });
 
-  it("adds text, edits it by clicking it, and removes it when emptied", async () => {
+  it("selects text without editing, opens it with the pencil, and removes it when emptied", async () => {
     const view = await open();
     await click(byLabel("Text"));
     await pointer("pointerdown", 40, 40);
@@ -191,6 +192,8 @@ describe("Whiteboard", () => {
 
     await pointer("pointerdown", 45, 45);
     await pointer("pointerup", 45, 45);
+    expect(box()).toBeNull();
+    await click(byLabel("Edit text"));
     expect(box().value).toBe("hello");
     await type(box(), "");
     await act(async () => box().blur());
@@ -198,13 +201,45 @@ describe("Whiteboard", () => {
     view.unmount();
   });
 
+  it("edits a selected box on double-click", async () => {
+    seed([{ id: "r", type: "rect", x: 30, y: 30, w: 100, h: 60, text: "Before" }]);
+    const view = await open();
+    await pointer("pointerdown", 80, 60);
+    await pointer("pointerup", 80, 60);
+    expect(box()).toBeNull();
+    expect(byLabel("Add a box to the right")).toBeTruthy();
+    await act(async () => void canvas().dispatchEvent(new MouseEvent("dblclick", { bubbles: true, clientX: 80, clientY: 60 })));
+    expect(box().value).toBe("Before");
+    await type(box(), "After");
+    await press(box(), "Enter", { ctrlKey: true });
+    expect(items()).toEqual(["Box: After"]);
+    view.unmount();
+  });
+
+  it("fits the contents after panning away without changing the board", async () => {
+    seed([{ id: "r", type: "rect", x: 1000, y: 2000, w: 100, h: 60, text: "A" }]);
+    const view = await open();
+    Object.defineProperties(canvas(), { clientWidth: { value: 400 }, clientHeight: { value: 300 } });
+    await click(byLabel("Fit board"));
+    await waitFor(() => expect(readBoard().view).toEqual({ x: 850, y: 1880, zoom: 1 }));
+    expect(items()).toEqual(["Box: A"]);
+    expect(byLabel("Undo").disabled).toBe(true);
+    view.unmount();
+  });
+
   it("undoes, redoes and clears everything in one step", async () => {
     seed([{ id: "r", type: "rect", x: 10, y: 10, w: 50, h: 50 }, { id: "a", type: "arrow", x1: 0, y1: 100, x2: 80, y2: 100 }]);
     const view = await open();
-    expect(byLabel("Clear the board").disabled).toBe(false);
-    await click(byLabel("Clear the board"));
+    const menu = document.querySelector("details")!;
+    const clear = menu.querySelector("button")!;
+    expect(menu.open).toBe(false);
+    await click(menu.querySelector("summary")!);
+    expect(menu.open).toBe(true);
+    expect(clear.disabled).toBe(false);
+    await click(clear);
     expect(items()).toEqual([]);
-    expect(byLabel("Clear the board").disabled).toBe(true);
+    expect(menu.open).toBe(false);
+    expect(clear.disabled).toBe(true);
     await savedElements(0);
 
     await click(byLabel("Undo"));

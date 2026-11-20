@@ -6,19 +6,19 @@
  */
 
 import * as React from "react";
-import { Download, Plus, Redo2, Square, Trash2, Type, Undo2, X } from "lucide-react";
+import { Download, Ellipsis, Pencil, Plus, Redo2, Square, Trash2, Type, Undo2, X } from "lucide-react";
 
 import { renderNode } from "@/components/board/render";
 import { saveBlob } from "@/lib/apps/file-open";
 import type { AppLang } from "@/lib/apps/lang";
-import { boundsOf, connect, fitLabel, remove, snap, textSize, topmostAt, type Point } from "@/lib/board/geometry";
+import { boundsOf, connect, fitLabel, remove, snap, textSize, topmostAt, unionOf, type Point } from "@/lib/board/geometry";
 import { SNAP, begin, boxBeside, finish, newText, panView, panning, pinchView, preview, textBeside, update, type Gesture, type Side, type Tool } from "@/lib/board/gesture";
 import { canRedo, canUndo, commit, createHistory, redo, undo, type History } from "@/lib/board/history";
 import { tb } from "@/lib/board/i18n";
-import { INK, LABEL_PAD, MUTED, SURFACE, TEXT_SIZE, type BoardElement, type RectElement, type TextElement, type View } from "@/lib/board/model";
+import { INK, MUTED, SURFACE, TEXT_SIZE, type BoardElement, type RectElement, type TextElement, type View } from "@/lib/board/model";
 import type { BoardState } from "@/lib/board/storage";
 import { boardSvg, describeElement } from "@/lib/board/svg";
-import { clampZoom, panBy, toScreen, toWorld, zoomAt } from "@/lib/board/viewport";
+import { clampZoom, fitView, panBy, toScreen, toWorld, zoomAt } from "@/lib/board/viewport";
 import { svgToPng } from "@/lib/charts/export";
 import { cn } from "@/lib/viewer/utils";
 
@@ -46,13 +46,10 @@ function kindLabel(lang: AppLang, el: BoardElement): string {
 }
 
 /** Where the + buttons go around a picked box: as a fraction of its width and height, and which way out of it. */
-type Handle = { side: Side; label: "boxRight" | "boxLeft" | "boxBelow" | "boxBelowLeft" | "boxBelowRight" | "textRight" | "textBelow"; at: [number, number]; out: [number, number] };
+type Handle = { side: Side; label: "boxRight" | "boxBelow" | "textRight" | "textBelow"; at: [number, number]; out: [number, number] };
 const BOX_HANDLES: Handle[] = [
   { side: "right", label: "boxRight", at: [1, 0.5], out: [1, 0] },
-  { side: "left", label: "boxLeft", at: [0, 0.5], out: [-1, 0] },
   { side: "below", label: "boxBelow", at: [0.5, 1], out: [0, 1] },
-  { side: "below-left", label: "boxBelowLeft", at: [0, 1], out: [-0.75, 0.75] },
-  { side: "below-right", label: "boxBelowRight", at: [1, 1], out: [0.75, 0.75] },
 ];
 /** Text adds the next column to its right or the next line of its column below. */
 const TEXT_HANDLES: Handle[] = [
@@ -83,6 +80,7 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
   const [failed, setFailed] = React.useState(false);
 
   const wrapRef = React.useRef<HTMLDivElement>(null);
+  const moreRef = React.useRef<HTMLDetailsElement>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
   const gestureRef = React.useRef<Gesture | null>(null);
   const pointers = React.useRef(new Map<number, Point>());
@@ -158,15 +156,42 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
     if (editingId) editorRef.current?.focus({ preventScroll: true });
   }, [editingId]);
 
+  const editSelection = (id = selected) => {
+    const el = elements.find((item) => item.id === id);
+    if (el?.type === "rect" || el?.type === "text") startEdit(el, false);
+  };
+
+  /** Keep a newly linked item and its controls in reach, even on a narrow screen. */
+  const reveal = (el: BoardElement) => {
+    const svg = svgRef.current;
+    if (!svg?.clientWidth || !svg.clientHeight) return;
+    const { clientWidth: width, clientHeight: height } = svg;
+    const bounds = boundsOf(el);
+    const edge = 48;
+    const a = toScreen(view, bounds);
+    const b = toScreen(view, { x: bounds.x + bounds.w, y: bounds.y + bounds.h });
+    if (b.x - a.x > width - edge * 2 || b.y - a.y > height - edge * 2) {
+      setView(fitView(bounds, width, height));
+      return;
+    }
+    const shift = (start: number, end: number, size: number) => start < edge ? edge - start : Math.min(0, size - edge - end);
+    const dx = shift(a.x, b.x, width);
+    const dy = shift(a.y, b.y, height);
+    if (dx || dy) setView(panBy(view, dx, dy));
+  };
+
   /** The next box on that side of a box, linked by an arrow; or the next column (right) or line (below) of text. */
   const addBeside = (from: BoardElement[], id: string, side: Side) => {
     const el = from.find((e) => e.id === id);
     if (el?.type === "rect") {
       const made = boxBeside(from, el, side);
       commitElements(made.elements);
+      reveal(made.box);
       startEdit(made.box, false);
     } else if (el?.type === "text") {
-      startEdit(textBeside(el, side === "below" ? "below" : "right"), true);
+      const next = textBeside(el, side === "below" ? "below" : "right");
+      reveal(next);
+      startEdit(next, true);
     }
   };
 
@@ -183,6 +208,7 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
 
   const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
     if (event.button === 2) return;
+    if (moreRef.current) moreRef.current.open = false;
     // The first finger of a new touch: any pointer still listed lost its pointer-up, and must not make this a pinch.
     if (event.isPrimary) {
       pointers.current.clear();
@@ -260,6 +286,13 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
     if (edit?.type === "text" || edit?.type === "rect") startEdit(edit, false);
   };
 
+  const onDoubleClick = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (tool || editing) return;
+    const screen = screenOf(event);
+    const hit = topmostAt(elements, toWorld(view, screen.x, screen.y), 6 / view.zoom);
+    if (hit?.id === selected) editSelection();
+  };
+
   const onPointerCancel = (event: React.PointerEvent<SVGSVGElement>) => {
     pointers.current.delete(event.pointerId);
     if (pointers.current.size < 2) pinch.current = null;
@@ -303,7 +336,16 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
     setSelected(null);
     commitElements([]);
   };
-  const pick = (next: Tool) => setTool((current) => (current === next ? null : next));
+  const fit = () => {
+    const svg = svgRef.current;
+    if (!svg?.clientWidth || !svg.clientHeight) return;
+    const content = editing ? finishEdit(draft) : elements;
+    setView(fitView(unionOf(content.map(boundsOf)), svg.clientWidth, svg.clientHeight));
+  };
+  const pick = (next: Tool) => {
+    setSelected(null);
+    setTool((current) => (current === next ? null : next));
+  };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (isTyping(event.target)) return;
@@ -322,6 +364,10 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
       setGestureBoth(null);
       setSelected(null);
       return setTool(null);
+    }
+    if (key === "enter" && event.target === wrapRef.current && selected) {
+      event.preventDefault();
+      return editSelection();
     }
     if (key === "delete" || key === "backspace") {
       event.preventDefault();
@@ -356,8 +402,11 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
       handles.push({ side, label: tb(lang, label), at: { x: edge.x + out[0] * HANDLE_GAP, y: edge.y + out[1] * HANDLE_GAP } });
     }
   }
-  // The delete button sits off the top-right corner of the selection outline, where no + button goes.
-  const deleteAt = picked && pickedBox && selected === picked.id ? toScreen(view, { x: pickedBox.x + pickedBox.w + 10, y: pickedBox.y - 10 }) : null;
+  const left = pickedBox && toScreen(view, pickedBox);
+  const right = pickedBox && toScreen(view, { x: pickedBox.x + pickedBox.w, y: pickedBox.y });
+  const deleteAt = left && { left: left.x - 12, top: left.y - 20 };
+  const editAt = !editing && picked?.type !== "arrow" && right && { left: right.x + 12, top: right.y - 20 };
+  const handleClass = "absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-(--accent) bg-(--bg) text-(--accent) shadow-sm hover:bg-(--accent)/15 focus-visible:outline-2 focus-visible:outline-(--accent)";
   const editorStyle = (): React.CSSProperties => {
     const size = TEXT_SIZE * view.zoom;
     // Set at least MIN_FIELD_FONT and scaled back down, so it looks the same and a phone does not zoom the page.
@@ -384,8 +433,9 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
       <div role="toolbar" aria-label={tb(lang, "toolbar")} className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div role="group" className="flex gap-1">
           {TOOLS.map(({ tool: id, icon: Icon, key }) => (
-            <button key={id} type="button" aria-pressed={tool === id} aria-label={tb(lang, id)} title={`${tb(lang, id)} (${key.toUpperCase()})`} onClick={() => pick(id)} className={buttonClass(tool === id)}>
+            <button key={id} type="button" aria-pressed={tool === id} aria-label={tb(lang, id)} title={`${tb(lang, id)} (${key.toUpperCase()})`} onClick={() => pick(id)} className={cn(buttonClass(tool === id), "w-auto gap-1.5 px-2.5 text-sm font-medium")}>
               <Icon aria-hidden="true" className="size-4" />
+              {tb(lang, id)}
             </button>
           ))}
         </div>
@@ -396,13 +446,42 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
           <button type="button" aria-label={tb(lang, "redo")} title={`${tb(lang, "redo")} (Ctrl+Shift+Z)`} disabled={!canRedo(hist)} onClick={doRedo} className={buttonClass(false)}>
             <Redo2 aria-hidden="true" className="size-4" />
           </button>
-          <button type="button" aria-label={tb(lang, "clear")} title={tb(lang, "clear")} disabled={elements.length === 0} onClick={clear} className={buttonClass(false)}>
-            <Trash2 aria-hidden="true" className="size-4" />
-          </button>
         </div>
-        <button type="button" aria-label={tb(lang, "download")} title={tb(lang, "download")} onClick={download} className={buttonClass(false)}>
-          <Download aria-hidden="true" className="size-4" />
-        </button>
+        <div role="group" className="flex gap-1">
+          <button type="button" aria-label={tb(lang, "fitBoard")} title={tb(lang, "fitBoard")} onClick={fit} className={cn(buttonClass(false), "w-auto px-2.5 text-sm font-medium")}>
+            {tb(lang, "fit")}
+          </button>
+          <button type="button" aria-label={tb(lang, "download")} title={tb(lang, "download")} onClick={download} className={buttonClass(false)}>
+            <Download aria-hidden="true" className="size-4" />
+          </button>
+          <details
+            ref={moreRef}
+            className="relative"
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape" || !event.currentTarget.open) return;
+              event.currentTarget.open = false;
+              event.currentTarget.querySelector("summary")?.focus();
+            }}
+          >
+            <summary title={tb(lang, "more")} className={cn(buttonClass(false), "cursor-pointer list-none [&::-webkit-details-marker]:hidden")}>
+              <Ellipsis aria-hidden="true" className="size-4" />
+              <span className="sr-only">{tb(lang, "more")}</span>
+            </summary>
+            <div className="absolute right-0 top-full z-10 mt-1 rounded-md border border-(--border) bg-(--bg) p-1 shadow-md">
+              <button type="button" disabled={elements.length === 0} onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                if (moreRef.current) moreRef.current.open = false;
+                moreRef.current?.querySelector("summary")?.focus();
+                clear();
+              }} className="flex items-center gap-2 whitespace-nowrap rounded px-2 py-1.5 text-sm text-(--warning) hover:bg-(--surface) disabled:opacity-40">
+                <Trash2 aria-hidden="true" className="size-4" />
+                {tb(lang, "clear")}
+              </button>
+            </div>
+          </details>
+        </div>
         {failed && (
           <span role="alert" className="text-sm text-(--warning)">
             {tb(lang, "exportFailed")}
@@ -428,6 +507,7 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
+          onDoubleClick={onDoubleClick}
         >
           <g transform={`translate(${-view.x * view.zoom} ${-view.y * view.zoom}) scale(${view.zoom})`}>
             {drawnNow.map((el) => renderNode(describeElement(el), el.id))}
@@ -476,14 +556,20 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
             type="button"
             aria-label={label}
             title={label}
-            onClick={() => picked && addBeside(live.current.elements, picked.id, side)}
-            className="absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-(--accent) bg-(--bg) text-(--accent) shadow-sm hover:bg-(--accent)/15 focus-visible:outline-2 focus-visible:outline-(--accent)"
+            onMouseDown={(event) => { if (editing) event.preventDefault(); }}
+            onClick={() => picked && addBeside(editing ? finishEdit(draft) : elements, picked.id, side)}
+            className={handleClass}
             style={{ left: at.x, top: at.y }}
           >
             <Plus aria-hidden="true" className="size-4" />
           </button>
         ))}
 
+        {editAt && (
+          <button type="button" aria-label={tb(lang, "edit")} title={`${tb(lang, "edit")} (Enter)`} onClick={() => editSelection()} className={handleClass} style={editAt}>
+            <Pencil aria-hidden="true" className="size-4" />
+          </button>
+        )}
         {deleteAt && (
           <button
             type="button"
@@ -491,16 +577,10 @@ export function Workspace({ lang, board, onSave }: WorkspaceProps) {
             title={`${tb(lang, "deleteElement")} (Delete)`}
             onClick={removeSelected}
             className="absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-(--warning) bg-(--bg) text-(--warning) shadow-sm hover:bg-(--warning)/15 focus-visible:outline-2 focus-visible:outline-(--accent)"
-            style={{ left: deleteAt.x, top: deleteAt.y }}
+            style={deleteAt}
           >
             <X aria-hidden="true" className="size-4" />
           </button>
-        )}
-
-        {elements.length === 0 && !editing && (
-          <p className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center text-sm" style={{ color: MUTED }}>
-            {tb(lang, "hint")}
-          </p>
         )}
 
         <ul className="sr-only" aria-label={tb(lang, "elementList")}>

@@ -224,27 +224,6 @@ export const TOOLS: readonly ToolEntry[] = [
     },
   },
   {
-    id: "loners",
-    path: "/loners",
-    category: "games",
-    files: {
-      en: "you vs bot · first to 2 rounds · saves locally",
-      ru: "вы против бота · 2 раунда до победы · сохраняется локально",
-    },
-    title: { en: "Street Table", ru: "Уличный стол" },
-    description: {
-      en: "Play adjacent cards as crews — singles, sets and runs — recruit Loners for stronger combos, break up fights with security guards, and empty your hand first. Unofficial rules prototype.",
-      ru: "Собирайте комбинации из соседних карт — синглы, сеты и раны — вербуйте одиночек для усиления, разгоняйте драки охраной и первым опустошите руку. Неофициальный прототип правил.",
-    },
-    keywords:
-      "street table loners card game crews sets runs recruit security guard retreat weast coast unofficial prototype уличный стол одиночки карточная игра комбинации сеты раны охрана отступление прототип",
-    seo: {
-      title: "Street Table — a Loners card game prototype",
-      description:
-        "Build crews from adjacent cards, recruit Loners, steal volatile combos and call security in this unofficial prototype of the Loners card game. Free, offline, phone-friendly.",
-    },
-  },
-  {
     id: "hr",
     path: "/hr",
     category: "games",

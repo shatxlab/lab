@@ -1,10 +1,8 @@
-:root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; color: #f8eddb; background: #18171e; }
-* { box-sizing: border-box; }
-body { margin: 0; }
-button, select { font: inherit; }
-a { color: #f2b980; }
-.street-shell { max-width: 960px; padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 3rem; margin: auto; }
-.street-back, .street-label { font-size: .75rem; font-weight: 750; text-transform: uppercase; letter-spacing: .14em; }
+.street-shell { max-width: 960px; width: 100%; margin-inline: auto; padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 3rem; color: #f8eddb; }
+.street-shell a { color: #f2b980; }
+.street-shell, .street-shell * { box-sizing: border-box; }
+.street-shell button, .street-shell select { font: inherit; }
+.street-label { font-size: .75rem; font-weight: 750; text-transform: uppercase; letter-spacing: .14em; }
 .street-heading { margin: 2rem 0 1.5rem; border-block-end: 1px solid #584d58; padding-block-end: 1.25rem; }
 .street-heading h1 { font-family: Impact, 'Arial Black', system-ui, sans-serif; font-size: clamp(2.75rem, 10vw, 5rem); text-transform: uppercase; letter-spacing: -.045em; margin: 0; line-height: .95; }
 .street-heading p { color: #dbc7bb; margin: .7rem 0; }

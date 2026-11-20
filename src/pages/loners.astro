@@ -1,20 +1,8 @@
 ---
+import ToolsLayout from '@/layouts/ToolsLayout.astro';
 import LonersGame from '@/components/loners/LonersGame';
-import { withBase } from '@/lib/apps/paths';
 import '@/styles/loners.css';
 ---
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>Street Table — rules prototype</title>
-  </head>
-  <body>
-    <main class="street-shell">
-      <a class="street-back" href={withBase('/')}>← Lab</a>
-      <LonersGame client:load />
-    </main>
-  </body>
-</html>
+<ToolsLayout tool="loners">
+  <LonersGame client:load />
+</ToolsLayout>

@@ -1,6 +1,6 @@
 # KingsRoad: three-hit Ballista experiment
 
-> Latest follow-up: `kingsroad-range-experiment.md` completes the separately approved 20%-range diagnostic with
+> The [range follow-up](../kingsroad-range/kingsroad-range-experiment.md) completes the separately approved 20%-range diagnostic with
 > unlimited piercing. It also is **not recommended as a stand-alone retune**. The roadmaps hold current next steps;
 > recommendations below record the earlier batch, not an unexecuted range hypothesis or shipping approval.
 

@@ -1,6 +1,6 @@
 # KingsRoad cadence diagnostic: runner, bat and scamp spacing x2
 
-> **Superseded in part.** The duration-matched follow-up (`kingsroad-matched-cadence-experiment.md`) shows the Mixed and
+> **Superseded in part.** The duration-matched follow-up ([report](../kingsroad-matched/kingsroad-matched-cadence-experiment.md)) shows the Mixed and
 > early Archer gains below were mostly from longer waves. With the wave length held, Mixed is flat in wins and the Archer
 > niche disappears. Read the numbers below as the untimed-matched baseline for that follow-up.
 

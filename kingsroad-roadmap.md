@@ -94,7 +94,7 @@ UI, enemy/tower numbers, maps, wave timings, rewards or saves changed. No commit
 
 ## Three-hit Ballista diagnostic — complete, not adopted
 
-Full findings: `kingsroad-three-hit-experiment.md`; paired evidence: `reports/kingsroad-three-hit/`.
+Full findings: `reports/kingsroad-three-hit/kingsroad-three-hit-experiment.md`; paired evidence: `reports/kingsroad-three-hit/`.
 The user authorized this isolated offline experiment, **not** a live retune, commit or push.
 
 - **1,152 matched pairs / 2,304 full runs**: repeated 20×8×3 primary sweep, shared-budget/no-volley/rush/pure/line
@@ -122,7 +122,7 @@ The user authorized this isolated offline experiment, **not** a live retune, com
 
 ## Range/coverage diagnostic — complete, not adopted
 
-Full report: `kingsroad-range-experiment.md`; paired evidence: `reports/kingsroad-range/`.
+Full report: `reports/kingsroad-range/kingsroad-range-experiment.md`; paired evidence: `reports/kingsroad-range/`.
 The user approved testing this next hypothesis, not shipping a rule, committing or pushing.
 
 - Predeclared **20% less range at every Ballista level: 140/150/165→112/120/132**, with unlimited piercing restored.
@@ -165,7 +165,7 @@ The user approved testing this next hypothesis, not shipping a rule, committing 
 
 ## Cadence diagnostic — complete, not adopted
 
-Full findings: `kingsroad-cadence-experiment.md`; paired evidence: `reports/kingsroad-cadence/`. Offline only: runner,
+Full findings: `reports/kingsroad-cadence/kingsroad-cadence-experiment.md`; paired evidence: `reports/kingsroad-cadence/`. Offline only: runner,
 bat and scamp spawn spacing x2 (0.55/0.45/0.2 to 1.1/0.9/0.4 s), with counts, HP, roads and all tower stats unchanged.
 
 - **1,152 pairs / 2,304 full runs**, the three-hit design. Stock Ballista-heavy stays **160/160** (mean lives 19.92 to 19.96);
@@ -175,7 +175,7 @@ bat and scamp spawn spacing x2 (0.55/0.45/0.2 to 1.1/0.9/0.4 s), with counts, HP
 - **Pacing cost:** each winning run gets about **2.6 minutes longer** (about +13%). Not a free change.
 - Verdict: **not adopted alone**. Do not stack it with three-hit or range. Shipping any cadence change needs the user's
   choice and a phone check of the teaching maps, plus a pacing probe.
-- **Duration-matched follow-up (`kingsroad-matched-cadence-experiment.md`, `reports/kingsroad-matched/`):** fast spacing
+- **Duration-matched follow-up (`reports/kingsroad-matched/kingsroad-matched-cadence-experiment.md`, `reports/kingsroad-matched/`):** fast spacing
   x2 with the slow spacing scaled so each wave keeps its stock length (matched-2x), plus a density-only control.
   Both-win run time is within 0.06 min of stock. Ballista-heavy stays **160/160** (19.98 lives); Mixed **153→153** wins
   (14.70 lives); Archer-heavy **10→9**. The earlier Mixed and early-Archer gains were mostly longer waves; the early
@@ -186,7 +186,7 @@ bat and scamp spawn spacing x2 (0.55/0.45/0.2 to 1.1/0.9/0.4 s), with counts, HP
 
 ## Role-appropriate Archer policy — complete: the bot was not the problem
 
-Full findings: `kingsroad-archer-policy-experiment.md`; evidence: `reports/kingsroad-archer-policy/`. Offline only;
+Full findings: `reports/kingsroad-archer-policy/kingsroad-archer-policy-experiment.md`; evidence: `reports/kingsroad-archer-policy/`. Offline only;
 `archer-smart` strategy in `policy.ts`, stock rules everywhere.
 
 - The predeclared policy: frost-second plan order, road + expected air-lane placement, focus-fire plot re-rank, and
@@ -202,7 +202,7 @@ Full findings: `kingsroad-archer-policy-experiment.md`; evidence: `reports/kings
 
 ## Roster distribution diagnostic — complete: distribution is not the lever either
 
-Full findings: `kingsroad-roster-experiment.md`; evidence: `reports/kingsroad-roster/`. Offline only; `roster-spread`
+Full findings: `reports/kingsroad-roster/kingsroad-roster-experiment.md`; evidence: `reports/kingsroad-roster/`. Offline only; `roster-spread`
 variant splits scamp/runner columns round-robin across roads — same foes, counts, times and RNG draws, single-road
 maps untouched.
 
@@ -217,7 +217,7 @@ maps untouched.
 
 ## Shielded-foe prototype (bulwark) — mechanic proven, shipping shape decided
 
-Full findings: `kingsroad-bulwark-experiment.md`; evidence: `reports/kingsroad-bulwark/` (two doses). Offline only;
+Full findings: `reports/kingsroad-bulwark/kingsroad-bulwark-experiment.md`; evidence: `reports/kingsroad-bulwark/` (two doses). Offline only;
 study-only foe in memory: any single hit counts for at most 12 (bolts, stones and volley capped; burn ticks are not
 blows), 90 hp x hpScale, speed 26, leak 2.
 
@@ -253,7 +253,7 @@ human, not only the bot. The lever for any further retune is `toughness` per map
 is 28 waves, about 23 minutes). Per-map feedback on Twin Rivers, The Gorge and Last Stand was not recorded: ask before
 retuning them.
 
-**Maps 11 to 20 are in (2026-10-30), unplayed by a human.** A second canvas, `autumn` ("The Amber Woods": straw ground,
+**Maps 11 to 20 shipped on 2026-10-30.** The user has since completed all 20 maps and reported that Ballista spam wins with few losses. A second canvas, `autumn` ("The Amber Woods": straw ground,
 rust woods, mud roads), with ten maps after Last Stand: harvest, orchards, hairpin, crows, detour, parting, winding,
 gauntlet, kings, watch (16 to 28 waves). All have `archerBranches: true`. New foes are introduced one a map: harvest
 knights; orchards + scamps; hairpin + imps; crows + healers; detour + gargoyles, then all five. Roads were picked by
@@ -262,8 +262,7 @@ seeds, after three tuning rounds (avg lives left, all won unless noted): harvest
 14 (2.45, 7/8), crows 13 (1.3), detour 14 (1.3), parting 15 (1.4), winding 14 (1.4), gauntlet 14 (1.7), kings 11 (1.3),
 watch 9 (1.4, 28 waves). **The toughness ramp is not monotone**: it follows the bot, not the number, because roads
 with two or three lanes dilute fire (a map with three roads at 1.3 is harder than one road at 1.75), and a map can swing from
-18 lives to near-loss across 0.4 of toughness (Hairpin: 2.3 gives 18, 2.7 gives 1). Not seen yet: the new canvas drawn in
-a browser, and any human play. The rest of this section is the design record.
+18 lives to near-loss across 0.4 of toughness (Hairpin: 2.3 gives 18, 2.7 gives 1). The rest of this section is the original design record.
 
 ## Maps 11 to 20 (the second canvas): design record
 
@@ -330,4 +329,4 @@ ramp; they should start near where map 10 ends and not reset to 1.
 
 ## Later (every further 10 maps)
 
-The same pattern: a new canvas, a new mechanic, new enemies. Nothing designed yet; decide when maps 11 to 20 are done.
+The same pattern: a new canvas, a new mechanic, new enemies. See the [maps 21–30 proposal](game-design-improvements.md#kingsroad--maps-2130).

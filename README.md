@@ -217,8 +217,8 @@ button and compact landscape layout retain a usable board with the keyboard open
 
 `tests/crossword/` covers content geometry/progression, input/reducer, assistance history,
 large save round-trips, previous-edition continuity and zoom/focus behavior. Implementation
-details and verification live in the git history (the roadmap file was deleted as implemented);
-remaining physical-device playtest scope is in `game-design-improvements.md` §12.
+details and verification live in git history. See the remaining [real-device and human-solve
+checks](game-design-improvements.md#crosswords--real-device-and-human-solve-follow-up).
 
 ### Software Tycoon
 

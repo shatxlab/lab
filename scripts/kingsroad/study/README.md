@@ -1,7 +1,7 @@
 # KingsRoad strategy/pacing study tooling
 
 **Study only.** No shipping simulation, UI, balance, spawn schedule, saves, or RNG behavior changes.
-Read `kingsroad-balance-study.md`, `kingsroad-roadmap.md` and `game-design-improvements.md` §6B/§9.
+Read `kingsroad-balance-study.md`, `kingsroad-roadmap.md` and the [strategy and pacing backlog](../../../game-design-improvements.md#kingsroad--strategy-balance-and-pacing).
 
 ## Reproduce
 
@@ -121,7 +121,7 @@ No automated metric certifies fun or improved balance. Human/phone playtests rem
 ## Isolated three-hit experiment
 
 Authorization: compare the baseline with a three-enemy lifetime Ballista contact limit, **not** ship a retune.
-Results/rejection rationale: `kingsroad-three-hit-experiment.md`. Paired evidence: `reports/kingsroad-three-hit/`.
+Results/rejection rationale: `reports/kingsroad-three-hit/kingsroad-three-hit-experiment.md`. Paired evidence: `reports/kingsroad-three-hit/`.
 
 ```sh
 node --experimental-strip-types scripts/kingsroad/study/build.ts /tmp/kr-baseline.mjs baseline
@@ -166,7 +166,7 @@ is syntax-checked, not separately rerun end-to-end. No browser/player build or h
 ## Range/coverage-only diagnostic
 
 The user approved testing coverage separately after the three-hit findings. **No shipping retune/commit/push.**
-Report: `kingsroad-range-experiment.md`; evidence: `reports/kingsroad-range/`. Predeclared `range-80` changes only
+Report: `reports/kingsroad-range/kingsroad-range-experiment.md`; evidence: `reports/kingsroad-range/`. Predeclared `range-80` changes only
 Ballista L1/L2/L3 ranges **140/150/165→112/120/132** (0.8×), restoring unlimited piercing. No other numbers/rules
 change. The existing `range * 1.15 / shotSpeed` flight-life formula remains, so nominal projectile travel shortens
 along with acquisition radius; this is not an acquisition-only test holding bolt travel constant.

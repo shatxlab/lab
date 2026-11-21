@@ -1,10 +1,10 @@
 # KingsRoad: strategy balance and pacing study
 
-> Latest follow-up: `kingsroad-range-experiment.md` completes the separately approved 20%-range diagnostic with
+> Latest follow-up: `reports/kingsroad-range/kingsroad-range-experiment.md` completes the separately approved 20%-range diagnostic with
 > unlimited piercing. It also is **not recommended as a stand-alone retune**. The roadmaps hold current next steps;
 > recommendations below record the earlier batch, not an unexecuted range hypothesis or shipping approval.
 
-> Follow-up completed: `kingsroad-three-hit-experiment.md` tests the isolated three-hit limit in 1,152 matched
+> Follow-up completed: `reports/kingsroad-three-hit/kingsroad-three-hit-experiment.md` tests the isolated three-hit limit in 1,152 matched
 > pairs. It is **not recommended as a stand-alone retune**: Heavy keeps every primary win while Mixed regresses.
 > This original report remains the unchanged-balance reference; see the follow-up and roadmaps for current next steps.
 

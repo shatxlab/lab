@@ -1,8 +1,7 @@
 # Lone Tower roadmap and persistence notes
 
 This is Lone Tower's design, implementation and handoff record. The completed persistence batch is recorded below.
-The next gameplay iteration starts with the active-skill redesign in this document; the earlier cross-game persistence
-scope remains in `game-design-improvements.md`, section 3.
+The next gameplay iteration starts with the active-skill redesign in this document.
 
 ## Next gameplay iteration — goals and evidence
 

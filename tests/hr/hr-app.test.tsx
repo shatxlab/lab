@@ -180,14 +180,26 @@ describe("HrApp", () => {
     view.unmount();
   });
 
-  it("offers to continue a saved run", async () => {
+  it.each([false, true])("uses the hero card's single run button (saved run: %s)", async (hasSave) => {
     const run = createRun(starters()[0], 5);
     run.time = 95;
-    localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(run));
+    if (hasSave) localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(run));
     const view = await mount(<HrApp />);
-    expect(view.container.textContent).toContain("Kenji Dubois, at 1:35");
-    await act(async () => buttons(view.container, "Continue the run")[0].click());
-    expect(view.container.textContent).toContain("1:35");
+    const label = hasSave ? "Continue the run" : "Go to work";
+    const other = hasSave ? "Go to work" : "Continue the run";
+    const actions = buttons(view.container, label);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toBe(view.container.querySelector(".hr-hero .hr-card-send"));
+    expect(buttons(view.container, other)).toHaveLength(0);
+    if (hasSave) expect(view.container.textContent).toContain("Kenji Dubois, at 1:35");
+    await act(async () => actions[0].click());
+    expect(view.container.querySelector("canvas.tower-canvas")).toBeTruthy();
+    if (hasSave) {
+      expect(view.container.textContent).toContain("1:35");
+      expect(readRun()).toEqual(run);
+    } else {
+      expect(readRun()?.time).toBe(0);
+    }
     view.unmount();
   });
 });

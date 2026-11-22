@@ -222,14 +222,6 @@ export default function HrApp() {
           </details>
           {roster && career && focus && (
             <>
-              {saved && savedCoworker && (
-                <div className="tower-actions">
-                  <button type="button" className="tower-button" onClick={resume}>
-                    {text.continueRun}
-                  </button>
-                  <p className="hr-continue-hint">{text.continueHint(savedCoworker.name, clock(saved.time))}</p>
-                </div>
-              )}
               <p className="hr-day-line">
                 {text.day(roster.day + 1)}
                 {" · "}
@@ -239,7 +231,18 @@ export default function HrApp() {
                 <p className="hr-day-line hr-slump">{text.slumpLine(Math.min(career.slump, 3))}</p>
               )}
               <section className="hr-hero" aria-label={focus.name}>
-                <CoworkerCard coworker={focus} sheet={sheet} text={text} action={text.goToWork} onAct={() => start(focus)} showCareer kit={career.kit} />
+                <CoworkerCard
+                  coworker={focus}
+                  sheet={sheet}
+                  text={text}
+                  action={savedCoworker ? text.continueRun : text.goToWork}
+                  onAct={savedCoworker ? resume : () => start(focus)}
+                  showCareer
+                  kit={career.kit}
+                />
+                {saved && savedCoworker && (
+                  <p className="hr-continue-hint">{text.continueHint(savedCoworker.name, clock(saved.time))}</p>
+                )}
               </section>
               {[focus]
                 .filter((coworker) => perksPending(coworker) > 0)

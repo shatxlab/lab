@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { careerBuild, normalizeCareer } from "@/lib/hr/career";
 import { CART, FLOOR_PLAN, FOES, PILOT_FLOORS, SPECIALIST, floorStage, xpToNext } from "@/lib/hr/sim/balance";
-import { CLASS_CORE, CLASS_IDS, classPassives, classWeapons, type ClassId } from "@/lib/hr/sim/classes";
+import { CLASS_CORE, CLASS_IDS, CLASSES, SHARED_PASSIVES, classPassive, classPassives, classWeapons, type ClassId } from "@/lib/hr/sim/classes";
+import { PASSIVE_IDS, WEAPON_IDS } from "@/lib/hr/sim/balance";
 import { createRun, descend, RUN_VERSION, step, STEP } from "@/lib/hr/sim/run";
 import { possiblePicks } from "@/lib/hr/sim/picks";
-import type { Foe, FoeKind, Pick, Run, Shot } from "@/lib/hr/sim/types";
+import type { Foe, FoeKind, PassiveId, Pick, Run, Shot, WeaponId } from "@/lib/hr/sim/types";
 import { normalizeRun } from "@/lib/hr/snapshot";
 import { starters } from "@/lib/roster/generate";
 
@@ -51,6 +52,20 @@ function killBoss(run: Run) {
 }
 
 describe("HR classes", () => {
+  it("splits the arsenal: every weapon and class passive belongs to exactly one class", () => {
+    const weapons: WeaponId[] = [];
+    const passives: PassiveId[] = [];
+    for (const id of CLASS_IDS) {
+      weapons.push(...CLASSES[id].weapons);
+      passives.push(...CLASSES[id].passives);
+    }
+    expect(new Set(weapons).size).toBe(weapons.length);
+    expect(new Set(passives).size).toBe(passives.length);
+    // Sticky Notes are everyone's signature; the other six weapons and three passives are split once each.
+    expect(weapons).toHaveLength(WEAPON_IDS.length - 1);
+    expect(passives).toHaveLength(PASSIVE_IDS.length - SHARED_PASSIVES.length);
+    for (const id of CLASS_IDS) expect(CLASS_CORE[id]).not.toBe("stickyNotes");
+  });
   it.each(CLASS_IDS)("filters both XP and boss rewards for %s, with a new class weapon and an owned upgrade", (classId) => {
     const level = newDay(classId);
     level.gems.push({ id: 53, x: level.hero.x, y: level.hero.y, value: xpToNext(level.level) + 1, pulled: false });

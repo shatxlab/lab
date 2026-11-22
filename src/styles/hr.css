@@ -267,7 +267,19 @@
 }
 
 .hr-class-choice span { display: block; }
-.hr-class-choice span span { font-size: 0.85rem; }
+.hr-class-choice > span > span { font-size: 0.85rem; }
+.hr-class-tagline { font-weight: 600; margin-top: 0.1rem; }
+.hr-class-kit {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+}
+
+.hr-class-kit li { margin: 0.15rem 0; }
+.hr-class-passive { margin-top: 0.35rem; }
+.hr-class-passive strong { color: var(--tower-accent); }
+.hr-class-tradeoff { margin-top: 0.2rem; }
+.hr-class-tradeoff strong { color: #e88f6f; }
 .hr-class-picker .hr-card-send { min-height: 3rem; }
 
 .hr-start-over {

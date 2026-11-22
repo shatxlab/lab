@@ -7,7 +7,7 @@ import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
 import { HERO_BASE, PASSIVE_IDS, WEAPON_IDS, xpToNext } from "@/lib/hr/sim/balance";
 import { createRun, startingLoadout } from "@/lib/hr/sim/run";
-import { CLASSES, CLASS_IDS, type ClassId } from "@/lib/hr/sim/classes";
+import { CLASS_IDS, classPassive, type ClassId } from "@/lib/hr/sim/classes";
 import type { Run } from "@/lib/hr/sim/types";
 import { mergeKit, type ItemState } from "@/lib/hr/kit";
 import { baseNumbers } from "@/lib/hr/sim/hero";
@@ -291,16 +291,26 @@ function ClassPicker({ coworker, text, build, selected, onSelect, onStart }: {
       <fieldset aria-describedby="hr-class-hint">
         <legend>{text.chooseClass}</legend>
         <p id="hr-class-hint">{text.classHint}</p>
-        {CLASS_IDS.map((id) => (
-          <label key={id} className="hr-class-choice">
-            <input type="radio" name="hr-class" value={id} checked={selected === id} onChange={() => onSelect(id)} aria-label={text.classes[id].name} />
-            <span>
-              <strong>{text.classes[id].name}</strong>
-              <span>{text.classes[id].description}</span>
-              <small>{[...CLASSES[id].weapons.filter((weapon) => weapon !== departmentWeapon(coworker)).map((weapon) => text.weapons[weapon].name), ...CLASSES[id].passives.map((passive) => text.passives[passive].name)].join(" · ")}</small>
-            </span>
-          </label>
-        ))}
+        {CLASS_IDS.map((id) => {
+          const copy = text.classes[id];
+          const passive = text.passives[classPassive(id)];
+          return (
+            <label key={id} className="hr-class-choice">
+              <input type="radio" name="hr-class" value={id} checked={selected === id} onChange={() => onSelect(id)} aria-label={copy.name} />
+              <span>
+                <strong>{copy.name}</strong>
+                <span className="hr-class-tagline">{copy.tagline}</span>
+                <ul className="hr-class-kit">
+                  {copy.kit.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+                <span className="hr-class-passive"><strong>{text.classPassiveLabel}:</strong> {passive.name} — {passive.description}</span>
+                <span className="hr-class-tradeoff"><strong>{text.classTradeoffLabel}:</strong> {copy.tradeoff}</span>
+              </span>
+            </label>
+          );
+        })}
       </fieldset>
       {ready && <p><strong>{text.classStartingGear}:</strong> {starting.join(", ")}</p>}
       {archived.length > 0 && <p><strong>{text.classArchived}:</strong> {archived.join(", ")}</p>}

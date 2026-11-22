@@ -23,11 +23,19 @@ and a preview of their gear. Keep the class between days; no class swaps in v1. 
 **Sticky Situation** is gone (thumb button, keyboard path and crawl effect); **Sticky Notes** stay automatic in every
 Intern track. The tracks reuse weapons and passives, with a few class-specific numbers and behaviors:
 
-| Class | Playstyle / trade-off | Weapons besides Sticky Notes | Class passives |
+| Class | Playstyle / trade-off | Weapons besides Sticky Notes | Class passive |
 | --- | --- | --- | --- |
-| Field Rep | Piercing cards lean toward foes ahead; little protection up close | Business Cards, Spreadsheet, Rubber Duck | Power Tie, Lanyard |
-| Compliance Officer | Push crowds back and swat up to two nearby straight shots with the Binder; short reach | Policy Binder, Fine Print, Rubber Duck | Ergonomic Chair, Lanyard |
-| Systems Operator | Drop area damage onto groups; racks are weaker against bosses | Server Rack, Spreadsheet, Fine Print | Power Tie, Ergonomic Chair |
+| Field Rep | A mobile shooter: line foes up and pierce them from a distance; nothing protects you up close | Business Cards, Spreadsheet | Power Tie |
+| Compliance Officer | A front-line regulator: knock crowds back and swat up to two nearby shots with the Binder; short reach | Policy Binder, Rubber Duck | Ergonomic Chair |
+| Systems Operator | An area-effects engineer: rain hardware on packed groups; racks hit lone bosses for less | Server Rack, Fine Print | Lanyard |
+
+After the user's feedback ("skills overlap in classes"), the six non-signature weapons and the three non-shared
+passives are split exactly once across the tracks — no weapon or class passive appears in two pools, so a class
+pick is a real identity, not a slice of a shared menu. The picker card explains each class before the choice: a
+tagline, one bullet per weapon with what it actually does, the class passive with its number, and a
+"Watch out" trade-off line; the shared hint names what everyone keeps (Sticky Notes, the four perk passives).
+Each class keeps a small edge on its own tools: Cards pierce one more, the Binder reaches a bit further and
+swats shots, the Operator's Fine Print spreads wider while the rack trades single-target bite for area.
 
 Coffee, Gym Membership, Sneakers and Mentor stay shared so existing promotion perks can still grant and upgrade
 those passives. Keep current slot/level caps (4 weapons including the signature, 4 passives). Level-up and boss-clear
@@ -84,9 +92,11 @@ matched baseline (29/72 wins, 24 seeds per starter). Current tests cover class p
 behaviors, adaptive waves and boss wind-up/recovery. Full suite 3,620 tests, typecheck and build passed; local desktop
 Chrome covered EN/RU at 390/360 px, including class selection, legacy stairs, wave HUD and the Printer Prime tell.
 
-- **24 fresh seeds/track:** Field Rep 17/24, Compliance 19/24, Systems 23/24. Three five-day careers/track won
-  12/15, 5/15 and 15/15 days respectively. That's a balance gap, not evidence the whole game is harder. The
-  class bot chooses its core weapon and reads projector warnings; don't compare its win rates directly to legacy.
+- **24 fresh seeds/track (after the kit split):** Field Rep 17/24 (71%), Compliance 24/24, Systems 24/24.
+  Five-day campaigns: Field Rep 13/15, Compliance 4/15, Systems 10/15 — Compliance's fresh days got easier
+  (the Duck and its own chair moved in) while its veteran days got harder, and Field Rep stays the weakest fresh
+  start (the Spreadsheet is its only second weapon). A class-balance retune is due with the phone playtest; the
+  class bot overvalues its own fixed pick order, so weigh human play over these numbers.
 - **Pilot pacing:** median waves 35–40 s. Before staging, class-only runs had 10–18 s with no foe in the sampled
   phone-sized rectangle; final pilots had about 3–8 s, and median peak count rose from 4–7 to 8–20 across pilots
   and classes. Floor 5 bosses lasted 31–32 s for Field Rep and Compliance, 15 s for Systems. Floors 9/13/19's boss

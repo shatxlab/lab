@@ -8,6 +8,14 @@ import type { DepartmentId, Effect, PerkId, QuirkId, Stat } from "@/lib/roster/t
 import type { Blurb } from "@/lib/tower/i18n";
 import type { FoeKind, MutationId, PassiveId, Stage, WeaponId } from "./sim/types";
 
+/** A class card at the pick: an identity, its two weapons, and what to watch out for. */
+export interface ClassCopy {
+  name: string;
+  tagline: string;
+  kit: string[];
+  tradeoff: string;
+}
+
 export interface HrText {
   title: string;
   tagline: string;
@@ -22,7 +30,9 @@ export interface HrText {
   classHint: string;
   classStartingGear: string;
   classArchived: string;
-  classes: Record<ClassId, Blurb>;
+  classPassiveLabel: string;
+  classTradeoffLabel: string;
+  classes: Record<ClassId, ClassCopy>;
   day: (day: number) => string;
   /** Rank titles, lowest first; the last one repeats. */
   ranks: string[];
@@ -143,13 +153,40 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     continueHint: (name, time) => `${name}, at ${time}`,
     goToWork: "Go to work",
     chooseClass: "Choose a career class",
-    classHint: "Your class is locked when you start work. It sets your level-up and boss rewards; your signature weapon stays.",
+    classHint:
+      "Your class sets what level-ups and bosses offer — only its weapons and passive come up. Everyone keeps the automatic Sticky Notes; Coffee, Gym, Sneakers and Mentor stay shared. The choice locks when you start work.",
     classStartingGear: "Starts with",
     classArchived: "Stored, not equipped",
+    classPassiveLabel: "Class passive",
+    classTradeoffLabel: "Watch out",
     classes: {
-      fieldRep: { name: "Field Rep", description: "Line up enemies for piercing cards. Aim by moving; cards lean toward foes ahead. Less protection up close." },
-      compliance: { name: "Compliance Officer", description: "Push back crowds and swat nearby shots with the Binder. Less reach." },
-      systems: { name: "Systems Operator", description: "Drop area damage onto groups. No immediate knockback when cornered." },
+      fieldRep: {
+        name: "Field Rep",
+        tagline: "A mobile shooter: line foes up and pierce them from a distance.",
+        kit: [
+          "Business Cards: a fan of piercing shots that lean toward the foes you face",
+          "Spreadsheet: hurled at the nearest foe, piercing through a line",
+        ],
+        tradeoff: "Nothing protects you up close: no knockback, no shot blocking.",
+      },
+      compliance: {
+        name: "Compliance Officer",
+        tagline: "A front-line regulator: hold the crowd at arm's length.",
+        kit: [
+          "Policy Binder: swings around you, knocking crowds back — and swats up to two nearby shots out of the air",
+          "Rubber Duck: ducks orbit you and peck everything they touch",
+        ],
+        tradeoff: "Short reach: you must stand close to hurt anything.",
+      },
+      systems: {
+        name: "Systems Operator",
+        tagline: "An area-effects engineer: rain hardware on packed groups.",
+        kit: [
+          "Server Rack: crashes down on packed groups — but hits lone bosses for less",
+          "Fine Print: a slowing, damaging cloud of contract clauses around you",
+        ],
+        tradeoff: "No escape tool: when a group closes in, you fight your way out.",
+      },
     },
     day: (day) => `Day ${day}`,
     ranks: ["Trainee", "Junior", "Specialist", "Senior", "Lead", "Director"],
@@ -407,13 +444,40 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     continueHint: (name, time) => `${name}, ${time}`,
     goToWork: "На работу",
     chooseClass: "Выберите класс",
-    classHint: "Класс закрепится с началом работы. От него зависят награды за уровни и боссов. Фирменное оружие останется.",
+    classHint:
+      "Класс задаёт награды за уровни и боссов — в выпадениях только его оружие и пассив. У всех остаются автоматические стикеры; кофе, зал, кроссовки и наставник — общие. Выбор закрепляется с началом работы.",
     classStartingGear: "На старте",
     classArchived: "На хранении, не экипировано",
+    classPassiveLabel: "Пассив класса",
+    classTradeoffLabel: "Слабое место",
     classes: {
-      fieldRep: { name: "Торговый представитель", description: "Выстраивайте врагов под пробивные визитки. Они доворачивают к целям впереди. Вблизи защиты меньше." },
-      compliance: { name: "Специалист по регламенту", description: "Папка отталкивает толпу и сбивает ближайшие снаряды. Меньше дальность." },
-      systems: { name: "Системный оператор", description: "Бьёт по группам врагов. В окружении нечем быстро оттолкнуть толпу." },
+      fieldRep: {
+        name: "Торговый представитель",
+        tagline: "Мобильный стрелок: выстраивайте врагов в линию и пробивайте насквозь.",
+        kit: [
+          "Визитки: веер пробивающих выстрелов, доворачивающих к целям перед вами",
+          "Таблица: летит в ближайшего врага и пробивает линию насквозь",
+        ],
+        tradeoff: "Вблизи никакой защиты: ни отбрасывания, ни сбивания снарядов.",
+      },
+      compliance: {
+        name: "Специалист по регламенту",
+        tagline: "Регулятор на передовой: держите толпу на расстоянии вытянутой папки.",
+        kit: [
+          "Папка с политиками: вращается вокруг вас, отталкивает толпу — и сбивает до двух ближайших снарядов",
+          "Резиновая утка: утки кружат вокруг вас и клюют всё, к чему прикоснутся",
+        ],
+        tradeoff: "Малая дальность: чтобы наносить урон, приходится стоять близко.",
+      },
+      systems: {
+        name: "Системный оператор",
+        tagline: "Инженер площадного урона: обрушивайте железо на плотные группы.",
+        kit: [
+          "Серверная стойка: падает на плотные группы — но по одиночным боссам бьёт слабее",
+          "Мелкий шрифт: замедляющее и ранящее облако договорных пунктов вокруг вас",
+        ],
+        tradeoff: "Никуда не убежать: если группа взяла в кольцо, прорываться придётся боем.",
+      },
     },
     day: (day) => `День ${day}`,
     ranks: ["Стажёр", "Младший", "Специалист", "Старший", "Ведущий", "Директор"],

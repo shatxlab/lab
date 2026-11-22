@@ -414,8 +414,11 @@ export function weaponNumbers(id: WeaponId, level: number, mutation?: MutationId
   // Compliance can engage just beyond boss contact; it's still the shortest-range track.
   // Keep the base signature, but prevent its upgrades from eclipsing the whole class.
   if (classId && id === "stickyNotes") numbers.damage -= Math.max(0, level - 2) * 1.5;
-  if (classId === "compliance") numbers.radius += id === "policyBinder" ? 15 : id === "contract" ? 10 : 0;
+  // Each class's small edge on its own tools: the Binder reaches a bit further, cards pierce one more, the
+  // Operator's fine print spreads wider and the rack trades single-target bite for area coverage.
+  if (classId === "compliance" && id === "policyBinder") numbers.radius += 15;
   if (classId === "fieldRep" && id === "businessCard") numbers.pierce += 1;
+  if (classId === "systems" && id === "contract") numbers.radius += 10;
   if (classId === "systems" && id === "serverRack") numbers.damage *= SYSTEMS_RACK_DAMAGE;
   return mutation ? mutateNumbers(mutation, numbers) : numbers;
 }

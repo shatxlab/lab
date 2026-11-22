@@ -37,6 +37,14 @@ tagline, one bullet per weapon with what it actually does, the class passive wit
 Each class keeps a small edge on its own tools: Cards pierce one more, the Binder reaches a bit further and
 swats shots, the Operator's Fine Print spreads wider while the rack trades single-target bite for area.
 
+**The hero card was rebuilt for the same feedback** ("the placement of text and the hero avatar is not the
+best"): the card is a column of full-width rows now — a header with the portrait beside the name, the class line
+and the rank; the XP bar with its numbers under it; quirks and perks as their own rows; the desk kit; the six
+stats as chips three across and two down; the CTA at the bottom. Nothing crowds the avatar and no detail wraps
+under it. Verified by geometry checks in desktop Chrome at 360/390 px in both languages (portrait beside the
+identity block, chips 3×2, no horizontal overflow), plus the HR test suite; visually confirmed only via those
+measured boxes, not a human eye.
+
 Coffee, Gym Membership, Sneakers and Mentor stay shared so existing promotion perks can still grant and upgrade
 those passives. Keep current slot/level caps (4 weapons including the signature, 4 passives). Level-up and boss-clear
 cards both draw only from the class pool. Offers reserve an upgrade to equipped gear and a new item when available;

@@ -381,30 +381,37 @@ interface CardProps {
 }
 
 function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer, kit, classId }: CardProps) {
+  const next = xpToNext(coworker.level);
   return (
     <article className={`hr-card hr-card-${coworker.rarity}`}>
-      <Portrait coworker={coworker} sheet={sheet} />
-      <div className="hr-card-body">
-        <p className="hr-card-name">{coworker.name}</p>
-        {showCareer && (
-          <>
+      <header className="hr-card-head">
+        <Portrait coworker={coworker} sheet={sheet} />
+        <div className="hr-card-id">
+          <p className="hr-card-name">{coworker.name}</p>
+          <p className="hr-card-class">
+            {classId ? text.classes[classId].name : text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
+          </p>
+          {showCareer && (
             <p className="hr-card-rank">
               {rankName(text, rankOf(coworker.level))} · {text.careerLevel(coworker.level)}
             </p>
-            <progress className="hr-card-progress" max={xpToNext(coworker.level)} value={coworker.xp} aria-label={text.xpProgress(coworker.xp, xpToNext(coworker.level))} />
-            <p className="hr-card-rank">{text.xpProgress(coworker.xp, xpToNext(coworker.level))}</p>
-            {coworker.perks.length > 0 && <p className="hr-card-rank">{text.perksLine(coworker.perks.map((perk) => text.perks[perk].name).join(", "))}</p>}
-          </>
-        )}
-        <p className="hr-card-department">
-          {classId ? text.classes[classId].name : text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
-        </p>
+          )}
+        </div>
+      </header>
+      {showCareer && (
+        <div className="hr-card-xp">
+          <progress className="hr-card-progress" max={next} value={coworker.xp} aria-label={text.xpProgress(coworker.xp, next)} />
+          <p className="hr-card-rank">{text.xpProgress(coworker.xp, next)}</p>
+        </div>
+      )}
+      <div className="hr-card-body">
         {departmentWeapon(coworker) === "rubberDuck" && <p className="hr-card-quirk">{text.weapons.rubberDuck.description}</p>}
         {coworker.quirks.map((quirk) => (
           <p key={quirk} className="hr-card-quirk">
             <strong>{text.quirks[quirk]}</strong> {quirkLine(text, quirk)}
           </p>
         ))}
+        {showCareer && coworker.perks.length > 0 && <p className="hr-card-perks">{text.perksLine(coworker.perks.map((perk) => text.perks[perk].name).join(", "))}</p>}
       </div>
       {kit && (
         <p className="hr-card-kit">

@@ -4,7 +4,7 @@
  */
 import { DEPARTMENTS } from "@/lib/roster/data";
 import { POSE_PAD } from "@/lib/tycoon/render-support/poses";
-import { ARENA, BOARDROOM, COFFEE, DUCK_RADIUS, enrageFactor, HERO_RADIUS, SERVER_ROOM, SHOCK, weaponNumbers } from "../sim/balance";
+import { ARENA, BOARDROOM, CART, COFFEE, DUCK_RADIUS, enrageFactor, ESCORT, HERO_RADIUS, PAPERWORK, PILOT_BOSS, SERVER_ROOM, SHOCK, weaponNumbers } from "../sim/balance";
 import type { Foe, Run } from "../sim/types";
 import { BOSS_PIXEL, type BossFrames } from "./bosses";
 import { FIGURE_PIXEL, type BossFigures } from "./boss-figures";
@@ -383,7 +383,7 @@ function drawHero(ctx: CanvasRenderingContext2D, run: Run, scene: Scene, time: n
 function drawAura(ctx: CanvasRenderingContext2D, run: Run): void {
   const contract = run.weapons.find((weapon) => weapon.id === "contract");
   if (!contract) return;
-  const { radius } = weaponNumbers("contract", contract.level);
+  const { radius } = weaponNumbers("contract", contract.level, run.mutations?.contract, run.classId);
   ctx.fillStyle = "rgba(138, 74, 138, 0.18)";
   ctx.strokeStyle = "rgba(184, 124, 192, 0.6)";
   ctx.lineWidth = 2;
@@ -682,6 +682,13 @@ function drawEffect(ctx: CanvasRenderingContext2D, kind: string, x: number, y: n
       ctx.fillStyle = `rgba(232, 76, 61, ${fade * 0.25})`;
       ctx.fill();
       break;
+    case "repair":
+      ctx.strokeStyle = `rgba(111, 245, 178, ${fade * 0.8})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * (0.85 + progress * 0.15), 0, Math.PI * 2);
+      ctx.stroke();
+      break;
     default:
       ctx.strokeStyle = `rgba(244, 244, 244, ${fade * 0.8})`;
       ctx.lineWidth = 2;
@@ -693,8 +700,35 @@ function drawEffect(ctx: CanvasRenderingContext2D, kind: string, x: number, y: n
 
 // ---- Foes --------------------------------------------------------------------------------------------------------
 
+function drawTell(ctx: CanvasRenderingContext2D, foe: Foe): void {
+  const { x, y, radius, windup } = foe;
+  if (!windup && (!foe.boss || !foe.recovery || foe.charge > 0 || foe.shock > 0)) return;
+  ctx.save();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = windup ? "#ff7153" : "#9be5fa";
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 6, 0, Math.PI * 2);
+  ctx.stroke();
+  if (windup) {
+    ctx.setLineDash([8, 5]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const ring = foe.kind === "blobPrime" || (foe.kind === "hrManager" && (foe.cycles + 1) % PAPERWORK.ringEvery === 0);
+    if (ring) {
+      ctx.arc(x, y, foe.kind === "blobPrime" ? SHOCK.seconds * SHOCK.speed : radius + 32, 0, Math.PI * 2);
+    } else {
+      const reach = foe.kind === "rollingCart" ? CART.speed * CART.duration : foe.kind === "lunchMonitor" ? 150 : PILOT_BOSS.aim;
+      ctx.moveTo(x + Math.cos(windup.angle) * (radius + 7), y + Math.sin(windup.angle) * (radius + 7));
+      ctx.lineTo(x + Math.cos(windup.angle) * reach, y + Math.sin(windup.angle) * reach);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number, bosses?: BossFrames | null, figures?: BossFigures | null, hero?: { x: number; y: number }): void {
   const { x, y, radius: r } = foe;
+  drawTell(ctx, foe);
   // A boss dragged out too long enrages: a rising red ring under it, the tell for its climbing damage.
   const enrage = enrageFactor(foe);
   if (enrage > 1) {
@@ -766,7 +800,54 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number, bosses?:
   ctx.translate(x, y);
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1.5;
-  switch (foe.kind) {    case "replyAll": {
+  switch (foe.kind) {
+    case "paperShredling":
+      ctx.fillStyle = "#ffe3aa";
+      ctx.fillRect(x - 9, y - 7, 18, 12);
+      ctx.fillRect(x - 7, y + 4, 4, 5);
+      ctx.fillRect(x + 3, y + 4, 4, 5);
+      ctx.fillStyle = INK;
+      ctx.fillRect(x - 5, y - 3, 3, 3);
+      ctx.fillRect(x + 2, y - 3, 3, 3);
+      break;
+    case "rollingCart":
+      ctx.fillStyle = INK;
+      ctx.fillRect(x - 17, y - 10, 34, 20);
+      ctx.fillRect(x - 12, y + 8, 7, 6);
+      ctx.fillRect(x + 5, y + 8, 7, 6);
+      ctx.fillStyle = "#ff9755";
+      ctx.fillRect(x - 14, y - 7, 28, 13);
+      ctx.fillStyle = "#f9e1bf";
+      ctx.fillRect(x - 10, y - 8, 4, 11);
+      ctx.fillRect(x + 6, y - 8, 4, 11);
+      break;
+    case "patchDrone":
+      ctx.fillStyle = INK;
+      ctx.fillRect(x - 16, y - 4, 32, 9);
+      ctx.fillRect(x - 8, y - 10, 16, 20);
+      ctx.fillStyle = "#7ce5b0";
+      ctx.fillRect(x - 13, y - 2, 26, 5);
+      ctx.fillRect(x - 6, y - 8, 12, 16);
+      ctx.fillStyle = INK;
+      ctx.fillRect(x - 2, y - 5, 4, 10);
+      ctx.fillRect(x - 5, y - 2, 10, 4);
+      break;
+    case "securityEscort": {
+      ctx.fillStyle = INK;
+      ctx.fillRect(x - 11, y - 13, 22, 26);
+      ctx.fillStyle = "#b8a4ff";
+      ctx.fillRect(x - 8, y - 10, 16, 20);
+      ctx.fillStyle = INK;
+      ctx.fillRect(x - 6, y - 6, 12, 4);
+      const angle = foe.guardAngle ?? 0;
+      ctx.strokeStyle = "#8edafa";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(x, y, r + 3, angle - ESCORT.arc, angle + ESCORT.arc);
+      ctx.stroke();
+      break;
+    }
+    case "replyAll": {
       const bob = Math.sin(time * 10 + foe.id) * 1.5;
       ctx.translate(0, bob);
       ctx.fillStyle = "#f4f4f4";

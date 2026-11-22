@@ -8,8 +8,17 @@ import {
   AUDITOR_SUMMON_EVERY,
   AUDITOR_SUMMONS,
   BLINK,
+  BINDER_PARRY,
   BOSS_PUSH,
   CAMEO,
+  CART,
+  DRONE,
+  ESCORT,
+  LATE_PACK,
+  SYSTEMS_RACK_BOSS_DAMAGE,
+  PILOT_BOSS,
+  PILOT_FLOORS,
+  SPECIALIST,
   CHAIR_SUMMONS,
   CHARGE,
   COFFEE,
@@ -18,6 +27,7 @@ import {
   ELITE,
   enrageFactor,
   FAN_SPREAD,
+  FIELD_FAN,
   FOE_HURT_FLASH,
   FOES,
   FLOOR_PLAN,
@@ -42,6 +52,8 @@ import {
   MAX_FOES,
   MAX_GEMS,
   MAX_WEAPON_LEVEL,
+  MAX_WEAPONS,
+  MAX_PASSIVES,
   WEAPON_IDS,
   MAX_PRINTERS,
   MAX_SHOTS,
@@ -73,12 +85,14 @@ import {
   WEAPONS,
   floorStage,
   hpScale,
+  hordeDensity,
   spawnRate,
   touchScale,
   weaponNumbers,
   xpToNext,
 } from "./balance";
 import { Grid } from "./grid";
+import { classPassives, classWeapons, type ClassId } from "./classes";
 import { baseNumbers, withPassives } from "./hero";
 import { ITEM_DROPS, itemEffect, type ItemState } from "../kit";
 import { applyPick, rollPicks } from "./picks";
@@ -86,12 +100,14 @@ import type { Effect, Foe, FoeKind, Hazard, Input, Interview, OwnedWeapon, Passi
 
 /** The fixed tick the page steps the sim with, so every device plays the same run. */
 export const STEP = 1 / 60;
-export const RUN_VERSION = 12;
+export const RUN_VERSION = 13;
 
 /** The biggest foe's radius, which every grid search is widened by. */
 const FOE_PAD = Math.max(...Object.values(FOES).map((foe) => foe.radius));
 /** Homing and piercing weapons look for foes this close. */
 const AIM_REACH = 450;
+/** Class-day auto-aim lets ordinary foes enter the fight instead of clearing the wave offscreen. */
+const CLASS_HORDE_AIM = 235;
 
 /** The paperwork family of shots, which the Shredder Guard softens. */
 const PAPER_SHOTS = new Set<Source>(["hrManager", "auditor", "shredder", "printerJam", "printerPrime"]);
@@ -113,29 +129,44 @@ function gearEffect(run: Run, id: ItemState["id"]): number {
   return item ? itemEffect(item) : 0;
 }
 
-export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null, kit: readonly ItemState[] = [], build: { weapons?: Partial<Record<WeaponId, number>>; passives?: Partial<Record<PassiveId, number>> } = {}): Run {
-  // The desk's gear is a third stat source, after the level and the quirks.
-  const base = baseNumbers(coworker, kit);
-  // The build's passives, with the perks' starting passives raised to at least level 1.
-  const passives: Run["passives"] = { ...(build.passives ?? {}) };
+type SavedBuild = { weapons?: Partial<Record<WeaponId, number>>; passives?: Partial<Record<PassiveId, number>> };
+
+/** The loadout used by both the class preview and the day, including promotion grants. */
+export function startingLoadout(coworker: Coworker, build: SavedBuild, classId: ClassId | null) {
+  const signature = DEPARTMENTS[coworker.department].weapon;
+  const saved = Object.entries(build.weapons ?? {}) as [WeaponId, number][];
+  const weaponIds = classId ? classWeapons(classId, signature) : WEAPON_IDS;
+  const armed = saved.filter(([id, level]) => weaponIds.includes(id) && Number.isFinite(level) && level >= 1);
+  const signatureLevel = Math.max(armed.find(([id]) => id === signature)?.[1] ?? 0, coworker.perks.includes("overtime") ? 2 : 1);
+  const equipped = classId ? [[signature, signatureLevel] as const, ...armed.filter(([id]) => id !== signature).slice(0, MAX_WEAPONS - 1)] : armed;
+  if (!classId && !equipped.some(([id]) => id === signature)) equipped.push([signature, signatureLevel]);
+  const weapons: Run["weapons"] = equipped.map(([id, level]) => ({ id, level: Math.min(MAX_WEAPON_LEVEL, Math.floor(id === signature ? signatureLevel : level)), cooldownLeft: 0, spin: 0 }));
+
+  const passives: Run["passives"] = classId ? {} : { ...build.passives };
   for (const perk of coworker.perks) {
     const passive = PERK_PASSIVE[perk];
-    if (passive) passives[passive] = Math.max(passives[passive] ?? 0, 1);
+    if (passive) passives[passive] = Math.max(build.passives?.[passive] ?? 0, 1);
   }
+  if (classId) {
+    for (const id of classPassives(classId)) {
+      if (Object.keys(passives).length >= MAX_PASSIVES) break;
+      if (build.passives?.[id]) passives[id] = build.passives[id];
+    }
+  }
+  return { weapons, passives };
+}
+
+export function createRun(coworker: Coworker, seed: number, difficulty = 1, interview: Interview | null = null, kit: readonly ItemState[] = [], build: SavedBuild = {}, classId: ClassId | null = null): Run {
+  // The desk's gear is a third stat source, after the level and the quirks.
+  const base = baseNumbers(coworker, kit);
+  const { weapons, passives } = startingLoadout(coworker, build, classId);
   const numbers = withPassives(base, passives);
-  // The build's weapons, with the signature in it (or raised by overtime); a fresh hero carries just the signature.
-  const signature = DEPARTMENTS[coworker.department].weapon;
-  const weapons: Run["weapons"] = (Object.entries(build.weapons ?? {}) as [WeaponId, number][])
-    .filter(([id, level]) => WEAPON_IDS.includes(id) && Number.isFinite(level) && level >= 1)
-    .map(([id, level]) => ({ id, level: Math.min(MAX_WEAPON_LEVEL, Math.floor(level)), cooldownLeft: 0, spin: 0 }));
-  const carried = weapons.find((weapon) => weapon.id === signature);
-  if (carried) carried.level = Math.max(carried.level, coworker.perks.includes("overtime") ? 2 : 1);
-  else weapons.push({ id: signature, level: coworker.perks.includes("overtime") ? 2 : 1, cooldownLeft: 0, spin: 0 });
   const run: Run = {
     version: RUN_VERSION,
     seed,
     rng: seed,
     coworkerId: coworker.id,
+    classId,
     department: coworker.department,
     careerLevel: coworker.level,
     quirks: [...coworker.quirks],
@@ -362,7 +393,7 @@ export function abandon(run: Run): void {
  * keyboard's aim). Focus shortens the cooldown; the career's tier scales the effect; quirks bend the casting.
  */
 export function castSkill(run: Run, x?: number, y?: number): boolean {
-  if (run.status !== "playing" || run.picks || run.cleared || run.skillCd > 0) return false;
+  if (run.department === "interns" || run.status !== "playing" || run.picks || run.cleared || run.skillCd > 0) return false;
   const department = run.department;
   const effect = SKILL_EFFECTS[department];
   const tierFactor = skillTier(run.careerLevel);
@@ -425,16 +456,6 @@ export function castSkill(run: Run, x?: number, y?: number): boolean {
       touched = 1;
       break;
     }
-    case "interns": {
-      for (const foe of run.foes) {
-        if (Math.hypot(foe.x - point.x, foe.y - point.y) <= effect.radius * tierFactor) {
-          foe.stuck = effect.duration * tierFactor;
-          touched += 1;
-        }
-      }
-      addEffect(run, "blast", point.x, point.y, effect.radius * tierFactor, 0.4);
-      break;
-    }
   }
   // Quirk hooks: the casting bends to who is casting it.
   let cd = SKILL.cooldown * run.numbers.cooldown;
@@ -470,6 +491,8 @@ export function descend(run: Run): boolean {
   run.picks = null;
   run.floor += 1;
   run.floorStart = run.time;
+  delete run.waveBeat;
+  delete run.waveBeatAt;
   run.bossDone = false;
   run.bossId = null;
   run.spawnDebt = 0;
@@ -563,7 +586,7 @@ function index(run: Run): void {
   for (const foe of run.foes) byId.set(foe.id, foe);
 }
 
-function addFoe(run: Run, kind: FoeKind, x: number, y: number, overrides: { boss?: boolean; hp?: number; elite?: boolean } = {}): Foe {
+function addFoe(run: Run, kind: FoeKind, x: number, y: number, overrides: { boss?: boolean; hp?: number; elite?: boolean; pay?: number; squad?: true } = {}): Foe {
   const def = FOES[kind];
   const boss = overrides.boss ?? def.boss;
   const elite = overrides.elite ?? false;
@@ -580,8 +603,10 @@ function addFoe(run: Run, kind: FoeKind, x: number, y: number, overrides: { boss
     radius: def.radius,
     speed: def.speed,
     touch: def.touch * (elite ? ELITE.touch : 1),
-    xp: def.xp * (elite ? ELITE.pay : 1),
-    gold: def.gold * (elite ? ELITE.pay : 1),
+    xp: def.xp * (elite ? ELITE.pay : 1) * (overrides.pay ?? 1),
+    gold: def.gold * (elite ? ELITE.pay : 1) * (overrides.pay ?? 1),
+    ...(overrides.pay !== undefined ? { kpi: overrides.pay } : {}),
+    ...(overrides.squad ? { squad: true } : {}),
     pushX: 0,
     pushY: 0,
     slow: 0,
@@ -592,7 +617,6 @@ function addFoe(run: Run, kind: FoeKind, x: number, y: number, overrides: { boss
     chargeY: 0,
     duckCooldown: 0,
     detained: 0,
-    stuck: 0,
     marked: 0,
     blinkCd: 0,
     shock: 0,
@@ -653,32 +677,93 @@ function spawn(run: Run, dt: number): void {
   spawnFloor(run, dt);
 }
 
+/** Two different approach lanes, when the walls allow it. Keep each small pack together. */
+function spawnSquads(run: Run, kinds: readonly FoeKind[], pay: number): void {
+  const { hero } = run;
+  const first = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
+  const angle = Math.atan2(first.y - hero.y, first.x - hero.x);
+  const other = [Math.PI, Math.PI * 2 / 3, -Math.PI * 2 / 3].map((turn) => ({
+    x: clampTo(hero.x + Math.cos(angle + turn) * SPAWN_DISTANCE.min, 0, ARENA.width),
+    y: clampTo(hero.y + Math.sin(angle + turn) * SPAWN_DISTANCE.min, 0, ARENA.height),
+  })).find(({ x, y }) => Math.hypot(x - hero.x, y - hero.y) >= SPAWN_DISTANCE.min * 0.95)
+    ?? pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
+  kinds.forEach((kind, index) => {
+    if (run.foes.length >= MAX_FOES) return;
+    const at = index % 2 === 0 ? first : other;
+    const heading = Math.atan2(at.y - hero.y, at.x - hero.x);
+    const offset = (Math.floor(index / 2) % 5 - 2) * 19;
+    addFoe(run, kind, at.x - Math.sin(heading) * offset, at.y + Math.cos(heading) * offset, { pay, squad: true });
+  });
+}
+
+function advanceWaves(run: Run, elapsed: number, pilot: NonNullable<(typeof PILOT_FLOORS)[number]> | undefined): boolean {
+  const plan = FLOOR_PLAN[run.floor - 1];
+  const specialist = SPECIALIST[plan.stage];
+  const beat = run.waveBeat ?? 0;
+  if (!pilot) {
+    if (beat === 0 && run.floor >= specialist.from && elapsed >= plan.horde * 0.45 && elapsed < plan.horde && spikeRate(run) === 1) {
+      spawnSquads(run, Array<FoeKind>(specialist.count).fill(specialist.kind), 0.45);
+      run.waveBeat = 1;
+    } else if (run.floor >= 14 && beat === 1 && elapsed >= plan.horde * 0.68 && elapsed < plan.horde
+      && (!run.spike || run.spike.done || elapsed < run.spike.at - SPIKE.rushWarn - 5)) {
+      // A second front on late regular floors, never layered over a warning or a rush.
+      spawnSquads(run, LATE_PACK, 0.35);
+      run.waveBeat = 2;
+    }
+    return elapsed >= plan.horde;
+  }
+  const packAlive = run.foes.some((foe) => foe.squad && foe.hp > 0);
+  const sinceBeat = elapsed - (run.waveBeatAt ?? 0);
+  if (elapsed >= pilot.horde) return true;
+  if (beat === 3 && elapsed >= pilot.minimum && sinceBeat >= 6 && !packAlive) return true;
+  if (beat === 0) {
+    spawnSquads(run, ["replyAll", "replyAll", "replyAll", "replyAll", "paperPlane", "paperPlane"], pilot.pay);
+  } else if (beat === 1 && (elapsed >= 14 || (sinceBeat >= 7 && !packAlive))) {
+    spawnSquads(run, [...Array<FoeKind>(specialist.count).fill(specialist.kind), "replyAll", "replyAll", "paperPlane"], pilot.pay);
+  } else if (beat === 2 && (elapsed >= pilot.horde - 12 || (elapsed >= 22 && sinceBeat >= 7 && !packAlive))) {
+    spawnSquads(run, ["replyAll", "paperPlane", "replyAll", "paperPlane", "replyAll", "replyAll", specialist.kind, "replyAll", "paperPlane", "replyAll"], pilot.pay);
+  } else {
+    return false;
+  }
+  run.waveBeat = beat + 1;
+  run.waveBeatAt = elapsed;
+  return false;
+}
+
 /** One floor of the day: a horde for the plan's span, then its boss walks in and the horde thins. */
 function spawnFloor(run: Run, dt: number): void {
   const plan = FLOOR_PLAN[run.floor - 1];
-  if (!run.bossDone && floorElapsed(run) >= plan.horde) {
+  const elapsed = floorElapsed(run);
+  const pilot = run.classId ? PILOT_FLOORS[run.floor] : undefined;
+  const bossReady = !run.bossDone && (run.classId ? advanceWaves(run, elapsed, pilot) : elapsed >= plan.horde);
+  if (bossReady) {
     run.bossDone = true;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
     const boss = addFoe(run, plan.boss, at.x, at.y, { boss: true, hp: plan.bossHp });
     // An immobile boss cannot come to the fight later, so it walks in first and plants itself near the hero.
     if (FOES[plan.boss].speed === 0) boss.walkIn = true;
+    if (pilot) boss.timer = 0;
     run.bossId = boss.id;
   }
   const bossOut = run.bossId !== null && run.foes.some((foe) => foe.id === run.bossId);
   const rush = spikeRate(run);
-  run.spawnDebt += spawnRate(floorElapsed(run)) * (1 + (run.difficulty - 1) / 2) * (bossOut ? INTERVIEW.bossOutShare : 1) * rush * dt;
+  const density = run.classId && !pilot && !bossOut && rush === 1 ? hordeDensity(run.floor) : 1;
+  // A staged floor gets some of its bodies from the packs. The boss entrance trims spawns still further.
+  const phaseRate = bossOut ? INTERVIEW.bossOutShare * (pilot ? 0.65 : 1) : pilot ? 0.78 : 1;
+  const baseRate = spawnRate(pilot ? Math.min(elapsed, plan.horde) : elapsed);
+  run.spawnDebt += baseRate * (1 + (run.difficulty - 1) / 2) * phaseRate * rush * density * dt;
   while (run.spawnDebt >= 1) {
     run.spawnDebt -= 1;
     if (run.foes.length >= MAX_FOES) continue;
     const at = pointAround(run, SPAWN_DISTANCE.min, SPAWN_DISTANCE.max);
     // From the second act on, a share of the horde comes in elite: no flinch, half knockback, a harder touch.
     const elite = !bossOut && random(run) < ELITE.share[run.stage];
-    addFoe(run, drawKind(run), at.x, at.y, { elite });
+    addFoe(run, drawKind(run), at.x, at.y, { elite, pay: pilot && !bossOut ? pilot.pay : density > 1 ? 1 / density : undefined });
   }
-  tickSpike(run, dt);
+  if (!pilot || !bossOut) tickSpike(run, dt);
   // Each act plants its immobile blocker on a timer: the printer from floor 3, then the act's own.
   const blocker = BLOCKERS[run.stage];
-  if (!blocker || run.floor < blocker.from) return;
+  if (!blocker || run.floor < blocker.from || (pilot && bossOut)) return;
   run.printerIn -= dt;
   if (run.printerIn > 0) return;
   run.printerIn = blocker.every;
@@ -734,7 +819,7 @@ function tickSpike(run: Run, dt: number): void {
 function seedFloor(run: Run): void {
   const plan = FLOOR_PLAN[run.floor - 1];
   const room = Math.max(4, plan.horde - SPIKE.hordeMargin);
-  if (!run.interview && run.floor >= SPIKE.from && random(run) < SPIKE.chance) {
+  if (!run.interview && !(run.classId && PILOT_FLOORS[run.floor]) && run.floor >= SPIKE.from && random(run) < SPIKE.chance) {
     // Rings lean early in the horde, rushes middle: both well before the boss walks in.
     const at = 4 + random(run) * room;
     run.spike = random(run) < 0.6 ? { kind: "ring", at } : { kind: "rush", at, span: SPIKE.rushSpan };
@@ -754,7 +839,7 @@ function seedFloor(run: Run): void {
     run.cameo = { kind: "nurse" };
     run.hero.hp = Math.min(run.numbers.maxHp, run.hero.hp + run.numbers.maxHp * CAMEO.nurseHeal);
   } else {
-    run.cameo = { kind: "rival", kills0: run.kills, target: CAMEO.rivalKills + CAMEO.rivalKillsPerFloor * run.floor };
+    run.cameo = { kind: "rival", kills0: run.kills, target: CAMEO.rivalKills + CAMEO.rivalKillsPerFloor * run.floor, ...(run.classId ? { credited: 0 } : {}) };
   }
 }
 
@@ -785,6 +870,25 @@ function shootAt(run: Run, from: Foe, angle: number, shot: { speed: number; radi
 function act(run: Run, foe: Foe, toHero: number, distance: number): void {
   foe.cycles += 1;
   switch (foe.kind) {
+    case "rollingCart":
+      foe.charge = CART.duration;
+      foe.chargeX = Math.cos(toHero);
+      foe.chargeY = Math.sin(toHero);
+      break;
+    case "patchDrone": {
+      let repaired = 0;
+      grid.near(foe.x, foe.y, DRONE.range, FOE_PAD, (ally) => {
+        if (repaired >= DRONE.recipients || ally.boss || ally.kind === "patchDrone" || ally.hp <= 0 || ally.hp >= ally.maxHp) return;
+        ally.hp = Math.min(ally.maxHp, ally.hp + DRONE.repair);
+        repaired += 1;
+        addEffect(run, "repair", ally.x, ally.y, ally.radius + 5, 0.45);
+      });
+      if (repaired) addEffect(run, "repair", foe.x, foe.y, DRONE.range, 0.5);
+      break;
+    }
+    case "securityEscort":
+      foe.guardAngle = toHero;
+      break;
     case "meetingInvite":
       summon(run, foe, INVITE_SUMMONS);
       break;
@@ -893,6 +997,34 @@ function anchored(foe: Foe): boolean {
   return foe.kind === "printerJam" || foe.boss;
 }
 
+function hasPilotBoss(run: Run, foe: Foe): boolean {
+  return Boolean(foe.boss && run.classId && !run.interview && PILOT_FLOORS[run.floor]);
+}
+
+/** Lock the attack direction (never the player's controls), then give a chance to close in. */
+function tickTelegraph(run: Run, foe: Foe, dt: number, pilotBoss: boolean): void {
+  const distance = Math.hypot(run.hero.x - foe.x, run.hero.y - foe.y);
+  const range = pilotBoss ? PILOT_BOSS.close : CART.range;
+  if (foe.windup) {
+    foe.windup.left -= dt;
+    if (foe.windup.left > 0) return;
+    const { angle } = foe.windup;
+    delete foe.windup;
+    act(run, foe, angle, distance);
+    foe.recovery = (pilotBoss ? PILOT_BOSS.recovery : CART.recovery) + Math.max(foe.charge, foe.shock);
+    return;
+  }
+  if ((foe.recovery ?? 0) > 0) {
+    foe.recovery = Math.max(0, foe.recovery! - dt);
+    return;
+  }
+  foe.timer = Math.max(0, foe.timer - dt);
+  if (foe.timer === 0 && distance <= range) {
+    foe.timer = FOES[foe.kind].every;
+    foe.windup = { angle: toHeroOf(foe, run.hero), left: pilotBoss ? PILOT_BOSS.windup : CART.windup };
+  }
+}
+
 function moveFoes(run: Run, dt: number): void {
   const { hero } = run;
   const fade = Math.max(0, 1 - PUSH_FADE * dt);
@@ -903,7 +1035,6 @@ function moveFoes(run: Run, dt: number): void {
     foe.blinkCd = Math.max(0, foe.blinkCd - dt);
     foe.marked = Math.max(0, foe.marked - dt);
     foe.detained = Math.max(0, foe.detained - dt);
-    foe.stuck = Math.max(0, foe.stuck - dt);
     if (foe.detained > 0) continue;
     if (foe.kind === "auditor" && !foe.enraged && foe.hp <= foe.maxHp / 2) {
       foe.enraged = true;
@@ -924,14 +1055,18 @@ function moveFoes(run: Run, dt: number): void {
       foe.blinkCd = BLINK.every;
     }
     const def = FOES[foe.kind];
-    if (def.every > 0) {
+    const pilotBoss = hasPilotBoss(run, foe);
+    if (foe.kind === "securityEscort" && foe.guardAngle === undefined) foe.guardAngle = toHeroOf(foe, hero);
+    if (pilotBoss || foe.kind === "rollingCart") {
+      tickTelegraph(run, foe, dt, pilotBoss);
+    } else if (def.every > 0) {
       foe.timer -= dt;
       if (foe.timer <= 0) {
         foe.timer += def.every * (foe.enraged ? AUDITOR_ENRAGE.timerScale : 1);
         act(run, foe, toHeroOf(foe, hero), Math.hypot(hero.x - foe.x, hero.y - foe.y));
       }
     }
-    let speed = foe.speed * (1 - foe.slow) * enraged * (foe.stuck > 0 ? 0.3 : 1);
+    let speed = foe.speed * (1 - foe.slow) * enraged;
     let [mx, my] = distance > 0 ? [dx / distance, dy / distance] : [0, 0];
     // An immobile floor boss walks in first, then plants itself for good.
     if (foe.walkIn) {
@@ -941,9 +1076,11 @@ function moveFoes(run: Run, dt: number): void {
         speed = BOSS_WALK_IN.speed;
       }
     }
+    if (pilotBoss && distance > PILOT_BOSS.close) speed = Math.max(speed, PILOT_BOSS.approach);
+    if (foe.windup || (foe.recovery ?? 0) > 0) speed = foe.windup ? 0 : speed * 0.2;
     if (foe.charge > 0) {
       foe.charge -= dt;
-      speed *= foe.kind === "teamLead" ? LEAD_CHARGE.speed : CHARGE.speed;
+      speed = foe.kind === "rollingCart" ? CART.speed : foe.speed * (1 - foe.slow) * enraged * (foe.kind === "teamLead" ? LEAD_CHARGE.speed : CHARGE.speed);
       mx = foe.chargeX;
       my = foe.chargeY;
     }
@@ -992,9 +1129,11 @@ function separate(run: Run): void {
   }
 }
 
-function hurtFoe(run: Run, foe: Foe, amount: number, weapon: WeaponId): void {
+function hurtFoe(run: Run, foe: Foe, amount: number, weapon: WeaponId, shot?: Shot): void {
   if (foe.hp <= 0) return;
-  const dealt = Math.min(foe.hp, amount * run.numbers.damage * (foe.marked > 0 ? 1.5 : 1));
+  const guard = foe.kind === "securityEscort" && foe.guardAngle !== undefined && shot
+    && -(shot.vx * Math.cos(foe.guardAngle) + shot.vy * Math.sin(foe.guardAngle)) >= Math.hypot(shot.vx, shot.vy) * Math.cos(ESCORT.arc);
+  const dealt = Math.min(foe.hp, amount * run.numbers.damage * (guard ? ESCORT.damage : 1) * (foe.marked > 0 ? 1.5 : 1));
   foe.hp -= dealt;
   foe.hurt = FOE_HURT_FLASH;
   run.dealt[weapon] = (run.dealt[weapon] ?? 0) + dealt;
@@ -1017,6 +1156,7 @@ function reap(run: Run): void {
       continue;
     }
     run.kills += 1;
+    if (run.cameo?.credited !== undefined && !run.cameo.done) run.cameo.credited += foe.kpi ?? 1;
     run.gold += foe.gold * run.numbers.gold * STAGES[run.stage].gold * (foe.marked > 0 ? 2 : 1);
     if (foe.xp > 0) run.gems.push({ id: run.nextId++, x: foe.x, y: foe.y, value: foe.xp, pulled: false });
     addEffect(run, "pop", foe.x, foe.y, foe.radius, 0.3);
@@ -1033,7 +1173,7 @@ function reap(run: Run): void {
         const cameo = run.cameo;
         if (cameo?.kind === "rival" && !cameo.done) {
           cameo.done = true;
-          cameo.won = run.kills - (cameo.kills0 ?? 0) >= (cameo.target ?? Infinity);
+          cameo.won = (cameo.credited === undefined ? run.kills - (cameo.kills0 ?? 0) : cameo.credited + 1e-9) >= (cameo.target ?? Infinity);
           if (cameo.won) run.gold += CAMEO.rivalGold + CAMEO.rivalGoldPerFloor * run.floor;
         }
         // Luck rolls the boss's signature item; a lucky desk fills faster.
@@ -1069,11 +1209,14 @@ function reap(run: Run): void {
 
 // ---- Weapons -----------------------------------------------------------------------------------------------------
 
-function nearestFoes(run: Run, count: number, reach: number): Foe[] {
+function nearestFoes(run: Run, count: number, reach: number, primary = false): Foe[] {
   const { hero } = run;
+  const ordinaryReach = primary && run.classId && !run.interview && run.floor > 1 ? Math.min(reach, CLASS_HORDE_AIM) : reach;
   return run.foes
-    .map((foe) => ({ foe, distance: Math.hypot(foe.x - hero.x, foe.y - hero.y) - (foe.boss ? BOSS_AIM_BIAS : 0) }))
-    .filter((entry) => entry.distance <= reach && entry.foe.hp > 0)
+    .map((foe) => ({ foe, distance: Math.hypot(foe.x - hero.x, foe.y - hero.y) }))
+    .filter(({ foe, distance }) => foe.hp > 0 && distance <= (foe.boss
+      ? hasPilotBoss(run, foe) ? Math.min(reach + BOSS_AIM_BIAS, PILOT_BOSS.aim) : reach + BOSS_AIM_BIAS
+      : ordinaryReach))
     // A boss is the point of its phase: aimed weapons pick it over the horde around it.
     .sort((a, b) => (Number(b.foe.boss) - Number(a.foe.boss)) || (a.distance - b.distance))
     .slice(0, count)
@@ -1102,11 +1245,11 @@ function addShot(run: Run, weapon: WeaponId, angle: number, numbers: ReturnType<
 /** Fires the weapon if it's ready and has something to fire at; returns whether it did. */
 function trigger(run: Run, weapon: OwnedWeapon): boolean {
   const { hero } = run;
-  const numbers = weaponNumbers(weapon.id, weapon.level, run.mutations?.[weapon.id]);
+  const numbers = weaponNumbers(weapon.id, weapon.level, run.mutations?.[weapon.id], run.classId);
   const facing = Math.atan2(hero.faceY, hero.faceX);
   switch (WEAPONS[weapon.id].pattern) {
     case "homing": {
-      const targets = nearestFoes(run, numbers.count, AIM_REACH);
+      const targets = nearestFoes(run, numbers.count, AIM_REACH, true);
       if (targets.length === 0) return false;
       for (let index = 0; index < numbers.count; index += 1) {
         const target = targets[index % targets.length];
@@ -1115,17 +1258,31 @@ function trigger(run: Run, weapon: OwnedWeapon): boolean {
       return true;
     }
     case "pierce": {
-      const [target] = nearestFoes(run, 1, AIM_REACH);
+      const [target] = nearestFoes(run, 1, AIM_REACH, true);
       if (!target) return false;
       const aim = Math.atan2(target.y - hero.y, target.x - hero.x);
       for (let index = 0; index < numbers.count; index += 1) addShot(run, weapon.id, aim + (index - (numbers.count - 1) / 2) * 0.15, numbers);
       return true;
     }
-    case "fan":
-      for (let index = 0; index < numbers.count; index += 1) addShot(run, weapon.id, facing + (index - (numbers.count - 1) / 2) * FAN_SPREAD, numbers);
+    case "fan": {
+      let aim = facing;
+      if (run.classId === "fieldRep") {
+        let best: number = FIELD_FAN.range;
+        for (const foe of run.foes) {
+          const dx = foe.x - hero.x;
+          const dy = foe.y - hero.y;
+          const distance = Math.hypot(dx, dy);
+          const angle = Math.atan2(dy, dx) - facing;
+          if (foe.hp <= 0 || distance >= best || Math.cos(angle) < Math.cos(FIELD_FAN.cone)) continue;
+          best = distance;
+          aim = facing + Math.atan2(Math.sin(angle), Math.cos(angle)) * FIELD_FAN.assist;
+        }
+      }
+      for (let index = 0; index < numbers.count; index += 1) addShot(run, weapon.id, aim + (index - (numbers.count - 1) / 2) * FAN_SPREAD, numbers);
       return true;
+    }
     case "drop": {
-      const near = nearestFoes(run, 12, DROP_REACH);
+      const near = nearestFoes(run, 12, DROP_REACH, run.classId === "systems");
       for (let index = 0; index < numbers.count; index += 1) {
         const target = near.length > 0 ? near[Math.floor(random(run) * near.length)] : null;
         const x = target ? target.x : hero.x + hero.faceX * 120;
@@ -1141,6 +1298,14 @@ function trigger(run: Run, weapon: OwnedWeapon): boolean {
         const pull = run.mutations?.[weapon.id] === "gravity";
         knock(foe, hero.x, hero.y, pull ? -numbers.knockback * 1.2 : numbers.knockback);
       });
+      if (run.classId === "compliance") {
+        let parried = 0;
+        run.foeShots = run.foeShots.filter((shot) => {
+          if (parried >= BINDER_PARRY.count || shot.lob || Math.hypot(shot.x - hero.x, shot.y - hero.y) > BINDER_PARRY.radius + shot.radius) return true;
+          parried += 1;
+          return false;
+        });
+      }
       addEffect(run, "swing", hero.x, hero.y, numbers.radius, 0.2);
       return true;
     case "aura":
@@ -1153,7 +1318,7 @@ function trigger(run: Run, weapon: OwnedWeapon): boolean {
 
 function fire(run: Run, weapon: OwnedWeapon, dt: number): void {
   const { hero } = run;
-  const numbers = weaponNumbers(weapon.id, weapon.level, run.mutations?.[weapon.id]);
+  const numbers = weaponNumbers(weapon.id, weapon.level, run.mutations?.[weapon.id], run.classId);
   const pattern = WEAPONS[weapon.id].pattern;
   if (pattern === "orbit") {
     weapon.spin = (weapon.spin + numbers.speed * dt) % (Math.PI * 2);
@@ -1202,7 +1367,7 @@ function moveShots(run: Run, dt: number): void {
     shot.life -= dt;
     grid.near(shot.x, shot.y, shot.radius, FOE_PAD, (foe) => {
       if (shot.pierce <= 0 || foe.hp <= 0 || shot.hitIds.includes(foe.id)) return;
-      hurtFoe(run, foe, shot.damage, shot.weapon);
+      hurtFoe(run, foe, shot.damage, shot.weapon, shot);
       shot.hitIds.push(foe.id);
       shot.pierce -= 1;
     });
@@ -1216,7 +1381,10 @@ function landDrops(run: Run, dt: number): void {
   run.drops = run.drops.filter((drop) => {
     drop.delay -= dt;
     if (drop.delay > 0) return true;
-    grid.near(drop.x, drop.y, drop.radius, FOE_PAD, (foe) => hurtFoe(run, foe, drop.damage, "serverRack"));
+    grid.near(drop.x, drop.y, drop.radius, FOE_PAD, (foe) => {
+      const damage = foe.boss && run.classId === "systems" ? drop.damage * SYSTEMS_RACK_BOSS_DAMAGE : drop.damage;
+      hurtFoe(run, foe, damage, "serverRack");
+    });
     addEffect(run, "blast", drop.x, drop.y, drop.radius, 0.35);
     return false;
   });

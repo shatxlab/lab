@@ -1,3 +1,4 @@
+import type { ClassId } from "./sim/classes";
 import type { EncounterTradeoff } from "./career";
 import type { AppLang } from "@/lib/apps/lang";
 import { QUIRK_NUMBER } from "./sim/balance";
@@ -17,6 +18,11 @@ export interface HrText {
   continueRun: string;
   continueHint: (name: string, time: string) => string;
   goToWork: string;
+  chooseClass: string;
+  classHint: string;
+  classStartingGear: string;
+  classArchived: string;
+  classes: Record<ClassId, Blurb>;
   day: (day: number) => string;
   /** Rank titles, lowest first; the last one repeats. */
   ranks: string[];
@@ -37,9 +43,9 @@ export interface HrText {
   departments: Record<DepartmentId, string>;
   stats: Record<Stat, string>;
   /** The department skills: the button's name and cooldown, and the icon's glyph. */
-  skillNames: Record<DepartmentId, string>;
-  skillGlyph: Record<DepartmentId, string>;
-  skillHint: (department: DepartmentId) => string;
+  skillNames: Record<Exclude<DepartmentId, "interns">, string>;
+  skillGlyph: Record<Exclude<DepartmentId, "interns">, string>;
+  skillHint: (department: Exclude<DepartmentId, "interns">) => string;
   skillButton: (name: string, seconds: number) => string;
   skillAim: string;
   /** The desk kit, on the card and in the panels. */
@@ -63,7 +69,7 @@ export interface HrText {
   /** The hammers: one pattern bend per weapon (P3, hr-harder-roadmap). */
   hammers: Record<MutationId, Blurb>;
   hammerOf: (weapon: string) => string;
-  heal: Blurb;
+  heal: (percent: number) => Blurb;
   gold: Blurb;
   levelUp: string;
   pickOne: string;
@@ -76,6 +82,8 @@ export interface HrText {
   next: (who: string, time: string) => string;
   /** Where the descent is, e.g. "Floor 3". */
   floor: (floor: number) => string;
+  floorWave: (floor: number, phase: number) => string;
+  bossArrives: (boss: string) => string;
   /** The panel after a floor's boss falls. */
   floorCleared: string;
   floorClearedHint: string;
@@ -134,6 +142,15 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     continueRun: "Continue the run",
     continueHint: (name, time) => `${name}, at ${time}`,
     goToWork: "Go to work",
+    chooseClass: "Choose a career class",
+    classHint: "Your class is locked when you start work. It sets your level-up and boss rewards; your signature weapon stays.",
+    classStartingGear: "Starts with",
+    classArchived: "Stored, not equipped",
+    classes: {
+      fieldRep: { name: "Field Rep", description: "Line up enemies for piercing cards. Aim by moving; cards lean toward foes ahead. Less protection up close." },
+      compliance: { name: "Compliance Officer", description: "Push back crowds and swat nearby shots with the Binder. Less reach." },
+      systems: { name: "Systems Operator", description: "Drop area damage onto groups. No immediate knockback when cornered." },
+    },
     day: (day) => `Day ${day}`,
     ranks: ["Trainee", "Junior", "Specialist", "Senior", "Lead", "Director"],
     careerLevel: (level) => `Level ${level}`,
@@ -180,7 +197,6 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       sales: "Cold Call",
       it: "Rollback",
       hr: "Team Building",
-      interns: "Sticky Situation",
     },
     skillGlyph: {
       engineering: "🦆",
@@ -189,7 +205,6 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       sales: "📞",
       it: "↩️",
       hr: "🎉",
-      interns: "📝",
     },
     skillHint: (department) =>
       ({
@@ -199,7 +214,6 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         sales: "Cold Call: the nearest pack hesitates and takes a card's worth of hurt.",
         it: "Rollback: erase every shot on the screen and duck behind a moment of cover.",
         hr: "Team Building: patch up a quarter of your health and carry the team's pace for a moment.",
-        interns: "Sticky Situation: blanket the tap in sticky notes — everything there crawls.",
       })[department],
     skillButton: (name, seconds) => (seconds > 0 ? `${name} ${Math.ceil(seconds)}s` : name),
     skillAim: "Aim…",
@@ -287,7 +301,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       ergoChair: { name: "Ergonomic chair", description: "Take 8% less damage." },
       powerTie: { name: "Power tie", description: "Deal 10% more damage." },
     },
-    heal: { name: "Snack break", description: "Heal 30% of your health." },
+    heal: (percent) => ({ name: "Snack break", description: `Heal ${percent}% of your max health.` }),
     gold: { name: "Petty cash", description: "Take 10 gold." },
     levelUp: "Level up!",
     pickOne: "Pick one",
@@ -314,6 +328,10 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       vendingMachine: "The Vending Machine",
       printerPrime: "Printer Jam Prime",
       blobPrime: "Monday Blob Prime",
+      paperShredling: "Paper Shredling",
+      rollingCart: "Rolling Cart",
+      patchDrone: "Patch Drone",
+      securityEscort: "Security Escort",
       lunchThief: "Lunch Thief",
       greaseFire: "Grease Fire",
       looseCable: "Loose Cable",
@@ -328,6 +346,8 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     enrageHint: "A boss fought too long gets angry: its damage climbs every half minute. Finish the fight.",
     rushWarn: "A rush is coming!",
     rushLive: "Rush!",
+    floorWave: (floor, phase) => `Floor ${floor} · Wave ${phase}/3`,
+    bossArrives: (boss) => `${boss} is here`,
     slumpLine: (days) => `Slump ×${days} — today the office goes a little easier on you.`,
     cameoSenior: "A retired senior sits in — one extra choice.",
     cameoNurse: "The office nurse patched you up.",
@@ -386,6 +406,15 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     continueRun: "Продолжить забег",
     continueHint: (name, time) => `${name}, ${time}`,
     goToWork: "На работу",
+    chooseClass: "Выберите класс",
+    classHint: "Класс закрепится с началом работы. От него зависят награды за уровни и боссов. Фирменное оружие останется.",
+    classStartingGear: "На старте",
+    classArchived: "На хранении, не экипировано",
+    classes: {
+      fieldRep: { name: "Торговый представитель", description: "Выстраивайте врагов под пробивные визитки. Они доворачивают к целям впереди. Вблизи защиты меньше." },
+      compliance: { name: "Специалист по регламенту", description: "Папка отталкивает толпу и сбивает ближайшие снаряды. Меньше дальность." },
+      systems: { name: "Системный оператор", description: "Бьёт по группам врагов. В окружении нечем быстро оттолкнуть толпу." },
+    },
     day: (day) => `День ${day}`,
     ranks: ["Стажёр", "Младший", "Специалист", "Старший", "Ведущий", "Директор"],
     careerLevel: (level) => `Уровень ${level}`,
@@ -432,7 +461,6 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       sales: "Холодный звонок",
       it: "Откат",
       hr: "Тимбилдинг",
-      interns: "Клейкая ситуация",
     },
     skillGlyph: {
       engineering: "🦆",
@@ -441,7 +469,6 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       sales: "📞",
       it: "↩️",
       hr: "🎉",
-      interns: "📝",
     },
     skillHint: (department) =>
       ({
@@ -451,7 +478,6 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         sales: "Холодный звонок: ближайшая стая замрёт и получит по визитке.",
         it: "Откат: сотри все выстрелы с экрана и спрячься за мгновением прикрытия.",
         hr: "Тимбилдинг: подлечись на четверть и пронесись с командным темпом.",
-        interns: "Клейкая ситуация: заслей поле вокруг касания стикерами — всё там поползёт.",
       })[department],
     skillButton: (name, seconds) => (seconds > 0 ? `${name} ${Math.ceil(seconds)} с` : name),
     skillAim: "Прицел…",
@@ -539,7 +565,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       ergoChair: { name: "Эргономичное кресло", description: "На 8% меньше урона." },
       powerTie: { name: "Галстук власти", description: "На 10% больше урона." },
     },
-    heal: { name: "Перекус", description: "Восстановить 30% здоровья." },
+    heal: (percent) => ({ name: "Перекус", description: `Восстановить ${percent}% максимального здоровья.` }),
     gold: { name: "Касса", description: "Взять 10 золота." },
     levelUp: "Новый уровень!",
     pickOne: "Выберите одно",
@@ -566,6 +592,10 @@ export const HR_TEXT: Record<AppLang, HrText> = {
       vendingMachine: "Торговый автомат",
       printerPrime: "Главный зажеватель бумаги",
       blobPrime: "Большой понедельник",
+      paperShredling: "Бумажный обрезок",
+      rollingCart: "Тележка на разгоне",
+      patchDrone: "Дрон-ремонтник",
+      securityEscort: "Охранник со щитом",
       lunchThief: "Похититель обедов",
       greaseFire: "Горящий жир",
       looseCable: "Путаница кабелей",
@@ -580,6 +610,8 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     enrageHint: "Босс, которого затянули, злится: каждые полминуты его урон растёт. Заканчивай бой.",
     rushWarn: "Надвигается наплыв!",
     rushLive: "Наплыв!",
+    floorWave: (floor, phase) => `Этаж ${floor} · Волна ${phase}/3`,
+    bossArrives: (boss) => `Босс на этаже: ${boss}`,
     slumpLine: (days) => `Полоса неудач ×${days} — сегодня офис пойдёт навстречу.`,
     cameoSenior: "В комнате отдыхает старший в отставке — лишний вариант.",
     cameoNurse: "Офисная медсестра подлатала тебя.",

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import HrApp from "@/components/hr/HrApp";
 import { createRun } from "@/lib/hr/sim/run";
-import { CAREER_STORAGE_KEY, readCareer } from "@/lib/hr/career";
+import { CAREER_STORAGE_KEY, defaultCareer, readCareer } from "@/lib/hr/career";
 import { HR_TEXT } from "@/lib/hr/i18n";
 import { readRun, RUN_STORAGE_KEY } from "@/lib/hr/snapshot";
 import { starters } from "@/lib/roster/generate";
@@ -38,7 +38,7 @@ describe("HrApp", () => {
     expect(buttons(view.container, "Start career")).toHaveLength(0);
     const names = [...view.container.querySelectorAll(".hr-card-name")].map((element) => element.textContent);
     expect(names).toEqual([starters()[0].name]);
-    expect(readCareer()).toEqual({ focusId: 1, owned: [1], gold: 0, kit: [], build: { weapons: {}, passives: {} }, slump: 0 });
+    expect(readCareer()).toEqual({ ...defaultCareer(), focusId: 1, owned: [1] });
     expect(view.container.textContent).toContain("Day 1");
     expect(view.container.textContent).toContain("Trainee · Level 1");
     expect(localStorage.getItem(ROSTER_STORAGE_KEY)).not.toBeNull();
@@ -53,7 +53,7 @@ describe("HrApp", () => {
     localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(roster));
     localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify(career));
     const view = await mount(<HrApp />);
-    expect(readCareer()).toEqual({ focusId: 2, owned: [2, 3], gold: 1234, kit: [], build: { weapons: {}, passives: {} }, slump: 0 });
+    expect(readCareer()).toEqual({ ...defaultCareer(), focusId: 2, owned: [2, 3], gold: 1234 });
     expect(readSave()).toEqual(roster);
     expect(view.container.textContent).toContain("Day 13");
     expect(view.container.querySelector(".hr-card-name")?.textContent).toBe(starters()[1].name);
@@ -114,8 +114,8 @@ describe("HrApp", () => {
     view.unmount();
   });
 
-  it("sends the hero in, and a walk-out still moves the day on and saves the gold", async () => {
-    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 2, owned: [2], gold: 7, kit: [] }));
+  it("sends the hero in, and a walk-out still moves the day on and preserves the class and archived gear", async () => {
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 2, owned: [2], gold: 7, classId: "fieldRep", build: { weapons: { serverRack: 4 } } }));
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Go to work")[0].click());
     expect(view.container.querySelector("canvas.tower-canvas")).toBeTruthy();
@@ -127,7 +127,7 @@ describe("HrApp", () => {
     expect(view.container.textContent).toContain("Walked out");
     expect(localStorage.getItem(RUN_STORAGE_KEY)).toBeNull();
     expect(readSave().day).toBe(1);
-    expect(readCareer()).toEqual({ focusId: 2, owned: [2], gold: 7, kit: [], build: { weapons: { spreadsheet: 1 }, passives: {} }, slump: 1 });
+    expect(readCareer()).toEqual({ ...defaultCareer(), focusId: 2, owned: [2], gold: 7, classId: "fieldRep", build: { weapons: { serverRack: 4, spreadsheet: 1 }, passives: {} }, slump: 1 });
     view.unmount();
   });
 
@@ -135,7 +135,7 @@ describe("HrApp", () => {
     const roster = readSave();
     roster.coworkers[0] = { ...roster.coworkers[0], level: 6 };
     localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(roster));
-    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], gold: 0, kit: [{ id: "redPen", level: 1, floor: 20 }] }));
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ focusId: 1, owned: [1], gold: 0, classId: "systems", kit: [{ id: "redPen", level: 1, floor: 20 }] }));
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Go to work")[0].click());
     expect(readRun()?.level).toBe(6);
@@ -164,19 +164,40 @@ describe("HrApp", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const view = await mount(<HrApp />);
     await act(async () => buttons(view.container, "Start a new career")[0].click());
-    expect(readCareer()).toEqual({ focusId: 1, owned: [1], gold: 0, kit: [], build: { weapons: {}, passives: {} }, slump: 0 });
+    expect(readCareer()).toEqual({ ...defaultCareer(), focusId: 1, owned: [1] });
     view.unmount();
   });
 
   it("preserves a legacy non-Intern suspended run without an established career", async () => {
     const run = createRun(starters()[2], 5);
     run.time = 95;
-    localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(run));
+    localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify({ ...run, version: 12, classId: undefined }));
     const view = await mount(<HrApp />);
     expect(readCareer().focusId).toBe(3);
+    expect(view.container.querySelector(".hr-class-picker")).toBeNull();
     expect(readRun()).toEqual(run);
     await act(async () => buttons(view.container, "Continue the run")[0].click());
     expect(view.container.textContent).toContain("1:35");
+    view.unmount();
+  });
+
+  it.each(["en", "ru"] as const)("selects a class and previews the migrated build before committing in %s", async (lang) => {
+    localStorage.setItem("lab:lang", lang);
+    localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ build: { weapons: { serverRack: 4, policyBinder: 2 } } }));
+    const text = HR_TEXT[lang];
+    const view = await mount(<HrApp />);
+    const start = buttons(view.container, text.goToWork)[0];
+    expect(start.disabled).toBe(true);
+    expect(view.container.querySelectorAll('input[type="radio"]')).toHaveLength(3);
+    await act(async () => view.container.querySelector<HTMLInputElement>('input[value="systems"]')?.click());
+    expect(view.container.querySelector(".hr-class-picker")?.textContent).toContain(`${text.classArchived}: ${text.weapons.policyBinder.name}`);
+    expect(readCareer().classId).toBeNull();
+    expect(start.disabled).toBe(false);
+    await act(async () => start.click());
+    expect(readCareer().classId).toBe("systems");
+    expect(readRun()?.classId).toBe("systems");
+    expect(readRun()?.weapons.map((weapon) => weapon.id)).toEqual(["stickyNotes", "serverRack"]);
+    expect(view.container.querySelector(".hr-skill-button")).toBeNull();
     view.unmount();
   });
 
@@ -184,6 +205,7 @@ describe("HrApp", () => {
     const run = createRun(starters()[0], 5);
     run.time = 95;
     if (hasSave) localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(run));
+    else localStorage.setItem(CAREER_STORAGE_KEY, JSON.stringify({ classId: "fieldRep" }));
     const view = await mount(<HrApp />);
     const label = hasSave ? "Continue the run" : "Go to work";
     const other = hasSave ? "Go to work" : "Continue the run";

@@ -513,12 +513,13 @@ describe("the floor bosses' own tricks", () => {
     castSkill(social);
     expect(social.hero.hp).toBeGreaterThan(social.numbers.maxHp * 0.6);
     expect(social.aura).toBeGreaterThan(0);
-    // Interns: the sticky field makes everything crawl.
+    // Interns no longer have an active; the automatic signature still fires.
     const intern = createRun({ ...plain, department: "interns" as const }, 46);
-    const glue = foe({ id: 603, kind: "replyAll", boss: false, x: intern.hero.x + 40, y: intern.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 40, touch: 0, xp: 0, gold: 0 });
-    intern.foes = [glue];
-    castSkill(intern, glue.x, glue.y);
-    expect(glue.stuck).toBeGreaterThan(0);
+    intern.foes = [foe({ id: 603, kind: "replyAll", boss: false, x: intern.hero.x + 40, y: intern.hero.y, hp: 100, maxHp: 100, speed: 0, touch: 0 })];
+    expect(castSkill(intern)).toBe(false);
+    expect(intern.skillCd).toBe(0);
+    step(intern, { dx: 0, dy: 0 });
+    expect(intern.shots[0]?.weapon).toBe("stickyNotes");
   });
 
   it("the skill's cooldown keeps it honest, focus shortens it, and the quirks bend it", () => {
@@ -689,7 +690,6 @@ function foe(fields: Partial<Run["foes"][number]>): Run["foes"][number] {
     chargeY: 0,
     duckCooldown: 0,
     detained: 0,
-    stuck: 0,
     marked: 0,
     blinkCd: 0,
     shock: 0,
@@ -839,7 +839,7 @@ describe("perks in a run", () => {
     const run = withPerks("secondWind");
     run.hero.hp = 0.001;
     // A foe too tough for the hero's weapons to clear before it touches them.
-    run.foes.push({ id: 999, kind: "replyAll", boss: false, x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, detained: 0, stuck: 0, marked: 0, blinkCd: 0, shock: 0, enraged: false, hurt: 0 });
+    run.foes.push({ id: 999, kind: "replyAll", boss: false, x: run.hero.x, y: run.hero.y, hp: 1e9, maxHp: 1e9, radius: 8, speed: 0, touch: 1e6, xp: 0, gold: 0, pushX: 0, pushY: 0, slow: 0, timer: 0, cycles: 0, charge: 0, chargeX: 0, chargeY: 0, duckCooldown: 0, detained: 0, marked: 0, blinkCd: 0, shock: 0, enraged: false, hurt: 0 });
     step(run, { dx: 0, dy: 0 });
     expect(run.status).toBe("playing");
     expect(run.revive).toBe(false);

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } 
 import { Pause } from "lucide-react";
 
 import { clock, type HrText } from "@/lib/hr/i18n";
-import { CAMEO, SPIKE } from "@/lib/hr/sim/balance";
+import { CAMEO, CLASS_HEAL_SHARE, HEAL_SHARE, SPIKE } from "@/lib/hr/sim/balance";
 import { KIT_SIZE } from "@/lib/hr/kit";
 import { bakeHero, type HeroFrames, type Sheet } from "@/lib/hr/render/heroes";
 import { bakeBosses, type BossFrames } from "@/lib/hr/render/bosses";
 import { bakeBossFigures, type BossFigures } from "@/lib/hr/render/boss-figures";
 import { cameraFor, drawRun, fitView, stickInput, type Stick, type View } from "@/lib/hr/render/draw";
 import { castSkill } from "@/lib/hr/sim/run";
-import { FLOOR_PLAN, FOES, INTERVIEW, floorStage, xpToNext } from "@/lib/hr/sim/balance";
+import { FLOOR_PLAN, FOES, INTERVIEW, PILOT_FLOORS, floorStage, xpToNext } from "@/lib/hr/sim/balance";
 import { abandon, choose, descend, step, STEP } from "@/lib/hr/sim/run";
 import type { FoeKind, Pick, Run } from "@/lib/hr/sim/types";
 import { writeRun } from "@/lib/hr/snapshot";
@@ -21,7 +21,6 @@ interface Hud {
   loot: string;
   /** Seconds left of the skill's cooldown, and the department, for the skill button. */
   skillCd: number;
-  department: Run["department"];
   /** The offer as JSON, so the HUD only re-renders when it changes. */
   picks: string;
   hp: number;
@@ -35,6 +34,7 @@ interface Hud {
   floorStart: number;
   gold: number;
   floor: number;
+  wave: number;
   /** The floor's boss is down and the stairs wait. */
   cleared: boolean;
   boss: FoeKind | null;
@@ -73,7 +73,6 @@ function snapshot(run: Run, itemNames: (item: { id: string }) => string): Hud {
   return {
     status: run.status,
     skillCd: Math.ceil(run.skillCd * 10) / 10,
-    department: run.department,
     picks: run.picks ? JSON.stringify(run.picks) : "",
     hp: Math.ceil(run.hero.hp),
     maxHp: Math.round(run.numbers.maxHp),
@@ -83,6 +82,7 @@ function snapshot(run: Run, itemNames: (item: { id: string }) => string): Hud {
     floorStart: Math.floor(run.floorStart),
     gold: Math.floor(run.gold),
     floor: run.floor,
+    wave: Math.max(1, run.waveBeat ?? 0),
     cleared: run.cleared,
     loot: run.lootFound.map((item) => itemNames(item)).join(","),
     boss: boss?.kind ?? null,
@@ -266,12 +266,11 @@ export function RunView({
         pause();
         return;
       }
-      if (event.code === "Space" && run.status === "playing" && !run.picks && !run.cleared) {
+      if (event.code === "Space" && run.department !== "interns" && run.status === "playing" && !run.picks && !run.cleared && !paused) {
         castSkill(run);
         event.preventDefault();
         return;
       }
-      if (event.code === "Space") event.preventDefault();
       if (event.code in KEYS) {
         keysRef.current.add(event.code);
         event.preventDefault();
@@ -287,7 +286,7 @@ export function RunView({
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [run, pause]);
+  }, [run, pause, paused]);
 
   const localPoint = (event: PointerEvent<HTMLCanvasElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -347,13 +346,16 @@ export function RunView({
     run.swapOut = itemId as Run["swapOut"];
     refresh();
   };
+  const department = run.department;
   const hpShare = hud.maxHp > 0 ? hud.hp / hud.maxHp : 0;
   const plan = FLOOR_PLAN[hud.floor - 1];
-  const next = run.interview
-    ? text.interviewClock(text.foes[run.interview.boss], clock(INTERVIEW.closesAt - hud.time))
-    : plan && !run.cleared && hud.time - hud.floorStart < plan.horde
-      ? text.next(text.foes[plan.boss], clock(plan.horde - (hud.time - hud.floorStart)))
-      : text.floor(hud.floor);
+  const pilot = run.classId && !run.interview && PILOT_FLOORS[hud.floor];
+  let next = text.floor(hud.floor);
+  if (run.interview) next = text.interviewClock(text.foes[run.interview.boss], clock(INTERVIEW.closesAt - hud.time));
+  else if (!hud.cleared && pilot && !hud.boss) next = text.floorWave(hud.floor, hud.wave);
+  else if (!hud.cleared && !hud.boss && plan && hud.time - hud.floorStart < plan.horde) {
+    next = text.next(text.foes[plan.boss], clock(plan.horde - (hud.time - hud.floorStart)));
+  }
 
   return (
     <div className="tower-run">
@@ -395,6 +397,7 @@ export function RunView({
           <span className="hr-boss-text">{text.foes[hud.boss]}</span>
         </div>
       )}
+      {pilot && !hud.cleared && <span className="hr-phase-announce" role="status">{hud.boss ? text.bossArrives(text.foes[hud.boss]) : next}</span>}
       {hud.spike === "rushWarn" && <p className="hr-tag warn">{text.rushWarn}</p>}
       {hud.spike === "rushLive" && <p className="hr-tag warn">{text.rushLive}</p>}
       {!hud.cleared && cameoKind === "senior" && <p className="hr-tag">{text.cameoSenior}</p>}
@@ -423,7 +426,7 @@ export function RunView({
               {picks.length > 0 && (
                 <div className="tower-choices">
                   {picks.map((pick, index) => {
-                    const blurb = pickBlurb(text, pick);
+                    const blurb = pickBlurb(text, pick, Boolean(run.classId));
                     return (
                       <button key={JSON.stringify(pick)} type="button" className="tower-choice" onClick={() => takePick(index)} autoFocus={index === 0 && !hud.cleared}>
                         <span className="tower-choice-name">{blurb.name}</span>
@@ -495,20 +498,20 @@ export function RunView({
         {hud.status !== "playing" && children}
 
         {/* The department's signature move: a round icon-button at the thumb's reach, clear of the stick. */}
-        {hud.status === "playing" && (
+        {department !== "interns" && hud.status === "playing" && !hud.picks && !hud.cleared && !paused && (
           <button
             type="button"
             className={`hr-skill-button${armed ? " hr-skill-armed" : ""}`}
             disabled={hud.skillCd > 0}
-            aria-label={text.skillHint(hud.department)}
+            aria-label={text.skillHint(department)}
             aria-pressed={armed}
             onClick={() => {
               if (hud.skillCd > 0) return;
               setArmed((current) => !current);
             }}
           >
-            <span className="hr-skill-icon" aria-hidden="true">{text.skillGlyph[hud.department]}</span>
-            <span className="hr-skill-label">{armed ? text.skillAim : text.skillButton(text.skillNames[hud.department], hud.skillCd)}</span>
+            <span className="hr-skill-icon" aria-hidden="true">{text.skillGlyph[department]}</span>
+            <span className="hr-skill-label">{armed ? text.skillAim : text.skillButton(text.skillNames[department], hud.skillCd)}</span>
           </button>
         )}
       </div>
@@ -530,7 +533,7 @@ function currentInput(stick: Stick | null, keys: Set<string>): { dx: number; dy:
   return length > 0 ? { dx: dx / length, dy: dy / length } : { dx: 0, dy: 0 };
 }
 
-function pickBlurb(text: HrText, pick: Pick) {
+function pickBlurb(text: HrText, pick: Pick, classDay: boolean) {
   switch (pick.kind) {
     case "weapon":
       return text.weapons[pick.id];
@@ -539,7 +542,7 @@ function pickBlurb(text: HrText, pick: Pick) {
     case "mutation":
       return { name: text.hammerOf(text.weapons[pick.weapon].name), description: text.hammers[pick.mutation].description };
     case "heal":
-      return text.heal;
+      return text.heal(Math.round(100 * (classDay ? CLASS_HEAL_SHARE : HEAL_SHARE)));
     case "gold":
       return text.gold;
   }

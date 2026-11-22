@@ -5,8 +5,9 @@ import { useAppLang, useLangReady } from "@/lib/apps/use-app-lang";
 import { choosePerk, careerBuild, clearCareer, defaultCareer, difficultyFor, promotionTradeoff, withCareerFocus, perkOffer, perksPending, rankOf, readCareer, settle, writeCareer, type Career } from "@/lib/hr/career";
 import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
-import { HERO_BASE, xpToNext } from "@/lib/hr/sim/balance";
-import { createRun } from "@/lib/hr/sim/run";
+import { HERO_BASE, PASSIVE_IDS, WEAPON_IDS, xpToNext } from "@/lib/hr/sim/balance";
+import { createRun, startingLoadout } from "@/lib/hr/sim/run";
+import { CLASSES, CLASS_IDS, type ClassId } from "@/lib/hr/sim/classes";
 import type { Run } from "@/lib/hr/sim/types";
 import { mergeKit, type ItemState } from "@/lib/hr/kit";
 import { baseNumbers } from "@/lib/hr/sim/hero";
@@ -40,6 +41,7 @@ export default function HrApp() {
   const readyRef = useLangReady<HTMLDivElement>();
   const [roster, setRoster] = useState<RosterSave | null>(null);
   const [career, setCareer] = useState<Career | null>(null);
+  const [pendingClass, setPendingClass] = useState<ClassId | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [saved, setSaved] = useState<Run | null>(null);
   const [run, setRun] = useState<Run | null>(null);
@@ -79,7 +81,16 @@ export default function HrApp() {
   };
 
   const start = (coworker: Coworker) => {
-    begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity, coworker.perks, careerRef.current?.slump ?? 0), null, careerRef.current?.kit ?? [], careerRef.current?.build));
+    const before = careerRef.current;
+    const classId = before?.classId ?? pendingClass;
+    if (!before || !classId) return;
+    if (!before.classId) {
+      const next = { ...before, classId };
+      writeCareer(next);
+      setCareer(next);
+      setPendingClass(null);
+    }
+    begin(createRun(coworker, Math.floor(Math.random() * 2 ** 31), difficultyFor(coworker.level, coworker.rarity, coworker.perks, before.slump), null, before.kit, before.build, classId));
   };
 
   const resume = () => {
@@ -109,7 +120,7 @@ export default function HrApp() {
       // The desk takes the day's loot: new items join, a full desk scraps its oldest — or the one the player
       // swapped out at the clear — for savings, and a won day levels up what was carried.
       const merge = mergeKit(current.kit, ended.lootFound, ended.status === "won", ended.swapOut);
-      const savings: Career = { ...current, slump, gold: current.gold + Math.floor(ended.gold) + merge.gold, kit: merge.kit, build: careerBuild(ended) };
+      const savings: Career = { ...current, slump, gold: current.gold + Math.floor(ended.gold) + merge.gold, kit: merge.kit, build: careerBuild(ended, current.build) };
       writeCareer(savings);
       setCareer(savings);
       scrapped = merge.scrapped.length > 0 ? { names: merge.scrapped.map((item) => text.itemNames[item.id]).join(", "), gold: merge.gold } : null;
@@ -150,6 +161,7 @@ export default function HrApp() {
     const next = withCareerFocus(fresh, defaultCareer());
     writeCareer(next);
     setCareer(next);
+    setPendingClass(null);
     setSaved(null);
   };
 
@@ -179,8 +191,8 @@ export default function HrApp() {
                 )}
                 <PerkPicker coworker={current} text={text} onPick={(perk) => takePerk(current, perk)} />
                 <div className="tower-actions">
-                  <button type="button" className="tower-button" onClick={() => start(current)} autoFocus>
-                    {text.playAgain}
+                  <button type="button" className="tower-button" onClick={() => career?.classId ? start(current) : setRun(null)} autoFocus>
+                    {career?.classId ? text.playAgain : text.chooseClass}
                   </button>
                   <button type="button" className="tower-button tower-button-quiet" onClick={() => setRun(null)}>
                     {text.menu}
@@ -235,7 +247,8 @@ export default function HrApp() {
                   coworker={focus}
                   sheet={sheet}
                   text={text}
-                  action={savedCoworker ? text.continueRun : text.goToWork}
+                  action={savedCoworker ? text.continueRun : career.classId ? text.goToWork : undefined}
+                  classId={career.classId}
                   onAct={savedCoworker ? resume : () => start(focus)}
                   showCareer
                   kit={career.kit}
@@ -244,6 +257,9 @@ export default function HrApp() {
                   <p className="hr-continue-hint">{text.continueHint(savedCoworker.name, clock(saved.time))}</p>
                 )}
               </section>
+              {!savedCoworker && !career.classId && (
+                <ClassPicker coworker={focus} text={text} build={career.build} selected={pendingClass} onSelect={setPendingClass} onStart={() => start(focus)} />
+              )}
               {[focus]
                 .filter((coworker) => perksPending(coworker) > 0)
                 .map((coworker) => (
@@ -253,6 +269,42 @@ export default function HrApp() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ClassPicker({ coworker, text, build, selected, onSelect, onStart }: {
+  coworker: Coworker; text: HrText; build: Career["build"]; selected: ClassId | null;
+  onSelect: (id: ClassId) => void; onStart: () => void;
+}) {
+  const ready = selected ? startingLoadout(coworker, build, selected) : null;
+  const starting = ready ? [
+    ...ready.weapons.map(({ id, level }) => `${text.weapons[id].name} · ${text.level(level)}`),
+    ...PASSIVE_IDS.filter((id) => ready.passives[id]).map((id) => `${text.passives[id].name} · ${text.level(ready.passives[id]!)}`),
+  ] : [];
+  const archived = ready ? [
+    ...WEAPON_IDS.filter((id) => build.weapons[id] && !ready.weapons.some((weapon) => weapon.id === id)).map((id) => `${text.weapons[id].name} · ${text.level(build.weapons[id]!)}`),
+    ...PASSIVE_IDS.filter((id) => build.passives[id] && !ready.passives[id]).map((id) => `${text.passives[id].name} · ${text.level(build.passives[id]!)}`),
+  ] : [];
+  return (
+    <div className="hr-class-picker">
+      <fieldset aria-describedby="hr-class-hint">
+        <legend>{text.chooseClass}</legend>
+        <p id="hr-class-hint">{text.classHint}</p>
+        {CLASS_IDS.map((id) => (
+          <label key={id} className="hr-class-choice">
+            <input type="radio" name="hr-class" value={id} checked={selected === id} onChange={() => onSelect(id)} aria-label={text.classes[id].name} />
+            <span>
+              <strong>{text.classes[id].name}</strong>
+              <span>{text.classes[id].description}</span>
+              <small>{[...CLASSES[id].weapons.filter((weapon) => weapon !== departmentWeapon(coworker)).map((weapon) => text.weapons[weapon].name), ...CLASSES[id].passives.map((passive) => text.passives[passive].name)].join(" · ")}</small>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {ready && <p><strong>{text.classStartingGear}:</strong> {starting.join(", ")}</p>}
+      {archived.length > 0 && <p><strong>{text.classArchived}:</strong> {archived.join(", ")}</p>}
+      <button type="button" className="tower-button hr-card-send" disabled={!selected} onClick={onStart}>{text.goToWork}</button>
     </div>
   );
 }
@@ -315,9 +367,10 @@ interface CardProps {
   showCareer?: boolean;
   /** The desk kit, only on the focus's own card. */
   kit?: ItemState[];
+  classId?: ClassId | null;
 }
 
-function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer, kit }: CardProps) {
+function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer, kit, classId }: CardProps) {
   return (
     <article className={`hr-card hr-card-${coworker.rarity}`}>
       <Portrait coworker={coworker} sheet={sheet} />
@@ -334,7 +387,7 @@ function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer, kit }:
           </>
         )}
         <p className="hr-card-department">
-          {text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
+          {classId ? text.classes[classId].name : text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
         </p>
         {departmentWeapon(coworker) === "rubberDuck" && <p className="hr-card-quirk">{text.weapons.rubberDuck.description}</p>}
         {coworker.quirks.map((quirk) => (

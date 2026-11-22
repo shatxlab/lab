@@ -1,4 +1,5 @@
 import { RUN_VERSION } from "./sim/run";
+import { isClassId } from "./sim/classes";
 import type { Run } from "./sim/types";
 
 /**
@@ -31,7 +32,9 @@ const isNumber = (value: unknown): value is number => typeof value === "number" 
 export function normalizeRun(raw: unknown): Run | null {
   if (!raw || typeof raw !== "object") return null;
   const run = raw as Partial<Run>;
-  if (run.version !== RUN_VERSION || run.status !== "playing") return null;
+  const legacy = run.version === 12;
+  if ((!legacy && run.version !== RUN_VERSION) || run.status !== "playing") return null;
+  if (!legacy && run.classId !== null && !isClassId(run.classId)) return null;
   if (![run.seed, run.rng, run.coworkerId, run.difficulty, run.time, run.level, run.xp, run.nextId].every(isNumber)) return null;
   if (![run.floor, run.floorStart].every(isNumber)) return null;
   if (run.bossId !== null && !isNumber(run.bossId)) return null;
@@ -43,7 +46,7 @@ export function normalizeRun(raw: unknown): Run | null {
   const lists = [run.weapons, run.foes, run.shots, run.drops, run.foeShots, run.gems, run.effects];
   if (!lists.every(Array.isArray)) return null;
   if (run.picks !== null && !Array.isArray(run.picks)) return null;
-  return run as Run;
+  return legacy ? { ...run, version: RUN_VERSION, classId: null } as Run : run as Run;
 }
 
 export function readRun(storage: RunStorage | undefined = storageOrUndefined()): Run | null {

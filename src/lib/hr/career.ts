@@ -4,6 +4,7 @@ import type { PassiveId } from "./sim/types";
 import { random } from "@/lib/tower/sim/random";
 import { MAX_PASSIVE_LEVEL, MAX_WEAPON_LEVEL, PASSIVE_IDS, PERK_DIFFICULTY, REVIEW, WEAPON_IDS } from "./sim/balance";
 import { normalizeKit, type ItemState } from "./kit";
+import { isClassId, type ClassId } from "./sim/classes";
 
 /**
  * The journey between runs: the one coworker the player is growing and the gold saved up. Level, XP and the day live
@@ -22,6 +23,8 @@ export interface Career {
   gold: number;
   /** The build the hero carried out of their last day: weapons and passives, at their levels. */
   build: Build;
+  /** Null until the player commits to a track on their next new day. */
+  classId: ClassId | null;
   /** Lost days in a row; each one eases the next day's difficulty (the slump mercy), a win resets it. */
   slump: number;
 }
@@ -41,7 +44,7 @@ function storageOrUndefined(): CareerStorage | undefined {
 }
 
 export function defaultCareer(): Career {
-  return { focusId: null, owned: [], gold: 0, kit: [], build: EMPTY_BUILD, slump: 0 };
+  return { focusId: null, owned: [], gold: 0, kit: [], build: EMPTY_BUILD, classId: null, slump: 0 };
 }
 
 /** Keep valid careers intact; old unselected saves and new players start with the Intern.
@@ -60,7 +63,7 @@ export function withCareerFocus(roster: RosterSave, career: Career, suspendedCow
 
 export function normalizeCareer(raw: unknown): Career {
   if (!raw || typeof raw !== "object") return defaultCareer();
-  const { focusId, owned, gold } = raw as Partial<Record<keyof Career, unknown>>;
+  const { focusId, owned, gold, classId } = raw as Partial<Record<keyof Career, unknown>>;
   const whole = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
   const focus = whole(focusId) || null;
   const ids = (list: unknown) => (Array.isArray(list) ? list.map(whole).filter((id) => id > 0) : []);
@@ -70,7 +73,7 @@ export function normalizeCareer(raw: unknown): Career {
   const build = normalizeBuild((raw as { build?: unknown }).build);
   const rawSlump = (raw as { slump?: unknown }).slump;
   const slump = typeof rawSlump === "number" && Number.isFinite(rawSlump) ? Math.max(0, Math.floor(rawSlump)) : 0;
-  return { focusId: focus, owned: own, gold: whole(gold), kit, build, slump };
+  return { focusId: focus, owned: own, gold: whole(gold), kit, build, classId: isClassId(classId) ? classId : null, slump };
 }
 
 export function readCareer(storage: CareerStorage | undefined = storageOrUndefined()): Career {
@@ -221,10 +224,11 @@ export interface Build {
 export const EMPTY_BUILD: Build = { weapons: {}, passives: {} };
 
 /** The build a finished run leaves behind: every weapon and passive, at its level. */
-export function careerBuild(run: { weapons: { id: WeaponId; level: number }[]; passives: Partial<Record<PassiveId, number>> }): Build {
-  const weapons: Build["weapons"] = {};
+export function careerBuild(run: { weapons: { id: WeaponId; level: number }[]; passives: Partial<Record<PassiveId, number>> }, previous = EMPTY_BUILD): Build {
+  // Off-class equipment stays in the career archive when only active equipment is settled.
+  const weapons: Build["weapons"] = { ...previous.weapons };
   for (const weapon of run.weapons) weapons[weapon.id] = Math.max(1, Math.min(MAX_WEAPON_LEVEL, weapon.level));
-  const passives: Build["passives"] = {};
+  const passives: Build["passives"] = { ...previous.passives };
   for (const [id, level] of Object.entries(run.passives) as [PassiveId, number][]) passives[id] = Math.max(1, Math.min(MAX_PASSIVE_LEVEL, level));
   return { weapons, passives };
 }

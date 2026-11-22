@@ -37,7 +37,6 @@ function foe(fields: Partial<Run["foes"][number]>): Run["foes"][number] {
     chargeY: 0,
     duckCooldown: 0,
     detained: 0,
-    stuck: 0,
     marked: 0,
     blinkCd: 0,
     shock: 0,

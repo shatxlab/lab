@@ -3,6 +3,7 @@
  * `scripts/hr/playthrough.ts` (usage in its header).
  */
 import type { DepartmentId, Effect as QuirkEffect, PerkId, Stat } from "@/lib/roster/types";
+import type { ClassId } from "./classes";
 import type { FoeKind, HeroNumbers, InterviewBoss, MutationId, PassiveId, Stage, WeaponId } from "./types";
 
 /** A walled office floor, about 3 by 3 phone screens. */
@@ -46,6 +47,32 @@ export const FOE_HURT_FLASH = 0.1;
 
 /** The day's last floor, where the audit waits. */
 export const LAST_FLOOR = 20;
+
+/** Prototype floors: the scripted surge may hand over sooner, after its foes are cleared. */
+export const PILOT_FLOORS: Partial<Record<number, { horde: number; minimum: number; pay: number }>> = {
+  5: { horde: 42, minimum: 35, pay: 0.5 },
+  9: { horde: 43, minimum: 35, pay: 0.6 },
+  13: { horde: 45, minimum: 37, pay: 0.65 },
+  19: { horde: 48, minimum: 39, pay: 0.7 },
+};
+
+export const SPECIALIST: Record<Stage, { kind: FoeKind; from: number; count: number }> = {
+  openSpace: { kind: "paperShredling", from: 3, count: 4 },
+  kitchen: { kind: "rollingCart", from: 6, count: 2 },
+  serverRoom: { kind: "patchDrone", from: 10, count: 1 },
+  boardroom: { kind: "securityEscort", from: 14, count: 3 },
+};
+
+export const LATE_PACK: readonly FoeKind[] = ["securityEscort", "rollingCart", "paperPlane", "paperPlane", "replyAll", "replyAll", "replyAll", "paperPlane"];
+
+export const CART = { range: 176, windup: 0.65, duration: 0.9, speed: 210, recovery: 0.95 } as const;
+export const DRONE = { range: 115, repair: 8, recipients: 3 } as const;
+export const ESCORT = { damage: 0.3, arc: Math.PI / 3 } as const;
+export const PILOT_BOSS = { approach: 140, close: 180, aim: 225, windup: 0.7, recovery: 1 } as const;
+
+export function hordeDensity(floor: number): number {
+  return floor <= 1 ? 1 : floor <= 5 ? 1.1 : floor <= 9 ? 1.2 : floor <= 13 ? 1.3 : 1.55;
+}
 
 /** Foes per second at `time` seconds; halved while a floor's boss is out. The office is busy: more mails than ever. */
 export function spawnRate(time: number): number {
@@ -178,6 +205,10 @@ export const FOES: Readonly<Record<FoeKind, FoeDef>> = {
   looseCable: { hp: 14, radius: 10, speed: 60, touch: 12, xp: 2, gold: 0.25, every: 0, boss: false },
   /** The server room's blocker: an overheating rack that rings pings all around itself. */
   hotRack: { hp: 55, radius: 15, speed: 0, touch: 8, xp: 4, gold: 0.8, every: 4.2, boss: false },
+  paperShredling: { hp: 7, radius: 8, speed: 94, touch: 10, xp: 1, gold: 0.1, every: 0, boss: false },
+  rollingCart: { hp: 22, radius: 15, speed: 60, touch: 15, xp: 2, gold: 0.2, every: 4.2, boss: false },
+  patchDrone: { hp: 14, radius: 12, speed: 86, touch: 7, xp: 2, gold: 0.2, every: 2.3, boss: false },
+  securityEscort: { hp: 24, radius: 15, speed: 60, touch: 16, xp: 2, gold: 0.25, every: 2.4, boss: false },
 };
 
 /** The interview: a short fight against one boss, with a thin horde around it. */
@@ -360,6 +391,12 @@ export const MAX_WEAPON_LEVEL = 6;
 export const MAX_WEAPONS = 4;
 /** Angle between two cards of a fan, in radians. */
 export const FAN_SPREAD = 0.22;
+/** Field Rep still has to face the pack; cards converge a little towards the front target. */
+export const FIELD_FAN = { range: 275, cone: Math.PI / 3, assist: 0.7 } as const;
+export const SYSTEMS_RACK_DAMAGE = 0.76;
+/** Racks excel against groups; the Operator still needs a single-target weapon for bosses. */
+export const SYSTEMS_RACK_BOSS_DAMAGE = 0.62;
+export const BINDER_PARRY = { count: 2, radius: 48 } as const;
 /** A server rack lands on a foe within this reach of the hero, or in front of them. */
 export const DROP_REACH = 300;
 /** Size of a rubber duck. */
@@ -368,12 +405,18 @@ export const DUCK_RADIUS = 9;
 export const MIN_COOLDOWN = 0.15;
 
 /** Applies a hammer's deltas on top of the weapon's level numbers; the pattern reads the rest (gravity's pull) from `Run.mutations`. */
-export function weaponNumbers(id: WeaponId, level: number, mutation?: MutationId): WeaponNumbers {
+export function weaponNumbers(id: WeaponId, level: number, mutation?: MutationId, classId?: ClassId | null): WeaponNumbers {
   const { base, perLevel } = WEAPONS[id];
   const numbers = { ...base };
   for (const key of Object.keys(perLevel) as (keyof WeaponNumbers)[]) numbers[key] += perLevel[key]! * (level - 1);
   numbers.count = Math.floor(numbers.count);
   numbers.pierce = Math.floor(numbers.pierce);
+  // Compliance can engage just beyond boss contact; it's still the shortest-range track.
+  // Keep the base signature, but prevent its upgrades from eclipsing the whole class.
+  if (classId && id === "stickyNotes") numbers.damage -= Math.max(0, level - 2) * 1.5;
+  if (classId === "compliance") numbers.radius += id === "policyBinder" ? 15 : id === "contract" ? 10 : 0;
+  if (classId === "fieldRep" && id === "businessCard") numbers.pierce += 1;
+  if (classId === "systems" && id === "serverRack") numbers.damage *= SYSTEMS_RACK_DAMAGE;
   return mutation ? mutateNumbers(mutation, numbers) : numbers;
 }
 
@@ -419,6 +462,8 @@ export function xpToNext(level: number): number {
 
 /** The heal offered when nothing else is left, as a share of max hp. */
 export const HEAL_SHARE = 0.3;
+/** An exhausted class pool shouldn't refill a veteran on virtually every floor. */
+export const CLASS_HEAL_SHARE = 0.18;
 /** Gold offered when nothing else is left. */
 export const GOLD_PICK = 10;
 /** Speed of a gem flying to the hero. */
@@ -583,7 +628,7 @@ export function skillTier(level: number): number {
 
 /** Each department's skill numbers, at tier 1; durations and radii scale with the tier. */
 export const SKILL_EFFECTS: Record<
-  DepartmentId,
+  Exclude<DepartmentId, "interns">,
   { radius: number; duration: number; count: number; damage: number }
 > = {
   engineering: { radius: 0, duration: 3, count: 1, damage: 0 },
@@ -592,7 +637,6 @@ export const SKILL_EFFECTS: Record<
   sales: { radius: 400, duration: 1.5, count: 5, damage: 12 },
   it: { radius: 0, duration: 1, count: 1, damage: 0 },
   hr: { radius: 0, duration: 3, count: 1, damage: 0 },
-  interns: { radius: 160, duration: 3, count: 1, damage: 0 },
 };
 
 /** The boardroom: the audit's arena. A projector flashes a warning circle, then blasts a wide burst of light. */

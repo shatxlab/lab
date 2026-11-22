@@ -9,6 +9,94 @@ The floor-plan refactor (20 floors), the boss ladder's final art, the stats/skil
 the per-topic roadmaps (`hr-floors-roadmap.md`, `hr-bosses-roadmap.md`, `hr-stats-roadmap.md`,
 `hr-harder-roadmap.md`) were deleted as implemented. This file keeps the handoff record for everything shipped.
 
+## Next playtest batch: classes and busier floors
+
+Implemented locally; real-phone playtest and final balance still open.
+
+**Goal:** keep the 20-floor route, short waves → boss → reward rhythm, and one persistent Intern. Make later floors
+harder to move through, and make the build feel like a specialization rather than a grab bag.
+
+### Classes: one hero, three career tracks
+
+Choose once, before the first new workday. Show the three tracks on the hero screen with a strength, a trade-off,
+and a preview of their gear. Keep the class between days; no class swaps in v1. Migration never requires a reset.
+**Sticky Situation** is gone (thumb button, keyboard path and crawl effect); **Sticky Notes** stay automatic in every
+Intern track. The tracks reuse weapons and passives, with a few class-specific numbers and behaviors:
+
+| Class | Playstyle / trade-off | Weapons besides Sticky Notes | Class passives |
+| --- | --- | --- | --- |
+| Field Rep | Piercing cards lean toward foes ahead; little protection up close | Business Cards, Spreadsheet, Rubber Duck | Power Tie, Lanyard |
+| Compliance Officer | Push crowds back and swat up to two nearby straight shots with the Binder; short reach | Policy Binder, Fine Print, Rubber Duck | Ergonomic Chair, Lanyard |
+| Systems Operator | Drop area damage onto groups; racks are weaker against bosses | Server Rack, Spreadsheet, Fine Print | Power Tie, Ergonomic Chair |
+
+Coffee, Gym Membership, Sneakers and Mentor stay shared so existing promotion perks can still grant and upgrade
+those passives. Keep current slot/level caps (4 weapons including the signature, 4 passives). Level-up and boss-clear
+cards both draw only from the class pool. Offers reserve an upgrade to equipped gear and a new item when available;
+Business Cards/Binder/Rack get the new-item slot until acquired. Other slots are seeded rolls. Higher Sticky Notes
+levels scale less aggressively on class days so the signature doesn't drown out the new weapons.
+Boss clears use the same pool, with existing lucky/senior bonus choices, hammers for equipped class weapons, and desk
+loot. Keep the existing shared panel and reward cadence: if a level-up already supplies the clear's offer, don't add
+another screen. When upgrades run out, offer an 18% max-HP snack or gold, not off-class gear. The final audit still ends
+in the day result, not an extra choice.
+
+Store the class on the career and snapshot it into each new run. Existing careers choose on their next new day:
+preview what stays equipped, retain compatible gear levels, and keep off-class gear levels in the saved build but
+inactive (settlement merges rather than overwrites them). Keep XP, stats, perks, savings and desk items intact. Migrate
+v12 suspended runs into v13 as legacy/unclassed through the end of that day, retaining any open offer; only new days
+require a class. Keep the class system in HR, not the shared coworker roster. New UI and copy in EN/RU.
+
+### Floor pacing: make both halves worth playing
+
+Before this pass the horde timer was **16–36 seconds before the boss spawned**, not the whole floor's duration. The last
+recorded full day was about 14 minutes median. Adding 15 seconds to every floor would add about five minutes before
+changing a single boss. Keep floor 1 quick and try longer, more varied fights on floors **5, 9, 13 and 19** first.
+Aim for **60–90 seconds of combat** on those floors as a prototype: about 35–50 s of waves and 25–40 s of boss
+combat, measured separately. Treat those as playtest targets, not timers that force players to wait.
+
+- **Before the boss:** open with a readable pack, introduce a specialist that changes the player's route, then build
+  to a short mixed surge. If a wave ends early, bring the next beat forward instead of leaving an empty arena. Extra
+  time should buy a new decision, not more laps around the same group.
+- **Boss entrance:** give the boss a clear cue and taper reinforcement spawns. Leave the remaining horde in play,
+  but don't schedule a fresh surge on top of the opening attack.
+- **Boss fight:** prioritize a visible tell → dodge → opening to get back in range and deal damage. Start by tuning
+  the existing patterns and recovery gaps, not by adding HP, invulnerability gates or more adds. Let clean play
+  finish the fight quickly. Reward and stairs stay immediately after the win.
+
+### More enemies: count first, then behaviors
+
+- Floor 1 keeps its original spawns. Typical class-day horde density is **1.10× on 2–5, 1.20× on 6–9, 1.30× on
+  10–13, 1.55× on 14–20**, excluding pilots, active rushes and boss phases. Regular boardroom floors can add a
+  second mixed pack if clear of a spike. Pilots use the three longer beats instead of stacking the multiplier and
+  the random spike; their boss reinforcements are 65% of the former boss-phase rate. Boss HP and incoming damage
+  are unchanged. After floor 1, auto-aim waits for ordinary enemies to get nearer rather than clearing them offscreen.
+- Add one ordinary enemy per act, introduced in the horde phase, in small numbers: **Paper Shredlings** (open-space
+  packs approach from two sides), **Rolling Carts** (kitchen straight-line rush with a visible wind-up), **Patch
+  Drones** (server-room support that repairs nearby ordinary enemies, never bosses or other drones), and **Security
+  Escorts** (boardroom slow, frontal guard; go around them or use area damage). Give each a distinct phone-readable
+  silhouette and tell. Don't stack every specialist together; introduce each before using it in mixed groups.
+- Spawns use the existing distance and entity cap. Extra bodies discount XP, gold and rival KPI credit; raw kills
+  still count every foe. Tune those discounts before touching global rewards or damage.
+
+### Verification and next tuning gate
+
+Class-only and density-only builds were sampled separately before staging the four pilots. The legacy smoke sweep
+matched baseline (29/72 wins, 24 seeds per starter). Current tests cover class pools, save migration, specialist
+behaviors, adaptive waves and boss wind-up/recovery. Full suite 3,620 tests, typecheck and build passed; local desktop
+Chrome covered EN/RU at 390/360 px, including class selection, legacy stairs, wave HUD and the Printer Prime tell.
+
+- **24 fresh seeds/track:** Field Rep 17/24, Compliance 19/24, Systems 23/24. Three five-day careers/track won
+  12/15, 5/15 and 15/15 days respectively. That's a balance gap, not evidence the whole game is harder. The
+  class bot chooses its core weapon and reads projector warnings; don't compare its win rates directly to legacy.
+- **Pilot pacing:** median waves 35–40 s. Before staging, class-only runs had 10–18 s with no foe in the sampled
+  phone-sized rectangle; final pilots had about 3–8 s, and median peak count rose from 4–7 to 8–20 across pilots
+  and classes. Floor 5 bosses lasted 31–32 s for Field Rep and Compliance, 15 s for Systems. Floors 9/13/19's boss
+  medians were about 9–20 s—below target. Median day 13:33–15:40 across the classes, including losses. First picks
+  were 27.5–31.5 s versus 26–28.5 s in class-only runs. These are bot measurements, not a phone playtest.
+
+**Next:** real phone. Judge both halves separately: did waves make you change routes, and did learning the boss
+pattern let you finish faster? Check tells in an actual crowd, dodge routes, performance on-device and reasonable
+class balance late in a career. Don't raise HP just to hit a time target.
+
 ## The one-hero batch (2026-11-15, from the user's phone feedback)
 
 The user played the floor plan and asked for a sharper single-hero game. Nine asks, all shipped in one batch:
@@ -121,7 +209,7 @@ Full record was `hr-harder-roadmap.md` (deleted as implemented); the facts that 
 
 ## Status (2026-10-31)
 
-- **Live and public:** <https://shatx.ru/hr/> (dev: `http://127.0.0.1:4321/lab/hr`, the site's base is `/lab`). Listed
+- **Live and public:** <https://shatx.ru/hr/> (dev: `http://127.0.0.1:4321/hr/`). Listed
   under Games on the home page (`src/lib/apps/tools.ts`, id `hr`). The user has played it on a phone for days and won
   with all three starters; their feedback shaped the direction below.
 - **Built and deployed:**
@@ -141,6 +229,9 @@ Full record was `hr-harder-roadmap.md` (deleted as implemented); the facts that 
   `2cd23cb` kitchen, `46c8c79` CI test fix, `d4fc46d` perks, `083be6c` server room.
 
 ## Next steps (start here)
+
+**Current priority:** phone playtest the [classes and busier floors](#next-playtest-batch-classes-and-busier-floors)
+above. The numbered list below is historical backlog; it predates the one-hero refactor.
 
 1. **Take the user's phone feedback** on the career first and act on it. What to ask: does one run a day feel like a
    journey or a grind (the pace: about 8 runs to the first promotion, 35 to 40 to Senior)? Which perks did they pick,
@@ -479,13 +570,14 @@ knob answers which complaint, what was tried, and what bites.
   node /tmp/hr.mjs 30 all - 11        # starters grown to career level 11 (the first perk on each promotion)
   node /tmp/hr.mjs 30 all - 6 rare    # pack cards of a rarity instead of the starters
   node /tmp/hr.mjs 30 all - 6 - recruiter   # an interview against a boss (teamLead, hrManager, recruiter)
-  node /tmp/hr.mjs 30 all - 11 - - serverRoom   # a stage (kitchen, serverRoom)
+  node /tmp/hr.mjs 24 interns - 1 - - systems  # fresh class day; includes phase and enemy metrics
   ```
-  Arguments: seeds, department or `all`, `verbose` or `-`, career level, rarity or `-`, interview boss or `-`, stage.
+  Arguments: seeds, department or `all`, `verbose` or `-`, career level, rarity or `-`, interview boss or `-`,
+  class (`fieldRep`, `compliance`, `systems` or `-`). `campaign.ts` also accepts a class after `[seeds] [days]`.
   Win rates move about +-9 points between 30-seed runs, so compare 40 or more seeds before trusting a small change.
   A run takes up to 8 s when it goes long; run several levels in parallel with `&` and `wait`.
   Rebuild with esbuild after every balance change; the bundle doesn't watch.
-- **The page:** `npm run dev` serves at `http://127.0.0.1:4321/lab/hr` (the base is `/lab`; `/hr` alone is a 404).
+- **The page:** `npm run dev` serves at `http://127.0.0.1:4321/hr/` (site base is `/`).
   The user may already have a dev server running on 4321 (`astro dev` refuses to start a second one and says so);
   reuse it rather than killing it. The first request to a new route can take a few seconds to compile.
 - **Looking at it headless:** there is no `chromium-cli` here and the Playwright headless shell isn't downloaded.
@@ -580,7 +672,7 @@ knob answers which complaint, what was tried, and what bites.
 
 ### 6. Pitfalls
 
-- **The base path is `/lab`.** Links and assets go through `withBase` (`@/lib/apps/paths`).
+- **The base path is `/`.** Keep links and assets base-relative through `withBase` (`@/lib/apps/paths`).
 - **The editor's TypeScript diagnostics go stale** after edits made with shell tools (it reported `AUDIT_CLOSES` and
   `FoeShot.from` missing when they existed). Trust `npx tsc --noEmit -p .` / `npm run typecheck`.
 - **Copy:** every new string goes in `src/lib/hr/i18n.ts` in both languages; a test checks both have the same keys.

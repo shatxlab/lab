@@ -86,12 +86,12 @@ describe("difficulty", () => {
 describe("normalizeCareer", () => {
   it("repairs what it can and defaults the rest", () => {
     expect(normalizeCareer(null)).toEqual(defaultCareer());
-    expect(normalizeCareer({ focusId: 2.7, gold: -5 })).toEqual({ focusId: 2, owned: [2], gold: 0, kit: [], build: { weapons: {}, passives: {} }, slump: 0 });
-    expect(normalizeCareer({ focusId: "x", gold: 12 })).toEqual({ focusId: null, owned: [], gold: 12, kit: [], build: { weapons: {}, passives: {} }, slump: 0 });
+    expect(normalizeCareer({ focusId: 2.7, gold: -5 })).toEqual({ ...defaultCareer(), focusId: 2, owned: [2] });
+    expect(normalizeCareer({ focusId: "x", gold: 12 })).toEqual({ ...defaultCareer(), gold: 12 });
   });
 
   it("keeps only known fields: legacy packs' seals and stage choices are dropped, and the build is repaired", () => {
-    expect(normalizeCareer({ focusId: 1, owned: [1, 4], sealed: [4, 5], stage: "kitchen", gold: 3 })).toEqual({ focusId: 1, owned: [1, 4], gold: 3, kit: [], build: { weapons: {}, passives: {} }, slump: 0 });
+    expect(normalizeCareer({ focusId: 1, owned: [1, 4], sealed: [4, 5], stage: "kitchen", gold: 3 })).toEqual({ ...defaultCareer(), focusId: 1, owned: [1, 4], gold: 3 });
     expect(normalizeCareer({ focusId: 1, build: { weapons: { stickyNotes: 9, nope: 2 }, passives: { coffee: 0.5, gym: 3 } } }).build).toEqual({ weapons: { stickyNotes: 6 }, passives: { coffee: 1, gym: 3 } });
   });
 

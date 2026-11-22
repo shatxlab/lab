@@ -2,7 +2,7 @@
 // change can be judged on whole runs.
 //
 //   npx esbuild scripts/hr/playthrough.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=/tmp/hr.mjs
-//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level] [rarity|-] [teamLead|hrManager|recruiter|-]
+//   node /tmp/hr.mjs [seeds] [department|all] [verbose|-] [level] [rarity|-] [teamLead|hrManager|recruiter|-] [fieldRep|compliance|systems|-]
 //
 // With a level, each starter is first grown straight to that level (stat bumps included, see `growTo`) and meets the
 // matching difficulty, to check the career curve. Level 1 is a first-day coworker. The build starts empty, so this
@@ -11,11 +11,12 @@
 import process from 'node:process'
 import { generateCoworker, starters } from '../../src/lib/roster/generate.ts'
 import type { Rarity, Coworker } from '../../src/lib/roster/types.ts'
+import { isClassId } from '../../src/lib/hr/sim/classes.ts'
 import { LAST_FLOOR } from '../../src/lib/hr/sim/balance.ts'
 import { choosePerk, difficultyFor, growTo, interviewDifficultyFor, perkOffer, perksPending } from '../../src/lib/hr/career.ts'
 import { createRun } from '../../src/lib/hr/sim/run.ts'
 import type { InterviewBoss } from '../../src/lib/hr/sim/types.ts'
-import { playRun } from './bot.ts'
+import { createRunMetrics, playRun } from './bot.ts'
 
 function minutes(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
@@ -27,6 +28,9 @@ const verbose = process.argv[4] === 'verbose'
 const careerLevel = Number(process.argv[5] ?? 1)
 const rarity = process.argv[6] && process.argv[6] !== '-' ? (process.argv[6] as Rarity) : undefined
 const boss = process.argv[7] && process.argv[7] !== '-' ? (process.argv[7] as InterviewBoss) : undefined
+const requestedClass = process.argv[8]
+if (requestedClass && requestedClass !== '-' && !isClassId(requestedClass)) throw new Error(`Unknown class: ${requestedClass}`)
+const classId = isClassId(requestedClass) ? requestedClass : null
 let wins = 0
 let runs = 0
 for (const [index, base] of starters().entries()) {
@@ -40,13 +44,15 @@ for (const [index, base] of starters().entries()) {
     coworker = choosePerk(coworker, offer[0]) ?? coworker
   }
   if (only && only !== coworker.department) continue
+  if (classId && coworker.department !== 'interns') continue
   console.log(`${coworker.name} (${coworker.rarity} ${coworker.department}, level ${coworker.level}, ${coworker.quirks.join(', ')}${coworker.perks.length ? `; perks ${coworker.perks.join(', ')}` : ''})`)
   let teamWins = 0
   const taken: Record<string, number> = {}
   for (let seed = 1; seed <= seeds; seed += 1) {
     const started = Date.now()
-    const run = createRun(coworker, seed, boss ? interviewDifficultyFor(coworker.level, coworker.rarity, coworker.perks) : difficultyFor(coworker.level, coworker.rarity, coworker.perks), boss ? { boss, candidateId: 99 } : null)
-    playRun(run, verbose)
+    const run = createRun(coworker, seed, boss ? interviewDifficultyFor(coworker.level, coworker.rarity, coworker.perks) : difficultyFor(coworker.level, coworker.rarity, coworker.perks), boss ? { boss, candidateId: 99 } : null, [], {}, classId)
+    const metrics = classId ? createRunMetrics() : undefined
+    playRun(run, verbose, metrics)
     runs += 1
     if (run.status === 'won') {
       wins += 1
@@ -62,6 +68,7 @@ for (const [index, base] of starters().entries()) {
     console.log(
       `  seed ${seed}: ${end} at ${minutes(run.time)} (${stage}), level ${run.level}, ${run.kills} kills, ${Math.round(run.gold)} gold | ${dealt} | ${((Date.now() - started) / 1000).toFixed(1)}s`,
     )
+    if (metrics) console.log(`  metrics ${JSON.stringify(metrics)}`)
   }
   const total = Object.values(taken).reduce((sum, damage) => sum + damage, 0)
   const shares = Object.entries(taken)

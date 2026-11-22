@@ -5,8 +5,9 @@
 // weapon, then a heal when low, then other weapons, then passives. A real player who herds the horde and plans a
 // build should do better.
 
+import { CLASS_CORE } from '../../src/lib/hr/sim/classes.ts'
 import { ARENA } from '../../src/lib/hr/sim/balance.ts'
-import { choose, descend, step } from '../../src/lib/hr/sim/run.ts'
+import { choose, descend, step, STEP } from '../../src/lib/hr/sim/run.ts'
 import type { Input, Pick, Run } from '../../src/lib/hr/sim/types.ts'
 
 /** How far ahead the bot looks, in seconds. */
@@ -32,6 +33,7 @@ export function score(run: Run, pick: Pick): number {
   const signature = run.weapons[0]?.id
   switch (pick.kind) {
     case 'weapon':
+      if (run.classId && pick.id === CLASS_CORE[run.classId] && pick.level === 1) return 105
       if (pick.id === signature) return 100
       return pick.level > 1 ? 80 - WEAPON_ORDER.indexOf(pick.id) : 60 - WEAPON_ORDER.indexOf(pick.id)
     case 'passive':
@@ -74,7 +76,7 @@ function danger(run: Run, x: number, y: number): number {
   // Floor hazards: a vent that is blasting or about to blast within the look-ahead, and a microwave about to
   // ring. A sensible player keeps off a flashing vent.
   for (const hazard of run.hazards) {
-    if (hazard.kind === 'vent') {
+    if (hazard.kind === 'vent' || (run.classId && hazard.kind === 'projector')) {
       if (hazard.active <= 0 && hazard.timer > LOOK_AHEAD) continue
     } else if (hazard.kind === 'microwave') {
       if (hazard.timer > 0.6) continue
@@ -96,7 +98,8 @@ function gems(run: Run, x: number, y: number): number {
   const boss = run.foes.find((foe) => foe.id === run.bossId)
   if (boss) {
     const distance = Math.hypot(boss.x - x, boss.y - y)
-    total += BOSS_ATTRACT * Math.max(0, Math.min(1, (distance - BOSS_STOP) / 120)) / (1 + distance / 60)
+    const stop = run.classId === 'compliance' ? (boss.recovery && boss.charge <= 0 ? 72 : 95) : BOSS_STOP
+    total += BOSS_ATTRACT * Math.max(0, Math.min(1, (distance - stop) / 120)) / (1 + distance / 60)
   }
   return total
 }
@@ -125,7 +128,12 @@ export function steer(run: Run): Input {
   return best
 }
 
-export function playRun(run: Run, verbose = false) {
+interface FloorMetrics { wave: number; boss: number; peak: number; quiet: number }
+export function createRunMetrics() {
+  return { firstPick: null as number | null, floors: {} as Record<number, FloorMetrics> }
+}
+
+export function playRun(run: Run, verbose = false, metrics?: ReturnType<typeof createRunMetrics>) {
   let tick = 0
   let input: Input = { dx: 0, dy: 0 }
   let nextReport = 60
@@ -140,8 +148,20 @@ export function playRun(run: Run, verbose = false) {
     }
     // A thumb doesn't change direction sixty times a second.
     if (tick % 6 === 0) input = steer(run)
+    const bossOut = run.bossDone
     step(run, input)
     tick += 1
+    if (metrics) {
+      if (run.picks && metrics.firstPick === null) metrics.firstPick = Math.round(run.time)
+      const floor = metrics.floors[run.floor] ??= { wave: 0, boss: 0, peak: 0, quiet: 0 }
+      if (bossOut) floor.boss += STEP
+      else floor.wave += STEP
+      if (tick % 15 === 0) {
+        const nearby = run.foes.filter((foe) => Math.abs(foe.x - run.hero.x) <= 210 && Math.abs(foe.y - run.hero.y) <= 370).length
+        floor.peak = Math.max(nearby, floor.peak)
+        if (!run.bossDone && run.time - run.floorStart >= 4 && nearby === 0) floor.quiet += 0.25
+      }
+    }
     if (verbose && run.time >= nextReport) {
       nextReport += 60
       const build = run.weapons.map((weapon) => `${weapon.id}${weapon.level}`).join(' ')

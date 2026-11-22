@@ -8,9 +8,11 @@
 import type { DepartmentId, QuirkId, WeaponId } from "@/lib/roster/types";
 import type { ItemId, ItemState } from "@/lib/hr/kit";
 
+import type { ClassId } from "./classes";
+
 export type { WeaponId };
 
-export type FoeKind = "replyAll" | "paperPlane" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "lunchMonitor" | "sysadmin" | "auditor" | InterviewBoss | "meetingChair" | "shredder" | "coffeeMachine" | "vendingMachine" | "printerPrime" | "blobPrime" | "lunchThief" | "greaseFire" | "looseCable" | "hotRack";
+export type FoeKind = "replyAll" | "paperPlane" | "mondayBlob" | "meetingInvite" | "printerJam" | "middleManager" | "lunchMonitor" | "sysadmin" | "auditor" | InterviewBoss | "meetingChair" | "shredder" | "coffeeMachine" | "vendingMachine" | "printerPrime" | "blobPrime" | "lunchThief" | "greaseFire" | "looseCable" | "hotRack" | "paperShredling" | "rollingCart" | "patchDrone" | "securityEscort";
 
 /** What hurt the hero: a foe, or a hazard of the stage. */
 export type Source = FoeKind | "microwave" | "vent" | "projector";
@@ -108,6 +110,10 @@ export interface Foe {
   touch: number;
   xp: number;
   gold: number;
+  /** Normalized kill credit for denser waves; defaults to one. */
+  kpi?: number;
+  /** Part of a staged pack (ambient stragglers don't block the next beat). */
+  squad?: true;
   /** Knockback velocity, which fades. */
   pushX: number;
   pushY: number;
@@ -121,12 +127,15 @@ export interface Foe {
   charge: number;
   chargeX: number;
   chargeY: number;
+  /** A locked attack direction during a readable wind-up, followed by a short recovery. */
+  windup?: { left: number; angle: number };
+  recovery?: number;
+  /** Escorts briefly commit to the direction of their guard. */
+  guardAngle?: number;
   /** Seconds until a rubber duck may hit it again. */
   duckCooldown: number;
   /** Seconds left bound by Cease & Desist: it neither moves nor acts. */
   detained: number;
-  /** Seconds left glued by Sticky Situation: it crawls. */
-  stuck: number;
   /** Seconds left under Audit: it takes half again as much and pays double. */
   marked: number;
   /** Seconds until a blinking sysadmin may blink away again. */
@@ -204,7 +213,7 @@ export interface Gem {
 
 /** Something only the renderer cares about: a swing, a blast, a pop. */
 export interface Effect {
-  kind: "swing" | "blast" | "pop" | "duckHit" | "spikeWarn";
+  kind: "swing" | "blast" | "pop" | "duckHit" | "spikeWarn" | "repair";
   x: number;
   y: number;
   radius: number;
@@ -251,6 +260,8 @@ export interface Cameo {
   /** Rival: the hero's kill count when the floor began, and the KPI target to beat. */
   kills0?: number;
   target?: number;
+  /** Class-day credit uses the original floor budget even when there are more bodies. */
+  credited?: number;
   /** Rival: set once the floor has been scored. */
   done?: boolean;
   /** Rival: whether the target was beaten (gold) or not (a taunt). */
@@ -263,6 +274,8 @@ export interface Run {
   seed: number;
   rng: number;
   coworkerId: number;
+  /** Null for legacy days or the standalone interview sim. */
+  classId: ClassId | null;
   /** Multiplies foes' hp and (by half) their spawns; 1 on a coworker's first day. */
   difficulty: number;
   /** Set when the run is an interview: no review, no day, and the boss is the only goal. */
@@ -271,6 +284,9 @@ export interface Run {
   floor: number;
   /** The run time this floor began at, so a floor's horde and its spawns ramp from their own start. */
   floorStart: number;
+  /** Scripted wave state on a class day; zero also means no specialist pack has spawned yet. */
+  waveBeat?: number;
+  waveBeatAt?: number;
   /** The floor boss's foe id once it has walked in; null until then and after it falls. */
   bossId: number | null;
   /** The floor's boss is down: the pick offer and the stairs wait, the arena holds still. */

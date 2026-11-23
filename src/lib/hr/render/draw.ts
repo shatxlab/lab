@@ -8,6 +8,7 @@ import { ARENA, BOARDROOM, CART, COFFEE, DUCK_RADIUS, enrageFactor, ESCORT, HERO
 import type { Foe, Run } from "../sim/types";
 import { BOSS_PIXEL, type BossFrames } from "./bosses";
 import { FIGURE_PIXEL, type BossFigures } from "./boss-figures";
+import { AUDITOR_PIXEL } from "./auditor";
 import type { HeroFrames } from "./heroes";
 
 export interface View {
@@ -93,6 +94,8 @@ export interface Scene {
   bosses?: BossFrames | null;
   /** The people bosses baked from the sheet; null draws their shape stand-ins. */
   figures?: BossFigures | null;
+  /** Bosses with their own generated sprites (the auditor), taking precedence over the sheet figures. */
+  sprites?: BossFigures | null;
   /** The desk gear the hero carries; the wings and the loafers show on the sprite. */
   gear?: string[];
 }
@@ -119,7 +122,7 @@ export function drawRun(ctx: CanvasRenderingContext2D, run: Run, view: View, sce
   for (const gem of run.gems) drawGem(ctx, gem.x, gem.y, gem.value);
   for (const drop of run.drops) drawDropShadow(ctx, run, drop);
   const foes = [...run.foes].sort((a, b) => a.y - b.y);
-  for (const foe of foes) drawFoe(ctx, foe, time, scene.bosses, scene.figures, run.hero);
+  for (const foe of foes) drawFoe(ctx, foe, time, scene.bosses, scene.figures, scene.sprites, run.hero);
   drawHero(ctx, run, scene, time);
   drawDucks(ctx, run);
   for (const shot of run.shots) drawShot(ctx, shot.weapon, shot.x, shot.y, shot.vx, shot.vy, shot.radius, time);
@@ -726,7 +729,7 @@ function drawTell(ctx: CanvasRenderingContext2D, foe: Foe): void {
   ctx.restore();
 }
 
-function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number, bosses?: BossFrames | null, figures?: BossFigures | null, hero?: { x: number; y: number }): void {
+function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number, bosses?: BossFrames | null, figures?: BossFigures | null, sprites?: BossFigures | null, hero?: { x: number; y: number }): void {
   const { x, y, radius: r } = foe;
   drawTell(ctx, foe);
   // A boss dragged out too long enrages: a rising red ring under it, the tell for its climbing damage.
@@ -750,23 +753,26 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number, bosses?:
     ctx.stroke();
     ctx.restore();
   }
-  // The people bosses wear the pack's characters in their own suits, scaled up, with the walk cycle.
-  const figure = figures?.[foe.kind];
+  // The people bosses wear the pack's characters in their own suits, scaled up, with the walk cycle; a boss with
+  // its own generated sprite (the auditor) wears that instead, centred on its full canvas with no accessory drawn on.
+  const sprite = sprites?.[foe.kind];
+  const figure = sprite ?? figures?.[foe.kind];
   if (figure) {
     ellipseShadow(ctx, x, y, r);
     ctx.save();
     ctx.translate(x, 0);
     if (hero && hero.x < x - 0.1) ctx.scale(-1, 1);
-    const pixel = FIGURE_PIXEL[foe.kind] ?? 2.8;
+    const pixel = sprite ? AUDITOR_PIXEL : (FIGURE_PIXEL[foe.kind] ?? 2.8);
     const walking = foe.speed > 0;
     const image = walking ? figure.walk[Math.floor(time * 8) % figure.walk.length] : figure.stand;
     const width = figure.width * pixel;
     const height = figure.height * pixel;
     const feet = y + r * 0.55;
-    // The sprite's own middle sits `POSE_PAD.left` pixels in from the padded frame's edge (as for the hero).
-    const middle = (3 + (figure.width - 3 - 5) / 2) * pixel;
+    // The generated sprite fills its whole canvas; the sheet figure's own middle sits `POSE_PAD.left` pixels in
+    // from the padded frame's edge (as for the hero).
+    const middle = sprite ? width / 2 : (3 + (figure.width - 3 - 5) / 2) * pixel;
     ctx.drawImage(image, -middle, feet - height, width, height);
-    drawBossAccessory(ctx, foe, pixel, middle, feet, height);
+    if (!sprite) drawBossAccessory(ctx, foe, pixel, middle, feet, height);
     if (foe.hurt > 0) {
       ctx.globalAlpha = 0.75;
       ctx.drawImage(figure.flash, -width / 2, feet - height, width, height);

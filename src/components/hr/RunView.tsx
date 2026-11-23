@@ -7,6 +7,7 @@ import { KIT_SIZE } from "@/lib/hr/kit";
 import { bakeHero, type HeroFrames, type Sheet } from "@/lib/hr/render/heroes";
 import { bakeBosses, type BossFrames } from "@/lib/hr/render/bosses";
 import { bakeBossFigures, type BossFigures } from "@/lib/hr/render/boss-figures";
+import { loadAuditorFrames } from "@/lib/hr/render/auditor";
 import { cameraFor, drawRun, fitView, stickInput, type Stick, type View } from "@/lib/hr/render/draw";
 import { castSkill } from "@/lib/hr/sim/run";
 import { FLOOR_PLAN, FOES, INTERVIEW, PILOT_FLOORS, floorStage, xpToNext } from "@/lib/hr/sim/balance";
@@ -147,6 +148,19 @@ export function RunView({
   const figures = useMemo<BossFigures | null>(() => (sheet ? bakeBossFigures(sheet) : null), [sheet]);
   const figuresRef = useRef(figures);
   figuresRef.current = figures;
+  // The auditor's own PixelLab sprite, loaded once in the background; the sheet figure covers any load failure.
+  const [sprites, setSprites] = useState<BossFigures | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadAuditorFrames().then((frames) => {
+      if (alive && frames) setSprites({ auditor: frames });
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const spritesRef = useRef(sprites);
+  spritesRef.current = sprites;
 
   const lastPicksRef = useRef("");
   const lastClearedRef = useRef(false);
@@ -228,7 +242,7 @@ export function RunView({
         const ratio = canvas.width / Math.max(1, viewRef.current.width);
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         const moving = Math.hypot(run.hero.x - fromX, run.hero.y - fromY) > 0.01;
-        drawRun(ctx, run, viewRef.current, { frames: framesRef.current, department: coworker.department, moving, stick: stickRef.current, bosses: bossesRef.current, figures: figuresRef.current, gear: run.kit.map((item) => item.id) }, now / 1000);
+        drawRun(ctx, run, viewRef.current, { frames: framesRef.current, department: coworker.department, moving, stick: stickRef.current, bosses: bossesRef.current, figures: figuresRef.current, sprites: spritesRef.current, gear: run.kit.map((item) => item.id) }, now / 1000);
       }
       refresh();
       frame = requestAnimationFrame(tick);

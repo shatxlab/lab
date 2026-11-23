@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { clock, HR_TEXT, quirkLine } from "@/lib/hr/i18n";
 import { cameraFor, fitView, STICK_RADIUS, stickInput } from "@/lib/hr/render/draw";
 import { AUTHORED_BOSS_SPRITES, authoredSpritePixels } from "@/lib/hr/render/bosses";
+import { auditorPixels } from "@/lib/hr/render/auditor";
 import { heroPixels } from "@/lib/hr/render/heroes";
+import type { Pixels } from "@/lib/tycoon/render-support/poses";
 import { ARENA, QUIRK_NUMBER, SPAWN_DISTANCE } from "@/lib/hr/sim/balance";
 import { createRun } from "@/lib/hr/sim/run";
 import { QUIRKS } from "@/lib/roster/data";
@@ -95,6 +97,20 @@ describe("the authored boss sprites", () => {
     expect(pixels.data[(0 * width + 0) * 4 + 3]).toBe(0);
     // Every sprite is odd-shaped enough to need its own colour for its body, and every row fits the width.
     for (const row of sprite.rows) expect(row.length).toBeLessThanOrEqual(width);
+  });
+});
+
+describe("the auditor's own sprite", () => {
+  it("paints the flash as a white silhouette of the stand frame, keeping the walk cycle as shipped", () => {
+    const stand: Pixels = { data: new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 0, 0, 10, 20, 30, 255]), width: 3, height: 1 };
+    const walk: Pixels[] = [{ data: new Uint8ClampedArray(12), width: 3, height: 1 }];
+    const { stand: standPixels, walk: walkPixels, flash } = auditorPixels(stand, walk);
+    expect(standPixels).toBe(stand);
+    expect(walkPixels).toEqual(walk);
+    // The opaque red pixel went white; the transparent one stayed transparent.
+    expect([flash.data[0], flash.data[1], flash.data[2], flash.data[3]]).toEqual([255, 255, 255, 255]);
+    expect(flash.data[7]).toBe(0);
+    expect([flash.data[8], flash.data[9], flash.data[10]]).toEqual([255, 255, 255]);
   });
 });
 

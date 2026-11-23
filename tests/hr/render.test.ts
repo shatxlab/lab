@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { clock, HR_TEXT, quirkLine } from "@/lib/hr/i18n";
 import { cameraFor, fitView, STICK_RADIUS, stickInput } from "@/lib/hr/render/draw";
 import { AUTHORED_BOSS_SPRITES, authoredSpritePixels } from "@/lib/hr/render/bosses";
-import { spritePixels } from "@/lib/hr/render/boss-sprites";
+import { spritePixels, trimToArt } from "@/lib/hr/render/boss-sprites";
 import { heroPixels } from "@/lib/hr/render/heroes";
 import type { Pixels } from "@/lib/tycoon/render-support/poses";
 import { ARENA, QUIRK_NUMBER, SPAWN_DISTANCE } from "@/lib/hr/sim/balance";
@@ -111,6 +111,27 @@ describe("the bosses' own sprites", () => {
     expect([flash.data[0], flash.data[1], flash.data[2], flash.data[3]]).toEqual([255, 255, 255, 255]);
     expect(flash.data[7]).toBe(0);
     expect([flash.data[8], flash.data[9], flash.data[10]]).toEqual([255, 255, 255]);
+  });
+
+  it("crops the frames to the art, so the feet reach the canvas's bottom edge the renderer anchors on", () => {
+    // A 4x3 frame whose art floats one row up and leaves two transparent columns on the left.
+    const frame = (bottom: boolean): Pixels => {
+      const data = new Uint8ClampedArray(4 * 3 * 4);
+      const y = bottom ? 2 : 1;
+      data.set([255, 0, 0, 255], (y * 4 + 2) * 4);
+      return { data, width: 4, height: 3 };
+    };
+    const [a, b] = trimToArt([frame(false), frame(true)]);
+    expect([a.width, a.height]).toEqual([1, 2]);
+    // The red pixel keeps its row within the crop: the art never jumps between frames.
+    expect(Array.from(a.data.slice(0, 4))).toEqual([255, 0, 0, 255]);
+    expect(Array.from(a.data.slice(4, 8))).toEqual([0, 0, 0, 0]);
+    expect(Array.from(b.data.slice(0, 4))).toEqual([0, 0, 0, 0]);
+    expect(Array.from(b.data.slice(4, 8))).toEqual([255, 0, 0, 255]);
+  });
+
+  it("leaves an empty frame list alone", () => {
+    expect(trimToArt([])).toEqual([]);
   });
 });
 

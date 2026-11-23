@@ -36,6 +36,36 @@ export function spritePixels(stand: Pixels, walk: Pixels[]): HeroPixels {
   return { stand, walk, flash };
 }
 
+/** The frames cropped to the art's bounding box (the union over all of them): the feet reach the canvas's bottom
+ * edge, which is what the renderer anchors on — some generations leave a few transparent rows under the feet, and
+ * the boss then reads as floating above its shadow. The frames keep their relative placement, so the walk cycle
+ * stays put; every frame is at least 1x1 even for a fully transparent one. */
+export function trimToArt(frames: Pixels[]): Pixels[] {
+  if (frames.length === 0) return frames;
+  let left = frames[0].width, top = frames[0].height, right = 0, bottom = 0;
+  for (const frame of frames) {
+    for (let y = 0; y < frame.height; y += 1) {
+      for (let x = 0; x < frame.width; x += 1) {
+        if (frame.data[(y * frame.width + x) * 4 + 3] === 0) continue;
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+      }
+    }
+  }
+  const width = Math.max(1, right - left + 1);
+  const height = Math.max(1, bottom - top + 1);
+  return frames.map((frame) => {
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      const from = ((top + y) * frame.width + left) * 4;
+      data.set(frame.data.subarray(from, from + width * 4), y * width * 4);
+    }
+    return { data, width, height };
+  });
+}
+
 /** A PNG URL decoded into raw pixels; null if the fetch or the decode fails, and the pack figure stands in. */
 async function loadPixels(url: string): Promise<Pixels | null> {
   try {
@@ -71,7 +101,8 @@ async function loadSprite(dir: string): Promise<HeroFrames | null> {
     if (frame) walk.push(frame);
   }
   if (walk.length === 0) walk.push(stand);
-  const { stand: standPixels, walk: walkPixels, flash } = spritePixels(stand, walk);
+  const [standPixels, ...walkPixels] = trimToArt([stand, ...walk]);
+  const { flash } = spritePixels(standPixels, walkPixels);
   return {
     stand: toCanvas(standPixels),
     walk: walkPixels.map(toCanvas),

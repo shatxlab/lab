@@ -7,7 +7,7 @@ import { KIT_SIZE } from "@/lib/hr/kit";
 import { bakeHero, type HeroFrames, type Sheet } from "@/lib/hr/render/heroes";
 import { bakeBosses, type BossFrames } from "@/lib/hr/render/bosses";
 import { bakeBossFigures, type BossFigures } from "@/lib/hr/render/boss-figures";
-import { loadAuditorFrames } from "@/lib/hr/render/auditor";
+import { loadBossSprites } from "@/lib/hr/render/boss-sprites";
 import { cameraFor, drawRun, fitView, stickInput, type Stick, type View } from "@/lib/hr/render/draw";
 import { castSkill } from "@/lib/hr/sim/run";
 import { FLOOR_PLAN, FOES, INTERVIEW, PILOT_FLOORS, floorStage, xpToNext } from "@/lib/hr/sim/balance";
@@ -148,12 +148,12 @@ export function RunView({
   const figures = useMemo<BossFigures | null>(() => (sheet ? bakeBossFigures(sheet) : null), [sheet]);
   const figuresRef = useRef(figures);
   figuresRef.current = figures;
-  // The auditor's own PixelLab sprite, loaded once in the background; the sheet figure covers any load failure.
+  // The bosses' own PixelLab sprites, loaded once in the background; the sheet figures cover any load failure.
   const [sprites, setSprites] = useState<BossFigures | null>(null);
   useEffect(() => {
     let alive = true;
-    loadAuditorFrames().then((frames) => {
-      if (alive && frames) setSprites({ auditor: frames });
+    loadBossSprites().then((frames) => {
+      if (alive && frames) setSprites(frames);
     });
     return () => {
       alive = false;

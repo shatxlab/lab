@@ -8,7 +8,7 @@ import { ARENA, BOARDROOM, CART, COFFEE, DUCK_RADIUS, enrageFactor, ESCORT, HERO
 import type { Foe, Run } from "../sim/types";
 import { BOSS_PIXEL, type BossFrames } from "./bosses";
 import { FIGURE_PIXEL, type BossFigures } from "./boss-figures";
-import { AUDITOR_PIXEL } from "./auditor";
+import { BOSS_SPRITE_PIXEL } from "./boss-sprites";
 import type { HeroFrames } from "./heroes";
 
 export interface View {
@@ -762,7 +762,7 @@ function drawFoe(ctx: CanvasRenderingContext2D, foe: Foe, time: number, bosses?:
     ctx.save();
     ctx.translate(x, 0);
     if (hero && hero.x < x - 0.1) ctx.scale(-1, 1);
-    const pixel = sprite ? AUDITOR_PIXEL : (FIGURE_PIXEL[foe.kind] ?? 2.8);
+    const pixel = sprite ? (BOSS_SPRITE_PIXEL[foe.kind] ?? 1.5) : (FIGURE_PIXEL[foe.kind] ?? 2.8);
     const walking = foe.speed > 0;
     const image = walking ? figure.walk[Math.floor(time * 8) % figure.walk.length] : figure.stand;
     const width = figure.width * pixel;

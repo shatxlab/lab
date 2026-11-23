@@ -20,22 +20,24 @@ harder to move through, and make the build feel like a specialization rather tha
 
 Choose once, before the first new workday. Show the three tracks on the hero screen with a strength, a trade-off,
 and a preview of their gear. Keep the class between days; no class swaps in v1. Migration never requires a reset.
-**Sticky Situation** is gone (thumb button, keyboard path and crawl effect); **Sticky Notes** stay automatic in every
-Intern track. The tracks reuse weapons and passives, with a few class-specific numbers and behaviors:
+**Sticky Situation** is gone (thumb button, keyboard path and crawl effect). Since 2026-11-17 (user ask: "not Sticky
+Notes as the default no matter the class") **each class fights with its own default weapon, unique per class and
+equipped from the first second**; the rest of the pool is picked up during runs:
 
-| Class | Playstyle / trade-off | Weapons besides Sticky Notes | Class passive |
+| Class | Playstyle / trade-off | Default weapon | Rest of the pool | Class passive |
 | --- | --- | --- | --- |
-| Field Rep | A mobile shooter: line foes up and pierce them from a distance; nothing protects you up close | Business Cards, Spreadsheet | Power Tie |
-| Compliance Officer | A front-line regulator: knock crowds back and swat up to two nearby shots with the Binder; short reach | Policy Binder, Rubber Duck | Ergonomic Chair |
-| Systems Operator | An area-effects engineer: rain hardware on packed groups; racks hit lone bosses for less | Server Rack, Fine Print | Lanyard |
+| Field Rep | A mobile shooter: line foes up and pierce them from a distance; nothing protects you up close | Business Cards | Spreadsheet | Power Tie |
+| Compliance Officer | A front-line regulator: knock crowds back and swat up to two nearby shots; short reach until the Binder arrives | Sticky Notes | Policy Binder, Rubber Duck | Ergonomic Chair |
+| Systems Operator | An area-effects engineer: rain hardware on packed groups; racks hit lone bosses for less | Server Rack | Fine Print | Lanyard |
 
-After the user's feedback ("skills overlap in classes"), the six non-signature weapons and the three non-shared
-passives are split exactly once across the tracks — no weapon or class passive appears in two pools, so a class
-pick is a real identity, not a slice of a shared menu. The picker card explains each class before the choice: a
-tagline, one bullet per weapon with what it actually does, the class passive with its number, and a
-"Watch out" trade-off line; the shared hint names what everyone keeps (Sticky Notes, the four perk passives).
+After the user's feedback ("skills overlap in classes"), the weapons and the three non-shared passives are split
+exactly once across the tracks — no weapon or class passive appears in two pools, so a class pick is a real identity,
+not a slice of a shared menu. The picker card explains each class before the choice: a tagline, one bullet per
+weapon with what it actually does (the default first), the class passive with its number, and a
+"Watch out" trade-off line; the shared hint names each class's default weapon and the four shared perk passives.
 Each class keeps a small edge on its own tools: Cards pierce one more, the Binder reaches a bit further and
 swats shots, the Operator's Fine Print spreads wider while the rack trades single-target bite for area.
+Unclassed (legacy) days keep the intern department's Sticky Notes as the department signature.
 
 **The hero card was rebuilt for the same feedback** ("the placement of text and the hero avatar is not the
 best"): the card is a column of full-width rows now — a header with the portrait beside the name, the class line
@@ -46,14 +48,22 @@ identity block, chips 3×2, no horizontal overflow), plus the HR test suite; vis
 measured boxes, not a human eye.
 
 Coffee, Gym Membership, Sneakers and Mentor stay shared so existing promotion perks can still grant and upgrade
-those passives. Keep current slot/level caps (4 weapons including the signature, 4 passives). Level-up and boss-clear
-cards both draw only from the class pool. Offers reserve an upgrade to equipped gear and a new item when available;
-Business Cards/Binder/Rack get the new-item slot until acquired. Other slots are seeded rolls. Higher Sticky Notes
-levels scale less aggressively on class days so the signature doesn't drown out the new weapons.
+those passives. Keep current slot/level caps (4 weapons including the default, 4 passives). Level-up and boss-clear
+cards both draw only from the class pool. Offers reserve an upgrade to equipped gear and — while a pool weapon is
+unowned — the new-item slot for that weapon. Other slots are seeded rolls.
 Boss clears use the same pool, with existing lucky/senior bonus choices, hammers for equipped class weapons, and desk
 loot. Keep the existing shared panel and reward cadence: if a level-up already supplies the clear's offer, don't add
 another screen. When upgrades run out, offer an 18% max-HP snack or gold, not off-class gear. The final audit still ends
 in the day result, not an extra choice.
+
+**Default-weapon split (2026-11-17).** The user asked for a unique default weapon per class instead of automatic
+Sticky Notes for everyone. Shipped: Business Cards for Field Rep, Sticky Notes for Compliance (its ranged chip —
+the Binder becomes the pickup), Server Rack for Systems. Offers now reserve the new-item slot for an unowned pool
+weapon, and the bot grabs new pool weapons before pumping its default. The class-day Sticky Notes damage dampener
+is gone; the rack casts sooner (cooldown 2.2 → 1.8 s) with its lone-boss penalty softened (0.62 → 0.78), and Fine
+Print hits a quarter harder (4 → 5). Bot, 12 fresh seeds/track: Field Rep 10/12, Compliance 10/12, Systems 10/12
+(previously 24/24-seed 100% for the two notes-backed classes, so the phone playtest should check their late
+career first). Day medians: Field Rep ~15–17 min, Compliance ~14–18, Systems ~18–21.
 
 Store the class on the career and snapshot it into each new run. Existing careers choose on their next new day:
 preview what stays equipped, retain compatible gear levels, and keep off-class gear levels in the saved build but

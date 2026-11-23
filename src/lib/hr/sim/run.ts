@@ -92,7 +92,7 @@ import {
   xpToNext,
 } from "./balance";
 import { Grid } from "./grid";
-import { classPassives, classWeapons, type ClassId } from "./classes";
+import { classPassives, classSignature, classWeapons, type ClassId } from "./classes";
 import { baseNumbers, withPassives } from "./hero";
 import { ITEM_DROPS, itemEffect, type ItemState } from "../kit";
 import { applyPick, rollPicks } from "./picks";
@@ -133,9 +133,10 @@ type SavedBuild = { weapons?: Partial<Record<WeaponId, number>>; passives?: Part
 
 /** The loadout used by both the class preview and the day, including promotion grants. */
 export function startingLoadout(coworker: Coworker, build: SavedBuild, classId: ClassId | null) {
-  const signature = DEPARTMENTS[coworker.department].weapon;
+  // A classed day fights with the class's own default weapon; an unclassed (legacy) day keeps the department's.
+  const signature = classId ? classSignature(classId) : DEPARTMENTS[coworker.department].weapon;
   const saved = Object.entries(build.weapons ?? {}) as [WeaponId, number][];
-  const weaponIds = classId ? classWeapons(classId, signature) : WEAPON_IDS;
+  const weaponIds = classId ? classWeapons(classId) : WEAPON_IDS;
   const armed = saved.filter(([id, level]) => weaponIds.includes(id) && Number.isFinite(level) && level >= 1);
   const signatureLevel = Math.max(armed.find(([id]) => id === signature)?.[1] ?? 0, coworker.perks.includes("overtime") ? 2 : 1);
   const equipped = classId ? [[signature, signatureLevel] as const, ...armed.filter(([id]) => id !== signature).slice(0, MAX_WEAPONS - 1)] : armed;

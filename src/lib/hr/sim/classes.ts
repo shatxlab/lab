@@ -7,26 +7,24 @@ export type ClassId = (typeof CLASS_IDS)[number];
 export const SHARED_PASSIVES = ["coffee", "gym", "sneakers", "mentor"] as const;
 
 /**
- * One weapon pool and one class passive per class, with nothing shared between tracks (besides the Intern's
- * automatic Sticky Notes): the six other weapons and the three other passives are split exactly once.
+ * One default weapon, one rest-of-pool and one class passive per class, with nothing shared between tracks. The
+ * default (signature) weapon is equipped at the start of every class day and is unique per class; the rest of the
+ * pool is picked up during runs, so every weapon belongs to exactly one class.
  */
-export const CLASSES: Record<ClassId, { weapons: readonly WeaponId[]; passives: readonly PassiveId[] }> = {
-  fieldRep: { weapons: ["businessCard", "spreadsheet"], passives: ["powerTie"] },
-  compliance: { weapons: ["policyBinder", "rubberDuck"], passives: ["ergoChair"] },
-  systems: { weapons: ["serverRack", "contract"], passives: ["lanyard"] },
+export const CLASSES: Record<ClassId, { signature: WeaponId; weapons: readonly WeaponId[]; passives: readonly PassiveId[] }> = {
+  fieldRep: { signature: "businessCard", weapons: ["spreadsheet"], passives: ["powerTie"] },
+  compliance: { signature: "stickyNotes", weapons: ["policyBinder", "rubberDuck"], passives: ["ergoChair"] },
+  systems: { signature: "serverRack", weapons: ["contract"], passives: ["lanyard"] },
 };
 
-/** The one weapon a class offer always seeds before it is owned. */
-export const CLASS_CORE: Record<ClassId, WeaponId> = {
-  fieldRep: "businessCard", compliance: "policyBinder", systems: "serverRack",
-};
-
-export function isClassId(id: unknown): id is ClassId {
-  return CLASS_IDS.some((entry) => entry === id);
+/** The class's default weapon: unique per class, equipped before the first offer. */
+export function classSignature(id: ClassId): WeaponId {
+  return CLASSES[id].signature;
 }
 
-export function classWeapons(id: ClassId, signature: WeaponId): WeaponId[] {
-  return [...new Set([signature, ...CLASSES[id].weapons])];
+/** Everything a class day can offer as a weapon: the default first, then the rest of the pool. */
+export function classWeapons(id: ClassId): WeaponId[] {
+  return [CLASSES[id].signature, ...CLASSES[id].weapons];
 }
 
 /** The passives a class day can offer: the shared four, then the class's own. */
@@ -37,4 +35,8 @@ export function classPassives(id: ClassId): PassiveId[] {
 /** The class's exclusive passive. */
 export function classPassive(id: ClassId): PassiveId {
   return CLASSES[id].passives[0];
+}
+
+export function isClassId(id: unknown): id is ClassId {
+  return CLASS_IDS.some((entry) => entry === id);
 }

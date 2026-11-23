@@ -379,10 +379,10 @@ const weapon = (pattern: Pattern, base: Partial<WeaponNumbers>, perLevel: Partia
 export const WEAPONS: Readonly<Record<WeaponId, WeaponDef>> = {
   stickyNotes: weapon("homing", { cooldown: 0.55, damage: 8, radius: 5, speed: 320, life: 1.5 }, { damage: 3, count: 0.6, cooldown: -0.03, pierce: 0.3 }),
   spreadsheet: weapon("pierce", { cooldown: 1.1, damage: 16, pierce: 4, radius: 8, speed: 260, life: 1.6 }, { damage: 5, pierce: 1, count: 0.34 }),
-  serverRack: weapon("drop", { cooldown: 2.2, damage: 22, radius: 45, life: 0.6 }, { damage: 7, radius: 4, cooldown: -0.15, count: 0.3 }),
+  serverRack: weapon("drop", { cooldown: 1.8, damage: 22, radius: 45, life: 0.6 }, { damage: 7, radius: 4, cooldown: -0.15, count: 0.3 }),
   policyBinder: weapon("swing", { cooldown: 1, damage: 12, radius: 55, knockback: 260 }, { damage: 4, radius: 6, cooldown: -0.05 }),
   rubberDuck: weapon("orbit", { damage: 8, radius: 60, speed: 3, life: 0.4 }, { damage: 3, radius: 3, count: 1 }),
-  contract: weapon("aura", { cooldown: 0.5, damage: 4, radius: 50, slow: 0.3 }, { damage: 2, radius: 8, slow: 0.03 }),
+  contract: weapon("aura", { cooldown: 0.5, damage: 5, radius: 50, slow: 0.3 }, { damage: 2, radius: 8, slow: 0.03 }),
   businessCard: weapon("fan", { cooldown: 1.1, damage: 10, count: 3, pierce: 1, radius: 5, speed: 300, life: 1.2 }, { damage: 3, count: 0.5, pierce: 0.2 }),
 };
 
@@ -395,7 +395,7 @@ export const FAN_SPREAD = 0.22;
 export const FIELD_FAN = { range: 275, cone: Math.PI / 3, assist: 0.7 } as const;
 export const SYSTEMS_RACK_DAMAGE = 0.76;
 /** Racks excel against groups; the Operator still needs a single-target weapon for bosses. */
-export const SYSTEMS_RACK_BOSS_DAMAGE = 0.62;
+export const SYSTEMS_RACK_BOSS_DAMAGE = 0.78;
 export const BINDER_PARRY = { count: 2, radius: 48 } as const;
 /** A server rack lands on a foe within this reach of the hero, or in front of them. */
 export const DROP_REACH = 300;
@@ -411,9 +411,6 @@ export function weaponNumbers(id: WeaponId, level: number, mutation?: MutationId
   for (const key of Object.keys(perLevel) as (keyof WeaponNumbers)[]) numbers[key] += perLevel[key]! * (level - 1);
   numbers.count = Math.floor(numbers.count);
   numbers.pierce = Math.floor(numbers.pierce);
-  // Compliance can engage just beyond boss contact; it's still the shortest-range track.
-  // Keep the base signature, but prevent its upgrades from eclipsing the whole class.
-  if (classId && id === "stickyNotes") numbers.damage -= Math.max(0, level - 2) * 1.5;
   // Each class's small edge on its own tools: the Binder reaches a bit further, cards pierce one more, the
   // Operator's fine print spreads wider and the rack trades single-target bite for area coverage.
   if (classId === "compliance" && id === "policyBinder") numbers.radius += 15;

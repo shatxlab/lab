@@ -5,7 +5,6 @@
 // weapon, then a heal when low, then other weapons, then passives. A real player who herds the horde and plans a
 // build should do better.
 
-import { CLASS_CORE } from '../../src/lib/hr/sim/classes.ts'
 import { ARENA } from '../../src/lib/hr/sim/balance.ts'
 import { choose, descend, step, STEP } from '../../src/lib/hr/sim/run.ts'
 import type { Input, Pick, Run } from '../../src/lib/hr/sim/types.ts'
@@ -33,7 +32,9 @@ export function score(run: Run, pick: Pick): number {
   const signature = run.weapons[0]?.id
   switch (pick.kind) {
     case 'weapon':
-      if (run.classId && pick.id === CLASS_CORE[run.classId] && pick.level === 1) return 105
+      // A class day: grab each new pool weapon while a slot is free, then pump the default. An unclassed day keeps
+      // the department's signature ahead of the rest.
+      if (run.classId && pick.level === 1) return 105
       if (pick.id === signature) return 100
       return pick.level > 1 ? 80 - WEAPON_ORDER.indexOf(pick.id) : 60 - WEAPON_ORDER.indexOf(pick.id)
     case 'passive':

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { careerBuild, normalizeCareer } from "@/lib/hr/career";
 import { CART, FLOOR_PLAN, FOES, PILOT_FLOORS, SPECIALIST, floorStage, xpToNext } from "@/lib/hr/sim/balance";
-import { CLASS_CORE, CLASS_IDS, CLASSES, SHARED_PASSIVES, classPassive, classPassives, classWeapons, type ClassId } from "@/lib/hr/sim/classes";
+import { CLASS_IDS, CLASSES, SHARED_PASSIVES, classPassive, classPassives, classSignature, classWeapons, type ClassId } from "@/lib/hr/sim/classes";
 import { PASSIVE_IDS, WEAPON_IDS } from "@/lib/hr/sim/balance";
 import { createRun, descend, RUN_VERSION, step, STEP } from "@/lib/hr/sim/run";
 import { possiblePicks } from "@/lib/hr/sim/picks";
@@ -37,7 +37,7 @@ function foe(run: Run, kind: FoeKind, dx: number, dy: number, changes: Partial<F
 
 function allowed(run: Run, offered: Pick[]) {
   for (const pick of offered) {
-    if (pick.kind === "weapon") expect(classWeapons(run.classId!, "stickyNotes")).toContain(pick.id);
+    if (pick.kind === "weapon") expect(classWeapons(run.classId!)).toContain(pick.id);
     if (pick.kind === "passive") expect(classPassives(run.classId!)).toContain(pick.id);
     if (pick.kind === "mutation") expect(run.weapons.some(({ id }) => id === pick.weapon)).toBe(true);
   }
@@ -52,26 +52,26 @@ function killBoss(run: Run) {
 }
 
 describe("HR classes", () => {
-  it("splits the arsenal: every weapon and class passive belongs to exactly one class", () => {
+  it("splits the arsenal: every weapon belongs to one class, and each class's default weapon is its own", () => {
     const weapons: WeaponId[] = [];
     const passives: PassiveId[] = [];
     for (const id of CLASS_IDS) {
-      weapons.push(...CLASSES[id].weapons);
+      weapons.push(classSignature(id), ...CLASSES[id].weapons);
       passives.push(...CLASSES[id].passives);
     }
     expect(new Set(weapons).size).toBe(weapons.length);
     expect(new Set(passives).size).toBe(passives.length);
-    // Sticky Notes are everyone's signature; the other six weapons and three passives are split once each.
-    expect(weapons).toHaveLength(WEAPON_IDS.length - 1);
+    // Every weapon and non-shared passive is split exactly once across the tracks.
+    expect(weapons).toHaveLength(WEAPON_IDS.length);
     expect(passives).toHaveLength(PASSIVE_IDS.length - SHARED_PASSIVES.length);
-    for (const id of CLASS_IDS) expect(CLASS_CORE[id]).not.toBe("stickyNotes");
+    // No two classes share a default weapon.
+    expect(new Set(CLASS_IDS.map(classSignature)).size).toBe(CLASS_IDS.length);
   });
   it.each(CLASS_IDS)("filters both XP and boss rewards for %s, with a new class weapon and an owned upgrade", (classId) => {
     const level = newDay(classId);
     level.gems.push({ id: 53, x: level.hero.x, y: level.hero.y, value: xpToNext(level.level) + 1, pulled: false });
     step(level, still);
-    expect(level.picks).toContainEqual({ kind: "weapon", id: "stickyNotes", level: 2 });
-    expect(level.picks).toContainEqual({ kind: "weapon", id: CLASS_CORE[classId], level: 1 });
+    expect(level.picks).toContainEqual({ kind: "weapon", id: classSignature(classId), level: 2 });
     allowed(level, level.picks!);
     const floor = newDay(classId);
     killBoss(floor);
@@ -94,10 +94,10 @@ describe("HR classes", () => {
 
   it("uses fallback rewards at capacity and doesn't add a reward screen to the final audit", () => {
     const run = newDay("compliance");
-    run.weapons = classWeapons("compliance", "stickyNotes").map((id) => ({ id, level: 6, spin: 0, cooldownLeft: 0 }));
+    run.weapons = classWeapons("compliance").map((id) => ({ id, level: 6, spin: 0, cooldownLeft: 0 }));
     run.passives = { gym: 5, mentor: 5, sneakers: 5, coffee: 5 };
     expect(possiblePicks(run)).toEqual([]);
-    run.mutations = { stickyNotes: "tandem", policyBinder: "gravity" };
+    run.mutations = { rubberDuck: "wide", policyBinder: "gravity" };
     killBoss(run);
     expect(run.picks).toEqual([{ kind: "heal" }, { kind: "gold" }]);
     const final = room(20);

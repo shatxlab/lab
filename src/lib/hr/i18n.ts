@@ -154,7 +154,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     goToWork: "Go to work",
     chooseClass: "Choose a career class",
     classHint:
-      "Your class sets what level-ups and bosses offer — only its weapons and passive come up. Everyone keeps the automatic Sticky Notes; Coffee, Gym, Sneakers and Mentor stay shared. The choice locks when you start work.",
+      "Your class sets what level-ups and bosses offer — only its weapons and passive come up, and each class fights with its own default weapon from the first minute: Business Cards, Sticky Notes or Server Rack. Coffee, Gym, Sneakers and Mentor stay shared. The choice locks when you start work.",
     classStartingGear: "Starts with",
     classArchived: "Stored, not equipped",
     classPassiveLabel: "Class passive",
@@ -164,7 +164,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         name: "Field Rep",
         tagline: "A mobile shooter: line foes up and pierce them from a distance.",
         kit: [
-          "Business Cards: a fan of piercing shots that lean toward the foes you face",
+          "Business Cards: a fan of piercing shots that lean toward the foes you face — your default weapon",
           "Spreadsheet: hurled at the nearest foe, piercing through a line",
         ],
         tradeoff: "Nothing protects you up close: no knockback, no shot blocking.",
@@ -173,6 +173,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         name: "Compliance Officer",
         tagline: "A front-line regulator: hold the crowd at arm's length.",
         kit: [
+          "Sticky Notes: a stream of notes that chase the nearest foes — your default weapon",
           "Policy Binder: swings around you, knocking crowds back — and swats up to two nearby shots out of the air",
           "Rubber Duck: ducks orbit you and peck everything they touch",
         ],
@@ -182,7 +183,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         name: "Systems Operator",
         tagline: "An area-effects engineer: rain hardware on packed groups.",
         kit: [
-          "Server Rack: crashes down on packed groups — but hits lone bosses for less",
+          "Server Rack: crashes down on packed groups — but hits lone bosses for less — your default weapon",
           "Fine Print: a slowing, damaging cloud of contract clauses around you",
         ],
         tradeoff: "No escape tool: when a group closes in, you fight your way out.",
@@ -445,7 +446,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
     goToWork: "На работу",
     chooseClass: "Выберите класс",
     classHint:
-      "Класс задаёт награды за уровни и боссов — в выпадениях только его оружие и пассив. У всех остаются автоматические стикеры; кофе, зал, кроссовки и наставник — общие. Выбор закрепляется с началом работы.",
+      "Класс задаёт награды за уровни и боссов — в выпадениях только его оружие и пассив, и каждый класс с первой минуты дерётся своим оружием по умолчанию: визитки, стикеры или серверная стойка. Кофе, зал, кроссовки и наставник — общие. Выбор закрепляется с началом работы.",
     classStartingGear: "На старте",
     classArchived: "На хранении, не экипировано",
     classPassiveLabel: "Пассив класса",
@@ -455,7 +456,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         name: "Торговый представитель",
         tagline: "Мобильный стрелок: выстраивайте врагов в линию и пробивайте насквозь.",
         kit: [
-          "Визитки: веер пробивающих выстрелов, доворачивающих к целям перед вами",
+          "Визитки: веер пробивающих выстрелов, доворачивающих к целям перед вами — оружие по умолчанию",
           "Таблица: летит в ближайшего врага и пробивает линию насквозь",
         ],
         tradeoff: "Вблизи никакой защиты: ни отбрасывания, ни сбивания снарядов.",
@@ -464,6 +465,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         name: "Специалист по регламенту",
         tagline: "Регулятор на передовой: держите толпу на расстоянии вытянутой папки.",
         kit: [
+          "Стикеры: поток стикеров летит за ближайшими врагами — оружие по умолчанию",
           "Папка с политиками: вращается вокруг вас, отталкивает толпу — и сбивает до двух ближайших снарядов",
           "Резиновая утка: утки кружат вокруг вас и клюют всё, к чему прикоснутся",
         ],
@@ -473,7 +475,7 @@ export const HR_TEXT: Record<AppLang, HrText> = {
         name: "Системный оператор",
         tagline: "Инженер площадного урона: обрушивайте железо на плотные группы.",
         kit: [
-          "Серверная стойка: падает на плотные группы — но по одиночным боссам бьёт слабее",
+          "Серверная стойка: падает на плотные группы — но по одиночным боссам бьёт слабее — оружие по умолчанию",
           "Мелкий шрифт: замедляющее и ранящее облако договорных пунктов вокруг вас",
         ],
         tradeoff: "Никуда не убежать: если группа взяла в кольцо, прорываться придётся боем.",

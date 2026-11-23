@@ -127,7 +127,7 @@ describe("HrApp", () => {
     expect(view.container.textContent).toContain("Walked out");
     expect(localStorage.getItem(RUN_STORAGE_KEY)).toBeNull();
     expect(readSave().day).toBe(1);
-    expect(readCareer()).toEqual({ ...defaultCareer(), focusId: 2, owned: [2], gold: 7, classId: "fieldRep", build: { weapons: { serverRack: 4, spreadsheet: 1 }, passives: {} }, slump: 1 });
+    expect(readCareer()).toEqual({ ...defaultCareer(), focusId: 2, owned: [2], gold: 7, classId: "fieldRep", build: { weapons: { serverRack: 4, businessCard: 1 }, passives: {} }, slump: 1 });
     view.unmount();
   });
 
@@ -196,7 +196,7 @@ describe("HrApp", () => {
     await act(async () => start.click());
     expect(readCareer().classId).toBe("systems");
     expect(readRun()?.classId).toBe("systems");
-    expect(readRun()?.weapons.map((weapon) => weapon.id)).toEqual(["stickyNotes", "serverRack"]);
+    expect(readRun()?.weapons.map((weapon) => weapon.id)).toEqual(["serverRack"]);
     expect(view.container.querySelector(".hr-skill-button")).toBeNull();
     view.unmount();
   });

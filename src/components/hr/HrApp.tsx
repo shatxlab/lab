@@ -7,7 +7,7 @@ import { clock, HR_TEXT, quirkLine, type HrText } from "@/lib/hr/i18n";
 import { bakeHero, loadSheet, type Sheet } from "@/lib/hr/render/heroes";
 import { HERO_BASE, PASSIVE_IDS, WEAPON_IDS, xpToNext } from "@/lib/hr/sim/balance";
 import { createRun, startingLoadout } from "@/lib/hr/sim/run";
-import { CLASS_IDS, classPassive, type ClassId } from "@/lib/hr/sim/classes";
+import { CLASS_IDS, classPassive, classSignature, type ClassId } from "@/lib/hr/sim/classes";
 import type { Run } from "@/lib/hr/sim/types";
 import { mergeKit, type ItemState } from "@/lib/hr/kit";
 import { baseNumbers } from "@/lib/hr/sim/hero";
@@ -389,7 +389,7 @@ function CoworkerCard({ coworker, sheet, text, action, onAct, showCareer, kit, c
         <div className="hr-card-id">
           <p className="hr-card-name">{coworker.name}</p>
           <p className="hr-card-class">
-            {classId ? text.classes[classId].name : text.departments[coworker.department]} · {text.weapons[departmentWeapon(coworker)].name}
+            {classId ? text.classes[classId].name : text.departments[coworker.department]} · {text.weapons[classId ? classSignature(classId) : departmentWeapon(coworker)].name}
           </p>
           {showCareer && (
             <p className="hr-card-rank">

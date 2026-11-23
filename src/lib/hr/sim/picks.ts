@@ -1,5 +1,4 @@
-import { DEPARTMENTS } from "@/lib/roster/data";
-import { CLASS_CORE, classPassives, classWeapons } from "./classes";
+import { classPassives, classWeapons } from "./classes";
 import { random } from "@/lib/tower/sim/random";
 import {
   GOLD_PICK,
@@ -19,7 +18,7 @@ import type { Pick, Run } from "./types";
 /** Everything the hero could take right now: the next level of what they have, and new things while slots are free. */
 export function possiblePicks(run: Run): Pick[] {
   const picks: Pick[] = [];
-  for (const id of run.classId ? classWeapons(run.classId, DEPARTMENTS[run.department].weapon) : WEAPON_IDS) {
+  for (const id of run.classId ? classWeapons(run.classId) : WEAPON_IDS) {
     const owned = run.weapons.find((weapon) => weapon.id === id);
     if (owned ? owned.level < MAX_WEAPON_LEVEL : run.weapons.length < MAX_WEAPONS) picks.push({ kind: "weapon", id, level: (owned?.level ?? 0) + 1 });
   }
@@ -39,15 +38,14 @@ export function rollPicks(run: Run, lucky = 0): Pick[] {
   const draw = (indexes: number[]) => {
     if (indexes.length > 0) offer.push(pool.splice(indexes[Math.floor(random(run) * indexes.length)], 1)[0]);
   };
+  // The class's default weapon is equipped from the start, so the offer just reserves an upgrade and a new item
+  // while either exists; the new slot prefers a pool weapon that isn't owned yet.
   if (run.classId) {
-    const core = CLASS_CORE[run.classId];
     const upgrades = pool.filter((pick) => "level" in pick && pick.level > 1);
-    const signature = DEPARTMENTS[run.department].weapon;
-    const specialized = upgrades.filter((pick) => pick.kind !== "weapon" || pick.id !== signature);
-    const eligibleUpgrades = specialized.length > 0 ? specialized : upgrades;
-    draw(pool.flatMap((pick, i) => eligibleUpgrades.includes(pick) ? [i] : []));
-    const newCore = pool.findIndex((pick) => pick.kind === "weapon" && pick.id === core && pick.level === 1);
-    draw(newCore >= 0 ? [newCore] : pool.flatMap((pick, i) => "level" in pick && pick.level === 1 ? [i] : []));
+    draw(pool.flatMap((pick, i) => upgrades.includes(pick) ? [i] : []));
+    const fresh = pool.filter((pick) => pick.kind === "weapon" && pick.level === 1);
+    const source = fresh.length > 0 ? fresh : pool.filter((pick) => "level" in pick && pick.level === 1);
+    draw(pool.flatMap((pick, i) => source.includes(pick) ? [i] : []));
   }
   while (offer.length < size && pool.length > 0) draw(pool.map((_, i) => i));
   if (offer.length < size) offer.push({ kind: "heal" });

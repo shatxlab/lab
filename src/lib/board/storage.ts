@@ -10,6 +10,7 @@ import {
   type BoardElement,
   type View,
 } from "@/lib/board/model";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** Persisted key; the `lab:` prefix puts it in the settings backup automatically. */
 export const BOARD_STORAGE_KEY = "lab:board:v2";
@@ -28,7 +29,7 @@ export const emptyBoard = (): BoardState => ({ elements: [], view: defaultView()
 
 function storageOrUndefined(): BoardStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

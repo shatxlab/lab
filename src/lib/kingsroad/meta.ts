@@ -1,5 +1,6 @@
 import { MAPS } from "./sim/maps";
 import type { MapId } from "./sim/types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** The best stars won on each road, kept between games. */
 export const KINGSROAD_STORAGE_KEY = "lab:kingsroad:v1";
@@ -15,7 +16,7 @@ export interface KingsroadStorage {
 
 function storageOrUndefined(): KingsroadStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

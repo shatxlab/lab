@@ -1,5 +1,6 @@
 import { CARD_COUNTS, DEFAULT_CARD_COUNT, isLang, isThemeId } from "./themes";
 import type { CouplesSettings, GameId, Lang, Mode, ThemeId } from "./types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** Persisted key for the couples setup and lifetime stats. */
 export const COUPLES_STORAGE_KEY = "lab:couples:v1";
@@ -28,7 +29,7 @@ export interface CouplesStorage {
 
 function storageOrUndefined(): CouplesStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

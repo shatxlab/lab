@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { tpw } from "@/lib/apps/pwa-i18n";
 import { withBase } from "@/lib/apps/paths";
+import { bootStorageMirror } from "@/lib/apps/storage-mirror";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 
 /** How often an open tab asks the server whether a newer worker exists. */
@@ -17,6 +18,13 @@ export default function PwaRegister() {
   const lang = useAppLang();
   const [notice, setNotice] = React.useState<boolean>(false);
   const refreshing = React.useRef(false);
+
+  // Persisted-storage grant plus restore of evicted saves. `bootStorageMirror`
+  // is memoized: the layout's head script usually runs it first — this effect
+  // is the fallback for pages without the script.
+  React.useEffect(() => {
+    bootStorageMirror();
+  }, []);
 
   React.useEffect(() => {
     if (!import.meta.env.PROD || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;

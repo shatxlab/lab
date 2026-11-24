@@ -1,6 +1,7 @@
 import { RUN_VERSION } from "./sim/run";
 import { isClassId } from "./sim/classes";
 import type { Run } from "./sim/types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /**
  * The run in progress, saved as it goes (the page writes it when hidden or closed and at every level-up) and picked
@@ -17,7 +18,7 @@ export interface RunStorage {
 
 function storageOrUndefined(): RunStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

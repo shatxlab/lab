@@ -10,11 +10,11 @@
  * keys matching KEY_PATTERN are ever read, written or removed.
  */
 
+import { mirroredStorage } from "./mirrored-storage";
+import { isLabKey, labKeys, KEY_PATTERN } from "./lab-keys";
+
 export const BACKUP_FORMAT = "lab-backup";
 export const BACKUP_VERSION = 1;
-
-/** Keys belonging to lab. Anything else on the origin is never touched. */
-export const KEY_PATTERN = /^(lab:|epub-reader:)/;
 
 /** Hard caps so a hostile or accidental huge file can't hang the tab. */
 export const MAX_BACKUP_BYTES = 20 * 1024 * 1024;
@@ -41,26 +41,10 @@ export type ParseError = "invalid" | "format" | "version" | "empty" | "tooLarge"
 
 export type ParseResult = { ok: true; backup: BackupFile } | { ok: false; error: ParseError };
 
-export function isLabKey(key: string): boolean {
-  return KEY_PATTERN.test(key);
-}
+export { isLabKey, labKeys, KEY_PATTERN };
 
 export function storageOrUndefined(): BackupStorage | undefined {
-  try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
-  } catch {
-    return undefined;
-  }
-}
-
-/** All lab keys currently in storage (snapshot, safe to mutate storage after). */
-export function labKeys(storage: BackupStorage): string[] {
-  const keys: string[] = [];
-  for (let index = 0; index < storage.length; index += 1) {
-    const key = storage.key(index);
-    if (key && isLabKey(key)) keys.push(key);
-  }
-  return keys.sort();
+  return mirroredStorage();
 }
 
 export function collectBackup(storage: BackupStorage | undefined = storageOrUndefined(), now: Date = new Date()): BackupFile {

@@ -1,6 +1,7 @@
 import { PERK_IDS, PERKS } from "./sim/balance";
 import { emptyPerks } from "./sim/upgrades";
 import type { PerkId, PerkLevels, Run } from "./sim/types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** Gold, best wave and bought perks, kept between runs. */
 export const TOWER_STORAGE_KEY = "lab:tower:v1";
@@ -21,7 +22,7 @@ export interface TowerStorage {
 
 function storageOrUndefined(): TowerStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

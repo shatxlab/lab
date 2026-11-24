@@ -16,6 +16,8 @@
  */
 
 import * as React from "react";
+
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 import { Download, MapPin } from "lucide-react";
 
 import { BlobThumb } from "@/components/workbench/BlobThumb";
@@ -130,8 +132,9 @@ async function inspect(lang: AppLang, file: File): Promise<Found> {
 }
 
 function loadSettings(): ImageSettings {
+  const stored = mirroredStorage()?.getItem(STORAGE_KEY);
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as { settings?: Partial<ImageSettings> } | null;
+    const raw = JSON.parse(stored ?? "null") as { settings?: Partial<ImageSettings> } | null;
     const saved = raw?.settings;
     if (!saved) return DEFAULT_IMAGE_SETTINGS;
     return {
@@ -184,7 +187,7 @@ export function ImageOperation({ lang, assets, params, setParams }: OperationPro
   React.useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings }));
+      mirroredStorage()?.setItem(STORAGE_KEY, JSON.stringify({ settings }));
     } catch {
       // Preferences are optional.
     }

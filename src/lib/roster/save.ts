@@ -15,6 +15,7 @@ import {
   type RosterSave,
   type Status,
 } from "./types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** The coworkers every game here shares, and the codex of everyone and every quirk seen. */
 export const ROSTER_STORAGE_KEY = "lab:roster:v1";
@@ -26,7 +27,7 @@ export interface RosterStorage {
 
 function storageOrUndefined(): RosterStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

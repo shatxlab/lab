@@ -3,6 +3,7 @@ import { ENEMIES, MAX_CALTROPS, PERK_IDS, PERKS, SKILLS, UPGRADE_IDS, UPGRADE_MA
 import { towerStats } from "./sim/stats";
 import { waveRoster } from "./sim/waves";
 import type { PerkLevels, Run, UpgradeLevels } from "./sim/types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** Separate from permanent gold/perks. The key stays stable; v1 envelopes migrate explicitly on read. */
 export const RUN_STORAGE_KEY = "lab:tower:run:v1";
@@ -21,7 +22,7 @@ export interface RunCheckpoint {
 }
 
 function storageOrUndefined(): RunStorage | undefined {
-  try { return typeof localStorage === "undefined" ? undefined : localStorage; } catch { return undefined; }
+  try { return mirroredStorage(); } catch { return undefined; }
 }
 
 let fallbackId = 0;

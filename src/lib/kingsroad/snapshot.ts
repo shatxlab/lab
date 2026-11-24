@@ -2,6 +2,7 @@ import { readSave, recordWin, writeSave, type KingsroadSave } from "./meta";
 import { FOES, MAX_LEVEL, START_LIVES, starsFor, TOWER_KINDS } from "./sim/balance";
 import { MAPS } from "./sim/maps";
 import type { Game } from "./sim/types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** Separate from campaign stars. Bump the envelope version if simulation state becomes incompatible. */
 export const RUN_STORAGE_KEY = "lab:kingsroad:run:v1";
@@ -16,7 +17,7 @@ export interface RunStorage {
 
 function storageOrUndefined(): RunStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

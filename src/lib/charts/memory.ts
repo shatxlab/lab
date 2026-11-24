@@ -8,6 +8,7 @@
 
 import type { Aggregate, ChartSpec, ChartType } from "@/lib/charts/spec";
 import { CHART_TYPES } from "@/lib/charts/spec";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 export const CHART_MEMORY_KEY = "lab:charts:v1";
 export const MAX_FILES = 40;
@@ -84,7 +85,7 @@ interface MemoryStorage {
 
 function storageOrUndefined(): MemoryStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

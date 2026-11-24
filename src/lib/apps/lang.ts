@@ -8,6 +8,8 @@
  * can subscribe to.
  */
 
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
+
 export type AppLang = "en" | "ru";
 
 export const APP_LANG_STORAGE_KEY = "lab:lang";
@@ -27,7 +29,7 @@ type OptionalStorage = LangStorage | undefined;
 
 function storageOrUndefined(): OptionalStorage {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

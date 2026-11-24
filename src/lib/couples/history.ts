@@ -1,3 +1,4 @@
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 import type { CouplesStorage } from "./storage";
 import type { CouplesQuestion } from "./types";
 
@@ -58,7 +59,7 @@ export function normalizeHistory(raw: unknown): CouplesHistory {
 
 export function readHistory(storage?: CouplesStorage): CouplesHistory {
   try {
-    const target = storage ?? (typeof localStorage === "undefined" ? undefined : localStorage);
+    const target = storage ?? mirroredStorage();
     const value = target?.getItem(HISTORY_KEY);
     return value ? normalizeHistory(JSON.parse(value)) : emptyHistory();
   } catch {
@@ -68,7 +69,7 @@ export function readHistory(storage?: CouplesStorage): CouplesHistory {
 
 export function writeHistory(history: CouplesHistory, storage?: CouplesStorage): void {
   try {
-    const target = storage ?? (typeof localStorage === "undefined" ? undefined : localStorage);
+    const target = storage ?? mirroredStorage();
     target?.setItem(HISTORY_KEY, JSON.stringify(history));
   } catch {
     // Remembering is a nicety; never break a page over it.

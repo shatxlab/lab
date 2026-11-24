@@ -4,6 +4,7 @@ import type { PassiveId } from "./sim/types";
 import { random } from "@/lib/tower/sim/random";
 import { MAX_PASSIVE_LEVEL, MAX_WEAPON_LEVEL, PASSIVE_IDS, PERK_DIFFICULTY, REVIEW, WEAPON_IDS } from "./sim/balance";
 import { normalizeKit, type ItemState } from "./kit";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 import { isClassId, type ClassId } from "./sim/classes";
 
 /**
@@ -37,7 +38,7 @@ export interface CareerStorage {
 
 function storageOrUndefined(): CareerStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

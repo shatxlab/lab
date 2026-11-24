@@ -1,4 +1,5 @@
 import type { EpubBook } from "@/lib/apps/epub-reader";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 export type ReaderTheme = "paper" | "sepia" | "night";
 
@@ -52,7 +53,7 @@ type StorageLike = Pick<Storage, "getItem" | "setItem">;
 
 function storageOrUndefined(): StorageLike | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

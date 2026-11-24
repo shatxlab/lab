@@ -1,4 +1,6 @@
 /** Comfort settings, separate from permanent progress and active runs. */
+
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 export const TOWER_SETTINGS_KEY = "lab:tower:settings:v1";
 
 export interface TowerSettings {
@@ -14,7 +16,7 @@ export interface SettingsStorage {
 }
 
 function storageOrUndefined(): SettingsStorage | undefined {
-  try { return typeof localStorage === "undefined" ? undefined : localStorage; } catch { return undefined; }
+  try { return mirroredStorage(); } catch { return undefined; }
 }
 
 export function defaultSettings(): TowerSettings {

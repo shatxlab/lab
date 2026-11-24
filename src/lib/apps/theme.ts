@@ -1,3 +1,5 @@
+import { mirroredStorage } from "./mirrored-storage";
+
 export type Theme = "light" | "dark";
 
 /** Persisted theme value shape: "light" | "dark". */
@@ -23,11 +25,7 @@ export function resolveTheme(stored: Theme | null, prefersDark: boolean): Theme 
 type OptionalThemeStorage = ThemeStorage | undefined;
 
 function themeStorageOrUndefined(): OptionalThemeStorage {
-  try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
-  } catch {
-    return undefined;
-  }
+  return mirroredStorage();
 }
 
 /**

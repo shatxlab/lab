@@ -20,16 +20,20 @@
  */
 
 import * as React from "react";
-import { Images, Smartphone, X } from "lucide-react";
+import { Images, Link2, Smartphone, X } from "lucide-react";
 
 import { AssetThumb, BatchThumb } from "@/components/workbench/AssetThumb";
 import { ConfirmSheet } from "@/components/workbench/ConfirmSheet";
 import { ReceiveDialog } from "@/components/tools/ReceiveDialog";
 import { SendToPhone } from "@/components/tools/SendToPhone";
+import { ShareByLink } from "@/components/tools/ShareByLink";
+import { ShareReceiveSheet } from "@/components/tools/ShareReceiveSheet";
 import { ActionButton, FilePicker, Tabs, ToolPage, panelClass } from "@/components/tools/ui";
 import { saveBlob } from "@/lib/apps/file-open";
 import { withBase } from "@/lib/apps/paths";
 import { useIncomingSend } from "@/lib/send/use-incoming";
+import { sh } from "@/lib/share/i18n";
+import { useIncomingShare } from "@/lib/share/use-incoming";
 import type { AppLang } from "@/lib/apps/lang";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import {
@@ -41,10 +45,11 @@ import {
   type CapabilityId,
   type OfferedCapability,
 } from "@/lib/workbench/capabilities";
-import { createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
+import { createAssetFromBytes, createAssetFromFile, createAssetFromText, type Asset } from "@/lib/workbench/asset";
 import { imagesLabel, isBatch } from "@/lib/workbench/batch";
 import { isTextual } from "@/lib/workbench/kinds";
-import { MAX_SENDABLE_BYTES, TEXT_SEND_KIND, parseTextSend, textToSend } from "@/lib/workbench/send";
+import { MAX_SENDABLE_BYTES, MAX_SHAREABLE_BYTES, parseSharedSend, parseTextSend, TEXT_SEND_KIND, textToSend, encodeFileShare, FILE_SHARE_KIND, type IncomingShared } from "@/lib/workbench/send";
+import { encodeShare } from "@/lib/share/codec";
 import { wb } from "@/lib/workbench/i18n";
 import { loadOperation } from "@/lib/workbench/operations";
 import { EMPTY_ASSETS, type OperationComponent, type OperationOutput } from "@/lib/workbench/operation";
@@ -56,6 +61,9 @@ export type OperationRegistry = Partial<Record<CapabilityId, OperationComponent>
 function capabilityLabel(lang: AppLang, id: CapabilityId): string {
   return capabilityById(id)?.label[lang] ?? id;
 }
+
+/** Kinds the workbench accepts by link, module-level so the receive hook keeps one callback. */
+const SHARE_KINDS = [TEXT_SEND_KIND, FILE_SHARE_KIND] as const;
 
 const ICON_BUTTON_CLASS =
   "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-(--muted-fg) transition-colors hover:bg-(--surface) hover:text-(--fg) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--accent)";
@@ -71,6 +79,27 @@ function SendTextButton({ lang, name, getText }: { lang: AppLang; name: string; 
       trigger={(open) => (
         <button type="button" aria-label={wb(lang, "sendNamed", { name })} onClick={open} className={ICON_BUTTON_CLASS}>
           <Smartphone aria-hidden="true" className="size-4" />
+        </button>
+      )}
+    />
+  );
+}
+
+/** The encrypted-link share for any openable asset. No QR on purpose: a QR never fits this payload. */
+function ShareAssetButton({ lang, asset }: { lang: AppLang; asset: Asset }) {
+  const textual = isTextual(asset.kind);
+  return (
+    <ShareByLink
+      lang={lang}
+      toolPath={withBase("/tools")}
+      build={async (passphrase) =>
+        textual
+          ? encodeShare(TEXT_SEND_KIND, textToSend(asset.name, await asset.text()), passphrase)
+          : encodeFileShare(asset.name, await asset.bytes(), passphrase)
+      }
+      trigger={(open) => (
+        <button type="button" aria-label={sh(lang, "buttonNamed", { name: asset.name })} onClick={open} className={ICON_BUTTON_CLASS}>
+          <Link2 aria-hidden="true" className="size-4" />
         </button>
       )}
     />
@@ -297,6 +326,7 @@ export function AssetTray({
               {isTextual(asset.kind) && asset.size <= MAX_SENDABLE_BYTES && (
                 <SendTextButton lang={lang} name={asset.name} getText={() => asset.text()} />
               )}
+              {asset.size <= MAX_SHAREABLE_BYTES && <ShareAssetButton lang={lang} asset={asset} />}
               <button
                 type="button"
                 aria-label={wb(lang, "remove", { name: asset.name })}
@@ -464,6 +494,20 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
     if (!received) return;
     addAssets([createAssetFromText(received.name, received.text)]);
     dismissIncoming();
+  };
+
+  // A document shared by link waits for its passphrase, then the same preview
+  // as a sent text before the user imports it.
+  const share = useIncomingShare(SHARE_KINDS);
+  const shared = React.useMemo(() => (share.incoming ? parseSharedSend(share.incoming) : null), [share.incoming]);
+  React.useEffect(() => {
+    if (share.incoming && !shared) share.dismiss();
+  }, [share, shared]);
+  const importShared = () => {
+    if (!shared) return;
+    if ("text" in shared) addAssets([createAssetFromText(shared.name, shared.text)]);
+    else addAssets([createAssetFromBytes(shared.name, shared.bytes)]);
+    share.dismiss();
   };
 
   const addText = React.useCallback(
@@ -635,6 +679,24 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
           preview={received.text}
           onImport={importReceived}
           onDismiss={dismissIncoming}
+        />
+      )}
+
+      {share.prompt && (
+        <ShareReceiveSheet lang={lang} wrong={share.wrong} onSubmit={share.submit} onDismiss={share.dismiss} />
+      )}
+
+      {shared && (
+        <ReceiveDialog
+          lang={lang}
+          summary={
+            "text" in shared
+              ? wb(lang, "receiveText", { name: shared.name, n: shared.text.length })
+              : sh(lang, "receiveFile", { name: shared.name, n: formatBytes(shared.bytes.length) })
+          }
+          preview={"text" in shared ? shared.text : undefined}
+          onImport={importShared}
+          onDismiss={share.dismiss}
         />
       )}
 

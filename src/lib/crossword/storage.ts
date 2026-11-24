@@ -1,5 +1,6 @@
 import type { CrosswordState } from "./game";
 import type { BuiltPuzzle } from "./types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** Versioned key for saved crossword progress. */
 export const CROSSWORD_STORAGE_KEY = "lab:crossword:v1";
@@ -25,7 +26,7 @@ export interface CrosswordStorage {
 
 function storageOrUndefined(): CrosswordStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

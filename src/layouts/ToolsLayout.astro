@@ -93,6 +93,12 @@ const structuredData = tool
     <title>{title}</title>
     <ThemePrePaint />
     <LangPrePaint />
+    <script>
+      // Start the mirror boot (persist grant, restore evicted saves, seed) as
+      // early as a module can run — before the islands hydrate and read.
+      import { bootStorageMirror } from "@/lib/apps/storage-mirror";
+      bootStorageMirror();
+    </script>
   </head>
   <body class:list={["flex flex-col bg-(--bg) text-(--fg) antialiased", immersive ? "lab-immersive h-dvh overflow-hidden" : "min-h-screen"]}>
     <a href="#main" class="skip-link"><span class="skip-en">Skip to content</span><span class="skip-ru">К содержимому</span></a>

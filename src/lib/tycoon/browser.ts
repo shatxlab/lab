@@ -6,18 +6,15 @@
 // Live career mutations are owned by career-controller/persistence, not by global browser helpers.
 // These helpers only expose storage/downloads; preview reset/import/free-chapter fallbacks explicitly refuse writes.
 
+import { mirroredStorage } from '@/lib/apps/mirrored-storage';
 import type { KeyValueStorage } from '@/lib/tycoon/save'
 import { exportJournal } from '@/lib/tycoon/sim/journal'
 import { serialize } from '@/lib/tycoon/sim/state'
 import { fail, type GameState, type Result } from '@/lib/tycoon/sim/types'
 
-/** `localStorage`, or null where the browser blocks it. */
+/** `localStorage` with a durable mirror, or null where the browser blocks it. */
 export function browserStorage(): KeyValueStorage | null {
-  try {
-    return window.localStorage
-  } catch {
-    return null
-  }
+  return mirroredStorage() ?? null;
 }
 
 /** Non-persistent previews never get permission to replace the real career. Live menus use the controller. */

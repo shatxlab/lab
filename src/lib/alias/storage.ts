@@ -1,6 +1,7 @@
 import { clampRoundSeconds, clampTargetScore, defaultSettings, SKIP_PENALTY_OPTIONS } from "./game";
 import { THEME_IDS } from "./themes";
 import type { AliasSettings, Lang, ThemeId } from "./types";
+import { mirroredStorage } from "@/lib/apps/mirrored-storage";
 
 /** Persisted key for the Alias setup screen. */
 export const ALIAS_STORAGE_KEY = "lab:alias:v1";
@@ -22,7 +23,7 @@ export interface AliasStorage {
 
 function storageOrUndefined(): AliasStorage | undefined {
   try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
+    return mirroredStorage();
   } catch {
     return undefined;
   }

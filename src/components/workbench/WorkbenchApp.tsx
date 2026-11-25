@@ -114,6 +114,8 @@ export interface InputBarProps {
   onText: (text: string) => void;
   /** Compact drop zone once assets are already open. */
   compact?: boolean;
+  /** One-row drop zone while a height-hungry editor (the sheet grid) is showing. */
+  slim?: boolean;
 }
 
 /**
@@ -121,7 +123,7 @@ export interface InputBarProps {
  * Pasted files win over pasted text, and paste is ignored while the user is
  * typing into a field so pasting into an operation never re-adds the draft.
  */
-export function InputBar({ lang, onFiles, onText, compact = false }: InputBarProps) {
+export function InputBar({ lang, onFiles, onText, compact = false, slim = false }: InputBarProps) {
   React.useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
@@ -148,6 +150,7 @@ export function InputBar({ lang, onFiles, onText, compact = false }: InputBarPro
       accept="*/*"
       multiple
       compact={compact}
+      slim={slim}
       prompt={wb(lang, "inputPrompt")}
       hint={wb(lang, "inputHint")}
       onFiles={onFiles}
@@ -533,6 +536,8 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
       : null
     : (current?.capability.id ?? null);
   const operationAssets = current?.assets ?? EMPTY_ASSETS;
+  // The Open tab on a spreadsheet is an editor with its own scrolling grid.
+  const sheetEditor = selected?.kind === "sheet" && active === "doc.open";
   const setMembers = React.useMemo<ReadonlySet<string>>(
     () => new Set(current?.capability.set ? current.assets.map((asset) => asset.id) : []),
     [current],
@@ -621,8 +626,8 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
   );
 
   return (
-    <ToolPage title={wb(lang, "title")} tagline={wb(lang, "tagline")} wide full={!empty && selected?.kind === "sheet"}>
-      <InputBar lang={lang} onFiles={addFiles} onText={addText} compact={!empty} />
+    <ToolPage title={wb(lang, "title")} tagline={wb(lang, "tagline")} wide full={!empty && selected?.kind === "sheet"} fill={sheetEditor}>
+      <InputBar lang={lang} onFiles={addFiles} onText={addText} compact={!empty} slim={sheetEditor} />
 
       {empty ? (
         <>
@@ -661,7 +666,12 @@ export default function WorkbenchApp({ operations }: WorkbenchAppProps = {}) {
                 role="tabpanel"
                 id={`wb-action-panel-${active}`}
                 aria-labelledby={`wb-action-tab-${active}`}
-                className="flex flex-col gap-4"
+                className={cn(
+                  "flex flex-col gap-4",
+                  // The sheet editor takes the height that is left and scrolls the grid
+                  // inside itself; every other operation keeps the page flow.
+                  sheetEditor && "min-h-0 flex-1",
+                )}
               >
                 {operation}
               </div>

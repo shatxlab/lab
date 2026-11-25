@@ -21,16 +21,21 @@ type ToolPageProps = {
   wide?: boolean;
   /** Fill the viewport width (data grids); wins over `wide`. */
   full?: boolean;
+  /**
+   * Take exactly the height left above and let a child pane scroll inside itself
+   * (needs a `fill` ToolsLayout); by default the page grows with its content.
+   */
+  fill?: boolean;
 };
 
 /** Page frame: heading, one-line tagline and the language-paint guard. */
-export function ToolPage({ title, tagline, children, wide = false, full = false }: ToolPageProps) {
+export function ToolPage({ title, tagline, children, wide = false, full = false, fill = false }: ToolPageProps) {
   const readyRef = useLangReady<HTMLDivElement>();
   return (
     <div
       ref={readyRef}
       data-lang-sensitive=""
-      className={cn("mx-auto flex w-full flex-1 flex-col gap-5 px-[18px] py-8", full ? "max-w-none" : wide ? "max-w-6xl" : "max-w-3xl")}
+      className={cn("mx-auto flex w-full flex-1 flex-col gap-5 px-[18px] py-8", fill && "min-h-0", full ? "max-w-none" : wide ? "max-w-6xl" : "max-w-3xl")}
     >
       <header className="flex flex-col gap-1.5">
         <h1 className="text-2xl font-bold text-(--fg)">{title}</h1>
@@ -50,6 +55,8 @@ type FilePickerProps = {
   prompt?: string;
   hint?: string;
   compact?: boolean;
+  /** One short row (icon + prompt, no hint) for screens where height is scarce. */
+  slim?: boolean;
   id?: string;
 };
 
@@ -57,7 +64,7 @@ type FilePickerProps = {
  * Accessible file drop zone: a real `<input type="file">` (keyboard and screen
  * reader friendly) visually hidden inside a label that also takes drops.
  */
-export function FilePicker({ lang, accept, multiple = false, onFiles, prompt, hint, compact = false, id }: FilePickerProps) {
+export function FilePicker({ lang, accept, multiple = false, onFiles, prompt, hint, compact = false, slim = false, id }: FilePickerProps) {
   const [dragging, setDragging] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const reactId = React.useId();
@@ -82,8 +89,8 @@ export function FilePicker({ lang, accept, multiple = false, onFiles, prompt, hi
         take(event.dataTransfer?.files ?? null);
       }}
       className={cn(
-        "group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-(--border) bg-(--surface)/40 text-center transition-colors hover:border-(--accent)/60 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--accent)",
-        compact ? "px-4 py-6" : "px-6 py-12",
+          "group flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-(--border) bg-(--surface)/40 text-center transition-colors hover:border-(--accent)/60 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--accent)",
+        slim ? "flex-row px-4 py-2" : cn("flex-col", compact ? "px-4 py-6" : "px-6 py-12"),
         dragging && "border-(--accent) bg-(--accent)/5",
       )}
     >
@@ -100,11 +107,11 @@ export function FilePicker({ lang, accept, multiple = false, onFiles, prompt, hi
           event.target.value = "";
         }}
       />
-      <Upload aria-hidden="true" className="size-6 text-(--muted-fg) group-hover:text-(--accent)" />
+      <Upload aria-hidden="true" className={cn("text-(--muted-fg) group-hover:text-(--accent)", slim ? "size-4" : "size-6")} />
       <span className="font-medium">
         {dragging ? tc(lang, "dropActive") : (prompt ?? tc(lang, multiple ? "dropFiles" : "dropFile"))}
       </span>
-      {hint && <span className="text-sm text-(--muted-fg)">{hint}</span>}
+      {hint && !slim && <span className="text-sm text-(--muted-fg)">{hint}</span>}
     </label>
   );
 }

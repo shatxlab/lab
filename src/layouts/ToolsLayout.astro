@@ -18,9 +18,15 @@ interface Props {
   lang?: string;
   /** Full-viewport page (games): no site header, and the body is exactly one viewport tall. */
   immersive?: boolean;
+  /**
+   * Lock the page to the viewport height so a child pane (the workbench's
+   * sheet grid) can scroll inside itself; other content scrolls in `<main>`
+   * exactly as it did in the document.
+   */
+  fill?: boolean;
 }
 
-const { tool: toolId, lang = "en", immersive = false } = Astro.props;
+const { tool: toolId, lang = "en", immersive = false, fill = false } = Astro.props;
 const tool = TOOLS.find((entry) => entry.id === toolId);
 
 const title = tool ? pageTitle(tool.seo.title) : BRAND.homeTitle;
@@ -100,7 +106,7 @@ const structuredData = tool
       bootStorageMirror();
     </script>
   </head>
-  <body class:list={["flex flex-col bg-(--bg) text-(--fg) antialiased", immersive ? "lab-immersive h-dvh overflow-hidden" : "min-h-screen"]}>
+  <body class:list={["flex flex-col bg-(--bg) text-(--fg) antialiased", immersive ? "lab-immersive h-dvh overflow-hidden" : fill ? "lab-fill h-dvh overflow-hidden" : "min-h-screen"]}>
     <a href="#main" class="skip-link"><span class="skip-en">Skip to content</span><span class="skip-ru">К содержимому</span></a>
     <div class="flex min-h-0 flex-1 flex-col">
       {!immersive && (
@@ -129,7 +135,7 @@ const structuredData = tool
         renders files entirely in your browser. Your files stay on your device.
       -->
 
-      <main id="main" tabindex="-1" class="flex min-h-0 flex-1 flex-col focus:outline-none">
+      <main id="main" tabindex="-1" class:list={["flex min-h-0 flex-1 flex-col focus:outline-none", fill && "overflow-auto"]}>
         <slot />
       </main>
     </div>

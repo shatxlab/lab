@@ -12,6 +12,12 @@
 ## Project
 
 - Astro site with React islands, TypeScript, and Vitest. Source in `src/`, tests in `tests/` (mirroring `src/`).
+- **WASM local-first is an architecture constraint, not a preference.** Every tool is client-side only:
+  processing in the tab, no uploads, no runtime server — the site is static output (see the comment in
+  `astro.config.mjs`). If a proposed change would add a server component, a backend/storage dependency,
+  or any upload path (new sharing, persistence, sync, AI calls with user data), **stop and ask the user
+  before implementing anything** — do not pick a backend or build the server side as a default. Decide
+  the architecture with the user first, then build.
 - Install: `npm install`. Dev server: `npm run dev`. Build: `npm run build`.
 - Verify changes before reporting them done:
   - `npm test` (Vitest)

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { addProtocol, GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type GeoJSONSource, type MapMouseEvent } from "maplibre-gl";
+import { GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type GeoJSONSource } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 
 import { ToolPage, inputClass } from "@/components/tools/ui";
@@ -16,16 +16,18 @@ import {
   type PoiHit,
   type RawPoiFeature,
 } from "@/lib/maps/categories";
-import {
-  fetchRoute,
-  formatRoute,
-  type RouteResult,
-} from "@/lib/maps/route";
+import { fetchRoute, formatRoute, type RouteResult } from "@/lib/maps/route";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
 /** Keyless free vector tiles; the style JSON carries the tile URLs. */
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+
+interface Endpoint {
+  name: string;
+  lat: number;
+  lon: number;
+}
 
 export default function MapsApp() {
   const lang = useAppLang();
@@ -33,19 +35,23 @@ export default function MapsApp() {
 
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapRef = React.useRef<MlMap | null>(null);
-  const markerRef = React.useRef<Marker | null>(null);
-  const [query, setQuery] = React.useState("");
+  const startMarkerRef = React.useRef<Marker | null>(null);
+  const endMarkerRef = React.useRef<Marker | null>(null);
+  const toInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const [activeField, setActiveField] = React.useState<"start" | "end">("start");
+  // Text being typed per field; empty while a chosen place occupies the field.
+  const [startQuery, setStartQuery] = React.useState("");
+  const [endQuery, setEndQuery] = React.useState("");
+  const [startPlace, setStartPlace] = React.useState<Endpoint | null>(null);
+  const [endPlace, setEndPlace] = React.useState<Endpoint | null>(null);
   const [results, setResults] = React.useState<PlaceResult[] | null>(null);
   const [status, setStatus] = React.useState<"idle" | "searching" | "failed">("idle");
-  const [selected, setSelected] = React.useState<PlaceResult | null>(null);
   const [copied, setCopied] = React.useState(false);
-  const [routeStart, setRouteStart] = React.useState<{ name: string; lat: number; lon: number } | null>(null);
-  const [routeEnd, setRouteEnd] = React.useState<{ name: string; lat: number; lon: number } | null>(null);
   const [route, setRoute] = React.useState<RouteResult | null>(null);
   const [routeState, setRouteState] = React.useState<"idle" | "loading" | "failed">("idle");
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
-  const [routePick, setRoutePick] = React.useState<"start" | "end" | null>(null);
 
   // Start from the URL hash (#map=zoom/lat/lon) so shared links open in place.
   const initialView = React.useRef<MapView>(
@@ -86,52 +92,104 @@ export default function MapsApp() {
     };
   }, []);
 
-  const pick = React.useCallback(
-    (place: { name: string; lat: number; lon: number; detail?: string }) => {
-      // Close the results dropdown: it overlays the panels below and would
-      // otherwise keep intercepting their clicks.
-      setResults(null);
-      setQuery("");
-      // While a route endpoint is being picked, every selection fills that slot.
-      if (routePick) {
-        setEndpoint(routePick, { name: place.name, lat: place.lat, lon: place.lon });
-        setRoutePick(null);
-        return;
+  const copyView = React.useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1600);
+      },
+      () => undefined,
+    );
+  }, []);
+
+  const choose = React.useCallback(
+    (field: "start" | "end", place: { name: string; lat: number; lon: number }) => {
+      if (field === "start") {
+        setStartPlace(place);
+        setStartQuery("");
+        // The natural next step is the destination — focus it right away.
+        requestAnimationFrame(() => toInputRef.current?.focus());
+      } else {
+        setEndPlace(place);
       }
-      setSelected({
-        name: place.name,
-        detail: place.detail ?? "",
-        lat: place.lat,
-        lon: place.lon,
-        kind: "picked",
-        key: `hit-${place.name}-${place.lat}`,
-      });
-      const map = mapRef.current;
-      if (!map) return;
-      map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 16), speed: 1.4 });
-      markerRef.current?.remove();
-      markerRef.current = new Marker({ color: "#e15b64" })
-        .setLngLat([place.lon, place.lat])
-        .addTo(map);
+      setResults(null);
     },
-    [routePick],
+    [],
   );
 
-  // While picking an endpoint, a tap anywhere on the map drops it there.
+  /** A pick from search or a category list fills the field being edited. */
+  const pick = React.useCallback(
+    (place: { name: string; lat: number; lon: number }) => {
+      const field =
+        activeField === "end" || startPlace ? (startPlace && activeField === "start" ? "end" : activeField) : "start";
+      choose(field, place);
+      const map = mapRef.current;
+      if (map && !(startPlace && endPlace)) {
+        map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 15), speed: 1.4 });
+      }
+    },
+    [activeField, startPlace, endPlace, choose],
+  );
+
+  // Endpoint markers on the map: green start, red destination.
   React.useEffect(() => {
     const map = mapRef.current;
-    if (!map || !routePick) return;
-    const onClick = (event: MapMouseEvent) => {
-      const { lat, lng } = event.lngLat;
-      pick({ name: `${t("pointOnMap")} (${lat.toFixed(5)}, ${lng.toFixed(5)})`, lat, lon: lng });
+    if (!map) return;
+    const place = (ref: React.RefObject<Marker | null>, p: Endpoint | null, color: string) => {
+      ref.current?.remove();
+      ref.current = null;
+      if (p) ref.current = new Marker({ color }).setLngLat([p.lon, p.lat]).addTo(map);
     };
-    map.on("click", onClick);
-    map.getCanvas().style.cursor = "crosshair";
-    return () => {
-      map.off("click", onClick);
-      map.getCanvas().style.cursor = "";
-    };
-  }, [routePick, pick]);
+    place(startMarkerRef, startPlace, "#2f9e44");
+    place(endMarkerRef, endPlace, "#e15b64");
+  }, [startPlace, endPlace]);
+
+  // Re-route (or drop the line) whenever the endpoints change.
+  React.useEffect(() => {
+    if (!startPlace || !endPlace) {
+      setRoute(null);
+      setRouteState("idle");
+      return;
+    }
+    const controller = new AbortController();
+    setRouteState("loading");
+    fetchRoute(startPlace, endPlace, controller.signal)
+      .then((found) => {
+        setRoute(found);
+        setRouteState("idle");
+      })
+      .catch((error: unknown) => {
+        if ((error as Error).name === "AbortError") return;
+        setRoute(null);
+        setRouteState("failed");
+      });
+    return () => controller.abort();
+  }, [startPlace, endPlace]);
+
+  // Draw the route line once a result is in.
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (map.getLayer("route-line")) map.removeLayer("route-line");
+    if (map.getSource("route")) map.removeSource("route");
+    if (!route) return;
+    map.addSource("route", {
+      type: "geojson",
+      data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route.coords } },
+    });
+    map.addLayer({
+      id: "route-line",
+      type: "line",
+      source: "route",
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#e15b64", "line-width": 5, "line-opacity": 0.9 },
+    });
+    const bounds = route.coords.reduce(
+      (acc, [lon, lat]) => acc.extend([lon, lat]),
+      new LngLatBounds(),
+    );
+    map.fitBounds(bounds, { padding: 60, duration: 600 });
+  }, [route]);
 
   // Category search reads the POI features already loaded in the viewport.
   const runCategoryQuery = React.useCallback(() => {
@@ -184,8 +242,8 @@ export default function MapsApp() {
   }, [categoryId, runCategoryQuery]);
 
   // Highlight the category hits on the map: small dots plus name labels. The
-  // source is created once per style and then updated via setData, so the
-  // points don't blink on every re-scan after a map move.
+  // source is created once and then updated via setData, so the points don't
+  // blink on every re-scan after a map move.
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -222,7 +280,6 @@ export default function MapsApp() {
           "circle-stroke-color": "#ffffff",
         },
       });
-      // Labels need glyphs; the raster-archive style has none.
       if (map.getStyle().glyphs) {
         map.addLayer({
           id: "category-labels",
@@ -253,7 +310,8 @@ export default function MapsApp() {
     }
   }, [categoryHits, categoryId]);
 
-  // Debounced search biased to the current map center.
+  // Debounced search for whichever field is being edited, biased to the map center.
+  const query = activeField === "start" ? startQuery : endQuery;
   React.useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
@@ -283,151 +341,169 @@ export default function MapsApp() {
     };
   }, [query]);
 
-  const dropRouteMarker = React.useRef<Marker | null>(null);
+  const field = (which: "start" | "end") => ({
+    place: which === "start" ? startPlace : endPlace,
+    text: which === "start" ? startQuery : endQuery,
+    setText: which === "start" ? setStartQuery : setEndQuery,
+  });
 
-  const setEndpoint = React.useCallback((which: "start" | "end", place: { name: string; lat: number; lon: number } | null) => {
+  /** Typing into a field invalidates its chosen place. */
+  const editField = (which: "start" | "end", text: string) => {
     if (which === "start") {
-      setRouteStart(place);
-      dropRouteMarker.current?.remove();
-      dropRouteMarker.current = null;
-      const map = mapRef.current;
-      if (place && map) {
-        dropRouteMarker.current = new Marker({ color: "#2f9e44" })
-          .setLngLat([place.lon, place.lat])
-          .addTo(map);
-      }
+      if (startPlace) setStartPlace(null);
+      setStartQuery(text);
     } else {
-      setRouteEnd(place);
+      if (endPlace) setEndPlace(null);
+      setEndQuery(text);
+    }
+    setActiveField(which);
+    setRoute(null);
+    setRouteState("idle");
+  };
+
+  const clearField = (which: "start" | "end") => {
+    if (which === "start") {
+      setStartPlace(null);
+      setStartQuery("");
+    } else {
+      setEndPlace(null);
+      setEndQuery("");
     }
     setResults(null);
-    setQuery("");
+  };
+
+  const swap = React.useCallback(() => {
+    setStartPlace(endPlace);
+    setEndPlace(startPlace);
+    setStartQuery("");
+    setEndQuery("");
+  }, [startPlace, endPlace]);
+
+  const clearRoute = React.useCallback(() => {
+    setStartPlace(null);
+    setEndPlace(null);
+    setStartQuery("");
+    setEndQuery("");
+    setResults(null);
   }, []);
 
-  const copyView = React.useCallback(() => {
-    navigator.clipboard.writeText(window.location.href).then(
-      () => {
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1600);
-      },
-      () => undefined,
+  const renderField = (which: "start" | "end") => {
+    const { place, text } = field(which);
+    const isActive = activeField === which;
+    const listId = `maps-${which}-list`;
+    return (
+      <div className="relative flex-1">
+        <label className="sr-only" htmlFor={`maps-${which}`}>
+          {t(which === "start" ? "fromLabel" : "toLabel")}
+        </label>
+        <input
+          id={`maps-${which}`}
+          ref={which === "end" ? toInputRef : undefined}
+          type="text"
+          className={inputClass}
+          placeholder={t(which === "start" ? "fromPlaceholder" : "toPlaceholder")}
+          value={place ? place.name : text}
+          onChange={(event) => editField(which, event.target.value)}
+          onFocus={() => setActiveField(which)}
+          role="combobox"
+          aria-expanded={isActive && results !== null}
+          aria-controls={listId}
+          aria-autocomplete="list"
+        />
+        {(place || text) && (
+          <button
+            type="button"
+            className="absolute top-1/2 right-2 -translate-y-1/2 text-sm text-(--muted-fg) hover:text-(--fg)"
+            onClick={() => clearField(which)}
+            aria-label={t("clearField")}
+          >
+            ✕
+          </button>
+        )}
+        {isActive && results !== null && results.length > 0 && (
+          <ul
+            id={listId}
+            role="listbox"
+            className="absolute top-full right-0 left-0 z-10 max-h-80 overflow-y-auto rounded-md border border-(--border) bg-(--surface) shadow-lg"
+          >
+            {results.map((place2) => (
+              <li key={place2.key} role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={place2.lat === place?.lat && place2.lon === place?.lon}
+                  className="block w-full px-3 py-2 text-left hover:bg-(--accent)/10 focus-visible:bg-(--accent)/10"
+                  onClick={() => pick(place2)}
+                >
+                  <span className="block text-sm text-(--fg)">{place2.name}</span>
+                  {place2.detail && <span className="block text-xs text-(--muted-fg)">{place2.detail}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     );
-  }, []);
-
-  // Re-route (or drop the line) whenever the endpoints change.
-  React.useEffect(() => {
-    if (!routeStart || !routeEnd) {
-      setRoute(null);
-      setRouteState("idle");
-      return;
-    }
-    const controller = new AbortController();
-    setRouteState("loading");
-    fetchRoute(routeStart, routeEnd, controller.signal)
-      .then((found) => {
-        setRoute(found);
-        setRouteState("idle");
-      })
-      .catch((error: unknown) => {
-        if ((error as Error).name === "AbortError") return;
-        setRoute(null);
-        setRouteState("failed");
-      });
-    return () => controller.abort();
-  }, [routeStart, routeEnd]);
-
-  // Draw the route line once a result is in.
-  React.useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (map.getLayer("route-line")) map.removeLayer("route-line");
-    if (map.getSource("route")) map.removeSource("route");
-    if (!route) return;
-    map.addSource("route", {
-      type: "geojson",
-      data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route.coords } },
-    });
-    map.addLayer({
-      id: "route-line",
-      type: "line",
-      source: "route",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#e15b64", "line-width": 5, "line-opacity": 0.9 },
-    });
-    const bounds = route.coords.reduce(
-      (acc, [lon, lat]) => acc.extend([lon, lat]),
-      new LngLatBounds(),
-    );
-    map.fitBounds(bounds, { padding: 60, duration: 600 });
-  }, [route]);
-
-  const listId = "maps-results";
+  };
 
   return (
     <ToolPage title={t("title")} tagline={t("tagline")} wide fill>
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-60 flex-1">
-            <label className="sr-only" htmlFor="maps-search">
-              {t("searchLabel")}
-            </label>
-            <input
-              id="maps-search"
-              type="search"
-              className={inputClass}
-              placeholder={t("searchPlaceholder")}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              role="combobox"
-              aria-expanded={results !== null}
-              aria-controls={listId}
-              aria-autocomplete="list"
+        <div className="flex items-start gap-2">
+          {/* The route block: a connector rail joining the two endpoint fields. */}
+          <div className="relative min-w-0 flex-1">
+            <div aria-hidden className="absolute top-[26px] bottom-[26px] left-[15px] w-px bg-(--border)" />
+            <div
+              aria-hidden
+              className="absolute top-[13px] left-[9px] h-[14px] w-[14px] rounded-full border-2 border-(--fg) bg-(--surface)"
             />
-            {query && (
-              <button
-                type="button"
-                className="absolute top-1/2 right-2 -translate-y-1/2 text-sm text-(--muted-fg) hover:text-(--fg)"
-                onClick={() => setQuery("")}
-                aria-label={t("clearSearch")}
-              >
-                ✕
-              </button>
-            )}
-            {results && results.length > 0 && (
-              <ul
-                id={listId}
-                role="listbox"
-                className="absolute top-full right-0 left-0 z-10 max-h-80 overflow-y-auto rounded-md border border-(--border) bg-(--surface) shadow-lg"
-              >
-                {results.map((place) => (
-                  <li key={place.key} role="presentation">
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={selected?.key === place.key}
-                      className="block w-full px-3 py-2 text-left hover:bg-(--accent)/10 focus-visible:bg-(--accent)/10"
-                      onClick={() => pick(place)}
-                    >
-                      <span className="block text-sm text-(--fg)">{place.name}</span>
-                      {place.detail && (
-                        <span className="block text-xs text-(--muted-fg)">{place.detail}</span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div
+              aria-hidden
+              className="absolute bottom-[13px] left-[9px] h-[14px] w-[14px] rounded-full border-2 border-(--accent) bg-(--surface)"
+            />
+            <button
+              type="button"
+              className="absolute top-1/2 left-[3px] z-10 flex h-[24px] w-[24px] -translate-y-1/2 items-center justify-center rounded-full border border-(--border) bg-(--surface) text-xs text-(--muted-fg) hover:text-(--fg)"
+              onClick={swap}
+              disabled={!startPlace && !endPlace}
+              aria-label={t("swap")}
+              title={t("swap")}
+            >
+              ⇄
+            </button>
+            <div className="flex flex-col gap-2 pl-10">
+              {renderField("start")}
+              {renderField("end")}
+            </div>
           </div>
-          <button type="button" className="rounded-md border border-(--border) px-3 py-1.5 text-sm text-(--fg)" onClick={copyView}>
-            {copied ? t("hashCopied") : "🔗"}
+          <button
+            type="button"
+            className="mt-1 rounded-md border border-(--border) px-3 py-2 text-sm text-(--fg)"
+            onClick={copyView}
+            aria-label={t("hashCopied")}
+            title={t("hashCopied")}
+          >
+            {copied ? "✓" : "🔗"}
           </button>
         </div>
 
-        <p aria-live="polite" className="text-xs text-(--muted-fg)">
+        <p aria-live="polite" className="min-h-5 text-xs text-(--muted-fg)">
           {status === "searching" ? t("searching") : ""}
           {status === "failed" ? t("searchFailed") : ""}
           {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
-          {categoryId && categoryHits && categoryHits.length === 0 ? t("categoryEmpty") : ""}
+          {startPlace && endPlace && routeState === "loading" ? t("routing") : ""}
+          {startPlace && endPlace && routeState === "failed" ? t("routeFailed") : ""}
+          {startPlace && endPlace && route ? `${t("routeSummary")}: ${formatRoute(route.distance, route.duration, lang)}` : ""}
         </p>
+        {startPlace && endPlace && (
+          <button
+            type="button"
+            className="self-start rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
+            onClick={clearRoute}
+          >
+            {t("routeClear")}
+          </button>
+        )}
 
         <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t("categoriesLabel")}>
           {CATEGORIES.map((category) => (
@@ -459,89 +535,9 @@ export default function MapsApp() {
           </ul>
         )}
 
-        {selected && !routePick && (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--border) bg-(--surface) px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-sm text-(--fg)">
-              {selected.name}
-              {selected.detail ? <span className="text-(--muted-fg)"> — {selected.detail}</span> : null}
-            </span>
-            <button
-              type="button"
-              className="shrink-0 rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
-              onClick={() => {
-                setEndpoint("start", selected);
-                setRoutePick("end");
-              }}
-            >
-              {t("routeFromHere")}
-            </button>
-            <button
-              type="button"
-              className="shrink-0 rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
-              onClick={() => {
-                setEndpoint("end", selected);
-                setRoutePick("start");
-              }}
-            >
-              {t("routeToHere")}
-            </button>
-          </div>
-        )}
-
-        {routePick && (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--accent) bg-(--surface) px-3 py-2">
-            <span aria-live="polite" className="min-w-0 flex-1 text-sm text-(--fg)">
-              {routePick === "end" ? t("routePickEnd") : t("routePickStart")}
-            </span>
-            <button
-              type="button"
-              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
-              onClick={() => setRoutePick(null)}
-            >
-              {t("routeCancel")}
-            </button>
-          </div>
-        )}
-
-        {(routeStart || routeEnd) && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span aria-live="polite" className="text-sm text-(--fg)">
-              {routeState === "loading"
-                ? t("routing")
-                : routeState === "failed"
-                  ? t("routeFailed")
-                  : route
-                    ? `${t("routeStart")}: ${routeStart?.name} → ${t("routeFinish")}: ${routeEnd?.name} — ${formatRoute(route.distance, route.duration, lang)}`
-                    : ""}
-            </span>
-            <button
-              type="button"
-              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
-              onClick={() => {
-                setRouteStart(routeEnd ? { ...routeEnd } : null);
-                setRouteEnd(routeStart ? { ...routeStart } : null);
-              }}
-            >
-              ⇄ {t("routeSwap")}
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
-              onClick={() => {
-                dropRouteMarker.current?.remove();
-                dropRouteMarker.current = null;
-                setRouteStart(null);
-                setRouteEnd(null);
-              }}
-            >
-              {t("routeClear")}
-            </button>
-          </div>
-        )}
-
         <div
           ref={containerRef}
-          className="min-h-[60vh] flex-1 overflow-hidden rounded-xl border border-(--border)"
+          className="min-h-[55vh] flex-1 overflow-hidden rounded-xl border border-(--border)"
           role="application"
           aria-label={t("map")}
         />

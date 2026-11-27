@@ -38,7 +38,6 @@ export default function MapsApp() {
   const mapRef = React.useRef<MlMap | null>(null);
   const startMarkerRef = React.useRef<Marker | null>(null);
   const endMarkerRef = React.useRef<Marker | null>(null);
-  const toInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [activeField, setActiveField] = React.useState<"start" | "end">("start");
   // Text being typed per field; empty while a chosen place occupies the field.
@@ -58,31 +57,12 @@ export default function MapsApp() {
   const [routeState, setRouteState] = React.useState<"idle" | "loading" | "failed">("idle");
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
-  const dockRef = React.useRef<HTMLDivElement | null>(null);
-  const [dockOffset, setDockOffset] = React.useState(0);
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; lat: number; lon: number } | null>(null);
   const contextMenuRef = React.useRef(false);
   const menuOpenedAt = React.useRef(0);
   React.useEffect(() => {
     contextMenuRef.current = contextMenu !== null;
   }, [contextMenu]);
-
-  // On phones the docked route block overlays the viewport; reserve exactly
-  // its measured height so the map ends above it instead of hiding behind it.
-  React.useEffect(() => {
-    const dock = dockRef.current;
-    if (!dock) return;
-    const narrow = window.matchMedia("(max-width: 639px)");
-    const update = () => setDockOffset(narrow.matches ? dock.getBoundingClientRect().height : 0);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(dock);
-    narrow.addEventListener("change", update);
-    return () => {
-      observer.disconnect();
-      narrow.removeEventListener("change", update);
-    };
-  }, []);
 
   React.useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -190,7 +170,6 @@ export default function MapsApp() {
         setStartPlace(place);
         setStartQuery("");
         // The natural next step is the destination — focus it right away.
-        requestAnimationFrame(() => toInputRef.current?.focus());
       } else {
         setEndPlace(place);
       }
@@ -226,7 +205,7 @@ export default function MapsApp() {
     navigator.permissions
       ?.query({ name: "geolocation" as PermissionName })
       .then((state) => {
-        if (state.state === "granted") locate("start", false);
+        if (state.state === "granted") locate("start");
       })
       .catch(() => undefined);
   }, [locate]);
@@ -512,9 +491,8 @@ export default function MapsApp() {
         </label>
         <input
           id={`maps-${which}`}
-          ref={which === "end" ? toInputRef : undefined}
           type="text"
-          className={inputClass}
+          className={`${inputClass}${which === "start" ? " pl-9" : ""}`}
           placeholder={t(which === "start" ? "fromPlaceholder" : "toPlaceholder")}
           value={place ? place.name : text}
           onChange={(event) => editField(which, event.target.value)}
@@ -537,7 +515,7 @@ export default function MapsApp() {
         {which === "start" && !place && (
           <button
             type="button"
-            className="absolute top-1/2 right-8 -translate-y-1/2 text-(--muted-fg) hover:text-(--fg)"
+            className="absolute top-1/2 left-2 -translate-y-1/2 text-(--muted-fg) hover:text-(--fg)"
             onClick={() => locate("start")}
             aria-label={t("useMyLocation")}
             title={t("useMyLocation")}
@@ -549,7 +527,7 @@ export default function MapsApp() {
           <ul
             id={listId}
             role="listbox"
-            className="absolute top-full right-0 left-0 z-10 max-h-80 overflow-y-auto rounded-md border border-(--border) bg-(--surface) shadow-lg"
+            className="absolute top-full right-0 left-0 z-10 max-h-80 overflow-y-auto rounded-md border border-(--border) bg-(--surface) shadow-lg max-sm:top-auto max-sm:bottom-full max-sm:mb-1"
           >
             {results.map((place2) => (
               <li key={place2.key} role="presentation">
@@ -575,11 +553,10 @@ export default function MapsApp() {
     <ToolPage title={t("title")} tagline={t("tagline")} wide fill>
       <div
         className="flex min-h-0 flex-1 flex-col gap-3"
-        style={{ paddingBottom: dockOffset || undefined }}
       >
         {/* The route block: above the map on desktop, docked to the bottom of
             the screen on phones (see .maps-route-dock in apps.css). */}
-        <div ref={dockRef} className="maps-route-dock flex flex-col gap-3">
+        <div className="maps-route-dock flex flex-col gap-3 max-sm:order-4 max-sm:sticky max-sm:bottom-0">
           <div className="flex items-start gap-2">
           {/* The route block: a connector rail joining the two endpoint fields. */}
           <div className="relative min-w-0 flex-1">
@@ -641,7 +618,7 @@ export default function MapsApp() {
           <p className="hidden max-sm:block text-[10px] text-(--muted-fg)">{t("attribution")}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t("categoriesLabel")}>
+        <div className="flex flex-wrap items-center gap-1 max-sm:order-1" role="group" aria-label={t("categoriesLabel")}>
           {CATEGORIES.map((category) => (
             <button
               key={category.id}
@@ -656,7 +633,7 @@ export default function MapsApp() {
         </div>
 
         {categoryHits && categoryHits.length > 0 && (
-          <ul className="max-h-40 overflow-y-auto rounded-md border border-(--border) bg-(--surface) text-sm">
+          <ul className="max-h-40 overflow-y-auto rounded-md border border-(--border) bg-(--surface) text-sm max-sm:order-2">
             {categoryHits.map((hit) => (
               <li key={`${hit.name}-${hit.lat}-${hit.lon}`}>
                 <button
@@ -671,7 +648,7 @@ export default function MapsApp() {
           </ul>
         )}
 
-        <div className="relative min-h-[55vh] max-sm:min-h-0 flex-1">
+        <div className="relative min-h-[55vh] max-sm:min-h-0 flex-1 max-sm:order-3">
           <div
             ref={containerRef}
             className="maps-map h-full w-full overflow-hidden rounded-xl border border-(--border)"

@@ -1030,19 +1030,22 @@ html[data-lang="ru"] .skip-link .skip-ru {
 }
 
 /*
- * Maps: on phones the route block docks to the bottom of the screen (like the
- * Alias start bar) so the map keeps most of the viewport. The desktop layout
- * is untouched — the class only applies below the sm breakpoint.
+ * Maps: on phones the route block sits at the bottom of the screen (like the
+ * Alias start bar) — sticky at the end of the page column, so the map and the
+ * dock always share the viewport without covering each other. The desktop
+ * layout is untouched — the class only applies below the sm breakpoint.
  */
 @media (max-width: 639px) {
   .maps-route-dock {
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     backdrop-filter: blur(8px);
+    border-radius: 0;
     border-top: 1px solid var(--border);
     bottom: 0;
-    inset-inline: 0;
-    padding: 0.75rem clamp(1rem, 3vw, 1.5rem) calc(0.75rem + env(safe-area-inset-bottom));
-    position: fixed;
+    box-shadow: 0 -4px 12px rgb(0 0 0 / 8%);
+    margin-inline: -18px;
+    padding: 0.75rem 18px calc(0.75rem + env(safe-area-inset-bottom));
+    position: sticky;
     z-index: 20;
   }
 }

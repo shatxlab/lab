@@ -1045,9 +1045,4 @@ html[data-lang="ru"] .skip-link .skip-ru {
     position: fixed;
     z-index: 20;
   }
-
-  /* Keep the map controls above the dock. */
-  .maps-map .maplibregl-ctrl-bottom-right {
-    bottom: 11.5rem;
-  }
 }

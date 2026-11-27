@@ -58,6 +58,25 @@ export default function MapsApp() {
   const [routeState, setRouteState] = React.useState<"idle" | "loading" | "failed">("idle");
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
+  const dockRef = React.useRef<HTMLDivElement | null>(null);
+  const [dockOffset, setDockOffset] = React.useState(0);
+
+  // On phones the docked route block overlays the viewport; reserve exactly
+  // its measured height so the map ends above it instead of hiding behind it.
+  React.useEffect(() => {
+    const dock = dockRef.current;
+    if (!dock) return;
+    const narrow = window.matchMedia("(max-width: 639px)");
+    const update = () => setDockOffset(narrow.matches ? dock.getBoundingClientRect().height : 0);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(dock);
+    narrow.addEventListener("change", update);
+    return () => {
+      observer.disconnect();
+      narrow.removeEventListener("change", update);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -466,10 +485,13 @@ export default function MapsApp() {
 
   return (
     <ToolPage title={t("title")} tagline={t("tagline")} wide fill>
-      <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div
+        className="flex min-h-0 flex-1 flex-col gap-3"
+        style={{ paddingBottom: dockOffset || undefined }}
+      >
         {/* The route block: above the map on desktop, docked to the bottom of
             the screen on phones (see .maps-route-dock in apps.css). */}
-        <div className="maps-route-dock flex flex-col gap-3">
+        <div ref={dockRef} className="maps-route-dock flex flex-col gap-3">
           <div className="flex items-start gap-2">
           {/* The route block: a connector rail joining the two endpoint fields. */}
           <div className="relative min-w-0 flex-1">
@@ -563,11 +585,11 @@ export default function MapsApp() {
 
         <div
           ref={containerRef}
-          className="maps-map min-h-[55vh] flex-1 overflow-hidden rounded-xl border border-(--border)"
+          className="maps-map min-h-[55vh] max-sm:min-h-0 flex-1 overflow-hidden rounded-xl border border-(--border)"
           role="application"
           aria-label={t("map")}
         />
-        <p className="hidden max-sm:block text-xs text-(--muted-fg)">{t("attribution")}</p>
+        <p className="max-sm:hidden text-xs text-(--muted-fg)">{t("attribution")}</p>
       </div>
     </ToolPage>
   );

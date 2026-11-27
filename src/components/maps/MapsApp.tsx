@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, LocateFixed } from "lucide-react";
 import { GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type GeoJSONSource } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 
@@ -60,6 +60,12 @@ export default function MapsApp() {
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
   const dockRef = React.useRef<HTMLDivElement | null>(null);
   const [dockOffset, setDockOffset] = React.useState(0);
+  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; lat: number; lon: number } | null>(null);
+  const contextMenuRef = React.useRef(false);
+  const menuOpenedAt = React.useRef(0);
+  React.useEffect(() => {
+    contextMenuRef.current = contextMenu !== null;
+  }, [contextMenu]);
 
   // On phones the docked route block overlays the viewport; reserve exactly
   // its measured height so the map ends above it instead of hiding behind it.
@@ -117,6 +123,45 @@ export default function MapsApp() {
         window.history.pushState(null, "", url);
       }
     });
+    // Long-press (touch) and right-click open a small "from here / to here"
+    // menu at the tapped point.
+    const menuAt = (point: { x: number; y: number }, lngLat: { lat: number; lng: number }) => {
+      const width = map.getContainer().clientWidth;
+      setContextMenu({
+        x: Math.min(point.x, Math.max(8, width - 190)),
+        y: point.y,
+        lat: lngLat.lat,
+        lon: lngLat.lng,
+      });
+      menuOpenedAt.current = Date.now();
+    };
+    map.on("contextmenu", (e) => menuAt(e.point, e.lngLat));
+    let pressTimer: number | null = null;
+    let pressOrigin: { x: number; y: number } | null = null;
+    const cancelPress = () => {
+      if (pressTimer !== null) window.clearTimeout(pressTimer);
+      pressTimer = null;
+    };
+    map.on("touchstart", (e) => {
+      if ((e.originalEvent.touches?.length ?? 1) !== 1) return;
+      pressOrigin = e.point;
+      pressTimer = window.setTimeout(() => {
+        pressTimer = null;
+        menuAt(e.point, map.unproject([e.point.x, e.point.y]));
+      }, 500);
+    });
+    map.on("touchmove", (e) => {
+      if (pressTimer !== null && pressOrigin && Math.hypot(e.point.x - pressOrigin.x, e.point.y - pressOrigin.y) > 12) {
+        cancelPress();
+      }
+    });
+    map.on("touchend", cancelPress);
+    map.on("dragstart", cancelPress);
+    // A tap closes the menu — but not the tap that just opened it.
+    map.on("click", () => {
+      if (contextMenuRef.current && Date.now() - menuOpenedAt.current > 500) setContextMenu(null);
+    });
+
     return () => {
       map.remove();
       mapRef.current = null;
@@ -153,6 +198,38 @@ export default function MapsApp() {
     },
     [],
   );
+
+  const locate = React.useCallback(
+    (field: "start" | "end", fly = true) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const place = {
+            name: t("myLocation"),
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          };
+          choose(field, place);
+          const map = mapRef.current;
+          if (map && fly) map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 14), speed: 1.4 });
+        },
+        () => undefined,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      );
+    },
+    [choose, t],
+  );
+
+  // When geolocation was already granted (or remembered), the start field
+  // pre-fills with the current position — no button press needed.
+  React.useEffect(() => {
+    if (initialHash.current.start) return;
+    navigator.permissions
+      ?.query({ name: "geolocation" as PermissionName })
+      .then((state) => {
+        if (state.state === "granted") locate("start", false);
+      })
+      .catch(() => undefined);
+  }, [locate]);
 
   /** A pick from search or a category list fills the field being edited. */
   const pick = React.useCallback(
@@ -457,6 +534,17 @@ export default function MapsApp() {
             ✕
           </button>
         )}
+        {which === "start" && !place && (
+          <button
+            type="button"
+            className="absolute top-1/2 right-8 -translate-y-1/2 text-(--muted-fg) hover:text-(--fg)"
+            onClick={() => locate("start")}
+            aria-label={t("useMyLocation")}
+            title={t("useMyLocation")}
+          >
+            <LocateFixed size={16} />
+          </button>
+        )}
         {isActive && results !== null && results.length > 0 && (
           <ul
             id={listId}
@@ -583,12 +671,40 @@ export default function MapsApp() {
           </ul>
         )}
 
-        <div
-          ref={containerRef}
-          className="maps-map min-h-[55vh] max-sm:min-h-0 flex-1 overflow-hidden rounded-xl border border-(--border)"
-          role="application"
-          aria-label={t("map")}
-        />
+        <div className="relative min-h-[55vh] max-sm:min-h-0 flex-1">
+          <div
+            ref={containerRef}
+            className="maps-map h-full w-full overflow-hidden rounded-xl border border-(--border)"
+            role="application"
+            aria-label={t("map")}
+          />
+          {contextMenu && (
+            <div
+              role="menu"
+              className="absolute z-20 overflow-hidden rounded-md border border-(--border) bg-(--surface) py-1 shadow-lg"
+              style={{ left: contextMenu.x, top: contextMenu.y }}
+            >
+              {(["start", "end"] as const).map((field) => (
+                <button
+                  key={field}
+                  type="button"
+                  role="menuitem"
+                  className="block w-full px-4 py-2 text-left text-sm text-(--fg) hover:bg-(--accent)/10"
+                  onClick={() => {
+                    choose(field, {
+                      name: `${t("pointOnMap")} (${contextMenu.lat.toFixed(5)}, ${contextMenu.lon.toFixed(5)})`,
+                      lat: contextMenu.lat,
+                      lon: contextMenu.lon,
+                    });
+                    setContextMenu(null);
+                  }}
+                >
+                  {field === "start" ? t("fromHere") : t("toHere")}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <p className="max-sm:hidden text-xs text-(--muted-fg)">{t("attribution")}</p>
       </div>
     </ToolPage>

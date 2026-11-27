@@ -3,14 +3,13 @@ import { describe, expect, it } from "vitest";
 import { formatRoute, osrmUrl, parseRoute } from "@/lib/maps/route";
 
 describe("osrm routing", () => {
-  it("builds a lon,lat profile URL for the public routers", () => {
+  it("builds a walking route URL for the public router", () => {
     const url = osrmUrl(
-      "car",
       { lat: 55.7512, lon: 37.6184 },
       { lat: 55.7401, lon: 37.6032 },
     );
     expect(url).toBe(
-      "https://routing.openstreetmap.de/routed-car/route/v1/driving/37.618400,55.751200;37.603200,55.740100?overview=full&geometries=geojson",
+      "https://routing.openstreetmap.de/routed-foot/route/v1/driving/37.618400,55.751200;37.603200,55.740100?overview=full&geometries=geojson",
     );
   });
 

@@ -1,11 +1,10 @@
 /**
- * Routing via the OSRM instances of routing.openstreetmap.de — free, keyless,
- * CORS-open, no account. Coordinates are sent as `lon,lat` pairs; the response
- * comes back as GeoJSON when `geometries=geojson` is set. Pure helpers are
- * exported for tests; only `fetchRoute` touches the network.
+ * Routing via the OSRM foot router of routing.openstreetmap.de — free,
+ * keyless, CORS-open, no account. Walking is the only profile: this tool is
+ * deliberately pedestrian-first. Coordinates are sent as `lon,lat` pairs; the
+ * response comes back as GeoJSON when `geometries=geojson` is set. Pure
+ * helpers are exported for tests; only `fetchRoute` touches the network.
  */
-
-export type RouteProfile = "car" | "bike" | "foot";
 
 export interface RoutePoint {
   lat: number;
@@ -23,15 +22,9 @@ export interface RouteResult {
 
 const OSRM_ENDPOINT = "https://routing.openstreetmap.de";
 
-const PROFILE_PATH: Record<RouteProfile, string> = {
-  car: "routed-car",
-  bike: "routed-bike",
-  foot: "routed-foot",
-};
-
-export function osrmUrl(profile: RouteProfile, start: RoutePoint, end: RoutePoint): string {
+export function osrmUrl(start: RoutePoint, end: RoutePoint): string {
   const via = `${start.lon.toFixed(6)},${start.lat.toFixed(6)};${end.lon.toFixed(6)},${end.lat.toFixed(6)}`;
-  return `${OSRM_ENDPOINT}/${PROFILE_PATH[profile]}/route/v1/driving/${via}?overview=full&geometries=geojson`;
+  return `${OSRM_ENDPOINT}/routed-foot/route/v1/driving/${via}?overview=full&geometries=geojson`;
 }
 
 export function parseRoute(data: unknown): RouteResult {
@@ -47,12 +40,11 @@ export function parseRoute(data: unknown): RouteResult {
 }
 
 export async function fetchRoute(
-  profile: RouteProfile,
   start: RoutePoint,
   end: RoutePoint,
   signal?: AbortSignal,
 ): Promise<RouteResult> {
-  const response = await fetch(osrmUrl(profile, start, end), { signal });
+  const response = await fetch(osrmUrl(start, end), { signal });
   if (!response.ok) throw new Error(`osrm ${response.status}`);
   return parseRoute(await response.json());
 }

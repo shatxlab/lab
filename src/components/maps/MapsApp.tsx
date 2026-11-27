@@ -1,5 +1,5 @@
 import * as React from "react";
-import { addProtocol, GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type GeoJSONSource, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
+import { addProtocol, GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type GeoJSONSource, type MapMouseEvent } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 
 import { ToolPage, inputClass } from "@/components/tools/ui";
@@ -19,32 +19,13 @@ import {
 import {
   fetchRoute,
   formatRoute,
-  type RouteProfile,
   type RouteResult,
 } from "@/lib/maps/route";
-import {
-  getPmtilesProtocol,
-  pmtilesRasterStyle,
-  pmtilesVectorStyle,
-  registerLocalPmtiles,
-  styleForHeader,
-  type PmtilesTheme,
-} from "@/lib/maps/pmtiles";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
-type StyleId = "liberty" | "positron" | "dark";
-
-const STYLES: Record<StyleId, string> = {
-  liberty: "https://tiles.openfreemap.org/styles/liberty",
-  positron: "https://tiles.openfreemap.org/styles/positron",
-  dark: "https://tiles.openfreemap.org/styles/dark",
-};
-
 /** Keyless free vector tiles; the style JSON carries the tile URLs. */
-function styleFor(id: StyleId): string | StyleSpecification {
-  return STYLES[id];
-}
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 export default function MapsApp() {
   const lang = useAppLang();
@@ -53,7 +34,6 @@ export default function MapsApp() {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapRef = React.useRef<MlMap | null>(null);
   const markerRef = React.useRef<Marker | null>(null);
-  const [style, setStyle] = React.useState<StyleId>("liberty");
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<PlaceResult[] | null>(null);
   const [status, setStatus] = React.useState<"idle" | "searching" | "failed">("idle");
@@ -61,12 +41,8 @@ export default function MapsApp() {
   const [copied, setCopied] = React.useState(false);
   const [routeStart, setRouteStart] = React.useState<{ name: string; lat: number; lon: number } | null>(null);
   const [routeEnd, setRouteEnd] = React.useState<{ name: string; lat: number; lon: number } | null>(null);
-  const [profile, setProfile] = React.useState<RouteProfile>("car");
   const [route, setRoute] = React.useState<RouteResult | null>(null);
   const [routeState, setRouteState] = React.useState<"idle" | "loading" | "failed">("idle");
-  const [archive, setArchive] = React.useState<{ name: string } | null>(null);
-  const [archiveError, setArchiveError] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
   const [routePick, setRoutePick] = React.useState<"start" | "end" | null>(null);
@@ -78,11 +54,9 @@ export default function MapsApp() {
 
   React.useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    // Local .pmtiles archives are served through this custom protocol.
-    addProtocol("pmtiles", getPmtilesProtocol().tile);
     const map = new MlMap({
       container: containerRef.current,
-      style: styleFor(style),
+      style: MAP_STYLE,
       center: [initialView.current.lon, initialView.current.lat],
       zoom: initialView.current.zoom,
       hash: false,
@@ -112,51 +86,12 @@ export default function MapsApp() {
     };
   }, []);
 
-  React.useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    // A local archive replaces the online style entirely.
-    if (archive) {
-      const key = archive.name;
-      const instance = getPmtilesProtocol().get(key);
-      if (!instance) return;
-      instance
-        .getHeader()
-        .then((header) => {
-          map.setStyle(
-            styleForHeader(header) === "vector"
-              ? pmtilesVectorStyle(`pmtiles://${key}`, style === "dark" ? "dark" : "light", lang)
-              : pmtilesRasterStyle(`pmtiles://${key}`),
-          );
-          if (header.minLon < header.maxLon && header.minLat < header.maxLat) {
-            map.fitBounds(
-              [
-                [header.minLon, header.minLat],
-                [header.maxLon, header.maxLat],
-              ],
-              { padding: 40, duration: 600 },
-            );
-          }
-        })
-        .catch(() => setArchiveError(true));
-      return;
-    }
-    map.setStyle(styleFor(style));
-  }, [archive, style, lang]);
-
-  const openArchive = React.useCallback((file: File | undefined) => {
-    if (!file || !file.name.toLowerCase().endsWith(".pmtiles")) return;
-    setArchiveError(false);
-    try {
-      registerLocalPmtiles(file);
-      setArchive({ name: file.name });
-    } catch {
-      setArchiveError(true);
-    }
-  }, []);
-
   const pick = React.useCallback(
     (place: { name: string; lat: number; lon: number; detail?: string }) => {
+      // Close the results dropdown: it overlays the panels below and would
+      // otherwise keep intercepting their clicks.
+      setResults(null);
+      setQuery("");
       // While a route endpoint is being picked, every selection fills that slot.
       if (routePick) {
         setEndpoint(routePick, { name: place.name, lat: place.lat, lon: place.lon });
@@ -246,7 +181,7 @@ export default function MapsApp() {
       map.off("moveend", onIdle);
       map.off("idle", onIdle);
     };
-  }, [categoryId, runCategoryQuery, archive, style]);
+  }, [categoryId, runCategoryQuery]);
 
   // Highlight the category hits on the map: small dots plus name labels. The
   // source is created once per style and then updated via setData, so the
@@ -316,7 +251,7 @@ export default function MapsApp() {
         map.off("styledata", apply);
       };
     }
-  }, [categoryHits, categoryId, archive, style]);
+  }, [categoryHits, categoryId]);
 
   // Debounced search biased to the current map center.
   React.useEffect(() => {
@@ -378,7 +313,7 @@ export default function MapsApp() {
     );
   }, []);
 
-  // Re-route (or drop the line) whenever endpoints or profile change.
+  // Re-route (or drop the line) whenever the endpoints change.
   React.useEffect(() => {
     if (!routeStart || !routeEnd) {
       setRoute(null);
@@ -387,7 +322,7 @@ export default function MapsApp() {
     }
     const controller = new AbortController();
     setRouteState("loading");
-    fetchRoute(profile, routeStart, routeEnd, controller.signal)
+    fetchRoute(routeStart, routeEnd, controller.signal)
       .then((found) => {
         setRoute(found);
         setRouteState("idle");
@@ -398,7 +333,7 @@ export default function MapsApp() {
         setRouteState("failed");
       });
     return () => controller.abort();
-  }, [profile, routeStart, routeEnd]);
+  }, [routeStart, routeEnd]);
 
   // Draw the route line once a result is in.
   React.useEffect(() => {
@@ -423,7 +358,7 @@ export default function MapsApp() {
       new LngLatBounds(),
     );
     map.fitBounds(bounds, { padding: 60, duration: 600 });
-  }, [route, archive, style]);
+  }, [route]);
 
   const listId = "maps-results";
 
@@ -482,57 +417,12 @@ export default function MapsApp() {
               </ul>
             )}
           </div>
-          <div
-            className="flex items-center gap-1 rounded-md border border-(--border) p-1"
-            role="group"
-            aria-label={t("styleLabel")}
-          >
-            {(["liberty", "positron", "dark"] as const).map((id) => (
-              <button
-                key={id}
-                type="button"
-                className={`rounded px-2 py-1 text-xs ${style === id ? "bg-(--accent) text-white" : "text-(--muted-fg) hover:text-(--fg)"}`}
-                onClick={() => setStyle(id)}
-                aria-pressed={style === id}
-              >
-                {t(`style${id[0].toUpperCase()}${id.slice(1)}` as Parameters<typeof mb>[1])}
-              </button>
-            ))}
-          </div>
           <button type="button" className="rounded-md border border-(--border) px-3 py-1.5 text-sm text-(--fg)" onClick={copyView}>
             {copied ? t("hashCopied") : "🔗"}
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pmtiles"
-            className="hidden"
-            aria-label={t("openFile")}
-            onChange={(event) => {
-              openArchive(event.target.files?.[0]);
-              event.target.value = "";
-            }}
-          />
-          <button
-            type="button"
-            className="rounded-md border border-(--border) px-3 py-1.5 text-sm text-(--fg)"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {archive ? `🗂 ${archive.name}` : t("openFile")}
-          </button>
-          {archive && (
-            <button
-              type="button"
-              className="rounded-md border border-(--border) px-2 py-1.5 text-xs text-(--muted-fg) hover:text-(--fg)"
-              onClick={() => setArchive(null)}
-            >
-              {t("closeFile")}
-            </button>
-          )}
         </div>
 
         <p aria-live="polite" className="text-xs text-(--muted-fg)">
-          {archiveError ? t("fileFailed") : ""}
           {status === "searching" ? t("searching") : ""}
           {status === "failed" ? t("searchFailed") : ""}
           {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
@@ -577,7 +467,7 @@ export default function MapsApp() {
             </span>
             <button
               type="button"
-              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
+              className="shrink-0 rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
               onClick={() => {
                 setEndpoint("start", selected);
                 setRoutePick("end");
@@ -587,7 +477,7 @@ export default function MapsApp() {
             </button>
             <button
               type="button"
-              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
+              className="shrink-0 rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
               onClick={() => {
                 setEndpoint("end", selected);
                 setRoutePick("start");
@@ -615,23 +505,6 @@ export default function MapsApp() {
 
         {(routeStart || routeEnd) && (
           <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="flex items-center gap-1 rounded-md border border-(--border) p-1"
-              role="group"
-              aria-label={t("styleLabel")}
-            >
-              {(["car", "bike", "foot"] as const).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`rounded px-2 py-1 text-xs ${profile === id ? "bg-(--accent) text-white" : "text-(--muted-fg) hover:text-(--fg)"}`}
-                  onClick={() => setProfile(id)}
-                  aria-pressed={profile === id}
-                >
-                  {t(`profile${id[0].toUpperCase()}${id.slice(1)}` as Parameters<typeof mb>[1])}
-                </button>
-              ))}
-            </div>
             <span aria-live="polite" className="text-sm text-(--fg)">
               {routeState === "loading"
                 ? t("routing")

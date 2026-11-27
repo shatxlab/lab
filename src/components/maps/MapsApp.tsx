@@ -491,14 +491,6 @@ export default function MapsApp() {
 
   /** Typing into a field invalidates its chosen place. */
   const editField = (which: "start" | "end", text: string) => {
-    const place = which === "start" ? startPlace : endPlace;
-    // A geo point's label is not a searchable name — the first edit wipes the
-    // whole field instead of trimming it letter by letter. Real addresses are
-    // (reverse-geocoded), so they edit like normal text.
-    if (place?.geo) {
-      clearField(which);
-      return;
-    }
     if (which === "start") {
       if (startPlace) setStartPlace(null);
       setStartQuery(text);

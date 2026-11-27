@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ArrowUpDown } from "lucide-react";
 import { GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type GeoJSONSource } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 
@@ -463,13 +464,13 @@ export default function MapsApp() {
             />
             <button
               type="button"
-              className="absolute top-1/2 left-[3px] z-10 flex h-[24px] w-[24px] -translate-y-1/2 items-center justify-center rounded-full border border-(--border) bg-(--surface) text-xs text-(--muted-fg) hover:text-(--fg)"
+              className="absolute top-1/2 right-3 z-10 flex h-[28px] w-[28px] -translate-y-1/2 items-center justify-center rounded-full border border-(--border) bg-(--surface) text-(--muted-fg) hover:text-(--fg)"
               onClick={swap}
               disabled={!startPlace && !endPlace}
               aria-label={t("swap")}
               title={t("swap")}
             >
-              ⇄
+              <ArrowUpDown size={14} />
             </button>
             <div className="flex flex-col gap-2 pl-10">
               {renderField("start")}
@@ -487,23 +488,26 @@ export default function MapsApp() {
           </button>
         </div>
 
-        <p aria-live="polite" className="min-h-5 text-xs text-(--muted-fg)">
-          {status === "searching" ? t("searching") : ""}
-          {status === "failed" ? t("searchFailed") : ""}
-          {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
-          {startPlace && endPlace && routeState === "loading" ? t("routing") : ""}
-          {startPlace && endPlace && routeState === "failed" ? t("routeFailed") : ""}
-          {startPlace && endPlace && route ? `${t("routeSummary")}: ${formatRoute(route.distance, route.duration, lang)}` : ""}
-        </p>
-        {startPlace && endPlace && (
-          <button
-            type="button"
-            className="self-start rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
-            onClick={clearRoute}
-          >
-            {t("routeClear")}
-          </button>
-        )}
+        {/* Status + summary, indented to align with the fields, not the rail. */}
+        <div className="flex flex-wrap items-center gap-2 pl-10">
+          <p aria-live="polite" className="min-h-5 text-xs text-(--muted-fg)">
+            {status === "searching" ? t("searching") : ""}
+            {status === "failed" ? t("searchFailed") : ""}
+            {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
+            {startPlace && endPlace && routeState === "loading" ? t("routing") : ""}
+            {startPlace && endPlace && routeState === "failed" ? t("routeFailed") : ""}
+            {startPlace && endPlace && route ? `${t("routeSummary")}: ${formatRoute(route.distance, route.duration, lang)}` : ""}
+          </p>
+          {startPlace && endPlace && (
+            <button
+              type="button"
+              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
+              onClick={clearRoute}
+            >
+              {t("routeClear")}
+            </button>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t("categoriesLabel")}>
           {CATEGORIES.map((category) => (

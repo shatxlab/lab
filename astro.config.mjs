@@ -46,7 +46,7 @@ export default defineConfig({
          * OpenFreeMap and place search from Photon (all keyless, CORS-open,
          * nothing user-owned is uploaded).
          */
-        "connect-src 'self' https://tiles.openfreemap.org https://fonts.openfreemap.org https://photon.komoot.io",
+        "connect-src 'self' https://tiles.openfreemap.org https://fonts.openfreemap.org https://photon.komoot.io https://routing.openstreetmap.de",
         /*
          * The tycoon game's PixiJS renderer decodes textures in blob: workers
          * (pixi.js WorkerManager / ImageBitmap worker); without an explicit

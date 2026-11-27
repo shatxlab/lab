@@ -1,8 +1,9 @@
 /**
- * Bosses with their own sprites, authored pixel by pixel in the PixelOffice style and baked by
- * `scripts/hr/bake-boss-sprites.mjs`: 18x25 south-facing figures with a six-frame walk cycle,
- * shipped as PNGs under `assets/hr/<boss>/`. Baked into the same frames the sheet-based figure
- * bosses use (see `boss-figures.ts`), so the renderer draws them exactly the same way — the
+ * Bosses with their own sprites, cut from the PixelOffice pack's own characters and dressed as the
+ * bosses they are by `scripts/hr/bake-boss-sprites.ts`: the pack's face, hair, outline and hands,
+ * with the suit, the tie, the glasses and the pen painted on, and the pack's own stride for the
+ * walk. Shipped as PNGs under `assets/hr/<boss>/` and baked into the same frames the sheet-based
+ * figure bosses use (see `boss-figures.ts`), so the renderer draws them exactly the same way — the
  * sheet-baked pack figures stay as the fallback when these PNGs fail to load. The pixel work here
  * is pure (see `spritePixels`), so it is tested without a browser; only `loadBossSprites` touches
  * the DOM.
@@ -19,10 +20,10 @@ export const BOSS_SPRITE_DIRS: Partial<Record<FoeKind, string>> = {
   middleManager: "/hr/middle-manager",
 };
 
-/** World units per sprite pixel, per boss: the 18x25 canvases read as tall as the sheet-baked bosses (drawn at ~3). */
+/** World units per sprite pixel, per boss: the cut-and-dressed pack frames read as tall as the sheet-baked bosses. */
 export const BOSS_SPRITE_PIXEL: Partial<Record<FoeKind, number>> = {
-  auditor: 3.2,
-  middleManager: 2.8,
+  auditor: 3.9,
+  middleManager: 3.5,
 };
 
 /** The walk cycle shipped with every boss sprite: `walk-0.png` … `walk-5.png`. */

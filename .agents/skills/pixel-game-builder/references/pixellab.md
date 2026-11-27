@@ -1,6 +1,6 @@
 # Generated boss sprites with PixelLab (MCP)
 
-The HR Department bosses can wear their own generated sprites instead of the sheet-baked pack figures. The workflow below originally produced the auditor (floor 20) and the middle manager (floor 1); those two were later re-authored in the pack's own style by hand (see `scripts/hr/bake-boss-sprites.mjs` and the HR roadmap's "Boss sprites" note), so PixelLab is now the option for multi-direction or photographic sets, at the cost of style drift. Consult `hr-roadmap.md` for which bosses are figure bosses, and [the art acceptance guide](pixel-art.md) for the general rules.
+The HR Department bosses can wear their own generated sprites instead of the sheet-baked pack figures. The workflow below originally produced the auditor (floor 20) and the middle manager (floor 1); those two were later replaced by sprites cut from the pack's own characters and dressed (see `scripts/hr/bake-boss-sprites.ts` and the HR roadmap's "Boss sprites" note), so PixelLab is now the option for multi-direction or photographic sets, at the cost of style drift. Consult `hr-roadmap.md` for which bosses are figure bosses, and [the art acceptance guide](pixel-art.md) for the general rules.
 
 ## Setup
 

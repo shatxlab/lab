@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { clock, HR_TEXT, quirkLine } from "@/lib/hr/i18n";
 import { cameraFor, fitView, STICK_RADIUS, stickInput } from "@/lib/hr/render/draw";
 import { AUTHORED_BOSS_SPRITES, authoredSpritePixels } from "@/lib/hr/render/bosses";
-import { spritePixels, trimToArt } from "@/lib/hr/render/boss-sprites";
+import { BOSS_SPRITE_DIRS, BOSS_SPRITE_PIXEL, BOSS_SPRITE_WALK_FRAMES, spritePixels, trimToArt } from "@/lib/hr/render/boss-sprites";
 import { heroPixels } from "@/lib/hr/render/heroes";
 import type { Pixels } from "@/lib/tycoon/render-support/poses";
 import { ARENA, QUIRK_NUMBER, SPAWN_DISTANCE } from "@/lib/hr/sim/balance";
@@ -132,6 +132,19 @@ describe("the bosses' own sprites", () => {
 
   it("leaves an empty frame list alone", () => {
     expect(trimToArt([])).toEqual([]);
+  });
+
+  it("gives every boss that ships a sprite both a folder and a scale to draw it at", () => {
+    // The loader walks the folders and the renderer reads the scale: a kind with one and not the other either never
+    // loads or collapses to zero-size, and both are silent, so the pairing is held here.
+    const kinds = Object.keys(BOSS_SPRITE_DIRS);
+    expect(kinds.length).toBeGreaterThan(0);
+    for (const kind of kinds) {
+      expect(BOSS_SPRITE_DIRS[kind as keyof typeof BOSS_SPRITE_DIRS]).toMatch(/^\/hr\/[a-z-]+$/);
+      expect(BOSS_SPRITE_PIXEL[kind as keyof typeof BOSS_SPRITE_PIXEL]).toBeGreaterThan(0);
+    }
+    // The walk frames the baker writes are the ones the loader asks for.
+    expect(BOSS_SPRITE_WALK_FRAMES).toBe(6);
   });
 });
 

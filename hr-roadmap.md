@@ -235,17 +235,22 @@ Full record was `hr-harder-roadmap.md` (deleted as implemented); the facts that 
   blind spot, needs a human); every boss's telegraphs re-checked at phone scale; P4 ideas — endless floors past 20,
   contract clauses as a veterans' dial (voluntary +difficulty for +gold).
 
-## Boss sprites, authored in the pack's style (2026-11-26)
+## Boss sprites, cut from the pack and dressed (2026-11-26)
 
-- The middle manager (floor 1) and the auditor (floor 20) wear **hand-authored sprites** in the PixelOffice style,
-  replacing the off-style PixelLab test generations: 18x25 south-facing figures in the game's own palette and
-  outline, with a six-frame legs-only walk cycle, baked by `scripts/hr/bake-boss-sprites.mjs` into
-  `assets/hr/<boss>/stand.png` + `walk-0…5.png` (the same files `boss-sprites.ts` loads; the sheet figures stay as
-  the fallback). Scales in `BOSS_SPRITE_PIXEL`: the middle manager 2.8, the auditor 3.2. The auditor keeps his fat
-  red pen; the middle manager his clenched fists. Verified in the browser on floors 1 and 20.
-- A new boss sprite of this kind is now a matter of editing that script's rows and adding the kind to
-  `BOSS_SPRITE_DIRS`/`BOSS_SPRITE_PIXEL`; the PixelLab MCP pipeline (see the pixel-game-builder skill's
-  `references/pixellab.md`) remains the option for photographic multi-direction sets, at the cost of style drift.
+- The middle manager (floor 1) and the auditor (floor 20) wear **their own sprites** instead of the sheet figures,
+  replacing the off-style PixelLab test generations. They are cut from the pack's own characters — so the face, hair,
+  outline, hands and boot of every frame are the pack's — and dressed as bosses: the middle manager (character 0,
+  brown hair) in the navy suit and red tie he hands out, the auditor (character 2, the one the pack drew glasses on,
+  silver hair) in his grey suit with the red pen at his side. The walk is the pack's own stride (`stepA…stepC`, two
+  passes for the loader's six frames), not a hand-made cycle.
+- Baked by `scripts/hr/bake-boss-sprites.ts` (bundled with esbuild like `craft-boss-runs.ts`; `--preview` prints the
+  frames as ASCII to design the dress patches against) into `assets/hr/<boss>/stand.png` + `walk-0…5.png`, the files
+  `boss-sprites.ts` loads. Patches are in the character's own frame coordinates — `poseFrame` adds `POSE_PAD` itself.
+  Scales in `BOSS_SPRITE_PIXEL` are 3.5 and 3.9, so both read bigger than the hero and about like the other bosses.
+- A new sprite boss is now: a `BOSSES` entry (character, hair ramp, dress patches, scale) and its kind in
+  `BOSS_SPRITE_DIRS`/`BOSS_SPRITE_PIXEL`; `tests/hr/render.test.ts` holds the folder/scale pairing. The PixelLab MCP
+  pipeline (the pixel-game-builder skill's `references/pixellab.md`) stays as the option for multi-direction sets, at
+  the cost of style drift — its output is what these replaced.
 
 ## Status (2026-10-31)
 

@@ -235,6 +235,18 @@ Full record was `hr-harder-roadmap.md` (deleted as implemented); the facts that 
   blind spot, needs a human); every boss's telegraphs re-checked at phone scale; P4 ideas — endless floors past 20,
   contract clauses as a veterans' dial (voluntary +difficulty for +gold).
 
+## Boss sprites, authored in the pack's style (2026-11-26)
+
+- The middle manager (floor 1) and the auditor (floor 20) wear **hand-authored sprites** in the PixelOffice style,
+  replacing the off-style PixelLab test generations: 18x25 south-facing figures in the game's own palette and
+  outline, with a six-frame legs-only walk cycle, baked by `scripts/hr/bake-boss-sprites.mjs` into
+  `assets/hr/<boss>/stand.png` + `walk-0…5.png` (the same files `boss-sprites.ts` loads; the sheet figures stay as
+  the fallback). Scales in `BOSS_SPRITE_PIXEL`: the middle manager 2.8, the auditor 3.2. The auditor keeps his fat
+  red pen; the middle manager his clenched fists. Verified in the browser on floors 1 and 20.
+- A new boss sprite of this kind is now a matter of editing that script's rows and adding the kind to
+  `BOSS_SPRITE_DIRS`/`BOSS_SPRITE_PIXEL`; the PixelLab MCP pipeline (see the pixel-game-builder skill's
+  `references/pixellab.md`) remains the option for photographic multi-direction sets, at the cost of style drift.
+
 ## Status (2026-10-31)
 
 - **Live and public:** <https://shatx.ru/hr/> (dev: `http://127.0.0.1:4321/hr/`). Listed

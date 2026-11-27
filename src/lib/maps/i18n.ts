@@ -34,7 +34,6 @@ export const mb = createTranslator({
     routeSummary: "Route",
     routing: "Building the route…",
     routeFailed: "Could not build a route",
-    attribution: "© OpenStreetMap contributors · tiles by OpenFreeMap · search by Photon · routes by OSRM",
     map: "Map",
   },
   ru: {
@@ -70,7 +69,6 @@ export const mb = createTranslator({
     routeSummary: "Маршрут",
     routing: "Строим маршрут…",
     routeFailed: "Не удалось построить маршрут",
-    attribution: "© OpenStreetMap · тайлы OpenFreeMap · поиск Photon · маршруты OSRM",
     map: "Карта",
   },
 });

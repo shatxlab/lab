@@ -104,7 +104,12 @@ export default function MapsApp() {
       center: [initialView.lon, initialView.lat],
       zoom: initialView.zoom,
       hash: false,
-      attributionControl: false,
+      // The OSM licence asks for a visible credit — keep the standard
+      // compact corner control instead of a text line under the map.
+      attributionControl: {
+        compact: true,
+        customAttribution: "© OpenStreetMap contributors · OpenFreeMap",
+      },
     });
     mapRef.current = map;
     // Debug/testing hook: lets headless probes query the live map.
@@ -622,7 +627,7 @@ export default function MapsApp() {
           </div>
           <button
             type="button"
-            className="h-[38px] rounded-md border border-(--border) px-3 py-2 text-sm text-(--fg)"
+            className="h-[38px] w-[42px] rounded-md border border-(--border) px-0 py-2 text-center text-sm text-(--fg)"
             onClick={copyView}
             aria-label={t("hashCopied")}
             title={t("hashCopied")}
@@ -651,7 +656,6 @@ export default function MapsApp() {
               </button>
             )}
           </div>
-          <p className="hidden max-sm:block text-[10px] text-(--muted-fg)">{t("attribution")}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-1 max-sm:order-1" role="group" aria-label={t("categoriesLabel")}>
@@ -707,7 +711,6 @@ export default function MapsApp() {
             </div>
           )}
         </div>
-        <p className="max-sm:hidden text-xs text-(--muted-fg)">{t("attribution")}</p>
       </div>
     </ToolPage>
   );

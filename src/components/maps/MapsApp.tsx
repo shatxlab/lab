@@ -6,7 +6,7 @@ import type { FeatureCollection } from "geojson";
 import { ToolPage, inputClass } from "@/components/tools/ui";
 import type { AppLang } from "@/lib/apps/lang";
 import { useAppLang } from "@/lib/apps/use-app-lang";
-import { decodeView, DEFAULT_VIEW, encodeView, type MapView } from "@/lib/maps/hash";
+import { parseState, encodeState, DEFAULT_VIEW, type MapView } from "@/lib/maps/hash";
 import { mb } from "@/lib/maps/i18n";
 import { searchPlaces, type PlaceResult } from "@/lib/maps/search";
 import {
@@ -44,8 +44,13 @@ export default function MapsApp() {
   // Text being typed per field; empty while a chosen place occupies the field.
   const [startQuery, setStartQuery] = React.useState("");
   const [endQuery, setEndQuery] = React.useState("");
+  // Start from the URL hash (#map=…&s=…&e=…) so shared links restore the route.
+  const initialHash = React.useRef(
+    parseState(typeof window === "undefined" ? "" : window.location.hash),
+  );
   const [startPlace, setStartPlace] = React.useState<Endpoint | null>(null);
   const [endPlace, setEndPlace] = React.useState<Endpoint | null>(null);
+  const [initialView] = React.useState<MapView>(initialHash.current.view ?? DEFAULT_VIEW);
   const [results, setResults] = React.useState<PlaceResult[] | null>(null);
   const [status, setStatus] = React.useState<"idle" | "searching" | "failed">("idle");
   const [copied, setCopied] = React.useState(false);
@@ -54,18 +59,18 @@ export default function MapsApp() {
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
 
-  // Start from the URL hash (#map=zoom/lat/lon) so shared links open in place.
-  const initialView = React.useRef<MapView>(
-    decodeView(typeof window === "undefined" ? "" : window.location.hash) ?? DEFAULT_VIEW,
-  );
-
   React.useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    // Apply the shared endpoints after mount: the server render must match the
+    // first client render (empty fields), otherwise React re-hydrates loudly.
+    const { start, end } = initialHash.current;
+    if (start) setStartPlace(start);
+    if (end) setEndPlace(end);
     const map = new MlMap({
       container: containerRef.current,
       style: MAP_STYLE,
-      center: [initialView.current.lon, initialView.current.lat],
-      zoom: initialView.current.zoom,
+      center: [initialView.lon, initialView.lat],
+      zoom: initialView.zoom,
       hash: false,
       attributionControl: false,
     });
@@ -75,10 +80,16 @@ export default function MapsApp() {
     map.addControl(new NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new GeolocateControl({ trackUserLocation: false }), "bottom-right");
 
-    // Mirror the view into the hash without flooding history.
+    // Mirror the full state into the hash without flooding history. Endpoints
+    // are read through a ref so the moveend handler never goes stale.
     let replace = true;
     map.on("moveend", () => {
-      const hash = encodeView({ zoom: map.getZoom(), lat: map.getCenter().lat, lon: map.getCenter().lng });
+      const { start, end } = endpointsRef.current;
+      const hash = encodeState(
+        { zoom: map.getZoom(), lat: map.getCenter().lat, lon: map.getCenter().lng },
+        start,
+        end,
+      );
       const url = `${window.location.pathname}${window.location.search}#${hash}`;
       if (replace) {
         window.history.replaceState(null, "", url);
@@ -92,6 +103,12 @@ export default function MapsApp() {
       mapRef.current = null;
     };
   }, []);
+
+  // Mirror the chosen endpoints for the hash-writing moveend handler.
+  const endpointsRef = React.useRef<{ start: Endpoint | null; end: Endpoint | null }>({ start: null, end: null });
+  React.useEffect(() => {
+    endpointsRef.current = { start: startPlace, end: endPlace };
+  }, [startPlace, endPlace]);
 
   const copyView = React.useCallback(() => {
     navigator.clipboard.writeText(window.location.href).then(
@@ -479,7 +496,7 @@ export default function MapsApp() {
           </div>
           <button
             type="button"
-            className="mt-1 rounded-md border border-(--border) px-3 py-2 text-sm text-(--fg)"
+            className="h-[38px] rounded-md border border-(--border) px-3 py-2 text-sm text-(--fg)"
             onClick={copyView}
             aria-label={t("hashCopied")}
             title={t("hashCopied")}

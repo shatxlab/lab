@@ -36,6 +36,8 @@
     "marked": "^18.0.14",
     "pdfjs-dist": "^6.4.299",
     "pixi.js": "^8.22.0",
+    "pmtiles": "^4.5.0",
+    "protomaps-themes-base": "^4.5.0",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",

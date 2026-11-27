@@ -141,14 +141,31 @@ export default function MapsApp() {
     // menu at the tapped point.
     const menuAt = (point: { x: number; y: number }, lngLat: { lat: number; lng: number }, name?: string) => {
       const width = map.getContainer().clientWidth;
+      const lat = lngLat.lat;
+      const lon = lngLat.lng;
+      const fallback = `${t("pointOnMap")} (${lat.toFixed(5)}, ${lon.toFixed(5)})`;
       setContextMenu({
         x: Math.min(point.x, Math.max(8, width - 190)),
         y: point.y,
-        lat: lngLat.lat,
-        lon: lngLat.lng,
-        name,
+        lat,
+        lon,
+        name: name ?? fallback,
       });
       menuOpenedAt.current = Date.now();
+      if (name) return;
+      // An arbitrary point still gets its real street address: resolve it in
+      // the background and update the open menu and any field it landed in.
+      reverseGeocode(lat, lon)
+        .then((found) => {
+          if (!found) return;
+          const upgrade = (p: Endpoint | null) => (p && p.name === fallback ? { ...p, name: found.name } : p);
+          setContextMenu((current) =>
+            current && current.lat === lat && current.lon === lon ? { ...current, name: found.name } : current,
+          );
+          setStartPlace(upgrade);
+          setEndPlace(upgrade);
+        })
+        .catch(() => undefined);
     };
     map.on("contextmenu", (e) => menuAt(e.point, e.lngLat));
     let pressTimer: number | null = null;

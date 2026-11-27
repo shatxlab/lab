@@ -57,12 +57,39 @@ export default function MapsApp() {
   const [routeState, setRouteState] = React.useState<"idle" | "loading" | "failed">("idle");
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
-  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; lat: number; lon: number } | null>(null);
+  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; lat: number; lon: number; name?: string } | null>(null);
   const contextMenuRef = React.useRef(false);
   const menuOpenedAt = React.useRef(0);
   React.useEffect(() => {
     contextMenuRef.current = contextMenu !== null;
   }, [contextMenu]);
+  const categoryHitsRef = React.useRef<PoiHit[] | null>(null);
+  React.useEffect(() => {
+    categoryHitsRef.current = categoryHits;
+  }, [categoryHits]);
+
+  /** The topmost mapped place at a point — a POI from the tile data itself. */
+  const poiAtPoint = React.useCallback(
+    (map: MlMap, point: { x: number; y: number }): { name: string; lat: number; lon: number } | null => {
+      for (const feature of map.queryRenderedFeatures([point.x, point.y])) {
+        const name = feature.properties?.name;
+        if (!name) continue;
+        if (feature.sourceLayer && (POI_SOURCE_LAYERS as readonly string[]).includes(feature.sourceLayer)) {
+          if (feature.geometry.type === "Point") {
+            const [lon, lat] = feature.geometry.coordinates;
+            return { name: String(name), lat, lon };
+          }
+        }
+      }
+      // Clicks on our category highlight dots resolve to the underlying hit.
+      const dot = map.queryRenderedFeatures([point.x, point.y]).find((f) => f.layer.id === "category-points");
+      const hit = dot?.properties?.name
+        ? categoryHitsRef.current?.find((h) => h.name === dot.properties!.name)
+        : undefined;
+      return hit ? { name: hit.name, lat: hit.lat, lon: hit.lon } : null;
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -105,13 +132,14 @@ export default function MapsApp() {
     });
     // Long-press (touch) and right-click open a small "from here / to here"
     // menu at the tapped point.
-    const menuAt = (point: { x: number; y: number }, lngLat: { lat: number; lng: number }) => {
+    const menuAt = (point: { x: number; y: number }, lngLat: { lat: number; lng: number }, name?: string) => {
       const width = map.getContainer().clientWidth;
       setContextMenu({
         x: Math.min(point.x, Math.max(8, width - 190)),
         y: point.y,
         lat: lngLat.lat,
         lon: lngLat.lng,
+        name,
       });
       menuOpenedAt.current = Date.now();
     };
@@ -137,9 +165,17 @@ export default function MapsApp() {
     });
     map.on("touchend", cancelPress);
     map.on("dragstart", cancelPress);
-    // A tap closes the menu — but not the tap that just opened it.
-    map.on("click", () => {
-      if (contextMenuRef.current && Date.now() - menuOpenedAt.current > 500) setContextMenu(null);
+    // A tap on a mapped place (café, metro station, …) opens the same menu
+    // with one click; a tap on empty map closes the menu — but not the tap
+    // that just opened it.
+    map.on("click", (e) => {
+      if (Date.now() - menuOpenedAt.current <= 500) return;
+      const poi = poiAtPoint(map, e.point);
+      if (poi) {
+        menuAt({ x: e.point.x, y: e.point.y }, { lat: poi.lat, lng: poi.lon }, poi.name);
+        return;
+      }
+      if (contextMenuRef.current) setContextMenu(null);
     });
 
     return () => {
@@ -632,22 +668,6 @@ export default function MapsApp() {
           ))}
         </div>
 
-        {categoryHits && categoryHits.length > 0 && (
-          <ul className="max-h-40 overflow-y-auto rounded-md border border-(--border) bg-(--surface) text-sm max-sm:order-2">
-            {categoryHits.map((hit) => (
-              <li key={`${hit.name}-${hit.lat}-${hit.lon}`}>
-                <button
-                  type="button"
-                  className="block w-full px-3 py-1.5 text-left hover:bg-(--accent)/10 focus-visible:bg-(--accent)/10"
-                  onClick={() => pick(hit)}
-                >
-                  {hit.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
         <div className="relative min-h-[55vh] max-sm:min-h-0 flex-1 max-sm:order-3">
           <div
             ref={containerRef}
@@ -661,6 +681,11 @@ export default function MapsApp() {
               className="absolute z-20 overflow-hidden rounded-md border border-(--border) bg-(--surface) py-1 shadow-lg"
               style={{ left: contextMenu.x, top: contextMenu.y }}
             >
+              {contextMenu.name && (
+                <div className="max-w-52 truncate px-4 pb-0.5 pt-1.5 text-xs font-medium text-(--muted-fg)">
+                  {contextMenu.name}
+                </div>
+              )}
               {(["start", "end"] as const).map((field) => (
                 <button
                   key={field}
@@ -669,7 +694,7 @@ export default function MapsApp() {
                   className="block w-full px-4 py-2 text-left text-sm text-(--fg) hover:bg-(--accent)/10"
                   onClick={() => {
                     choose(field, {
-                      name: `${t("pointOnMap")} (${contextMenu.lat.toFixed(5)}, ${contextMenu.lon.toFixed(5)})`,
+                      name: contextMenu.name ?? `${t("pointOnMap")} (${contextMenu.lat.toFixed(5)}, ${contextMenu.lon.toFixed(5)})`,
                       lat: contextMenu.lat,
                       lon: contextMenu.lon,
                     });

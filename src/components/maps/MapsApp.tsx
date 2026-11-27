@@ -7,7 +7,20 @@ import { useAppLang } from "@/lib/apps/use-app-lang";
 import { decodeView, DEFAULT_VIEW, encodeView, type MapView } from "@/lib/maps/hash";
 import { mb } from "@/lib/maps/i18n";
 import { searchPlaces, type PlaceResult } from "@/lib/maps/search";
-import { fetchRoute, formatRoute, type RouteProfile, type RouteResult } from "@/lib/maps/route";
+import {
+  collectPois,
+  CATEGORIES,
+  categoryById,
+  POI_SOURCE_LAYERS,
+  type PoiHit,
+  type RawPoiFeature,
+} from "@/lib/maps/categories";
+import {
+  fetchRoute,
+  formatRoute,
+  type RouteProfile,
+  type RouteResult,
+} from "@/lib/maps/route";
 import {
   getPmtilesProtocol,
   pmtilesRasterStyle,
@@ -53,6 +66,8 @@ export default function MapsApp() {
   const [archive, setArchive] = React.useState<{ name: string } | null>(null);
   const [archiveError, setArchiveError] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [categoryId, setCategoryId] = React.useState<string | null>(null);
+  const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
 
   // Start from the URL hash (#map=zoom/lat/lon) so shared links open in place.
   const initialView = React.useRef<MapView>(
@@ -135,6 +150,92 @@ export default function MapsApp() {
       setArchiveError(true);
     }
   }, []);
+
+  const pickHit = React.useCallback((place: { name: string; lat: number; lon: number; detail?: string }) => {
+    setSelected({ name: place.name, detail: place.detail ?? "", lat: place.lat, lon: place.lon, kind: "category", key: `hit-${place.name}-${place.lat}` });
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 16), speed: 1.4 });
+    markerRef.current?.remove();
+    markerRef.current = new Marker({ color: "#e15b64" })
+      .setLngLat([place.lon, place.lat])
+      .addTo(map);
+  }, []);
+
+  // Category search reads the POI features already loaded in the viewport.
+  const runCategoryQuery = React.useCallback(() => {
+    const map = mapRef.current;
+    const category = categoryId ? categoryById(categoryId) : undefined;
+    if (!map || !category) {
+      setCategoryHits(null);
+      return;
+    }
+    const center = { lat: map.getCenter().lat, lon: map.getCenter().lng };
+    const raw: RawPoiFeature[] = [];
+    for (const [sourceId, source] of Object.entries(map.getStyle().sources ?? {})) {
+      if ((source as { type?: string }).type !== "vector") continue;
+      for (const sourceLayer of POI_SOURCE_LAYERS) {
+        try {
+          const found = map.querySourceFeatures(sourceId, { sourceLayer });
+          for (const item of found) {
+            const coords = item.geometry && item.geometry.type === "Point" ? item.geometry.coordinates : undefined;
+            if (!coords) continue;
+            raw.push({ properties: item.properties, geometry: { coordinates: coords } });
+          }
+        } catch {
+          // Layer absent from this schema — fine.
+        }
+      }
+    }
+    setCategoryHits(collectPois(raw, category, center));
+  }, [categoryId]);
+
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    runCategoryQuery();
+    if (!categoryId) return;
+    // Tiles stream in after every move; re-scan once they settle.
+    const onIdle = () => runCategoryQuery();
+    map.on("moveend", onIdle);
+    map.on("idle", onIdle);
+    return () => {
+      map.off("moveend", onIdle);
+      map.off("idle", onIdle);
+    };
+  }, [categoryId, runCategoryQuery, archive, style]);
+
+  // Highlight the category hits on the map.
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (map.getLayer("category-points")) map.removeLayer("category-points");
+    if (map.getSource("category")) map.removeSource("category");
+    if (!categoryHits || categoryHits.length === 0) return;
+    map.addSource("category", {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: categoryHits.map((hit) => ({
+          type: "Feature",
+          properties: { name: hit.name },
+          geometry: { type: "Point", coordinates: [hit.lon, hit.lat] },
+        })),
+      },
+    });
+    map.addLayer({
+      id: "category-points",
+      type: "circle",
+      source: "category",
+      paint: {
+        "circle-radius": 7,
+        "circle-color": "#e15b64",
+        "circle-opacity": 0.85,
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#ffffff",
+      },
+    });
+  }, [categoryHits, archive, style]);
 
   // Debounced search biased to the current map center.
   React.useEffect(() => {
@@ -366,6 +467,36 @@ export default function MapsApp() {
           {status === "failed" ? t("searchFailed") : ""}
           {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
         </p>
+
+        <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t("categoriesLabel")}>
+          {CATEGORIES.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              aria-pressed={categoryId === category.id}
+              className={`rounded-full border px-2.5 py-1 text-xs ${categoryId === category.id ? "border-(--accent) bg-(--accent) text-white" : "border-(--border) text-(--muted-fg) hover:text-(--fg)"}`}
+              onClick={() => setCategoryId((current) => (current === category.id ? null : category.id))}
+            >
+              {category.icon} {t(`category_${category.id}` as Parameters<typeof mb>[1])}
+            </button>
+          ))}
+        </div>
+
+        {categoryHits && categoryHits.length > 0 && (
+          <ul className="max-h-40 overflow-y-auto rounded-md border border-(--border) bg-(--surface) text-sm">
+            {categoryHits.map((hit) => (
+              <li key={`${hit.name}-${hit.lat}-${hit.lon}`}>
+                <button
+                  type="button"
+                  className="block w-full px-3 py-1.5 text-left hover:bg-(--accent)/10 focus-visible:bg-(--accent)/10"
+                  onClick={() => pickHit(hit)}
+                >
+                  {hit.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {selected && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--border) bg-(--surface) px-3 py-2">

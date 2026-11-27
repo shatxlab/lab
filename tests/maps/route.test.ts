@@ -10,7 +10,7 @@ describe("osrm routing", () => {
       { lat: 55.7401, lon: 37.6032 },
     );
     expect(url).toBe(
-      "https://routing.openstreetmap.de/routed-car/driving/route/v1/37.618400,55.751200;37.603200,55.740100?overview=full&geometries=geojson",
+      "https://routing.openstreetmap.de/routed-car/route/v1/driving/37.618400,55.751200;37.603200,55.740100?overview=full&geometries=geojson",
     );
   });
 

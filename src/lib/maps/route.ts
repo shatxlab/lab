@@ -24,14 +24,14 @@ export interface RouteResult {
 const OSRM_ENDPOINT = "https://routing.openstreetmap.de";
 
 const PROFILE_PATH: Record<RouteProfile, string> = {
-  car: "routed-car/driving",
-  bike: "routed-bike/bike",
-  foot: "routed-foot/foot",
+  car: "routed-car",
+  bike: "routed-bike",
+  foot: "routed-foot",
 };
 
 export function osrmUrl(profile: RouteProfile, start: RoutePoint, end: RoutePoint): string {
   const via = `${start.lon.toFixed(6)},${start.lat.toFixed(6)};${end.lon.toFixed(6)},${end.lat.toFixed(6)}`;
-  return `${OSRM_ENDPOINT}/${PROFILE_PATH[profile]}/route/v1/${via}?overview=full&geometries=geojson`;
+  return `${OSRM_ENDPOINT}/${PROFILE_PATH[profile]}/route/v1/driving/${via}?overview=full&geometries=geojson`;
 }
 
 export function parseRoute(data: unknown): RouteResult {

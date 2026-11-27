@@ -1,5 +1,6 @@
 import * as React from "react";
-import { addProtocol, GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type StyleSpecification } from "maplibre-gl";
+import { addProtocol, GeolocateControl, LngLatBounds, Map as MlMap, Marker, NavigationControl, type GeoJSONSource, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
+import type { FeatureCollection } from "geojson";
 
 import { ToolPage, inputClass } from "@/components/tools/ui";
 import type { AppLang } from "@/lib/apps/lang";
@@ -58,8 +59,8 @@ export default function MapsApp() {
   const [status, setStatus] = React.useState<"idle" | "searching" | "failed">("idle");
   const [selected, setSelected] = React.useState<PlaceResult | null>(null);
   const [copied, setCopied] = React.useState(false);
-  const [routeStart, setRouteStart] = React.useState<PlaceResult | null>(null);
-  const [routeEnd, setRouteEnd] = React.useState<PlaceResult | null>(null);
+  const [routeStart, setRouteStart] = React.useState<{ name: string; lat: number; lon: number } | null>(null);
+  const [routeEnd, setRouteEnd] = React.useState<{ name: string; lat: number; lon: number } | null>(null);
   const [profile, setProfile] = React.useState<RouteProfile>("car");
   const [route, setRoute] = React.useState<RouteResult | null>(null);
   const [routeState, setRouteState] = React.useState<"idle" | "loading" | "failed">("idle");
@@ -68,6 +69,7 @@ export default function MapsApp() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [categoryHits, setCategoryHits] = React.useState<PoiHit[] | null>(null);
+  const [routePick, setRoutePick] = React.useState<"start" | "end" | null>(null);
 
   // Start from the URL hash (#map=zoom/lat/lon) so shared links open in place.
   const initialView = React.useRef<MapView>(
@@ -87,6 +89,8 @@ export default function MapsApp() {
       attributionControl: false,
     });
     mapRef.current = map;
+    // Debug/testing hook: lets headless probes query the live map.
+    (window as unknown as { __mapsApp?: MlMap }).__mapsApp = map;
     map.addControl(new NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new GeolocateControl({ trackUserLocation: false }), "bottom-right");
 
@@ -151,16 +155,48 @@ export default function MapsApp() {
     }
   }, []);
 
-  const pickHit = React.useCallback((place: { name: string; lat: number; lon: number; detail?: string }) => {
-    setSelected({ name: place.name, detail: place.detail ?? "", lat: place.lat, lon: place.lon, kind: "category", key: `hit-${place.name}-${place.lat}` });
+  const pick = React.useCallback(
+    (place: { name: string; lat: number; lon: number; detail?: string }) => {
+      // While a route endpoint is being picked, every selection fills that slot.
+      if (routePick) {
+        setEndpoint(routePick, { name: place.name, lat: place.lat, lon: place.lon });
+        setRoutePick(null);
+        return;
+      }
+      setSelected({
+        name: place.name,
+        detail: place.detail ?? "",
+        lat: place.lat,
+        lon: place.lon,
+        kind: "picked",
+        key: `hit-${place.name}-${place.lat}`,
+      });
+      const map = mapRef.current;
+      if (!map) return;
+      map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 16), speed: 1.4 });
+      markerRef.current?.remove();
+      markerRef.current = new Marker({ color: "#e15b64" })
+        .setLngLat([place.lon, place.lat])
+        .addTo(map);
+    },
+    [routePick],
+  );
+
+  // While picking an endpoint, a tap anywhere on the map drops it there.
+  React.useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 16), speed: 1.4 });
-    markerRef.current?.remove();
-    markerRef.current = new Marker({ color: "#e15b64" })
-      .setLngLat([place.lon, place.lat])
-      .addTo(map);
-  }, []);
+    if (!map || !routePick) return;
+    const onClick = (event: MapMouseEvent) => {
+      const { lat, lng } = event.lngLat;
+      pick({ name: `${t("pointOnMap")} (${lat.toFixed(5)}, ${lng.toFixed(5)})`, lat, lon: lng });
+    };
+    map.on("click", onClick);
+    map.getCanvas().style.cursor = "crosshair";
+    return () => {
+      map.off("click", onClick);
+      map.getCanvas().style.cursor = "";
+    };
+  }, [routePick, pick]);
 
   // Category search reads the POI features already loaded in the viewport.
   const runCategoryQuery = React.useCallback(() => {
@@ -187,7 +223,14 @@ export default function MapsApp() {
         }
       }
     }
-    setCategoryHits(collectPois(raw, category, center));
+    const hits = collectPois(raw, category, center);
+    setCategoryHits((previous) => {
+      // Same hits → keep the previous array so effects don't re-run and the
+      // dots don't blink (idle fires after every render, including our own).
+      const signature = hits.map((hit) => `${hit.name},${hit.lat},${hit.lon}`).join("|");
+      if (previous && previous.map((hit) => `${hit.name},${hit.lat},${hit.lon}`).join("|") === signature) return previous;
+      return hits;
+    });
   }, [categoryId]);
 
   React.useEffect(() => {
@@ -205,37 +248,75 @@ export default function MapsApp() {
     };
   }, [categoryId, runCategoryQuery, archive, style]);
 
-  // Highlight the category hits on the map.
+  // Highlight the category hits on the map: small dots plus name labels. The
+  // source is created once per style and then updated via setData, so the
+  // points don't blink on every re-scan after a map move.
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer("category-points")) map.removeLayer("category-points");
-    if (map.getSource("category")) map.removeSource("category");
-    if (!categoryHits || categoryHits.length === 0) return;
-    map.addSource("category", {
-      type: "geojson",
-      data: {
+    const apply = () => {
+      if (!categoryId || !categoryHits || categoryHits.length === 0) {
+        if (map.getLayer("category-labels")) map.removeLayer("category-labels");
+        if (map.getLayer("category-points")) map.removeLayer("category-points");
+        if (map.getSource("category")) map.removeSource("category");
+        return;
+      }
+      const data: FeatureCollection = {
         type: "FeatureCollection",
         features: categoryHits.map((hit) => ({
           type: "Feature",
           properties: { name: hit.name },
           geometry: { type: "Point", coordinates: [hit.lon, hit.lat] },
         })),
-      },
-    });
-    map.addLayer({
-      id: "category-points",
-      type: "circle",
-      source: "category",
-      paint: {
-        "circle-radius": 7,
-        "circle-color": "#e15b64",
-        "circle-opacity": 0.85,
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff",
-      },
-    });
-  }, [categoryHits, archive, style]);
+      };
+      // Source already exists → swap the data in place (no layer flash).
+      if (map.getSource("category")) {
+        (map.getSource("category") as GeoJSONSource).setData(data);
+        return;
+      }
+      map.addSource("category", { type: "geojson", data });
+      map.addLayer({
+        id: "category-points",
+        type: "circle",
+        source: "category",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": "#e15b64",
+          "circle-opacity": 0.9,
+          "circle-stroke-width": 1.5,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+      // Labels need glyphs; the raster-archive style has none.
+      if (map.getStyle().glyphs) {
+        map.addLayer({
+          id: "category-labels",
+          type: "symbol",
+          source: "category",
+          layout: {
+            "text-field": "{name}",
+            "text-size": 11,
+            "text-offset": [0, 1.1],
+            "text-anchor": "top",
+            "text-allow-overlap": false,
+          },
+          paint: {
+            "text-color": "#3a3335",
+            "text-halo-color": "#ffffff",
+            "text-halo-width": 1.4,
+          },
+        });
+      }
+    };
+    if (map.isStyleLoaded()) {
+      apply();
+    } else {
+      map.once("styledata", apply);
+      return () => {
+        map.off("styledata", apply);
+      };
+    }
+  }, [categoryHits, categoryId, archive, style]);
 
   // Debounced search biased to the current map center.
   React.useEffect(() => {
@@ -267,20 +348,9 @@ export default function MapsApp() {
     };
   }, [query]);
 
-  const pick = React.useCallback((place: PlaceResult) => {
-    setSelected(place);
-    const map = mapRef.current;
-    if (!map) return;
-    map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 16), speed: 1.4 });
-    markerRef.current?.remove();
-    markerRef.current = new Marker({ color: "#e15b64" })
-      .setLngLat([place.lon, place.lat])
-      .addTo(map);
-  }, []);
-
   const dropRouteMarker = React.useRef<Marker | null>(null);
 
-  const setEndpoint = React.useCallback((which: "start" | "end", place: PlaceResult | null) => {
+  const setEndpoint = React.useCallback((which: "start" | "end", place: { name: string; lat: number; lon: number } | null) => {
     if (which === "start") {
       setRouteStart(place);
       dropRouteMarker.current?.remove();
@@ -466,6 +536,7 @@ export default function MapsApp() {
           {status === "searching" ? t("searching") : ""}
           {status === "failed" ? t("searchFailed") : ""}
           {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
+          {categoryId && categoryHits && categoryHits.length === 0 ? t("categoryEmpty") : ""}
         </p>
 
         <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t("categoriesLabel")}>
@@ -489,7 +560,7 @@ export default function MapsApp() {
                 <button
                   type="button"
                   className="block w-full px-3 py-1.5 text-left hover:bg-(--accent)/10 focus-visible:bg-(--accent)/10"
-                  onClick={() => pickHit(hit)}
+                  onClick={() => pick(hit)}
                 >
                   {hit.name}
                 </button>
@@ -498,7 +569,7 @@ export default function MapsApp() {
           </ul>
         )}
 
-        {selected && (
+        {selected && !routePick && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--border) bg-(--surface) px-3 py-2">
             <span className="min-w-0 flex-1 truncate text-sm text-(--fg)">
               {selected.name}
@@ -507,16 +578,37 @@ export default function MapsApp() {
             <button
               type="button"
               className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
-              onClick={() => setEndpoint("start", selected)}
+              onClick={() => {
+                setEndpoint("start", selected);
+                setRoutePick("end");
+              }}
             >
               {t("routeFromHere")}
             </button>
             <button
               type="button"
               className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--fg)"
-              onClick={() => setEndpoint("end", selected)}
+              onClick={() => {
+                setEndpoint("end", selected);
+                setRoutePick("start");
+              }}
             >
               {t("routeToHere")}
+            </button>
+          </div>
+        )}
+
+        {routePick && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--accent) bg-(--surface) px-3 py-2">
+            <span aria-live="polite" className="min-w-0 flex-1 text-sm text-(--fg)">
+              {routePick === "end" ? t("routePickEnd") : t("routePickStart")}
+            </span>
+            <button
+              type="button"
+              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
+              onClick={() => setRoutePick(null)}
+            >
+              {t("routeCancel")}
             </button>
           </div>
         )}
@@ -549,6 +641,16 @@ export default function MapsApp() {
                     ? `${t("routeStart")}: ${routeStart?.name} → ${t("routeFinish")}: ${routeEnd?.name} — ${formatRoute(route.distance, route.duration, lang)}`
                     : ""}
             </span>
+            <button
+              type="button"
+              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
+              onClick={() => {
+                setRouteStart(routeEnd ? { ...routeEnd } : null);
+                setRouteEnd(routeStart ? { ...routeStart } : null);
+              }}
+            >
+              ⇄ {t("routeSwap")}
+            </button>
             <button
               type="button"
               className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"

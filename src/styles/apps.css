@@ -1028,3 +1028,26 @@ html[data-lang="ru"] .skip-link .skip-ru {
 .lab-palette-row:focus-within {
   box-shadow: inset 0 -2px 0 var(--accent);
 }
+
+/*
+ * Maps: on phones the route block docks to the bottom of the screen (like the
+ * Alias start bar) so the map keeps most of the viewport. The desktop layout
+ * is untouched — the class only applies below the sm breakpoint.
+ */
+@media (max-width: 639px) {
+  .maps-route-dock {
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border);
+    bottom: 0;
+    inset-inline: 0;
+    padding: 0.75rem clamp(1rem, 3vw, 1.5rem) calc(0.75rem + env(safe-area-inset-bottom));
+    position: fixed;
+    z-index: 20;
+  }
+
+  /* Keep the map controls above the dock. */
+  .maps-map .maplibregl-ctrl-bottom-right {
+    bottom: 11.5rem;
+  }
+}

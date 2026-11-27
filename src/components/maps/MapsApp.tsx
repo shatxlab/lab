@@ -467,7 +467,10 @@ export default function MapsApp() {
   return (
     <ToolPage title={t("title")} tagline={t("tagline")} wide fill>
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <div className="flex items-start gap-2">
+        {/* The route block: above the map on desktop, docked to the bottom of
+            the screen on phones (see .maps-route-dock in apps.css). */}
+        <div className="maps-route-dock flex flex-col gap-3">
+          <div className="flex items-start gap-2">
           {/* The route block: a connector rail joining the two endpoint fields. */}
           <div className="relative min-w-0 flex-1">
             <div aria-hidden className="absolute top-[26px] bottom-[26px] left-[15px] w-px bg-(--border)" />
@@ -503,27 +506,29 @@ export default function MapsApp() {
           >
             {copied ? "✓" : "🔗"}
           </button>
-        </div>
+          </div>
 
-        {/* Status + summary, indented to align with the fields, not the rail. */}
-        <div className="flex flex-wrap items-center gap-2 pl-10">
-          <p aria-live="polite" className="min-h-5 text-xs text-(--muted-fg)">
-            {status === "searching" ? t("searching") : ""}
-            {status === "failed" ? t("searchFailed") : ""}
-            {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
-            {startPlace && endPlace && routeState === "loading" ? t("routing") : ""}
-            {startPlace && endPlace && routeState === "failed" ? t("routeFailed") : ""}
-            {startPlace && endPlace && route ? `${t("routeSummary")}: ${formatRoute(route.distance, route.duration, lang)}` : ""}
-          </p>
-          {startPlace && endPlace && (
-            <button
-              type="button"
-              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
-              onClick={clearRoute}
-            >
-              {t("routeClear")}
-            </button>
-          )}
+          {/* Status + summary, indented to align with the fields, not the rail. */}
+          <div className="flex flex-wrap items-center gap-2 pl-10">
+            <p aria-live="polite" className="min-h-5 text-xs text-(--muted-fg)">
+              {status === "searching" ? t("searching") : ""}
+              {status === "failed" ? t("searchFailed") : ""}
+              {results && results.length === 0 && status === "idle" ? t("noResults") : ""}
+              {startPlace && endPlace && routeState === "loading" ? t("routing") : ""}
+              {startPlace && endPlace && routeState === "failed" ? t("routeFailed") : ""}
+              {startPlace && endPlace && route ? `${t("routeSummary")}: ${formatRoute(route.distance, route.duration, lang)}` : ""}
+            </p>
+            {startPlace && endPlace && (
+              <button
+                type="button"
+                className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--muted-fg) hover:text-(--fg)"
+                onClick={clearRoute}
+              >
+                {t("routeClear")}
+              </button>
+            )}
+          </div>
+          <p className="hidden max-sm:block text-[10px] text-(--muted-fg)">{t("attribution")}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t("categoriesLabel")}>
@@ -558,11 +563,11 @@ export default function MapsApp() {
 
         <div
           ref={containerRef}
-          className="min-h-[55vh] flex-1 overflow-hidden rounded-xl border border-(--border)"
+          className="maps-map min-h-[55vh] flex-1 overflow-hidden rounded-xl border border-(--border)"
           role="application"
           aria-label={t("map")}
         />
-        <p className="text-xs text-(--muted-fg)">{t("attribution")}</p>
+        <p className="hidden max-sm:block text-xs text-(--muted-fg)">{t("attribution")}</p>
       </div>
     </ToolPage>
   );

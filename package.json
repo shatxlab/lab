@@ -32,6 +32,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.48.0",
     "mammoth": "^1.12.2",
+    "maplibre-gl": "^6.19.0",
     "marked": "^18.0.14",
     "pdfjs-dist": "^6.4.299",
     "pixi.js": "^8.22.0",

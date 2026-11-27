@@ -42,13 +42,18 @@ export default defineConfig({
         "default-src 'self'",
         "img-src 'self' data: blob:",
         /*
+         * The maps tool loads vector tiles, glyphs and styles from
+         * OpenFreeMap and place search from Photon (all keyless, CORS-open,
+         * nothing user-owned is uploaded).
+         */
+        "connect-src 'self' https://tiles.openfreemap.org https://fonts.openfreemap.org https://photon.komoot.io",
+        /*
          * The tycoon game's PixiJS renderer decodes textures in blob: workers
          * (pixi.js WorkerManager / ImageBitmap worker); without an explicit
          * worker-src they fall back to script-src (self) and are blocked.
          */
         "worker-src 'self' blob:",
         "font-src 'self' data:",
-        "connect-src 'self'",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'none'",

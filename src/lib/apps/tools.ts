@@ -161,6 +161,27 @@ export const TOOLS: readonly ToolEntry[] = [
     },
   },
   {
+    id: "maps",
+    path: "/maps",
+    category: "productivity",
+    files: {
+      en: "OpenStreetMap · place & address search · shareable views",
+      ru: "OpenStreetMap · поиск мест и адресов · ссылки на вид",
+    },
+    title: { en: "Maps", ru: "Карты" },
+    description: {
+      en: "A fast map without tracking walls: browse OpenStreetMap vector tiles, search places, addresses and metro stations, and share a link to any view.",
+      ru: "Быстрая карта без стен слежки: векторные тайлы OpenStreetMap, поиск мест, адресов и станций метро, ссылка на любой вид.",
+    },
+    keywords:
+      "map maps atlas place address search navigation osm openstreetmap route coordinates карта карты место адрес поиск навигация координаты",
+    seo: {
+      title: "Maps — browse & search OpenStreetMap",
+      description:
+        "A private map: OpenStreetMap vector tiles, place and address search, shareable views. No accounts, no tracking — free in your browser.",
+    },
+  },
+  {
     id: "tycoon",
     path: "/tycoon",
     category: "games",

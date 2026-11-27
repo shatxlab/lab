@@ -8,7 +8,7 @@ import type { AppLang } from "@/lib/apps/lang";
 import { useAppLang } from "@/lib/apps/use-app-lang";
 import { parseState, encodeState, DEFAULT_VIEW, type MapView } from "@/lib/maps/hash";
 import { mb } from "@/lib/maps/i18n";
-import { searchPlaces, type PlaceResult } from "@/lib/maps/search";
+import { reverseGeocode, searchPlaces, type PlaceResult } from "@/lib/maps/search";
 import {
   collectPois,
   CATEGORIES,
@@ -28,6 +28,8 @@ interface Endpoint {
   name: string;
   lat: number;
   lon: number;
+  /** Chosen from the device's geolocation, not by name — edits reset it. */
+  geo?: boolean;
 }
 
 export default function MapsApp() {
@@ -206,7 +208,7 @@ export default function MapsApp() {
   }, []);
 
   const choose = React.useCallback(
-    (field: "start" | "end", place: { name: string; lat: number; lon: number }) => {
+    (field: "start" | "end", place: Endpoint) => {
       if (field === "start") {
         setStartPlace(place);
         setStartQuery("");
@@ -223,14 +225,20 @@ export default function MapsApp() {
     (field: "start" | "end", fly = true) => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const place = {
-            name: t("myLocation"),
+          const geo = {
             lat: position.coords.latitude,
             lon: position.coords.longitude,
           };
-          choose(field, place);
-          const map = mapRef.current;
-          if (map && fly) map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 14), speed: 1.4 });
+          // Show the real address, not a placeholder label; fall back to the
+          // generic name when the reverse lookup fails.
+          const apply = (name: string) => {
+            choose(field, { name, ...geo, geo: true });
+            const map = mapRef.current;
+            if (map && fly) map.flyTo({ center: [geo.lon, geo.lat], zoom: Math.max(map.getZoom(), 14), speed: 1.4 });
+          };
+          reverseGeocode(geo.lat, geo.lon)
+            .then((found) => apply(found ? found.name : t("myLocation")))
+            .catch(() => apply(t("myLocation")));
         },
         () => undefined,
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
@@ -483,6 +491,14 @@ export default function MapsApp() {
 
   /** Typing into a field invalidates its chosen place. */
   const editField = (which: "start" | "end", text: string) => {
+    const place = which === "start" ? startPlace : endPlace;
+    // A geo point's label is not a searchable name — the first edit wipes the
+    // whole field instead of trimming it letter by letter. Real addresses are
+    // (reverse-geocoded), so they edit like normal text.
+    if (place?.geo) {
+      clearField(which);
+      return;
+    }
     if (which === "start") {
       if (startPlace) setStartPlace(null);
       setStartQuery(text);

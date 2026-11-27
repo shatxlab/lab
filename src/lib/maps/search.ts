@@ -98,3 +98,21 @@ export async function searchPlaces(
   if (!response.ok) throw new Error(`photon ${response.status}`);
   return parsePhoton(await response.json());
 }
+
+/** Reverse lookup URL: the nearest named place to a coordinate. */
+export function photonReverseUrl(lat: number, lon: number): string {
+  const params = new URLSearchParams({ lat: lat.toFixed(6), lon: lon.toFixed(6), limit: "1" });
+  // Reverse lives outside /api on the public instance.
+  return `https://photon.komoot.io/reverse?${params.toString()}`;
+}
+
+/**
+ * The human address for a coordinate (for the geo-located start point).
+ * Returns null when the reverse lookup finds nothing or fails — the caller
+ * falls back to a generic label.
+ */
+export async function reverseGeocode(lat: number, lon: number, signal?: AbortSignal): Promise<PlaceResult | null> {
+  const response = await fetch(photonReverseUrl(lat, lon), { signal });
+  if (!response.ok) throw new Error(`photon ${response.status}`);
+  return parsePhoton(await response.json())[0] ?? null;
+}

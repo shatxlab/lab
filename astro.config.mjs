@@ -19,7 +19,7 @@ export default defineConfig({
   base: "/",
   output: "static",
   compressHTML: true,
-  integrations: [react(), pwa()],
+  integrations: [react(), pwa(), copyMaplibreWorker()],
   /*
    * The app renders user Markdown in the browser (marked + highlight.js), so
    * Astro's build-time Markdown pipeline is unused. Shiki emits inline styles
@@ -76,5 +76,37 @@ export default defineConfig({
         "@": fileURLToPath(new URL("./src", import.meta.url)),
       },
     },
+    /*
+     * maplibre-gl v6 finds its worker by rewriting its own import.meta.url
+     * at runtime, which Vite's pre-bundle does not carry over — excluding it
+     * keeps dev serving the package's dist files, where the worker sits
+     * next to the module and resolves naturally.
+     */
+    optimizeDeps: {
+      exclude: ["maplibre-gl"],
+    },
   },
 });
+
+/*
+ * In the static build maplibre's code lands in dist/_astro/*.js chunks, so its
+ * runtime worker URL resolves to dist/_astro/maplibre-gl-worker.mjs — a file
+ * Rollup never emits (the reference is not statically analyzable). Copy the
+ * worker in after the build.
+ */
+function copyMaplibreWorker() {
+  return {
+    name: "copy-maplibre-worker",
+    hooks: {
+      "astro:build:done": async ({ dir }) => {
+        const { copyFile } = await import("node:fs/promises");
+        for (const name of ["maplibre-gl-worker.mjs", "maplibre-gl-worker.mjs.map"]) {
+          await copyFile(
+            new URL(`./node_modules/maplibre-gl/dist/${name}`, import.meta.url),
+            new URL(`./_astro/${name}`, dir),
+          ).catch(() => undefined);
+        }
+      },
+    },
+  };
+}
